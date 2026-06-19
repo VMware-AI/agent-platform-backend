@@ -8,6 +8,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/vektah/gqlparser/v2 v2.5.34
+	github.com/vmware/govmomi v0.54.1
 	golang.org/x/crypto v0.53.0
 	modernc.org/sqlite v1.52.0
 )
@@ -27,7 +28,7 @@ require (
 	github.com/go-openapi/inflect v0.19.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/hcl/v2 v2.18.1 // indirect
