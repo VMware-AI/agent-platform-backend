@@ -38,14 +38,25 @@ docker compose -f deploy/docker-compose.yml up   # 本地 pg + redis
 make run
 ```
 
-## 状态（M1.0）
+## 状态（M1，~41 测试全绿）
 
-- ✅ 密码哈希（bcrypt cost 12 + 强度校验）+ 单测
-- ✅ RBAC 权限矩阵（超管/普通/可观测性专员）+ 单测
-- ✅ 会话存储（内存实现 + 接口）+ 单测
-- ✅ Ent 实体（User/Role/Permission/Tenant/Department/Membership/AuditLog）
-- ✅ GraphQL 契约（用户与权限）
-- ⏭ 代码生成接线 + resolver + 登录/用户 CRUD 端到端
+**0619 四大 nav 全覆盖**：
+
+| 域 | 能力 |
+|---|---|
+| 认证 / RBAC | bcrypt 密码 + 强度校验、session（内存/redis）、角色枚举 + 权限矩阵 + `@hasRole`/`@hasPermission` directive（**e2e 验证真实拦截**） |
+| 用户与权限 | login/logout/changePassword/me + 用户 CRUD + resetPassword（首登强制改密） |
+| 智能体中心 | AgentTemplate（市场 catalog）/ AgentConfig / Agent（实例，owner 隔离 + 状态鉴权） |
+| 模型网关 | VirtualKey（issue/revoke → litellm gateway client）、RateLimitPolicy（限流策略） |
+| 可观测性 | TokenUsage（计量中心，按 model 聚合）、RequestLog（请求日志）、AuditLog（审计） |
+| 系统配置 | ResourcePool（vCenter 接入，govmomi）、用户与权限 |
+| vCenter | `internal/vcenter`：连接 / ListVMs / SetGuestinfo（govmomi，**vcsim 测试**） |
+| 网关 | `internal/gateway`：litellm admin API client（key/team/budget） |
+| 部署编排 | `internal/deploy`：签 key → cloud-init → guestinfo 注入（**vcsim + fake gateway 集成测试**） |
+
+**18 Ent 实体**；GraphQL 契约分布在 `schema/*.graphql`（前后端契约单一事实源）。
+
+待续（需用户方向 / 真实环境）：Vaultwarden 凭据解析、`deployAgent` GraphQL 接线、真机 vCenter 验收、前端联调（独立仓）。
 
 ## 安全
 
