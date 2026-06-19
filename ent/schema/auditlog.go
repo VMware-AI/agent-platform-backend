@@ -19,7 +19,7 @@ func (AuditLog) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		field.UUID("actor_user_id", uuid.UUID{}).Optional().Nillable(),
-		field.String("action").NotEmpty(),         // user.create, password.reset, ...
+		field.String("action").NotEmpty(), // user.create, password.reset, ...
 		field.String("resource_type").Optional(),
 		field.String("resource_id").Optional(),
 		field.String("ip").Optional(),
