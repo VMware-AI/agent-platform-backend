@@ -38,3 +38,6 @@ type Tenant func(*sql.Selector)
 
 // User is the predicate function for user builders.
 type User func(*sql.Selector)
+
+// VirtualKey is the predicate function for virtualkey builders.
+type VirtualKey func(*sql.Selector)

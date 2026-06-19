@@ -1,0 +1,43 @@
+# Per-user LiteLLM virtual keys. See LLD-04. The secret is returned ONCE on issue.
+
+enum VirtualKeyStatus {
+  active
+  revoked
+}
+
+type VirtualKey {
+  id: ID!
+  alias: String
+  userId: ID!
+  teamId: String
+  models: [String!]!
+  maxBudget: Float
+  status: VirtualKeyStatus!
+  expiresAt: Time
+  createdAt: Time!
+}
+
+# Returned only at issue time — carries the secret, which is never queryable again.
+type IssuedVirtualKey {
+  virtualKey: VirtualKey!
+  secret: String!
+}
+
+input IssueVirtualKeyInput {
+  userId: ID!
+  teamId: String
+  models: [String!]
+  maxBudget: Float
+  rpmLimit: Int
+  tpmLimit: Int
+  alias: String
+}
+
+extend type Query {
+  virtualKeys(userId: ID): [VirtualKey!]! @hasRole(any: [admin])
+}
+
+extend type Mutation {
+  issueVirtualKey(input: IssueVirtualKeyInput!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
+  revokeVirtualKey(id: ID!): Boolean! @hasPermission(perm: "key:manage")
+}

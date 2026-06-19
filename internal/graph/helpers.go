@@ -76,6 +76,37 @@ func toModelResourcePool(p *ent.ResourcePool) *model.ResourcePool {
 	}
 }
 
+// toModelVirtualKey maps an ent.VirtualKey to the GraphQL model (omits the secret).
+func toModelVirtualKey(k *ent.VirtualKey) *model.VirtualKey {
+	m := &model.VirtualKey{
+		ID:        k.ID.String(),
+		UserID:    k.UserID.String(),
+		Models:    k.Models,
+		Status:    model.VirtualKeyStatus(string(k.Status)),
+		CreatedAt: k.CreatedAt,
+	}
+	if k.Models == nil {
+		m.Models = []string{}
+	}
+	if k.Alias != "" {
+		a := k.Alias
+		m.Alias = &a
+	}
+	if k.TeamID != "" {
+		tid := k.TeamID
+		m.TeamID = &tid
+	}
+	if k.MaxBudget != 0 {
+		b := k.MaxBudget
+		m.MaxBudget = &b
+	}
+	if k.ExpiresAt != nil {
+		t := *k.ExpiresAt
+		m.ExpiresAt = &t
+	}
+	return m
+}
+
 // clientIP extracts the remote address from the request in context.
 func clientIP(ctx context.Context) string {
 	if r := httpx.Request(ctx); r != nil {

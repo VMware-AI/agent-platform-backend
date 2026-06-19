@@ -27,6 +27,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/skill"
 	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
+	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 )
 
 // Client is the client that holds all ent builders.
@@ -56,6 +57,8 @@ type Client struct {
 	Tenant *TenantClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
+	// VirtualKey is the client for interacting with the VirtualKey builders.
+	VirtualKey *VirtualKeyClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -78,6 +81,7 @@ func (c *Client) init() {
 	c.Skill = NewSkillClient(c.config)
 	c.Tenant = NewTenantClient(c.config)
 	c.User = NewUserClient(c.config)
+	c.VirtualKey = NewVirtualKeyClient(c.config)
 }
 
 type (
@@ -181,6 +185,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Skill:        NewSkillClient(cfg),
 		Tenant:       NewTenantClient(cfg),
 		User:         NewUserClient(cfg),
+		VirtualKey:   NewVirtualKeyClient(cfg),
 	}, nil
 }
 
@@ -211,6 +216,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Skill:        NewSkillClient(cfg),
 		Tenant:       NewTenantClient(cfg),
 		User:         NewUserClient(cfg),
+		VirtualKey:   NewVirtualKeyClient(cfg),
 	}, nil
 }
 
@@ -241,7 +247,7 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Artifact, c.AuditLog, c.Department, c.Image, c.Membership, c.Permission,
-		c.ResourcePool, c.Role, c.Skill, c.Tenant, c.User,
+		c.ResourcePool, c.Role, c.Skill, c.Tenant, c.User, c.VirtualKey,
 	} {
 		n.Use(hooks...)
 	}
@@ -252,7 +258,7 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Artifact, c.AuditLog, c.Department, c.Image, c.Membership, c.Permission,
-		c.ResourcePool, c.Role, c.Skill, c.Tenant, c.User,
+		c.ResourcePool, c.Role, c.Skill, c.Tenant, c.User, c.VirtualKey,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -283,6 +289,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Tenant.mutate(ctx, m)
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
+	case *VirtualKeyMutation:
+		return c.VirtualKey.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
 	}
@@ -1943,14 +1951,147 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 	}
 }
 
+// VirtualKeyClient is a client for the VirtualKey schema.
+type VirtualKeyClient struct {
+	config
+}
+
+// NewVirtualKeyClient returns a client for the VirtualKey from the given config.
+func NewVirtualKeyClient(c config) *VirtualKeyClient {
+	return &VirtualKeyClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `virtualkey.Hooks(f(g(h())))`.
+func (c *VirtualKeyClient) Use(hooks ...Hook) {
+	c.hooks.VirtualKey = append(c.hooks.VirtualKey, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `virtualkey.Intercept(f(g(h())))`.
+func (c *VirtualKeyClient) Intercept(interceptors ...Interceptor) {
+	c.inters.VirtualKey = append(c.inters.VirtualKey, interceptors...)
+}
+
+// Create returns a builder for creating a VirtualKey entity.
+func (c *VirtualKeyClient) Create() *VirtualKeyCreate {
+	mutation := newVirtualKeyMutation(c.config, OpCreate)
+	return &VirtualKeyCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of VirtualKey entities.
+func (c *VirtualKeyClient) CreateBulk(builders ...*VirtualKeyCreate) *VirtualKeyCreateBulk {
+	return &VirtualKeyCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *VirtualKeyClient) MapCreateBulk(slice any, setFunc func(*VirtualKeyCreate, int)) *VirtualKeyCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &VirtualKeyCreateBulk{err: fmt.Errorf("calling to VirtualKeyClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*VirtualKeyCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &VirtualKeyCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for VirtualKey.
+func (c *VirtualKeyClient) Update() *VirtualKeyUpdate {
+	mutation := newVirtualKeyMutation(c.config, OpUpdate)
+	return &VirtualKeyUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *VirtualKeyClient) UpdateOne(_m *VirtualKey) *VirtualKeyUpdateOne {
+	mutation := newVirtualKeyMutation(c.config, OpUpdateOne, withVirtualKey(_m))
+	return &VirtualKeyUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *VirtualKeyClient) UpdateOneID(id uuid.UUID) *VirtualKeyUpdateOne {
+	mutation := newVirtualKeyMutation(c.config, OpUpdateOne, withVirtualKeyID(id))
+	return &VirtualKeyUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for VirtualKey.
+func (c *VirtualKeyClient) Delete() *VirtualKeyDelete {
+	mutation := newVirtualKeyMutation(c.config, OpDelete)
+	return &VirtualKeyDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *VirtualKeyClient) DeleteOne(_m *VirtualKey) *VirtualKeyDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *VirtualKeyClient) DeleteOneID(id uuid.UUID) *VirtualKeyDeleteOne {
+	builder := c.Delete().Where(virtualkey.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &VirtualKeyDeleteOne{builder}
+}
+
+// Query returns a query builder for VirtualKey.
+func (c *VirtualKeyClient) Query() *VirtualKeyQuery {
+	return &VirtualKeyQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeVirtualKey},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a VirtualKey entity by its id.
+func (c *VirtualKeyClient) Get(ctx context.Context, id uuid.UUID) (*VirtualKey, error) {
+	return c.Query().Where(virtualkey.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *VirtualKeyClient) GetX(ctx context.Context, id uuid.UUID) *VirtualKey {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *VirtualKeyClient) Hooks() []Hook {
+	return c.hooks.VirtualKey
+}
+
+// Interceptors returns the client interceptors.
+func (c *VirtualKeyClient) Interceptors() []Interceptor {
+	return c.inters.VirtualKey
+}
+
+func (c *VirtualKeyClient) mutate(ctx context.Context, m *VirtualKeyMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&VirtualKeyCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&VirtualKeyUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&VirtualKeyUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&VirtualKeyDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown VirtualKey mutation op: %q", m.Op())
+	}
+}
+
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
 		Artifact, AuditLog, Department, Image, Membership, Permission, ResourcePool,
-		Role, Skill, Tenant, User []ent.Hook
+		Role, Skill, Tenant, User, VirtualKey []ent.Hook
 	}
 	inters struct {
 		Artifact, AuditLog, Department, Image, Membership, Permission, ResourcePool,
-		Role, Skill, Tenant, User []ent.Interceptor
+		Role, Skill, Tenant, User, VirtualKey []ent.Interceptor
 	}
 )

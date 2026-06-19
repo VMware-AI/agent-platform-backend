@@ -39,6 +39,21 @@ type CreateUserInput struct {
 	TenantID *string `json:"tenantId,omitempty"`
 }
 
+type IssueVirtualKeyInput struct {
+	UserID    string   `json:"userId"`
+	TeamID    *string  `json:"teamId,omitempty"`
+	Models    []string `json:"models,omitempty"`
+	MaxBudget *float64 `json:"maxBudget,omitempty"`
+	RpmLimit  *int     `json:"rpmLimit,omitempty"`
+	TpmLimit  *int     `json:"tpmLimit,omitempty"`
+	Alias     *string  `json:"alias,omitempty"`
+}
+
+type IssuedVirtualKey struct {
+	VirtualKey *VirtualKey `json:"virtualKey"`
+	Secret     string      `json:"secret"`
+}
+
 type Mutation struct {
 }
 
@@ -90,6 +105,18 @@ type User struct {
 type UserConnection struct {
 	Items []User `json:"items"`
 	Total int    `json:"total"`
+}
+
+type VirtualKey struct {
+	ID        string           `json:"id"`
+	Alias     *string          `json:"alias,omitempty"`
+	UserID    string           `json:"userId"`
+	TeamID    *string          `json:"teamId,omitempty"`
+	Models    []string         `json:"models"`
+	MaxBudget *float64         `json:"maxBudget,omitempty"`
+	Status    VirtualKeyStatus `json:"status"`
+	ExpiresAt *time.Time       `json:"expiresAt,omitempty"`
+	CreatedAt time.Time        `json:"createdAt"`
 }
 
 type ResourcePoolStatus string
@@ -203,6 +230,61 @@ func (e *Role) UnmarshalJSON(b []byte) error {
 }
 
 func (e Role) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type VirtualKeyStatus string
+
+const (
+	VirtualKeyStatusActive  VirtualKeyStatus = "active"
+	VirtualKeyStatusRevoked VirtualKeyStatus = "revoked"
+)
+
+var AllVirtualKeyStatus = []VirtualKeyStatus{
+	VirtualKeyStatusActive,
+	VirtualKeyStatusRevoked,
+}
+
+func (e VirtualKeyStatus) IsValid() bool {
+	switch e {
+	case VirtualKeyStatusActive, VirtualKeyStatusRevoked:
+		return true
+	}
+	return false
+}
+
+func (e VirtualKeyStatus) String() string {
+	return string(e)
+}
+
+func (e *VirtualKeyStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = VirtualKeyStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid VirtualKeyStatus", str)
+	}
+	return nil
+}
+
+func (e VirtualKeyStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *VirtualKeyStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e VirtualKeyStatus) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

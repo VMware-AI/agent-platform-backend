@@ -1,0 +1,110 @@
+package graph
+
+// This file will be automatically regenerated based on the schema, any resolver
+// implementations will be copied through when generating.
+
+import (
+	"context"
+
+	"github.com/google/uuid"
+	"github.com/vektah/gqlparser/v2/gqlerror"
+
+	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
+	"github.com/VMware-AI/agent-platform-backend/internal/auth"
+	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
+	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
+)
+
+// IssueVirtualKey mints a per-user LiteLLM key via the gateway and records its
+// governance metadata. The secret is returned ONCE (LLD-04 §3).
+func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.IssueVirtualKeyInput) (*model.IssuedVirtualKey, error) {
+	if r.Gateway == nil {
+		return nil, gqlerror.Errorf("model gateway is not configured")
+	}
+	userID, err := uuid.Parse(input.UserID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid userId")
+	}
+
+	req := gateway.GenerateKeyRequest{
+		UserID:    input.UserID,
+		MaxBudget: input.MaxBudget,
+		RPMLimit:  input.RpmLimit,
+		TPMLimit:  input.TpmLimit,
+		Models:    input.Models,
+	}
+	if input.TeamID != nil {
+		req.TeamID = *input.TeamID
+	}
+	resp, err := r.Gateway.GenerateKey(ctx, req)
+	if err != nil {
+		r.audit(ctx, "key.issue", "virtual_key", input.UserID, false, actorID(auth.FromContext(ctx)))
+		return nil, gqlerror.Errorf("gateway: %s", err.Error())
+	}
+
+	create := r.Ent.VirtualKey.Create().
+		SetLitellmKey(resp.Key).
+		SetUserID(userID).
+		SetModels(input.Models)
+	if input.TeamID != nil {
+		create.SetTeamID(*input.TeamID)
+	}
+	if input.MaxBudget != nil {
+		create.SetMaxBudget(*input.MaxBudget)
+	}
+	if input.Alias != nil {
+		create.SetAlias(*input.Alias)
+	}
+	vk, err := create.Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	r.audit(ctx, "key.issue", "virtual_key", vk.ID.String(), true, actorID(auth.FromContext(ctx)))
+	return &model.IssuedVirtualKey{
+		VirtualKey: toModelVirtualKey(vk),
+		Secret:     resp.Key,
+	}, nil
+}
+
+// RevokeVirtualKey deletes the key at the gateway and marks the row revoked.
+func (r *mutationResolver) RevokeVirtualKey(ctx context.Context, id string) (bool, error) {
+	kid, err := uuid.Parse(id)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid id")
+	}
+	vk, err := r.Ent.VirtualKey.Get(ctx, kid)
+	if err != nil {
+		return false, err
+	}
+	if r.Gateway != nil {
+		if err := r.Gateway.DeleteKey(ctx, vk.LitellmKey); err != nil {
+			return false, gqlerror.Errorf("gateway: %s", err.Error())
+		}
+	}
+	if _, err := r.Ent.VirtualKey.UpdateOne(vk).SetStatus(virtualkey.StatusRevoked).Save(ctx); err != nil {
+		return false, err
+	}
+	r.audit(ctx, "key.revoke", "virtual_key", id, true, actorID(auth.FromContext(ctx)))
+	return true, nil
+}
+
+// VirtualKeys lists keys, optionally filtered by user (secrets never returned).
+func (r *queryResolver) VirtualKeys(ctx context.Context, userID *string) ([]model.VirtualKey, error) {
+	q := r.Ent.VirtualKey.Query()
+	if userID != nil {
+		uid, err := uuid.Parse(*userID)
+		if err != nil {
+			return nil, gqlerror.Errorf("invalid userId")
+		}
+		q = q.Where(virtualkey.UserID(uid))
+	}
+	keys, err := q.All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.VirtualKey, 0, len(keys))
+	for _, k := range keys {
+		out = append(out, *toModelVirtualKey(k))
+	}
+	return out, nil
+}

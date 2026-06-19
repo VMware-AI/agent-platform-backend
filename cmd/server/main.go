@@ -18,6 +18,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/config"
+	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph"
 	"github.com/VMware-AI/agent-platform-backend/internal/session"
 	"github.com/VMware-AI/agent-platform-backend/internal/store"
@@ -54,11 +55,20 @@ func main() {
 		log.Printf("session store: in-memory (dev)")
 	}
 
+	var gw gateway.Client
+	if base := os.Getenv("LITELLM_BASE_URL"); base != "" {
+		gw = gateway.NewHTTPClient(base, os.Getenv("LITELLM_MASTER_KEY"))
+		log.Printf("model gateway: %s", base)
+	} else {
+		log.Printf("model gateway: not configured (set LITELLM_BASE_URL)")
+	}
+
 	resolver := &graph.Resolver{
 		Ent:           client,
 		Sessions:      sessions,
 		SessionTTL:    ttl,
 		SecureCookies: cfg.Env == "prod",
+		Gateway:       gw,
 	}
 
 	es := graph.NewExecutableSchema(graph.Config{

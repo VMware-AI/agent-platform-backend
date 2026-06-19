@@ -17,6 +17,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/skill"
 	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
+	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/google/uuid"
 )
 
@@ -295,4 +296,27 @@ func init() {
 	userDescID := userFields[0].Descriptor()
 	// user.DefaultID holds the default value on creation for the id field.
 	user.DefaultID = userDescID.Default.(func() uuid.UUID)
+	virtualkeyMixin := schema.VirtualKey{}.Mixin()
+	virtualkeyMixinFields0 := virtualkeyMixin[0].Fields()
+	_ = virtualkeyMixinFields0
+	virtualkeyFields := schema.VirtualKey{}.Fields()
+	_ = virtualkeyFields
+	// virtualkeyDescCreatedAt is the schema descriptor for created_at field.
+	virtualkeyDescCreatedAt := virtualkeyMixinFields0[0].Descriptor()
+	// virtualkey.DefaultCreatedAt holds the default value on creation for the created_at field.
+	virtualkey.DefaultCreatedAt = virtualkeyDescCreatedAt.Default.(func() time.Time)
+	// virtualkeyDescUpdatedAt is the schema descriptor for updated_at field.
+	virtualkeyDescUpdatedAt := virtualkeyMixinFields0[1].Descriptor()
+	// virtualkey.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	virtualkey.DefaultUpdatedAt = virtualkeyDescUpdatedAt.Default.(func() time.Time)
+	// virtualkey.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	virtualkey.UpdateDefaultUpdatedAt = virtualkeyDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// virtualkeyDescLitellmKey is the schema descriptor for litellm_key field.
+	virtualkeyDescLitellmKey := virtualkeyFields[1].Descriptor()
+	// virtualkey.LitellmKeyValidator is a validator for the "litellm_key" field. It is called by the builders before save.
+	virtualkey.LitellmKeyValidator = virtualkeyDescLitellmKey.Validators[0].(func(string) error)
+	// virtualkeyDescID is the schema descriptor for id field.
+	virtualkeyDescID := virtualkeyFields[0].Descriptor()
+	// virtualkey.DefaultID holds the default value on creation for the id field.
+	virtualkey.DefaultID = virtualkeyDescID.Default.(func() uuid.UUID)
 }

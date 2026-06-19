@@ -241,6 +241,33 @@ var (
 			},
 		},
 	}
+	// VirtualKeysColumns holds the columns for the "virtual_keys" table.
+	VirtualKeysColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "litellm_key", Type: field.TypeString},
+		{Name: "alias", Type: field.TypeString, Nullable: true},
+		{Name: "user_id", Type: field.TypeUUID},
+		{Name: "team_id", Type: field.TypeString, Nullable: true},
+		{Name: "models", Type: field.TypeJSON, Nullable: true},
+		{Name: "max_budget", Type: field.TypeFloat64, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "revoked"}, Default: "active"},
+		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
+	}
+	// VirtualKeysTable holds the schema information for the "virtual_keys" table.
+	VirtualKeysTable = &schema.Table{
+		Name:       "virtual_keys",
+		Columns:    VirtualKeysColumns,
+		PrimaryKey: []*schema.Column{VirtualKeysColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "virtualkey_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{VirtualKeysColumns[5]},
+			},
+		},
+	}
 	// RolePermissionsColumns holds the columns for the "role_permissions" table.
 	RolePermissionsColumns = []*schema.Column{
 		{Name: "role_id", Type: field.TypeUUID},
@@ -304,6 +331,7 @@ var (
 		SkillsTable,
 		TenantsTable,
 		UsersTable,
+		VirtualKeysTable,
 		RolePermissionsTable,
 		UserRolesTable,
 	}

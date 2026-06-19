@@ -60,15 +60,22 @@ type ComplexityRoot struct {
 		User               func(childComplexity int) int
 	}
 
+	IssuedVirtualKey struct {
+		Secret     func(childComplexity int) int
+		VirtualKey func(childComplexity int) int
+	}
+
 	Mutation struct {
 		ChangePassword       func(childComplexity int, oldPassword string, newPassword string) int
 		CreateUser           func(childComplexity int, input model.CreateUserInput) int
 		DeleteResourcePool   func(childComplexity int, id string) int
 		DeleteUser           func(childComplexity int, id string) int
+		IssueVirtualKey      func(childComplexity int, input model.IssueVirtualKeyInput) int
 		Login                func(childComplexity int, username string, password string) int
 		Logout               func(childComplexity int) int
 		RegisterResourcePool func(childComplexity int, input model.RegisterResourcePoolInput) int
 		ResetPassword        func(childComplexity int, userID string) int
+		RevokeVirtualKey     func(childComplexity int, id string) int
 		SetUserActive        func(childComplexity int, id string, active bool) int
 		UpdateUser           func(childComplexity int, id string, input model.UpdateUserInput) int
 	}
@@ -78,6 +85,7 @@ type ComplexityRoot struct {
 		Me            func(childComplexity int) int
 		ResourcePools func(childComplexity int) int
 		Users         func(childComplexity int, page *model.PageInput) int
+		VirtualKeys   func(childComplexity int, userID *string) int
 	}
 
 	ResourcePool struct {
@@ -110,6 +118,18 @@ type ComplexityRoot struct {
 		Items func(childComplexity int) int
 		Total func(childComplexity int) int
 	}
+
+	VirtualKey struct {
+		Alias     func(childComplexity int) int
+		CreatedAt func(childComplexity int) int
+		ExpiresAt func(childComplexity int) int
+		ID        func(childComplexity int) int
+		MaxBudget func(childComplexity int) int
+		Models    func(childComplexity int) int
+		Status    func(childComplexity int) int
+		TeamID    func(childComplexity int) int
+		UserID    func(childComplexity int) int
+	}
 }
 
 // endregion ***************************** api!.gotpl *****************************
@@ -127,12 +147,15 @@ type MutationResolver interface {
 	DeleteUser(ctx context.Context, id string) (bool, error)
 	RegisterResourcePool(ctx context.Context, input model.RegisterResourcePoolInput) (*model.ResourcePool, error)
 	DeleteResourcePool(ctx context.Context, id string) (bool, error)
+	IssueVirtualKey(ctx context.Context, input model.IssueVirtualKeyInput) (*model.IssuedVirtualKey, error)
+	RevokeVirtualKey(ctx context.Context, id string) (bool, error)
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
 	Users(ctx context.Context, page *model.PageInput) (*model.UserConnection, error)
 	AuditLogs(ctx context.Context, page *model.PageInput) (*model.AuditConnection, error)
 	ResourcePools(ctx context.Context) ([]model.ResourcePool, error)
+	VirtualKeys(ctx context.Context, userID *string) ([]model.VirtualKey, error)
 }
 
 // endregion ************************** generated!.gotpl **************************
@@ -228,6 +251,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.AuthPayload.User(childComplexity), true
 
+	case "IssuedVirtualKey.secret":
+		if e.ComplexityRoot.IssuedVirtualKey.Secret == nil {
+			break
+		}
+
+		return e.ComplexityRoot.IssuedVirtualKey.Secret(childComplexity), true
+	case "IssuedVirtualKey.virtualKey":
+		if e.ComplexityRoot.IssuedVirtualKey.VirtualKey == nil {
+			break
+		}
+
+		return e.ComplexityRoot.IssuedVirtualKey.VirtualKey(childComplexity), true
+
 	case "Mutation.changePassword":
 		if e.ComplexityRoot.Mutation.ChangePassword == nil {
 			break
@@ -272,6 +308,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.DeleteUser(childComplexity, args["id"].(string)), true
+	case "Mutation.issueVirtualKey":
+		if e.ComplexityRoot.Mutation.IssueVirtualKey == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_issueVirtualKey_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.IssueVirtualKey(childComplexity, args["input"].(model.IssueVirtualKeyInput)), true
 	case "Mutation.login":
 		if e.ComplexityRoot.Mutation.Login == nil {
 			break
@@ -311,6 +358,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.ResetPassword(childComplexity, args["userId"].(string)), true
+	case "Mutation.revokeVirtualKey":
+		if e.ComplexityRoot.Mutation.RevokeVirtualKey == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_revokeVirtualKey_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.RevokeVirtualKey(childComplexity, args["id"].(string)), true
 	case "Mutation.setUserActive":
 		if e.ComplexityRoot.Mutation.SetUserActive == nil {
 			break
@@ -369,6 +427,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Users(childComplexity, args["page"].(*model.PageInput)), true
+	case "Query.virtualKeys":
+		if e.ComplexityRoot.Query.VirtualKeys == nil {
+			break
+		}
+
+		args, err := ec.field_Query_virtualKeys_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.VirtualKeys(childComplexity, args["userId"].(*string)), true
 
 	case "ResourcePool.createdAt":
 		if e.ComplexityRoot.ResourcePool.CreatedAt == nil {
@@ -488,6 +557,61 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.UserConnection.Total(childComplexity), true
 
+	case "VirtualKey.alias":
+		if e.ComplexityRoot.VirtualKey.Alias == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VirtualKey.Alias(childComplexity), true
+	case "VirtualKey.createdAt":
+		if e.ComplexityRoot.VirtualKey.CreatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VirtualKey.CreatedAt(childComplexity), true
+	case "VirtualKey.expiresAt":
+		if e.ComplexityRoot.VirtualKey.ExpiresAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VirtualKey.ExpiresAt(childComplexity), true
+	case "VirtualKey.id":
+		if e.ComplexityRoot.VirtualKey.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VirtualKey.ID(childComplexity), true
+	case "VirtualKey.maxBudget":
+		if e.ComplexityRoot.VirtualKey.MaxBudget == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VirtualKey.MaxBudget(childComplexity), true
+	case "VirtualKey.models":
+		if e.ComplexityRoot.VirtualKey.Models == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VirtualKey.Models(childComplexity), true
+	case "VirtualKey.status":
+		if e.ComplexityRoot.VirtualKey.Status == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VirtualKey.Status(childComplexity), true
+	case "VirtualKey.teamId":
+		if e.ComplexityRoot.VirtualKey.TeamID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VirtualKey.TeamID(childComplexity), true
+	case "VirtualKey.userId":
+		if e.ComplexityRoot.VirtualKey.UserID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VirtualKey.UserID(childComplexity), true
+
 	}
 	return 0, false
 }
@@ -497,6 +621,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	ec := newExecutionContext(opCtx, e, make(chan graphql.DeferredResult))
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputCreateUserInput,
+		ec.unmarshalInputIssueVirtualKeyInput,
 		ec.unmarshalInputPageInput,
 		ec.unmarshalInputRegisterResourcePoolInput,
 		ec.unmarshalInputUpdateUserInput,
@@ -702,6 +827,50 @@ type Mutation {
 directive @hasRole(any: [Role!]!) on FIELD_DEFINITION
 directive @hasPermission(perm: String!) on FIELD_DEFINITION
 `, BuiltIn: false},
+	{Name: "../../schema/virtualkey.graphql", Input: `# Per-user LiteLLM virtual keys. See LLD-04. The secret is returned ONCE on issue.
+
+enum VirtualKeyStatus {
+  active
+  revoked
+}
+
+type VirtualKey {
+  id: ID!
+  alias: String
+  userId: ID!
+  teamId: String
+  models: [String!]!
+  maxBudget: Float
+  status: VirtualKeyStatus!
+  expiresAt: Time
+  createdAt: Time!
+}
+
+# Returned only at issue time — carries the secret, which is never queryable again.
+type IssuedVirtualKey {
+  virtualKey: VirtualKey!
+  secret: String!
+}
+
+input IssueVirtualKeyInput {
+  userId: ID!
+  teamId: String
+  models: [String!]
+  maxBudget: Float
+  rpmLimit: Int
+  tpmLimit: Int
+  alias: String
+}
+
+extend type Query {
+  virtualKeys(userId: ID): [VirtualKey!]! @hasRole(any: [admin])
+}
+
+extend type Mutation {
+  issueVirtualKey(input: IssueVirtualKeyInput!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
+  revokeVirtualKey(id: ID!): Boolean! @hasPermission(perm: "key:manage")
+}
+`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
@@ -749,6 +918,16 @@ func (ec *executionContext) childFields_AuthPayload(ctx context.Context, field g
 		return ec.fieldContext_AuthPayload_mustChangePassword(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type AuthPayload", field.Name)
+}
+
+func (ec *executionContext) childFields_IssuedVirtualKey(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "virtualKey":
+		return ec.fieldContext_IssuedVirtualKey_virtualKey(ctx, field)
+	case "secret":
+		return ec.fieldContext_IssuedVirtualKey_secret(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type IssuedVirtualKey", field.Name)
 }
 
 func (ec *executionContext) childFields_ResourcePool(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -811,6 +990,30 @@ func (ec *executionContext) childFields_UserConnection(ctx context.Context, fiel
 		return ec.fieldContext_UserConnection_total(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type UserConnection", field.Name)
+}
+
+func (ec *executionContext) childFields_VirtualKey(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_VirtualKey_id(ctx, field)
+	case "alias":
+		return ec.fieldContext_VirtualKey_alias(ctx, field)
+	case "userId":
+		return ec.fieldContext_VirtualKey_userId(ctx, field)
+	case "teamId":
+		return ec.fieldContext_VirtualKey_teamId(ctx, field)
+	case "models":
+		return ec.fieldContext_VirtualKey_models(ctx, field)
+	case "maxBudget":
+		return ec.fieldContext_VirtualKey_maxBudget(ctx, field)
+	case "status":
+		return ec.fieldContext_VirtualKey_status(ctx, field)
+	case "expiresAt":
+		return ec.fieldContext_VirtualKey_expiresAt(ctx, field)
+	case "createdAt":
+		return ec.fieldContext_VirtualKey_createdAt(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type VirtualKey", field.Name)
 }
 
 func (ec *executionContext) childFields___Directive(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -1021,6 +1224,20 @@ func (ec *executionContext) field_Mutation_deleteUser_args(ctx context.Context, 
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_issueVirtualKey_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.IssueVirtualKeyInput, error) {
+			return ec.unmarshalNIssueVirtualKeyInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐIssueVirtualKeyInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -1068,6 +1285,20 @@ func (ec *executionContext) field_Mutation_resetPassword_args(ctx context.Contex
 		return nil, err
 	}
 	args["userId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_revokeVirtualKey_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -1154,6 +1385,20 @@ func (ec *executionContext) field_Query_users_args(ctx context.Context, rawArgs 
 		return nil, err
 	}
 	args["page"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_virtualKeys_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "userId",
+		func(ctx context.Context, v any) (*string, error) {
+			return ec.unmarshalOID2ᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["userId"] = arg0
 	return args, nil
 }
 
@@ -1509,6 +1754,61 @@ func (ec *executionContext) _AuthPayload_mustChangePassword(ctx context.Context,
 }
 func (ec *executionContext) fieldContext_AuthPayload_mustChangePassword(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("AuthPayload", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _IssuedVirtualKey_virtualKey(ctx context.Context, field graphql.CollectedField, obj *model.IssuedVirtualKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_IssuedVirtualKey_virtualKey(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.VirtualKey, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.VirtualKey) graphql.Marshaler {
+			return ec.marshalNVirtualKey2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKey(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_IssuedVirtualKey_virtualKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "IssuedVirtualKey",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_VirtualKey(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _IssuedVirtualKey_secret(ctx context.Context, field graphql.CollectedField, obj *model.IssuedVirtualKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_IssuedVirtualKey_secret(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Secret, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_IssuedVirtualKey_secret(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("IssuedVirtualKey", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _Mutation_login(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2056,6 +2356,130 @@ func (ec *executionContext) fieldContext_Mutation_deleteResourcePool(ctx context
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_issueVirtualKey(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_issueVirtualKey(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().IssueVirtualKey(ctx, fc.Args["input"].(model.IssueVirtualKeyInput))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				perm, err := ec.unmarshalNString2string(ctx, "key:manage")
+				if err != nil {
+					var zeroVal *model.IssuedVirtualKey
+					return zeroVal, err
+				}
+				if ec.Directives.HasPermission == nil {
+					var zeroVal *model.IssuedVirtualKey
+					return zeroVal, errors.New("directive hasPermission is not implemented")
+				}
+				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.IssuedVirtualKey) graphql.Marshaler {
+			return ec.marshalNIssuedVirtualKey2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐIssuedVirtualKey(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_issueVirtualKey(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_IssuedVirtualKey(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_issueVirtualKey_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_revokeVirtualKey(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_revokeVirtualKey(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().RevokeVirtualKey(ctx, fc.Args["id"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				perm, err := ec.unmarshalNString2string(ctx, "key:manage")
+				if err != nil {
+					var zeroVal bool
+					return zeroVal, err
+				}
+				if ec.Directives.HasPermission == nil {
+					var zeroVal bool
+					return zeroVal, errors.New("directive hasPermission is not implemented")
+				}
+				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_revokeVirtualKey(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_revokeVirtualKey_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_me(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -2258,6 +2682,68 @@ func (ec *executionContext) fieldContext_Query_resourcePools(_ context.Context, 
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_ResourcePool(ctx, field)
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_virtualKeys(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_virtualKeys(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().VirtualKeys(ctx, fc.Args["userId"].(*string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal []model.VirtualKey
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal []model.VirtualKey
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v []model.VirtualKey) graphql.Marshaler {
+			return ec.marshalNVirtualKey2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKeyᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_virtualKeys(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_VirtualKey(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_virtualKeys_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -2782,6 +3268,213 @@ func (ec *executionContext) _UserConnection_total(ctx context.Context, field gra
 }
 func (ec *executionContext) fieldContext_UserConnection_total(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("UserConnection", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _VirtualKey_id(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VirtualKey_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_VirtualKey_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _VirtualKey_alias(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VirtualKey_alias(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Alias, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_VirtualKey_alias(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _VirtualKey_userId(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VirtualKey_userId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.UserID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_VirtualKey_userId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _VirtualKey_teamId(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VirtualKey_teamId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TeamID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_VirtualKey_teamId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _VirtualKey_models(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VirtualKey_models(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Models, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []string) graphql.Marshaler {
+			return ec.marshalNString2ᚕstringᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_VirtualKey_models(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _VirtualKey_maxBudget(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VirtualKey_maxBudget(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.MaxBudget, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *float64) graphql.Marshaler {
+			return ec.marshalOFloat2ᚖfloat64(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_VirtualKey_maxBudget(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _VirtualKey_status(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VirtualKey_status(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Status, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.VirtualKeyStatus) graphql.Marshaler {
+			return ec.marshalNVirtualKeyStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKeyStatus(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_VirtualKey_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type VirtualKeyStatus does not have child fields"))
+}
+
+func (ec *executionContext) _VirtualKey_expiresAt(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VirtualKey_expiresAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ExpiresAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *time.Time) graphql.Marshaler {
+			return ec.marshalOTime2ᚖtimeᚐTime(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_VirtualKey_expiresAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _VirtualKey_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VirtualKey_createdAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_VirtualKey_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -3901,6 +4594,78 @@ func (ec *executionContext) unmarshalInputCreateUserInput(ctx context.Context, o
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Context, obj any) (model.IssueVirtualKeyInput, error) {
+	var it model.IssueVirtualKeyInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"userId", "teamId", "models", "maxBudget", "rpmLimit", "tpmLimit", "alias"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "userId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UserID = data
+		case "teamId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.TeamID = data
+		case "models":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("models"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Models = data
+		case "maxBudget":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("maxBudget"))
+			data, err := ec.unmarshalOFloat2ᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.MaxBudget = data
+		case "rpmLimit":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("rpmLimit"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RpmLimit = data
+		case "tpmLimit":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("tpmLimit"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.TpmLimit = data
+		case "alias":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("alias"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Alias = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputPageInput(ctx context.Context, obj any) (model.PageInput, error) {
 	var it model.PageInput
 	if obj == nil {
@@ -4196,6 +4961,50 @@ func (ec *executionContext) _AuthPayload(ctx context.Context, sel ast.SelectionS
 	return out
 }
 
+var issuedVirtualKeyImplementors = []string{"IssuedVirtualKey"}
+
+func (ec *executionContext) _IssuedVirtualKey(ctx context.Context, sel ast.SelectionSet, obj *model.IssuedVirtualKey) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, issuedVirtualKeyImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("IssuedVirtualKey")
+		case "virtualKey":
+			out.Values[i] = ec._IssuedVirtualKey_virtualKey(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "secret":
+			out.Values[i] = ec._IssuedVirtualKey_secret(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var mutationImplementors = []string{"Mutation"}
 
 func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -4281,6 +5090,20 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "deleteResourcePool":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_deleteResourcePool(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "issueVirtualKey":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_issueVirtualKey(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "revokeVirtualKey":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_revokeVirtualKey(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -4403,6 +5226,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_resourcePools(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "virtualKeys":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_virtualKeys(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -4657,6 +5502,85 @@ func (ec *executionContext) _UserConnection(ctx context.Context, sel ast.Selecti
 			}
 		case "total":
 			out.Values[i] = ec._UserConnection_total(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var virtualKeyImplementors = []string{"VirtualKey"}
+
+func (ec *executionContext) _VirtualKey(ctx context.Context, sel ast.SelectionSet, obj *model.VirtualKey) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, virtualKeyImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("VirtualKey")
+		case "id":
+			out.Values[i] = ec._VirtualKey_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "alias":
+			out.Values[i] = ec._VirtualKey_alias(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "userId":
+			out.Values[i] = ec._VirtualKey_userId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "teamId":
+			out.Values[i] = ec._VirtualKey_teamId(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "models":
+			out.Values[i] = ec._VirtualKey_models(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "maxBudget":
+			out.Values[i] = ec._VirtualKey_maxBudget(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "status":
+			out.Values[i] = ec._VirtualKey_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "expiresAt":
+			out.Values[i] = ec._VirtualKey_expiresAt(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "createdAt":
+			out.Values[i] = ec._VirtualKey_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -5182,6 +6106,25 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
+func (ec *executionContext) unmarshalNIssueVirtualKeyInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐIssueVirtualKeyInput(ctx context.Context, v any) (model.IssueVirtualKeyInput, error) {
+	res, err := ec.unmarshalInputIssueVirtualKeyInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNIssuedVirtualKey2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐIssuedVirtualKey(ctx context.Context, sel ast.SelectionSet, v model.IssuedVirtualKey) graphql.Marshaler {
+	return ec._IssuedVirtualKey(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNIssuedVirtualKey2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐIssuedVirtualKey(ctx context.Context, sel ast.SelectionSet, v *model.IssuedVirtualKey) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._IssuedVirtualKey(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNRegisterResourcePoolInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRegisterResourcePoolInput(ctx context.Context, v any) (model.RegisterResourcePoolInput, error) {
 	res, err := ec.unmarshalInputRegisterResourcePoolInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -5284,6 +6227,36 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 	return res
 }
 
+func (ec *executionContext) unmarshalNString2ᚕstringᚄ(ctx context.Context, v any) ([]string, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) marshalNTempPasswordPayload2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTempPasswordPayload(ctx context.Context, sel ast.SelectionSet, v model.TempPasswordPayload) graphql.Marshaler {
 	return ec._TempPasswordPayload(ctx, sel, &v)
 }
@@ -5361,6 +6334,46 @@ func (ec *executionContext) marshalNUserConnection2ᚖgithubᚗcomᚋVMwareᚑAI
 		return graphql.Null
 	}
 	return ec._UserConnection(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNVirtualKey2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKey(ctx context.Context, sel ast.SelectionSet, v model.VirtualKey) graphql.Marshaler {
+	return ec._VirtualKey(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNVirtualKey2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKeyᚄ(ctx context.Context, sel ast.SelectionSet, v []model.VirtualKey) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNVirtualKey2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKey(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNVirtualKey2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKey(ctx context.Context, sel ast.SelectionSet, v *model.VirtualKey) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._VirtualKey(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNVirtualKeyStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKeyStatus(ctx context.Context, v any) (model.VirtualKeyStatus, error) {
+	var res model.VirtualKeyStatus
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNVirtualKeyStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKeyStatus(ctx context.Context, sel ast.SelectionSet, v model.VirtualKeyStatus) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {
@@ -5534,6 +6547,23 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return res
 }
 
+func (ec *executionContext) unmarshalOFloat2ᚖfloat64(ctx context.Context, v any) (*float64, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalFloatContext(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOFloat2ᚖfloat64(ctx context.Context, sel ast.SelectionSet, v *float64) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	_ = sel
+	res := graphql.MarshalFloatContext(*v)
+	return graphql.WrapContextMarshaler(ctx, res)
+}
+
 func (ec *executionContext) unmarshalOID2ᚖstring(ctx context.Context, v any) (*string, error) {
 	if v == nil {
 		return nil, nil
@@ -5592,6 +6622,42 @@ func (ec *executionContext) marshalORole2ᚖgithubᚗcomᚋVMwareᚑAIᚋagent�
 		return graphql.Null
 	}
 	return v
+}
+
+func (ec *executionContext) unmarshalOString2ᚕstringᚄ(ctx context.Context, v any) ([]string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v any) (*string, error) {

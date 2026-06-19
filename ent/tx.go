@@ -34,6 +34,8 @@ type Tx struct {
 	Tenant *TenantClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
+	// VirtualKey is the client for interacting with the VirtualKey builders.
+	VirtualKey *VirtualKeyClient
 
 	// lazily loaded.
 	client     *Client
@@ -176,6 +178,7 @@ func (tx *Tx) init() {
 	tx.Skill = NewSkillClient(tx.config)
 	tx.Tenant = NewTenantClient(tx.config)
 	tx.User = NewUserClient(tx.config)
+	tx.VirtualKey = NewVirtualKeyClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.

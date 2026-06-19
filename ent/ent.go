@@ -23,6 +23,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/skill"
 	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
+	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 )
 
 // ent aliases to avoid import conflicts in user's code.
@@ -94,6 +95,7 @@ func checkColumn(t, c string) error {
 			skill.Table:        skill.ValidColumn,
 			tenant.Table:       tenant.ValidColumn,
 			user.Table:         user.ValidColumn,
+			virtualkey.Table:   virtualkey.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)
