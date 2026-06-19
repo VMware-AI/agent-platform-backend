@@ -160,11 +160,20 @@ func (r *mutationResolver) UpsertModelRoute(ctx context.Context, input model.Ups
 	if input.Enabled != nil {
 		enabled = *input.Enabled
 	}
+	var gwID *uuid.UUID
+	if input.BackendGatewayID != nil {
+		gid, err := uuid.Parse(*input.BackendGatewayID)
+		if err != nil {
+			return nil, gqlerror.Errorf("invalid backendGatewayId")
+		}
+		gwID = &gid
+	}
 	existing, err := r.Ent.ModelRoute.Query().Where(modelroute.Name(input.Name)).Only(ctx)
 	var mr *ent.ModelRoute
 	switch {
 	case ent.IsNotFound(err):
-		c := r.Ent.ModelRoute.Create().SetName(input.Name).SetModelAlias(input.ModelAlias).SetEnabled(enabled).SetUpstreams(input.Upstreams)
+		c := r.Ent.ModelRoute.Create().SetName(input.Name).SetModelAlias(input.ModelAlias).
+			SetEnabled(enabled).SetUpstreams(input.Upstreams).SetNillableGatewayConnectionID(gwID)
 		if input.Strategy != nil {
 			c.SetStrategy(modelroute.Strategy(*input.Strategy))
 		}
@@ -172,7 +181,8 @@ func (r *mutationResolver) UpsertModelRoute(ctx context.Context, input model.Ups
 	case err != nil:
 		return nil, err
 	default:
-		u := r.Ent.ModelRoute.UpdateOne(existing).SetModelAlias(input.ModelAlias).SetEnabled(enabled).SetUpstreams(input.Upstreams)
+		u := r.Ent.ModelRoute.UpdateOne(existing).SetModelAlias(input.ModelAlias).
+			SetEnabled(enabled).SetUpstreams(input.Upstreams).SetNillableGatewayConnectionID(gwID)
 		if input.Strategy != nil {
 			u.SetStrategy(modelroute.Strategy(*input.Strategy))
 		}

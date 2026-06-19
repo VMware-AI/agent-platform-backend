@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/VMware-AI/agent-platform-backend/ent/modelroute"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
+	"github.com/google/uuid"
 )
 
 // ModelRouteUpdate is the builder for updating ModelRoute entities.
@@ -60,6 +61,26 @@ func (_u *ModelRouteUpdate) SetNillableModelAlias(v *string) *ModelRouteUpdate {
 	if v != nil {
 		_u.SetModelAlias(*v)
 	}
+	return _u
+}
+
+// SetGatewayConnectionID sets the "gateway_connection_id" field.
+func (_u *ModelRouteUpdate) SetGatewayConnectionID(v uuid.UUID) *ModelRouteUpdate {
+	_u.mutation.SetGatewayConnectionID(v)
+	return _u
+}
+
+// SetNillableGatewayConnectionID sets the "gateway_connection_id" field if the given value is not nil.
+func (_u *ModelRouteUpdate) SetNillableGatewayConnectionID(v *uuid.UUID) *ModelRouteUpdate {
+	if v != nil {
+		_u.SetGatewayConnectionID(*v)
+	}
+	return _u
+}
+
+// ClearGatewayConnectionID clears the value of the "gateway_connection_id" field.
+func (_u *ModelRouteUpdate) ClearGatewayConnectionID() *ModelRouteUpdate {
+	_u.mutation.ClearGatewayConnectionID()
 	return _u
 }
 
@@ -191,6 +212,12 @@ func (_u *ModelRouteUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.ModelAlias(); ok {
 		_spec.SetField(modelroute.FieldModelAlias, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.GatewayConnectionID(); ok {
+		_spec.SetField(modelroute.FieldGatewayConnectionID, field.TypeUUID, value)
+	}
+	if _u.mutation.GatewayConnectionIDCleared() {
+		_spec.ClearField(modelroute.FieldGatewayConnectionID, field.TypeUUID)
+	}
 	if value, ok := _u.mutation.Upstreams(); ok {
 		_spec.SetField(modelroute.FieldUpstreams, field.TypeJSON, value)
 	}
@@ -259,6 +286,26 @@ func (_u *ModelRouteUpdateOne) SetNillableModelAlias(v *string) *ModelRouteUpdat
 	if v != nil {
 		_u.SetModelAlias(*v)
 	}
+	return _u
+}
+
+// SetGatewayConnectionID sets the "gateway_connection_id" field.
+func (_u *ModelRouteUpdateOne) SetGatewayConnectionID(v uuid.UUID) *ModelRouteUpdateOne {
+	_u.mutation.SetGatewayConnectionID(v)
+	return _u
+}
+
+// SetNillableGatewayConnectionID sets the "gateway_connection_id" field if the given value is not nil.
+func (_u *ModelRouteUpdateOne) SetNillableGatewayConnectionID(v *uuid.UUID) *ModelRouteUpdateOne {
+	if v != nil {
+		_u.SetGatewayConnectionID(*v)
+	}
+	return _u
+}
+
+// ClearGatewayConnectionID clears the value of the "gateway_connection_id" field.
+func (_u *ModelRouteUpdateOne) ClearGatewayConnectionID() *ModelRouteUpdateOne {
+	_u.mutation.ClearGatewayConnectionID()
 	return _u
 }
 
@@ -419,6 +466,12 @@ func (_u *ModelRouteUpdateOne) sqlSave(ctx context.Context) (_node *ModelRoute, 
 	}
 	if value, ok := _u.mutation.ModelAlias(); ok {
 		_spec.SetField(modelroute.FieldModelAlias, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.GatewayConnectionID(); ok {
+		_spec.SetField(modelroute.FieldGatewayConnectionID, field.TypeUUID, value)
+	}
+	if _u.mutation.GatewayConnectionIDCleared() {
+		_spec.ClearField(modelroute.FieldGatewayConnectionID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.Upstreams(); ok {
 		_spec.SetField(modelroute.FieldUpstreams, field.TypeJSON, value)

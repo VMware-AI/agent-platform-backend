@@ -69,6 +69,13 @@ type ComplexityRoot struct {
 		Version        func(childComplexity int) int
 	}
 
+	AgentUsage struct {
+		AgentID      func(childComplexity int) int
+		Cost         func(childComplexity int) int
+		InputTokens  func(childComplexity int) int
+		OutputTokens func(childComplexity int) int
+	}
+
 	AuditConnection struct {
 		Items func(childComplexity int) int
 		Total func(childComplexity int) int
@@ -88,6 +95,13 @@ type ComplexityRoot struct {
 	AuthPayload struct {
 		MustChangePassword func(childComplexity int) int
 		User               func(childComplexity int) int
+	}
+
+	DateUsage struct {
+		Cost         func(childComplexity int) int
+		Date         func(childComplexity int) int
+		InputTokens  func(childComplexity int) int
+		OutputTokens func(childComplexity int) int
 	}
 
 	DeployedAgent struct {
@@ -110,6 +124,8 @@ type ComplexityRoot struct {
 	}
 
 	MeteringSummary struct {
+		ByAgent           func(childComplexity int) int
+		ByDate            func(childComplexity int) int
 		ByModel           func(childComplexity int) int
 		TotalCost         func(childComplexity int) int
 		TotalInputTokens  func(childComplexity int) int
@@ -117,13 +133,14 @@ type ComplexityRoot struct {
 	}
 
 	ModelRoute struct {
-		CreatedAt  func(childComplexity int) int
-		Enabled    func(childComplexity int) int
-		ID         func(childComplexity int) int
-		ModelAlias func(childComplexity int) int
-		Name       func(childComplexity int) int
-		Strategy   func(childComplexity int) int
-		Upstreams  func(childComplexity int) int
+		BackendGatewayID func(childComplexity int) int
+		CreatedAt        func(childComplexity int) int
+		Enabled          func(childComplexity int) int
+		ID               func(childComplexity int) int
+		ModelAlias       func(childComplexity int) int
+		Name             func(childComplexity int) int
+		Strategy         func(childComplexity int) int
+		Upstreams        func(childComplexity int) int
 	}
 
 	ModelUsage struct {
@@ -480,6 +497,31 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.AgentTemplate.Version(childComplexity), true
 
+	case "AgentUsage.agentId":
+		if e.ComplexityRoot.AgentUsage.AgentID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentUsage.AgentID(childComplexity), true
+	case "AgentUsage.cost":
+		if e.ComplexityRoot.AgentUsage.Cost == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentUsage.Cost(childComplexity), true
+	case "AgentUsage.inputTokens":
+		if e.ComplexityRoot.AgentUsage.InputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentUsage.InputTokens(childComplexity), true
+	case "AgentUsage.outputTokens":
+		if e.ComplexityRoot.AgentUsage.OutputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentUsage.OutputTokens(childComplexity), true
+
 	case "AuditConnection.items":
 		if e.ComplexityRoot.AuditConnection.Items == nil {
 			break
@@ -555,6 +597,31 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.AuthPayload.User(childComplexity), true
 
+	case "DateUsage.cost":
+		if e.ComplexityRoot.DateUsage.Cost == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DateUsage.Cost(childComplexity), true
+	case "DateUsage.date":
+		if e.ComplexityRoot.DateUsage.Date == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DateUsage.Date(childComplexity), true
+	case "DateUsage.inputTokens":
+		if e.ComplexityRoot.DateUsage.InputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DateUsage.InputTokens(childComplexity), true
+	case "DateUsage.outputTokens":
+		if e.ComplexityRoot.DateUsage.OutputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DateUsage.OutputTokens(childComplexity), true
+
 	case "DeployedAgent.agent":
 		if e.ComplexityRoot.DeployedAgent.Agent == nil {
 			break
@@ -618,6 +685,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.IssuedVirtualKey.VirtualKey(childComplexity), true
 
+	case "MeteringSummary.byAgent":
+		if e.ComplexityRoot.MeteringSummary.ByAgent == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringSummary.ByAgent(childComplexity), true
+	case "MeteringSummary.byDate":
+		if e.ComplexityRoot.MeteringSummary.ByDate == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringSummary.ByDate(childComplexity), true
 	case "MeteringSummary.byModel":
 		if e.ComplexityRoot.MeteringSummary.ByModel == nil {
 			break
@@ -643,6 +722,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.MeteringSummary.TotalOutputTokens(childComplexity), true
 
+	case "ModelRoute.backendGatewayId":
+		if e.ComplexityRoot.ModelRoute.BackendGatewayID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelRoute.BackendGatewayID(childComplexity), true
 	case "ModelRoute.createdAt":
 		if e.ComplexityRoot.ModelRoute.CreatedAt == nil {
 			break
@@ -1809,6 +1894,7 @@ type ModelRoute {
   id: ID!
   name: String!
   modelAlias: String!
+  backendGatewayId: ID
   upstreams: [String!]!
   strategy: LoadBalanceStrategy!
   enabled: Boolean!
@@ -1838,6 +1924,7 @@ input UpsertUpstreamInput {
 input UpsertModelRouteInput {
   name: String!
   modelAlias: String!
+  backendGatewayId: ID
   upstreams: [String!]
   strategy: LoadBalanceStrategy
   enabled: Boolean
@@ -1884,11 +1971,27 @@ type ModelUsage {
   cost: Float!
 }
 
+type AgentUsage {
+  agentId: ID!
+  inputTokens: Int!
+  outputTokens: Int!
+  cost: Float!
+}
+
+type DateUsage {
+  date: String! # YYYY-MM-DD
+  inputTokens: Int!
+  outputTokens: Int!
+  cost: Float!
+}
+
 type MeteringSummary {
   totalInputTokens: Int!
   totalOutputTokens: Int!
   totalCost: Float!
   byModel: [ModelUsage!]!
+  byAgent: [AgentUsage!]!
+  byDate: [DateUsage!]!
 }
 
 input RecordTokenUsageInput {
@@ -2211,6 +2314,20 @@ func (ec *executionContext) childFields_AgentTemplate(ctx context.Context, field
 	return nil, fmt.Errorf("no field named %q was found under type AgentTemplate", field.Name)
 }
 
+func (ec *executionContext) childFields_AgentUsage(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "agentId":
+		return ec.fieldContext_AgentUsage_agentId(ctx, field)
+	case "inputTokens":
+		return ec.fieldContext_AgentUsage_inputTokens(ctx, field)
+	case "outputTokens":
+		return ec.fieldContext_AgentUsage_outputTokens(ctx, field)
+	case "cost":
+		return ec.fieldContext_AgentUsage_cost(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type AgentUsage", field.Name)
+}
+
 func (ec *executionContext) childFields_AuditConnection(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "items":
@@ -2251,6 +2368,20 @@ func (ec *executionContext) childFields_AuthPayload(ctx context.Context, field g
 		return ec.fieldContext_AuthPayload_mustChangePassword(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type AuthPayload", field.Name)
+}
+
+func (ec *executionContext) childFields_DateUsage(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "date":
+		return ec.fieldContext_DateUsage_date(ctx, field)
+	case "inputTokens":
+		return ec.fieldContext_DateUsage_inputTokens(ctx, field)
+	case "outputTokens":
+		return ec.fieldContext_DateUsage_outputTokens(ctx, field)
+	case "cost":
+		return ec.fieldContext_DateUsage_cost(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type DateUsage", field.Name)
 }
 
 func (ec *executionContext) childFields_DeployedAgent(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -2301,6 +2432,10 @@ func (ec *executionContext) childFields_MeteringSummary(ctx context.Context, fie
 		return ec.fieldContext_MeteringSummary_totalCost(ctx, field)
 	case "byModel":
 		return ec.fieldContext_MeteringSummary_byModel(ctx, field)
+	case "byAgent":
+		return ec.fieldContext_MeteringSummary_byAgent(ctx, field)
+	case "byDate":
+		return ec.fieldContext_MeteringSummary_byDate(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type MeteringSummary", field.Name)
 }
@@ -2313,6 +2448,8 @@ func (ec *executionContext) childFields_ModelRoute(ctx context.Context, field gr
 		return ec.fieldContext_ModelRoute_name(ctx, field)
 	case "modelAlias":
 		return ec.fieldContext_ModelRoute_modelAlias(ctx, field)
+	case "backendGatewayId":
+		return ec.fieldContext_ModelRoute_backendGatewayId(ctx, field)
 	case "upstreams":
 		return ec.fieldContext_ModelRoute_upstreams(ctx, field)
 	case "strategy":
@@ -3806,6 +3943,98 @@ func (ec *executionContext) fieldContext_AgentTemplate_createdAt(_ context.Conte
 	return graphql.NewScalarFieldContext("AgentTemplate", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
+func (ec *executionContext) _AgentUsage_agentId(ctx context.Context, field graphql.CollectedField, obj *model.AgentUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentUsage_agentId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.AgentID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentUsage_agentId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentUsage", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _AgentUsage_inputTokens(ctx context.Context, field graphql.CollectedField, obj *model.AgentUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentUsage_inputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.InputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentUsage_inputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentUsage", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _AgentUsage_outputTokens(ctx context.Context, field graphql.CollectedField, obj *model.AgentUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentUsage_outputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OutputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentUsage_outputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentUsage", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _AgentUsage_cost(ctx context.Context, field graphql.CollectedField, obj *model.AgentUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentUsage_cost(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Cost, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentUsage_cost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentUsage", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
 func (ec *executionContext) _AuditConnection_items(ctx context.Context, field graphql.CollectedField, obj *model.AuditConnection) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -4098,6 +4327,98 @@ func (ec *executionContext) _AuthPayload_mustChangePassword(ctx context.Context,
 }
 func (ec *executionContext) fieldContext_AuthPayload_mustChangePassword(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("AuthPayload", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _DateUsage_date(ctx context.Context, field graphql.CollectedField, obj *model.DateUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DateUsage_date(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Date, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DateUsage_date(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DateUsage", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _DateUsage_inputTokens(ctx context.Context, field graphql.CollectedField, obj *model.DateUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DateUsage_inputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.InputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DateUsage_inputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DateUsage", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DateUsage_outputTokens(ctx context.Context, field graphql.CollectedField, obj *model.DateUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DateUsage_outputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OutputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DateUsage_outputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DateUsage", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DateUsage_cost(ctx context.Context, field graphql.CollectedField, obj *model.DateUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DateUsage_cost(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Cost, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DateUsage_cost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DateUsage", field, false, false, errors.New("field of type Float does not have child fields"))
 }
 
 func (ec *executionContext) _DeployedAgent_agent(ctx context.Context, field graphql.CollectedField, obj *model.DeployedAgent) (ret graphql.Marshaler) {
@@ -4449,6 +4770,70 @@ func (ec *executionContext) fieldContext_MeteringSummary_byModel(_ context.Conte
 	return fc, nil
 }
 
+func (ec *executionContext) _MeteringSummary_byAgent(ctx context.Context, field graphql.CollectedField, obj *model.MeteringSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringSummary_byAgent(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ByAgent, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.AgentUsage) graphql.Marshaler {
+			return ec.marshalNAgentUsage2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentUsageᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringSummary_byAgent(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MeteringSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_AgentUsage(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MeteringSummary_byDate(ctx context.Context, field graphql.CollectedField, obj *model.MeteringSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringSummary_byDate(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ByDate, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.DateUsage) graphql.Marshaler {
+			return ec.marshalNDateUsage2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDateUsageᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringSummary_byDate(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MeteringSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_DateUsage(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ModelRoute_id(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -4516,6 +4901,29 @@ func (ec *executionContext) _ModelRoute_modelAlias(ctx context.Context, field gr
 }
 func (ec *executionContext) fieldContext_ModelRoute_modelAlias(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ModelRoute_backendGatewayId(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelRoute_backendGatewayId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.BackendGatewayID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOID2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_ModelRoute_backendGatewayId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type ID does not have child fields"))
 }
 
 func (ec *executionContext) _ModelRoute_upstreams(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
@@ -10455,7 +10863,7 @@ func (ec *executionContext) unmarshalInputUpsertModelRouteInput(ctx context.Cont
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "modelAlias", "upstreams", "strategy", "enabled"}
+	fieldsInOrder := [...]string{"name", "modelAlias", "backendGatewayId", "upstreams", "strategy", "enabled"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -10476,6 +10884,13 @@ func (ec *executionContext) unmarshalInputUpsertModelRouteInput(ctx context.Cont
 				return it, err
 			}
 			it.ModelAlias = data
+		case "backendGatewayId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("backendGatewayId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.BackendGatewayID = data
 		case "upstreams":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("upstreams"))
 			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
@@ -10833,6 +11248,60 @@ func (ec *executionContext) _AgentTemplate(ctx context.Context, sel ast.Selectio
 	return out
 }
 
+var agentUsageImplementors = []string{"AgentUsage"}
+
+func (ec *executionContext) _AgentUsage(ctx context.Context, sel ast.SelectionSet, obj *model.AgentUsage) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, agentUsageImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AgentUsage")
+		case "agentId":
+			out.Values[i] = ec._AgentUsage_agentId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "inputTokens":
+			out.Values[i] = ec._AgentUsage_inputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "outputTokens":
+			out.Values[i] = ec._AgentUsage_outputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cost":
+			out.Values[i] = ec._AgentUsage_cost(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var auditConnectionImplementors = []string{"AuditConnection"}
 
 func (ec *executionContext) _AuditConnection(ctx context.Context, sel ast.SelectionSet, obj *model.AuditConnection) graphql.Marshaler {
@@ -10969,6 +11438,60 @@ func (ec *executionContext) _AuthPayload(ctx context.Context, sel ast.SelectionS
 			}
 		case "mustChangePassword":
 			out.Values[i] = ec._AuthPayload_mustChangePassword(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var dateUsageImplementors = []string{"DateUsage"}
+
+func (ec *executionContext) _DateUsage(ctx context.Context, sel ast.SelectionSet, obj *model.DateUsage) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, dateUsageImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DateUsage")
+		case "date":
+			out.Values[i] = ec._DateUsage_date(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "inputTokens":
+			out.Values[i] = ec._DateUsage_inputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "outputTokens":
+			out.Values[i] = ec._DateUsage_outputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cost":
+			out.Values[i] = ec._DateUsage_cost(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -11178,6 +11701,16 @@ func (ec *executionContext) _MeteringSummary(ctx context.Context, sel ast.Select
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "byAgent":
+			out.Values[i] = ec._MeteringSummary_byAgent(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "byDate":
+			out.Values[i] = ec._MeteringSummary_byDate(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -11225,6 +11758,11 @@ func (ec *executionContext) _ModelRoute(ctx context.Context, sel ast.SelectionSe
 		case "modelAlias":
 			out.Values[i] = ec._ModelRoute_modelAlias(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "backendGatewayId":
+			out.Values[i] = ec._ModelRoute_backendGatewayId(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
 		case "upstreams":
@@ -13135,6 +13673,26 @@ func (ec *executionContext) marshalNAgentTemplateStatus2githubᚗcomᚋVMwareᚑ
 	return v
 }
 
+func (ec *executionContext) marshalNAgentUsage2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentUsage(ctx context.Context, sel ast.SelectionSet, v model.AgentUsage) graphql.Marshaler {
+	return ec._AgentUsage(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNAgentUsage2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentUsageᚄ(ctx context.Context, sel ast.SelectionSet, v []model.AgentUsage) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNAgentUsage2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentUsage(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) marshalNAuditConnection2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAuditConnection(ctx context.Context, sel ast.SelectionSet, v model.AuditConnection) graphql.Marshaler {
 	return ec._AuditConnection(ctx, sel, &v)
 }
@@ -13207,6 +13765,26 @@ func (ec *executionContext) unmarshalNCreateAgentInput2githubᚗcomᚋVMwareᚑA
 func (ec *executionContext) unmarshalNCreateUserInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCreateUserInput(ctx context.Context, v any) (model.CreateUserInput, error) {
 	res, err := ec.unmarshalInputCreateUserInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNDateUsage2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDateUsage(ctx context.Context, sel ast.SelectionSet, v model.DateUsage) graphql.Marshaler {
+	return ec._DateUsage(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNDateUsage2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDateUsageᚄ(ctx context.Context, sel ast.SelectionSet, v []model.DateUsage) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNDateUsage2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDateUsage(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalNDeployAgentInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDeployAgentInput(ctx context.Context, v any) (model.DeployAgentInput, error) {

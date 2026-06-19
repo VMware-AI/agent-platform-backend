@@ -19,7 +19,9 @@ func (ModelRoute) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		field.String("name").NotEmpty().Unique(),
 		field.String("model_alias").NotEmpty(), // outward model name
-		field.Strings("upstreams").Optional(),  // upstream names in the group
+		// 后端模型网关 (0619 第6页): which GatewayConnection serves this route.
+		field.UUID("gateway_connection_id", uuid.UUID{}).Optional().Nillable(),
+		field.Strings("upstreams").Optional(), // upstream names in the group
 		field.Enum("strategy").
 			Values("simple_shuffle", "latency", "usage_v2", "least_busy", "cost").
 			Default("simple_shuffle"),

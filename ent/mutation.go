@@ -6834,21 +6834,22 @@ func (m *MembershipMutation) ResetEdge(name string) error {
 // ModelRouteMutation represents an operation that mutates the ModelRoute nodes in the graph.
 type ModelRouteMutation struct {
 	config
-	op              Op
-	typ             string
-	id              *uuid.UUID
-	created_at      *time.Time
-	updated_at      *time.Time
-	name            *string
-	model_alias     *string
-	upstreams       *[]string
-	appendupstreams []string
-	strategy        *modelroute.Strategy
-	enabled         *bool
-	clearedFields   map[string]struct{}
-	done            bool
-	oldValue        func(context.Context) (*ModelRoute, error)
-	predicates      []predicate.ModelRoute
+	op                    Op
+	typ                   string
+	id                    *uuid.UUID
+	created_at            *time.Time
+	updated_at            *time.Time
+	name                  *string
+	model_alias           *string
+	gateway_connection_id *uuid.UUID
+	upstreams             *[]string
+	appendupstreams       []string
+	strategy              *modelroute.Strategy
+	enabled               *bool
+	clearedFields         map[string]struct{}
+	done                  bool
+	oldValue              func(context.Context) (*ModelRoute, error)
+	predicates            []predicate.ModelRoute
 }
 
 var _ ent.Mutation = (*ModelRouteMutation)(nil)
@@ -7099,6 +7100,55 @@ func (m *ModelRouteMutation) ResetModelAlias() {
 	m.model_alias = nil
 }
 
+// SetGatewayConnectionID sets the "gateway_connection_id" field.
+func (m *ModelRouteMutation) SetGatewayConnectionID(u uuid.UUID) {
+	m.gateway_connection_id = &u
+}
+
+// GatewayConnectionID returns the value of the "gateway_connection_id" field in the mutation.
+func (m *ModelRouteMutation) GatewayConnectionID() (r uuid.UUID, exists bool) {
+	v := m.gateway_connection_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldGatewayConnectionID returns the old "gateway_connection_id" field's value of the ModelRoute entity.
+// If the ModelRoute object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ModelRouteMutation) OldGatewayConnectionID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldGatewayConnectionID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldGatewayConnectionID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGatewayConnectionID: %w", err)
+	}
+	return oldValue.GatewayConnectionID, nil
+}
+
+// ClearGatewayConnectionID clears the value of the "gateway_connection_id" field.
+func (m *ModelRouteMutation) ClearGatewayConnectionID() {
+	m.gateway_connection_id = nil
+	m.clearedFields[modelroute.FieldGatewayConnectionID] = struct{}{}
+}
+
+// GatewayConnectionIDCleared returns if the "gateway_connection_id" field was cleared in this mutation.
+func (m *ModelRouteMutation) GatewayConnectionIDCleared() bool {
+	_, ok := m.clearedFields[modelroute.FieldGatewayConnectionID]
+	return ok
+}
+
+// ResetGatewayConnectionID resets all changes to the "gateway_connection_id" field.
+func (m *ModelRouteMutation) ResetGatewayConnectionID() {
+	m.gateway_connection_id = nil
+	delete(m.clearedFields, modelroute.FieldGatewayConnectionID)
+}
+
 // SetUpstreams sets the "upstreams" field.
 func (m *ModelRouteMutation) SetUpstreams(s []string) {
 	m.upstreams = &s
@@ -7270,7 +7320,7 @@ func (m *ModelRouteMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ModelRouteMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 8)
 	if m.created_at != nil {
 		fields = append(fields, modelroute.FieldCreatedAt)
 	}
@@ -7282,6 +7332,9 @@ func (m *ModelRouteMutation) Fields() []string {
 	}
 	if m.model_alias != nil {
 		fields = append(fields, modelroute.FieldModelAlias)
+	}
+	if m.gateway_connection_id != nil {
+		fields = append(fields, modelroute.FieldGatewayConnectionID)
 	}
 	if m.upstreams != nil {
 		fields = append(fields, modelroute.FieldUpstreams)
@@ -7308,6 +7361,8 @@ func (m *ModelRouteMutation) Field(name string) (ent.Value, bool) {
 		return m.Name()
 	case modelroute.FieldModelAlias:
 		return m.ModelAlias()
+	case modelroute.FieldGatewayConnectionID:
+		return m.GatewayConnectionID()
 	case modelroute.FieldUpstreams:
 		return m.Upstreams()
 	case modelroute.FieldStrategy:
@@ -7331,6 +7386,8 @@ func (m *ModelRouteMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldName(ctx)
 	case modelroute.FieldModelAlias:
 		return m.OldModelAlias(ctx)
+	case modelroute.FieldGatewayConnectionID:
+		return m.OldGatewayConnectionID(ctx)
 	case modelroute.FieldUpstreams:
 		return m.OldUpstreams(ctx)
 	case modelroute.FieldStrategy:
@@ -7373,6 +7430,13 @@ func (m *ModelRouteMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetModelAlias(v)
+		return nil
+	case modelroute.FieldGatewayConnectionID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetGatewayConnectionID(v)
 		return nil
 	case modelroute.FieldUpstreams:
 		v, ok := value.([]string)
@@ -7425,6 +7489,9 @@ func (m *ModelRouteMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *ModelRouteMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(modelroute.FieldGatewayConnectionID) {
+		fields = append(fields, modelroute.FieldGatewayConnectionID)
+	}
 	if m.FieldCleared(modelroute.FieldUpstreams) {
 		fields = append(fields, modelroute.FieldUpstreams)
 	}
@@ -7442,6 +7509,9 @@ func (m *ModelRouteMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ModelRouteMutation) ClearField(name string) error {
 	switch name {
+	case modelroute.FieldGatewayConnectionID:
+		m.ClearGatewayConnectionID()
+		return nil
 	case modelroute.FieldUpstreams:
 		m.ClearUpstreams()
 		return nil
@@ -7464,6 +7534,9 @@ func (m *ModelRouteMutation) ResetField(name string) error {
 		return nil
 	case modelroute.FieldModelAlias:
 		m.ResetModelAlias()
+		return nil
+	case modelroute.FieldGatewayConnectionID:
+		m.ResetGatewayConnectionID()
 		return nil
 	case modelroute.FieldUpstreams:
 		m.ResetUpstreams()

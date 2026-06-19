@@ -79,29 +79,67 @@ func (r *queryResolver) MeteringSummary(ctx context.Context, userID *string) (*m
 	var totalIn, totalOut int
 	var totalCost float64
 	byModel := map[string]*model.ModelUsage{}
-	order := []string{}
+	byAgent := map[string]*model.AgentUsage{}
+	byDate := map[string]*model.DateUsage{}
+	var modelOrder, agentOrder, dateOrder []string
 	for _, t := range rows {
 		totalIn += t.InputTokens
 		totalOut += t.OutputTokens
 		totalCost += t.Cost
+
 		mu, ok := byModel[t.Model]
 		if !ok {
 			mu = &model.ModelUsage{Model: t.Model}
 			byModel[t.Model] = mu
-			order = append(order, t.Model)
+			modelOrder = append(modelOrder, t.Model)
 		}
 		mu.InputTokens += t.InputTokens
 		mu.OutputTokens += t.OutputTokens
 		mu.Cost += t.Cost
+
+		if t.AgentID != nil {
+			aid := t.AgentID.String()
+			au, ok := byAgent[aid]
+			if !ok {
+				au = &model.AgentUsage{AgentID: aid}
+				byAgent[aid] = au
+				agentOrder = append(agentOrder, aid)
+			}
+			au.InputTokens += t.InputTokens
+			au.OutputTokens += t.OutputTokens
+			au.Cost += t.Cost
+		}
+
+		day := t.CreatedAt.Format("2006-01-02")
+		du, ok := byDate[day]
+		if !ok {
+			du = &model.DateUsage{Date: day}
+			byDate[day] = du
+			dateOrder = append(dateOrder, day)
+		}
+		du.InputTokens += t.InputTokens
+		du.OutputTokens += t.OutputTokens
+		du.Cost += t.Cost
 	}
-	models := make([]model.ModelUsage, 0, len(order))
-	for _, m := range order {
+
+	models := make([]model.ModelUsage, 0, len(modelOrder))
+	for _, m := range modelOrder {
 		models = append(models, *byModel[m])
+	}
+	agents := make([]model.AgentUsage, 0, len(agentOrder))
+	for _, a := range agentOrder {
+		agents = append(agents, *byAgent[a])
+	}
+	dates := make([]model.DateUsage, 0, len(dateOrder))
+	for _, d := range dateOrder {
+		dates = append(dates, *byDate[d])
 	}
 	return &model.MeteringSummary{
 		TotalInputTokens:  totalIn,
 		TotalOutputTokens: totalOut,
 		TotalCost:         totalCost,
 		ByModel:           models,
+		ByAgent:           agents,
+		ByDate:            dates,
 	}, nil
 }

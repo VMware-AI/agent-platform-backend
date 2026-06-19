@@ -61,6 +61,20 @@ func (_c *ModelRouteCreate) SetModelAlias(v string) *ModelRouteCreate {
 	return _c
 }
 
+// SetGatewayConnectionID sets the "gateway_connection_id" field.
+func (_c *ModelRouteCreate) SetGatewayConnectionID(v uuid.UUID) *ModelRouteCreate {
+	_c.mutation.SetGatewayConnectionID(v)
+	return _c
+}
+
+// SetNillableGatewayConnectionID sets the "gateway_connection_id" field if the given value is not nil.
+func (_c *ModelRouteCreate) SetNillableGatewayConnectionID(v *uuid.UUID) *ModelRouteCreate {
+	if v != nil {
+		_c.SetGatewayConnectionID(*v)
+	}
+	return _c
+}
+
 // SetUpstreams sets the "upstreams" field.
 func (_c *ModelRouteCreate) SetUpstreams(v []string) *ModelRouteCreate {
 	_c.mutation.SetUpstreams(v)
@@ -251,6 +265,10 @@ func (_c *ModelRouteCreate) createSpec() (*ModelRoute, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ModelAlias(); ok {
 		_spec.SetField(modelroute.FieldModelAlias, field.TypeString, value)
 		_node.ModelAlias = value
+	}
+	if value, ok := _c.mutation.GatewayConnectionID(); ok {
+		_spec.SetField(modelroute.FieldGatewayConnectionID, field.TypeUUID, value)
+		_node.GatewayConnectionID = &value
 	}
 	if value, ok := _c.mutation.Upstreams(); ok {
 		_spec.SetField(modelroute.FieldUpstreams, field.TypeJSON, value)

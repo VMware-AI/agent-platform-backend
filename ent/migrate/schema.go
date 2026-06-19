@@ -233,6 +233,7 @@ var (
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "name", Type: field.TypeString, Unique: true},
 		{Name: "model_alias", Type: field.TypeString},
+		{Name: "gateway_connection_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "upstreams", Type: field.TypeJSON, Nullable: true},
 		{Name: "strategy", Type: field.TypeEnum, Enums: []string{"simple_shuffle", "latency", "usage_v2", "least_busy", "cost"}, Default: "simple_shuffle"},
 		{Name: "enabled", Type: field.TypeBool, Default: true},

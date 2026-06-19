@@ -50,6 +50,7 @@ type ModelRoute {
   id: ID!
   name: String!
   modelAlias: String!
+  backendGatewayId: ID
   upstreams: [String!]!
   strategy: LoadBalanceStrategy!
   enabled: Boolean!
@@ -79,6 +80,7 @@ input UpsertUpstreamInput {
 input UpsertModelRouteInput {
   name: String!
   modelAlias: String!
+  backendGatewayId: ID
   upstreams: [String!]
   strategy: LoadBalanceStrategy
   enabled: Boolean

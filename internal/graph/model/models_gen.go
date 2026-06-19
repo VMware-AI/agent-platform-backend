@@ -40,6 +40,13 @@ type AgentTemplate struct {
 	CreatedAt      time.Time           `json:"createdAt"`
 }
 
+type AgentUsage struct {
+	AgentID      string  `json:"agentId"`
+	InputTokens  int     `json:"inputTokens"`
+	OutputTokens int     `json:"outputTokens"`
+	Cost         float64 `json:"cost"`
+}
+
 type AuditConnection struct {
 	Items []AuditLog `json:"items"`
 	Total int        `json:"total"`
@@ -74,6 +81,13 @@ type CreateUserInput struct {
 	Password string  `json:"password"`
 	Role     Role    `json:"role"`
 	TenantID *string `json:"tenantId,omitempty"`
+}
+
+type DateUsage struct {
+	Date         string  `json:"date"`
+	InputTokens  int     `json:"inputTokens"`
+	OutputTokens int     `json:"outputTokens"`
+	Cost         float64 `json:"cost"`
 }
 
 type DeployAgentInput struct {
@@ -120,16 +134,19 @@ type MeteringSummary struct {
 	TotalOutputTokens int          `json:"totalOutputTokens"`
 	TotalCost         float64      `json:"totalCost"`
 	ByModel           []ModelUsage `json:"byModel"`
+	ByAgent           []AgentUsage `json:"byAgent"`
+	ByDate            []DateUsage  `json:"byDate"`
 }
 
 type ModelRoute struct {
-	ID         string              `json:"id"`
-	Name       string              `json:"name"`
-	ModelAlias string              `json:"modelAlias"`
-	Upstreams  []string            `json:"upstreams"`
-	Strategy   LoadBalanceStrategy `json:"strategy"`
-	Enabled    bool                `json:"enabled"`
-	CreatedAt  time.Time           `json:"createdAt"`
+	ID               string              `json:"id"`
+	Name             string              `json:"name"`
+	ModelAlias       string              `json:"modelAlias"`
+	BackendGatewayID *string             `json:"backendGatewayId,omitempty"`
+	Upstreams        []string            `json:"upstreams"`
+	Strategy         LoadBalanceStrategy `json:"strategy"`
+	Enabled          bool                `json:"enabled"`
+	CreatedAt        time.Time           `json:"createdAt"`
 }
 
 type ModelUsage struct {
@@ -252,11 +269,12 @@ type UpsertAgentTemplateInput struct {
 }
 
 type UpsertModelRouteInput struct {
-	Name       string               `json:"name"`
-	ModelAlias string               `json:"modelAlias"`
-	Upstreams  []string             `json:"upstreams,omitempty"`
-	Strategy   *LoadBalanceStrategy `json:"strategy,omitempty"`
-	Enabled    *bool                `json:"enabled,omitempty"`
+	Name             string               `json:"name"`
+	ModelAlias       string               `json:"modelAlias"`
+	BackendGatewayID *string              `json:"backendGatewayId,omitempty"`
+	Upstreams        []string             `json:"upstreams,omitempty"`
+	Strategy         *LoadBalanceStrategy `json:"strategy,omitempty"`
+	Enabled          *bool                `json:"enabled,omitempty"`
 }
 
 type UpsertRateLimitPolicyInput struct {

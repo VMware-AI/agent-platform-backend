@@ -18,11 +18,27 @@ type ModelUsage {
   cost: Float!
 }
 
+type AgentUsage {
+  agentId: ID!
+  inputTokens: Int!
+  outputTokens: Int!
+  cost: Float!
+}
+
+type DateUsage {
+  date: String! # YYYY-MM-DD
+  inputTokens: Int!
+  outputTokens: Int!
+  cost: Float!
+}
+
 type MeteringSummary {
   totalInputTokens: Int!
   totalOutputTokens: Int!
   totalCost: Float!
   byModel: [ModelUsage!]!
+  byAgent: [AgentUsage!]!
+  byDate: [DateUsage!]!
 }
 
 input RecordTokenUsageInput {

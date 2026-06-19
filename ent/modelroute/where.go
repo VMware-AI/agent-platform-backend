@@ -75,6 +75,11 @@ func ModelAlias(v string) predicate.ModelRoute {
 	return predicate.ModelRoute(sql.FieldEQ(FieldModelAlias, v))
 }
 
+// GatewayConnectionID applies equality check predicate on the "gateway_connection_id" field. It's identical to GatewayConnectionIDEQ.
+func GatewayConnectionID(v uuid.UUID) predicate.ModelRoute {
+	return predicate.ModelRoute(sql.FieldEQ(FieldGatewayConnectionID, v))
+}
+
 // Enabled applies equality check predicate on the "enabled" field. It's identical to EnabledEQ.
 func Enabled(v bool) predicate.ModelRoute {
 	return predicate.ModelRoute(sql.FieldEQ(FieldEnabled, v))
@@ -288,6 +293,56 @@ func ModelAliasEqualFold(v string) predicate.ModelRoute {
 // ModelAliasContainsFold applies the ContainsFold predicate on the "model_alias" field.
 func ModelAliasContainsFold(v string) predicate.ModelRoute {
 	return predicate.ModelRoute(sql.FieldContainsFold(FieldModelAlias, v))
+}
+
+// GatewayConnectionIDEQ applies the EQ predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDEQ(v uuid.UUID) predicate.ModelRoute {
+	return predicate.ModelRoute(sql.FieldEQ(FieldGatewayConnectionID, v))
+}
+
+// GatewayConnectionIDNEQ applies the NEQ predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDNEQ(v uuid.UUID) predicate.ModelRoute {
+	return predicate.ModelRoute(sql.FieldNEQ(FieldGatewayConnectionID, v))
+}
+
+// GatewayConnectionIDIn applies the In predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDIn(vs ...uuid.UUID) predicate.ModelRoute {
+	return predicate.ModelRoute(sql.FieldIn(FieldGatewayConnectionID, vs...))
+}
+
+// GatewayConnectionIDNotIn applies the NotIn predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDNotIn(vs ...uuid.UUID) predicate.ModelRoute {
+	return predicate.ModelRoute(sql.FieldNotIn(FieldGatewayConnectionID, vs...))
+}
+
+// GatewayConnectionIDGT applies the GT predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDGT(v uuid.UUID) predicate.ModelRoute {
+	return predicate.ModelRoute(sql.FieldGT(FieldGatewayConnectionID, v))
+}
+
+// GatewayConnectionIDGTE applies the GTE predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDGTE(v uuid.UUID) predicate.ModelRoute {
+	return predicate.ModelRoute(sql.FieldGTE(FieldGatewayConnectionID, v))
+}
+
+// GatewayConnectionIDLT applies the LT predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDLT(v uuid.UUID) predicate.ModelRoute {
+	return predicate.ModelRoute(sql.FieldLT(FieldGatewayConnectionID, v))
+}
+
+// GatewayConnectionIDLTE applies the LTE predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDLTE(v uuid.UUID) predicate.ModelRoute {
+	return predicate.ModelRoute(sql.FieldLTE(FieldGatewayConnectionID, v))
+}
+
+// GatewayConnectionIDIsNil applies the IsNil predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDIsNil() predicate.ModelRoute {
+	return predicate.ModelRoute(sql.FieldIsNull(FieldGatewayConnectionID))
+}
+
+// GatewayConnectionIDNotNil applies the NotNil predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDNotNil() predicate.ModelRoute {
+	return predicate.ModelRoute(sql.FieldNotNull(FieldGatewayConnectionID))
 }
 
 // UpstreamsIsNil applies the IsNil predicate on the "upstreams" field.

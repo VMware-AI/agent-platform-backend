@@ -23,6 +23,8 @@ const (
 	FieldName = "name"
 	// FieldModelAlias holds the string denoting the model_alias field in the database.
 	FieldModelAlias = "model_alias"
+	// FieldGatewayConnectionID holds the string denoting the gateway_connection_id field in the database.
+	FieldGatewayConnectionID = "gateway_connection_id"
 	// FieldUpstreams holds the string denoting the upstreams field in the database.
 	FieldUpstreams = "upstreams"
 	// FieldStrategy holds the string denoting the strategy field in the database.
@@ -40,6 +42,7 @@ var Columns = []string{
 	FieldUpdatedAt,
 	FieldName,
 	FieldModelAlias,
+	FieldGatewayConnectionID,
 	FieldUpstreams,
 	FieldStrategy,
 	FieldEnabled,
@@ -127,6 +130,11 @@ func ByName(opts ...sql.OrderTermOption) OrderOption {
 // ByModelAlias orders the results by the model_alias field.
 func ByModelAlias(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldModelAlias, opts...).ToFunc()
+}
+
+// ByGatewayConnectionID orders the results by the gateway_connection_id field.
+func ByGatewayConnectionID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldGatewayConnectionID, opts...).ToFunc()
 }
 
 // ByStrategy orders the results by the strategy field.

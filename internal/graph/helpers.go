@@ -279,7 +279,7 @@ func toModelModelRoute(r *ent.ModelRoute) *model.ModelRoute {
 	if ups == nil {
 		ups = []string{}
 	}
-	return &model.ModelRoute{
+	m := &model.ModelRoute{
 		ID:         r.ID.String(),
 		Name:       r.Name,
 		ModelAlias: r.ModelAlias,
@@ -288,6 +288,11 @@ func toModelModelRoute(r *ent.ModelRoute) *model.ModelRoute {
 		Enabled:    r.Enabled,
 		CreatedAt:  r.CreatedAt,
 	}
+	if r.GatewayConnectionID != nil {
+		g := r.GatewayConnectionID.String()
+		m.BackendGatewayID = &g
+	}
+	return m
 }
 
 func toModelRouterTier(t *ent.RouterTier) *model.RouterTier {
