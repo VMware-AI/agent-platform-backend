@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -21,17 +20,8 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
-	// EdgeDepartments holds the string denoting the departments edge name in mutations.
-	EdgeDepartments = "departments"
 	// Table holds the table name of the tenant in the database.
 	Table = "tenants"
-	// DepartmentsTable is the table that holds the departments relation/edge.
-	DepartmentsTable = "departments"
-	// DepartmentsInverseTable is the table name for the Department entity.
-	// It exists in this package in order to avoid circular dependency with the "department" package.
-	DepartmentsInverseTable = "departments"
-	// DepartmentsColumn is the table column denoting the departments relation/edge.
-	DepartmentsColumn = "tenant_id"
 )
 
 // Columns holds all SQL columns for tenant fields.
@@ -86,25 +76,4 @@ func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByName orders the results by the name field.
 func ByName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldName, opts...).ToFunc()
-}
-
-// ByDepartmentsCount orders the results by departments count.
-func ByDepartmentsCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newDepartmentsStep(), opts...)
-	}
-}
-
-// ByDepartments orders the results by departments terms.
-func ByDepartments(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newDepartmentsStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-func newDepartmentsStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(DepartmentsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, DepartmentsTable, DepartmentsColumn),
-	)
 }

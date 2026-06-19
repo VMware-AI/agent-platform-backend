@@ -99,6 +99,12 @@ type CreateAgentInput struct {
 	ResourcePoolID *string `json:"resourcePoolId,omitempty"`
 }
 
+type CreateDepartmentInput struct {
+	TenantID  *string  `json:"tenantId,omitempty"`
+	Name      string   `json:"name"`
+	MaxBudget *float64 `json:"maxBudget,omitempty"`
+}
+
 type CreateUserInput struct {
 	Username string  `json:"username"`
 	Email    string  `json:"email"`
@@ -112,6 +118,14 @@ type DateUsage struct {
 	InputTokens  int     `json:"inputTokens"`
 	OutputTokens int     `json:"outputTokens"`
 	Cost         float64 `json:"cost"`
+}
+
+type Department struct {
+	ID            string    `json:"id"`
+	TenantID      *string   `json:"tenantId,omitempty"`
+	Name          string    `json:"name"`
+	LitellmTeamID *string   `json:"litellmTeamId,omitempty"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 type DeployAgentInput struct {
@@ -160,6 +174,13 @@ type IssueVirtualKeyInput struct {
 type IssuedVirtualKey struct {
 	VirtualKey *VirtualKey `json:"virtualKey"`
 	Secret     string      `json:"secret"`
+}
+
+type Membership struct {
+	ID           string         `json:"id"`
+	UserID       string         `json:"userId"`
+	DepartmentID string         `json:"departmentId"`
+	Role         MembershipRole `json:"role"`
 }
 
 type MeteringSummary struct {
@@ -763,6 +784,61 @@ func (e *LoadBalanceStrategy) UnmarshalJSON(b []byte) error {
 }
 
 func (e LoadBalanceStrategy) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type MembershipRole string
+
+const (
+	MembershipRoleUser      MembershipRole = "user"
+	MembershipRoleDeptAdmin MembershipRole = "dept_admin"
+)
+
+var AllMembershipRole = []MembershipRole{
+	MembershipRoleUser,
+	MembershipRoleDeptAdmin,
+}
+
+func (e MembershipRole) IsValid() bool {
+	switch e {
+	case MembershipRoleUser, MembershipRoleDeptAdmin:
+		return true
+	}
+	return false
+}
+
+func (e MembershipRole) String() string {
+	return string(e)
+}
+
+func (e *MembershipRole) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = MembershipRole(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid MembershipRole", str)
+	}
+	return nil
+}
+
+func (e MembershipRole) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *MembershipRole) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e MembershipRole) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

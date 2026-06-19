@@ -10,7 +10,6 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/role"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/google/uuid"
@@ -166,21 +165,6 @@ func (_c *UserCreate) AddRoles(v ...*Role) *UserCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddRoleIDs(ids...)
-}
-
-// AddMembershipIDs adds the "memberships" edge to the Membership entity by IDs.
-func (_c *UserCreate) AddMembershipIDs(ids ...int) *UserCreate {
-	_c.mutation.AddMembershipIDs(ids...)
-	return _c
-}
-
-// AddMemberships adds the "memberships" edges to the Membership entity.
-func (_c *UserCreate) AddMemberships(v ...*Membership) *UserCreate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddMembershipIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -374,22 +358,6 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(role.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.MembershipsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.MembershipsTable,
-			Columns: []string{user.MembershipsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(membership.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

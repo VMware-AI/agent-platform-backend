@@ -342,6 +342,42 @@ func toModelImage(i *ent.Image) *model.Image {
 	return m
 }
 
+func toModelDepartment(d *ent.Department) *model.Department {
+	m := &model.Department{ID: d.ID.String(), Name: d.Name, CreatedAt: d.CreatedAt}
+	if d.TenantID != nil {
+		t := d.TenantID.String()
+		m.TenantID = &t
+	}
+	if d.LitellmTeamID != "" {
+		l := d.LitellmTeamID
+		m.LitellmTeamID = &l
+	}
+	return m
+}
+
+func toModelMembership(m *ent.Membership) *model.Membership {
+	return &model.Membership{
+		ID:           m.ID.String(),
+		UserID:       m.UserID.String(),
+		DepartmentID: m.DepartmentID.String(),
+		Role:         entMembershipRoleToGQL(string(m.Role)),
+	}
+}
+
+func gqlMembershipRoleToEnt(r model.MembershipRole) string {
+	if r == model.MembershipRoleDeptAdmin {
+		return "dept-admin"
+	}
+	return string(r)
+}
+
+func entMembershipRoleToGQL(s string) model.MembershipRole {
+	if s == "dept-admin" {
+		return model.MembershipRoleDeptAdmin
+	}
+	return model.MembershipRole(s)
+}
+
 // connectPool resolves a resource pool's credentials and dials its vCenter.
 func (r *Resolver) connectPool(ctx context.Context, pool *ent.ResourcePool) (VCenterClient, error) {
 	if r.Secrets == nil || r.VCenterConnect == nil {

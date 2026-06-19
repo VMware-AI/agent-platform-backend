@@ -11,8 +11,6 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/VMware-AI/agent-platform-backend/ent/department"
-	"github.com/VMware-AI/agent-platform-backend/ent/membership"
-	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
 	"github.com/google/uuid"
 )
 
@@ -57,6 +55,14 @@ func (_c *DepartmentCreate) SetTenantID(v uuid.UUID) *DepartmentCreate {
 	return _c
 }
 
+// SetNillableTenantID sets the "tenant_id" field if the given value is not nil.
+func (_c *DepartmentCreate) SetNillableTenantID(v *uuid.UUID) *DepartmentCreate {
+	if v != nil {
+		_c.SetTenantID(*v)
+	}
+	return _c
+}
+
 // SetName sets the "name" field.
 func (_c *DepartmentCreate) SetName(v string) *DepartmentCreate {
 	_c.mutation.SetName(v)
@@ -89,26 +95,6 @@ func (_c *DepartmentCreate) SetNillableID(v *uuid.UUID) *DepartmentCreate {
 		_c.SetID(*v)
 	}
 	return _c
-}
-
-// SetTenant sets the "tenant" edge to the Tenant entity.
-func (_c *DepartmentCreate) SetTenant(v *Tenant) *DepartmentCreate {
-	return _c.SetTenantID(v.ID)
-}
-
-// AddMembershipIDs adds the "memberships" edge to the Membership entity by IDs.
-func (_c *DepartmentCreate) AddMembershipIDs(ids ...int) *DepartmentCreate {
-	_c.mutation.AddMembershipIDs(ids...)
-	return _c
-}
-
-// AddMemberships adds the "memberships" edges to the Membership entity.
-func (_c *DepartmentCreate) AddMemberships(v ...*Membership) *DepartmentCreate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddMembershipIDs(ids...)
 }
 
 // Mutation returns the DepartmentMutation object of the builder.
@@ -168,9 +154,6 @@ func (_c *DepartmentCreate) check() error {
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Department.updated_at"`)}
 	}
-	if _, ok := _c.mutation.TenantID(); !ok {
-		return &ValidationError{Name: "tenant_id", err: errors.New(`ent: missing required field "Department.tenant_id"`)}
-	}
 	if _, ok := _c.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Department.name"`)}
 	}
@@ -178,9 +161,6 @@ func (_c *DepartmentCreate) check() error {
 		if err := department.NameValidator(v); err != nil {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Department.name": %w`, err)}
 		}
-	}
-	if len(_c.mutation.TenantIDs()) == 0 {
-		return &ValidationError{Name: "tenant", err: errors.New(`ent: missing required edge "Department.tenant"`)}
 	}
 	return nil
 }
@@ -225,6 +205,10 @@ func (_c *DepartmentCreate) createSpec() (*Department, *sqlgraph.CreateSpec) {
 		_spec.SetField(department.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
+	if value, ok := _c.mutation.TenantID(); ok {
+		_spec.SetField(department.FieldTenantID, field.TypeUUID, value)
+		_node.TenantID = &value
+	}
 	if value, ok := _c.mutation.Name(); ok {
 		_spec.SetField(department.FieldName, field.TypeString, value)
 		_node.Name = value
@@ -232,39 +216,6 @@ func (_c *DepartmentCreate) createSpec() (*Department, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.LitellmTeamID(); ok {
 		_spec.SetField(department.FieldLitellmTeamID, field.TypeString, value)
 		_node.LitellmTeamID = value
-	}
-	if nodes := _c.mutation.TenantIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   department.TenantTable,
-			Columns: []string{department.TenantColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(tenant.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.TenantID = nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.MembershipsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   department.MembershipsTable,
-			Columns: []string{department.MembershipsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(membership.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

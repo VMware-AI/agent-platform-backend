@@ -1153,38 +1153,6 @@ func (c *DepartmentClient) GetX(ctx context.Context, id uuid.UUID) *Department {
 	return obj
 }
 
-// QueryTenant queries the tenant edge of a Department.
-func (c *DepartmentClient) QueryTenant(_m *Department) *TenantQuery {
-	query := (&TenantClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(department.Table, department.FieldID, id),
-			sqlgraph.To(tenant.Table, tenant.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, department.TenantTable, department.TenantColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryMemberships queries the memberships edge of a Department.
-func (c *DepartmentClient) QueryMemberships(_m *Department) *MembershipQuery {
-	query := (&MembershipClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(department.Table, department.FieldID, id),
-			sqlgraph.To(membership.Table, membership.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, department.MembershipsTable, department.MembershipsColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // Hooks returns the client hooks.
 func (c *DepartmentClient) Hooks() []Hook {
 	return c.hooks.Department
@@ -1537,7 +1505,7 @@ func (c *MembershipClient) UpdateOne(_m *Membership) *MembershipUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *MembershipClient) UpdateOneID(id int) *MembershipUpdateOne {
+func (c *MembershipClient) UpdateOneID(id uuid.UUID) *MembershipUpdateOne {
 	mutation := newMembershipMutation(c.config, OpUpdateOne, withMembershipID(id))
 	return &MembershipUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -1554,7 +1522,7 @@ func (c *MembershipClient) DeleteOne(_m *Membership) *MembershipDeleteOne {
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *MembershipClient) DeleteOneID(id int) *MembershipDeleteOne {
+func (c *MembershipClient) DeleteOneID(id uuid.UUID) *MembershipDeleteOne {
 	builder := c.Delete().Where(membership.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -1571,49 +1539,17 @@ func (c *MembershipClient) Query() *MembershipQuery {
 }
 
 // Get returns a Membership entity by its id.
-func (c *MembershipClient) Get(ctx context.Context, id int) (*Membership, error) {
+func (c *MembershipClient) Get(ctx context.Context, id uuid.UUID) (*Membership, error) {
 	return c.Query().Where(membership.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *MembershipClient) GetX(ctx context.Context, id int) *Membership {
+func (c *MembershipClient) GetX(ctx context.Context, id uuid.UUID) *Membership {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
 	}
 	return obj
-}
-
-// QueryUser queries the user edge of a Membership.
-func (c *MembershipClient) QueryUser(_m *Membership) *UserQuery {
-	query := (&UserClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(membership.Table, membership.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, membership.UserTable, membership.UserColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryDepartment queries the department edge of a Membership.
-func (c *MembershipClient) QueryDepartment(_m *Membership) *DepartmentQuery {
-	query := (&DepartmentClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(membership.Table, membership.FieldID, id),
-			sqlgraph.To(department.Table, department.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, membership.DepartmentTable, membership.DepartmentColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
 }
 
 // Hooks returns the client hooks.
@@ -2861,22 +2797,6 @@ func (c *TenantClient) GetX(ctx context.Context, id uuid.UUID) *Tenant {
 	return obj
 }
 
-// QueryDepartments queries the departments edge of a Tenant.
-func (c *TenantClient) QueryDepartments(_m *Tenant) *DepartmentQuery {
-	query := (&DepartmentClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(tenant.Table, tenant.FieldID, id),
-			sqlgraph.To(department.Table, department.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, tenant.DepartmentsTable, tenant.DepartmentsColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // Hooks returns the client hooks.
 func (c *TenantClient) Hooks() []Hook {
 	return c.hooks.Tenant
@@ -3285,22 +3205,6 @@ func (c *UserClient) QueryRoles(_m *User) *RoleQuery {
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(role.Table, role.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, false, user.RolesTable, user.RolesPrimaryKey...),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryMemberships queries the memberships edge of a User.
-func (c *UserClient) QueryMemberships(_m *User) *MembershipQuery {
-	query := (&MembershipClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(membership.Table, membership.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.MembershipsTable, user.MembershipsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

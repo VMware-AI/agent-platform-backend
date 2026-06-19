@@ -261,6 +261,10 @@ func init() {
 	membership.DefaultUpdatedAt = membershipDescUpdatedAt.Default.(func() time.Time)
 	// membership.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	membership.UpdateDefaultUpdatedAt = membershipDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// membershipDescID is the schema descriptor for id field.
+	membershipDescID := membershipFields[0].Descriptor()
+	// membership.DefaultID holds the default value on creation for the id field.
+	membership.DefaultID = membershipDescID.Default.(func() uuid.UUID)
 	modelrouteMixin := schema.ModelRoute{}.Mixin()
 	modelrouteMixinFields0 := modelrouteMixin[0].Fields()
 	_ = modelrouteMixinFields0

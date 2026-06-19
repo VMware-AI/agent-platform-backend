@@ -10,7 +10,6 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/VMware-AI/agent-platform-backend/ent/department"
-	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
 	"github.com/google/uuid"
 )
 
@@ -24,46 +23,12 @@ type Department struct {
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// TenantID holds the value of the "tenant_id" field.
-	TenantID uuid.UUID `json:"tenant_id,omitempty"`
+	TenantID *uuid.UUID `json:"tenant_id,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
 	// LitellmTeamID holds the value of the "litellm_team_id" field.
 	LitellmTeamID string `json:"litellm_team_id,omitempty"`
-	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the DepartmentQuery when eager-loading is set.
-	Edges        DepartmentEdges `json:"edges"`
-	selectValues sql.SelectValues
-}
-
-// DepartmentEdges holds the relations/edges for other nodes in the graph.
-type DepartmentEdges struct {
-	// Tenant holds the value of the tenant edge.
-	Tenant *Tenant `json:"tenant,omitempty"`
-	// Memberships holds the value of the memberships edge.
-	Memberships []*Membership `json:"memberships,omitempty"`
-	// loadedTypes holds the information for reporting if a
-	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
-}
-
-// TenantOrErr returns the Tenant value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e DepartmentEdges) TenantOrErr() (*Tenant, error) {
-	if e.Tenant != nil {
-		return e.Tenant, nil
-	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: tenant.Label}
-	}
-	return nil, &NotLoadedError{edge: "tenant"}
-}
-
-// MembershipsOrErr returns the Memberships value or an error if the edge
-// was not loaded in eager-loading.
-func (e DepartmentEdges) MembershipsOrErr() ([]*Membership, error) {
-	if e.loadedTypes[1] {
-		return e.Memberships, nil
-	}
-	return nil, &NotLoadedError{edge: "memberships"}
+	selectValues  sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -71,11 +36,13 @@ func (*Department) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case department.FieldTenantID:
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case department.FieldName, department.FieldLitellmTeamID:
 			values[i] = new(sql.NullString)
 		case department.FieldCreatedAt, department.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case department.FieldID, department.FieldTenantID:
+		case department.FieldID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -111,10 +78,11 @@ func (_m *Department) assignValues(columns []string, values []any) error {
 				_m.UpdatedAt = value.Time
 			}
 		case department.FieldTenantID:
-			if value, ok := values[i].(*uuid.UUID); !ok {
+			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field tenant_id", values[i])
-			} else if value != nil {
-				_m.TenantID = *value
+			} else if value.Valid {
+				_m.TenantID = new(uuid.UUID)
+				*_m.TenantID = *value.S.(*uuid.UUID)
 			}
 		case department.FieldName:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -139,16 +107,6 @@ func (_m *Department) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *Department) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
-}
-
-// QueryTenant queries the "tenant" edge of the Department entity.
-func (_m *Department) QueryTenant() *TenantQuery {
-	return NewDepartmentClient(_m.config).QueryTenant(_m)
-}
-
-// QueryMemberships queries the "memberships" edge of the Department entity.
-func (_m *Department) QueryMemberships() *MembershipQuery {
-	return NewDepartmentClient(_m.config).QueryMemberships(_m)
 }
 
 // Update returns a builder for updating this Department.
@@ -180,8 +138,10 @@ func (_m *Department) String() string {
 	builder.WriteString("updated_at=")
 	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
-	builder.WriteString("tenant_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.TenantID))
+	if v := _m.TenantID; v != nil {
+		builder.WriteString("tenant_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("name=")
 	builder.WriteString(_m.Name)

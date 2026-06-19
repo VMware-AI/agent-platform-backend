@@ -138,23 +138,15 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "name", Type: field.TypeString},
 		{Name: "litellm_team_id", Type: field.TypeString, Nullable: true},
-		{Name: "tenant_id", Type: field.TypeUUID},
 	}
 	// DepartmentsTable holds the schema information for the "departments" table.
 	DepartmentsTable = &schema.Table{
 		Name:       "departments",
 		Columns:    DepartmentsColumns,
 		PrimaryKey: []*schema.Column{DepartmentsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "departments_tenants_departments",
-				Columns:    []*schema.Column{DepartmentsColumns[5]},
-				RefColumns: []*schema.Column{TenantsColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
 	}
 	// GatewayConnectionsColumns holds the columns for the "gateway_connections" table.
 	GatewayConnectionsColumns = []*schema.Column{
@@ -191,30 +183,28 @@ var (
 	}
 	// MembershipsColumns holds the columns for the "memberships" table.
 	MembershipsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "user_id", Type: field.TypeUUID},
+		{Name: "department_id", Type: field.TypeUUID},
 		{Name: "role", Type: field.TypeEnum, Enums: []string{"user", "dept-admin"}, Default: "user"},
-		{Name: "department_memberships", Type: field.TypeUUID},
-		{Name: "user_memberships", Type: field.TypeUUID},
 	}
 	// MembershipsTable holds the schema information for the "memberships" table.
 	MembershipsTable = &schema.Table{
 		Name:       "memberships",
 		Columns:    MembershipsColumns,
 		PrimaryKey: []*schema.Column{MembershipsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
+		Indexes: []*schema.Index{
 			{
-				Symbol:     "memberships_departments_memberships",
-				Columns:    []*schema.Column{MembershipsColumns[4]},
-				RefColumns: []*schema.Column{DepartmentsColumns[0]},
-				OnDelete:   schema.NoAction,
+				Name:    "membership_user_id_department_id",
+				Unique:  true,
+				Columns: []*schema.Column{MembershipsColumns[3], MembershipsColumns[4]},
 			},
 			{
-				Symbol:     "memberships_users_memberships",
-				Columns:    []*schema.Column{MembershipsColumns[5]},
-				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.NoAction,
+				Name:    "membership_department_id",
+				Unique:  false,
+				Columns: []*schema.Column{MembershipsColumns[4]},
 			},
 		},
 	}
@@ -580,9 +570,6 @@ var (
 )
 
 func init() {
-	DepartmentsTable.ForeignKeys[0].RefTable = TenantsTable
-	MembershipsTable.ForeignKeys[0].RefTable = DepartmentsTable
-	MembershipsTable.ForeignKeys[1].RefTable = UsersTable
 	RolePermissionsTable.ForeignKeys[0].RefTable = RolesTable
 	RolePermissionsTable.ForeignKeys[1].RefTable = PermissionsTable
 	UserRolesTable.ForeignKeys[0].RefTable = UsersTable

@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -12,7 +11,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/VMware-AI/agent-platform-backend/ent/department"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
 	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
 	"github.com/google/uuid"
@@ -21,11 +19,10 @@ import (
 // TenantQuery is the builder for querying Tenant entities.
 type TenantQuery struct {
 	config
-	ctx             *QueryContext
-	order           []tenant.OrderOption
-	inters          []Interceptor
-	predicates      []predicate.Tenant
-	withDepartments *DepartmentQuery
+	ctx        *QueryContext
+	order      []tenant.OrderOption
+	inters     []Interceptor
+	predicates []predicate.Tenant
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -60,28 +57,6 @@ func (_q *TenantQuery) Unique(unique bool) *TenantQuery {
 func (_q *TenantQuery) Order(o ...tenant.OrderOption) *TenantQuery {
 	_q.order = append(_q.order, o...)
 	return _q
-}
-
-// QueryDepartments chains the current query on the "departments" edge.
-func (_q *TenantQuery) QueryDepartments() *DepartmentQuery {
-	query := (&DepartmentClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(tenant.Table, tenant.FieldID, selector),
-			sqlgraph.To(department.Table, department.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, tenant.DepartmentsTable, tenant.DepartmentsColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
 }
 
 // First returns the first Tenant entity from the query.
@@ -271,27 +246,15 @@ func (_q *TenantQuery) Clone() *TenantQuery {
 		return nil
 	}
 	return &TenantQuery{
-		config:          _q.config,
-		ctx:             _q.ctx.Clone(),
-		order:           append([]tenant.OrderOption{}, _q.order...),
-		inters:          append([]Interceptor{}, _q.inters...),
-		predicates:      append([]predicate.Tenant{}, _q.predicates...),
-		withDepartments: _q.withDepartments.Clone(),
+		config:     _q.config,
+		ctx:        _q.ctx.Clone(),
+		order:      append([]tenant.OrderOption{}, _q.order...),
+		inters:     append([]Interceptor{}, _q.inters...),
+		predicates: append([]predicate.Tenant{}, _q.predicates...),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
-}
-
-// WithDepartments tells the query-builder to eager-load the nodes that are connected to
-// the "departments" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *TenantQuery) WithDepartments(opts ...func(*DepartmentQuery)) *TenantQuery {
-	query := (&DepartmentClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withDepartments = query
-	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -370,11 +333,8 @@ func (_q *TenantQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *TenantQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Tenant, error) {
 	var (
-		nodes       = []*Tenant{}
-		_spec       = _q.querySpec()
-		loadedTypes = [1]bool{
-			_q.withDepartments != nil,
-		}
+		nodes = []*Tenant{}
+		_spec = _q.querySpec()
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Tenant).scanValues(nil, columns)
@@ -382,7 +342,6 @@ func (_q *TenantQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Tenan
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Tenant{config: _q.config}
 		nodes = append(nodes, node)
-		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -394,45 +353,7 @@ func (_q *TenantQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Tenan
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := _q.withDepartments; query != nil {
-		if err := _q.loadDepartments(ctx, query, nodes,
-			func(n *Tenant) { n.Edges.Departments = []*Department{} },
-			func(n *Tenant, e *Department) { n.Edges.Departments = append(n.Edges.Departments, e) }); err != nil {
-			return nil, err
-		}
-	}
 	return nodes, nil
-}
-
-func (_q *TenantQuery) loadDepartments(ctx context.Context, query *DepartmentQuery, nodes []*Tenant, init func(*Tenant), assign func(*Tenant, *Department)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*Tenant)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
-	}
-	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(department.FieldTenantID)
-	}
-	query.Where(predicate.Department(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(tenant.DepartmentsColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.TenantID
-		node, ok := nodeids[fk]
-		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "tenant_id" returned %v for node %v`, fk, n.ID)
-		}
-		assign(node, n)
-	}
-	return nil
 }
 
 func (_q *TenantQuery) sqlCount(ctx context.Context) (int, error) {

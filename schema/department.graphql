@@ -1,0 +1,41 @@
+# Departments (部门 = litellm team) + memberships. See doc43 / LLD-01.
+
+enum MembershipRole {
+  user
+  dept_admin
+}
+
+type Department {
+  id: ID!
+  tenantId: ID
+  name: String!
+  litellmTeamId: String
+  createdAt: Time!
+}
+
+type Membership {
+  id: ID!
+  userId: ID!
+  departmentId: ID!
+  role: MembershipRole!
+}
+
+input CreateDepartmentInput {
+  tenantId: ID
+  name: String!
+  # Shared budget for the litellm team backing this department.
+  maxBudget: Float
+}
+
+extend type Query {
+  departments: [Department!]! @hasRole(any: [admin, tenant_admin])
+  departmentMembers(departmentId: ID!): [Membership!]! @hasRole(any: [admin, tenant_admin])
+}
+
+extend type Mutation {
+  # Creates the department AND its litellm team (no orphan: rolls back on sync failure).
+  createDepartment(input: CreateDepartmentInput!): Department! @hasRole(any: [admin])
+  deleteDepartment(id: ID!): Boolean! @hasRole(any: [admin])
+  addMembership(userId: ID!, departmentId: ID!, role: MembershipRole): Membership! @hasRole(any: [admin, tenant_admin])
+  removeMembership(userId: ID!, departmentId: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
+}

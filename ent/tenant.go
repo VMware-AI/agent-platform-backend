@@ -23,29 +23,8 @@ type Tenant struct {
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Name holds the value of the "name" field.
-	Name string `json:"name,omitempty"`
-	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the TenantQuery when eager-loading is set.
-	Edges        TenantEdges `json:"edges"`
+	Name         string `json:"name,omitempty"`
 	selectValues sql.SelectValues
-}
-
-// TenantEdges holds the relations/edges for other nodes in the graph.
-type TenantEdges struct {
-	// Departments holds the value of the departments edge.
-	Departments []*Department `json:"departments,omitempty"`
-	// loadedTypes holds the information for reporting if a
-	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
-}
-
-// DepartmentsOrErr returns the Departments value or an error if the edge
-// was not loaded in eager-loading.
-func (e TenantEdges) DepartmentsOrErr() ([]*Department, error) {
-	if e.loadedTypes[0] {
-		return e.Departments, nil
-	}
-	return nil, &NotLoadedError{edge: "departments"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -109,11 +88,6 @@ func (_m *Tenant) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *Tenant) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
-}
-
-// QueryDepartments queries the "departments" edge of the Tenant entity.
-func (_m *Tenant) QueryDepartments() *DepartmentQuery {
-	return NewTenantClient(_m.config).QueryDepartments(_m)
 }
 
 // Update returns a builder for updating this Tenant.

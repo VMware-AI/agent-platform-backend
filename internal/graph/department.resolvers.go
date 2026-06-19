@@ -1,0 +1,137 @@
+package graph
+
+// This file will be automatically regenerated based on the schema, any resolver
+// implementations will be copied through when generating.
+
+import (
+	"context"
+
+	"github.com/google/uuid"
+	"github.com/vektah/gqlparser/v2/gqlerror"
+
+	"github.com/VMware-AI/agent-platform-backend/ent"
+	"github.com/VMware-AI/agent-platform-backend/ent/membership"
+	"github.com/VMware-AI/agent-platform-backend/internal/auth"
+	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
+	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
+)
+
+// CreateDepartment creates a department and its backing litellm team. If the
+// team sync fails, the department is rolled back (no orphan — doc43 §2.4).
+func (r *mutationResolver) CreateDepartment(ctx context.Context, input model.CreateDepartmentInput) (*model.Department, error) {
+	c := r.Ent.Department.Create().SetName(input.Name)
+	if input.TenantID != nil {
+		if tid, err := uuid.Parse(*input.TenantID); err == nil {
+			c.SetTenantID(tid)
+		}
+	}
+	dept, err := c.Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	teamID := dept.ID.String()
+	if r.Gateway != nil {
+		if _, err := r.Gateway.CreateTeam(ctx, gateway.TeamRequest{
+			TeamID: teamID, TeamAlias: input.Name, MaxBudget: input.MaxBudget,
+		}); err != nil {
+			_ = r.Ent.Department.DeleteOneID(dept.ID).Exec(ctx) // no orphan
+			return nil, gqlerror.Errorf("create litellm team: %s", err.Error())
+		}
+	}
+	dept, err = r.Ent.Department.UpdateOne(dept).SetLitellmTeamID(teamID).Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	r.audit(ctx, "department.create", "department", dept.ID.String(), true, actorID(auth.FromContext(ctx)))
+	return toModelDepartment(dept), nil
+}
+
+func (r *mutationResolver) DeleteDepartment(ctx context.Context, id string) (bool, error) {
+	did, err := uuid.Parse(id)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid id")
+	}
+	if err := r.Ent.Department.DeleteOneID(did).Exec(ctx); err != nil {
+		return false, err
+	}
+	r.audit(ctx, "department.delete", "department", id, true, actorID(auth.FromContext(ctx)))
+	return true, nil
+}
+
+// AddMembership adds (or updates the role of) a user in a department.
+func (r *mutationResolver) AddMembership(ctx context.Context, userID string, departmentID string, role *model.MembershipRole) (*model.Membership, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid userId")
+	}
+	did, err := uuid.Parse(departmentID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid departmentId")
+	}
+	roleStr := "user"
+	if role != nil {
+		roleStr = gqlMembershipRoleToEnt(*role)
+	}
+	existing, err := r.Ent.Membership.Query().
+		Where(membership.UserID(uid), membership.DepartmentID(did)).Only(ctx)
+	var m *ent.Membership
+	switch {
+	case ent.IsNotFound(err):
+		m, err = r.Ent.Membership.Create().SetUserID(uid).SetDepartmentID(did).SetRole(membership.Role(roleStr)).Save(ctx)
+	case err != nil:
+		return nil, err
+	default:
+		m, err = r.Ent.Membership.UpdateOne(existing).SetRole(membership.Role(roleStr)).Save(ctx)
+	}
+	if err != nil {
+		return nil, err
+	}
+	r.audit(ctx, "membership.add", "membership", m.ID.String(), true, actorID(auth.FromContext(ctx)))
+	return toModelMembership(m), nil
+}
+
+func (r *mutationResolver) RemoveMembership(ctx context.Context, userID string, departmentID string) (bool, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid userId")
+	}
+	did, err := uuid.Parse(departmentID)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid departmentId")
+	}
+	n, err := r.Ent.Membership.Delete().
+		Where(membership.UserID(uid), membership.DepartmentID(did)).Exec(ctx)
+	if err != nil {
+		return false, err
+	}
+	r.audit(ctx, "membership.remove", "membership", userID+"/"+departmentID, n > 0, actorID(auth.FromContext(ctx)))
+	return n > 0, nil
+}
+
+func (r *queryResolver) Departments(ctx context.Context) ([]model.Department, error) {
+	ds, err := r.Ent.Department.Query().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.Department, 0, len(ds))
+	for _, d := range ds {
+		out = append(out, *toModelDepartment(d))
+	}
+	return out, nil
+}
+
+func (r *queryResolver) DepartmentMembers(ctx context.Context, departmentID string) ([]model.Membership, error) {
+	did, err := uuid.Parse(departmentID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid departmentId")
+	}
+	ms, err := r.Ent.Membership.Query().Where(membership.DepartmentID(did)).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.Membership, 0, len(ms))
+	for _, m := range ms {
+		out = append(out, *toModelMembership(m))
+	}
+	return out, nil
+}

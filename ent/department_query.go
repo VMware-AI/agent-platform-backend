@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -13,21 +12,17 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/VMware-AI/agent-platform-backend/ent/department"
-	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
-	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
 	"github.com/google/uuid"
 )
 
 // DepartmentQuery is the builder for querying Department entities.
 type DepartmentQuery struct {
 	config
-	ctx             *QueryContext
-	order           []department.OrderOption
-	inters          []Interceptor
-	predicates      []predicate.Department
-	withTenant      *TenantQuery
-	withMemberships *MembershipQuery
+	ctx        *QueryContext
+	order      []department.OrderOption
+	inters     []Interceptor
+	predicates []predicate.Department
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -62,50 +57,6 @@ func (_q *DepartmentQuery) Unique(unique bool) *DepartmentQuery {
 func (_q *DepartmentQuery) Order(o ...department.OrderOption) *DepartmentQuery {
 	_q.order = append(_q.order, o...)
 	return _q
-}
-
-// QueryTenant chains the current query on the "tenant" edge.
-func (_q *DepartmentQuery) QueryTenant() *TenantQuery {
-	query := (&TenantClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(department.Table, department.FieldID, selector),
-			sqlgraph.To(tenant.Table, tenant.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, department.TenantTable, department.TenantColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryMemberships chains the current query on the "memberships" edge.
-func (_q *DepartmentQuery) QueryMemberships() *MembershipQuery {
-	query := (&MembershipClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(department.Table, department.FieldID, selector),
-			sqlgraph.To(membership.Table, membership.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, department.MembershipsTable, department.MembershipsColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
 }
 
 // First returns the first Department entity from the query.
@@ -295,39 +246,15 @@ func (_q *DepartmentQuery) Clone() *DepartmentQuery {
 		return nil
 	}
 	return &DepartmentQuery{
-		config:          _q.config,
-		ctx:             _q.ctx.Clone(),
-		order:           append([]department.OrderOption{}, _q.order...),
-		inters:          append([]Interceptor{}, _q.inters...),
-		predicates:      append([]predicate.Department{}, _q.predicates...),
-		withTenant:      _q.withTenant.Clone(),
-		withMemberships: _q.withMemberships.Clone(),
+		config:     _q.config,
+		ctx:        _q.ctx.Clone(),
+		order:      append([]department.OrderOption{}, _q.order...),
+		inters:     append([]Interceptor{}, _q.inters...),
+		predicates: append([]predicate.Department{}, _q.predicates...),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
-}
-
-// WithTenant tells the query-builder to eager-load the nodes that are connected to
-// the "tenant" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *DepartmentQuery) WithTenant(opts ...func(*TenantQuery)) *DepartmentQuery {
-	query := (&TenantClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withTenant = query
-	return _q
-}
-
-// WithMemberships tells the query-builder to eager-load the nodes that are connected to
-// the "memberships" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *DepartmentQuery) WithMemberships(opts ...func(*MembershipQuery)) *DepartmentQuery {
-	query := (&MembershipClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withMemberships = query
-	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -406,12 +333,8 @@ func (_q *DepartmentQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *DepartmentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Department, error) {
 	var (
-		nodes       = []*Department{}
-		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
-			_q.withTenant != nil,
-			_q.withMemberships != nil,
-		}
+		nodes = []*Department{}
+		_spec = _q.querySpec()
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Department).scanValues(nil, columns)
@@ -419,7 +342,6 @@ func (_q *DepartmentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*D
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Department{config: _q.config}
 		nodes = append(nodes, node)
-		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -431,81 +353,7 @@ func (_q *DepartmentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*D
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := _q.withTenant; query != nil {
-		if err := _q.loadTenant(ctx, query, nodes, nil,
-			func(n *Department, e *Tenant) { n.Edges.Tenant = e }); err != nil {
-			return nil, err
-		}
-	}
-	if query := _q.withMemberships; query != nil {
-		if err := _q.loadMemberships(ctx, query, nodes,
-			func(n *Department) { n.Edges.Memberships = []*Membership{} },
-			func(n *Department, e *Membership) { n.Edges.Memberships = append(n.Edges.Memberships, e) }); err != nil {
-			return nil, err
-		}
-	}
 	return nodes, nil
-}
-
-func (_q *DepartmentQuery) loadTenant(ctx context.Context, query *TenantQuery, nodes []*Department, init func(*Department), assign func(*Department, *Tenant)) error {
-	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*Department)
-	for i := range nodes {
-		fk := nodes[i].TenantID
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
-	}
-	if len(ids) == 0 {
-		return nil
-	}
-	query.Where(tenant.IDIn(ids...))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "tenant_id" returned %v`, n.ID)
-		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
-	}
-	return nil
-}
-func (_q *DepartmentQuery) loadMemberships(ctx context.Context, query *MembershipQuery, nodes []*Department, init func(*Department), assign func(*Department, *Membership)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*Department)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
-	}
-	query.withFKs = true
-	query.Where(predicate.Membership(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(department.MembershipsColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.department_memberships
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "department_memberships" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
-		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "department_memberships" returned %v for node %v`, *fk, n.ID)
-		}
-		assign(node, n)
-	}
-	return nil
 }
 
 func (_q *DepartmentQuery) sqlCount(ctx context.Context) (int, error) {
@@ -532,9 +380,6 @@ func (_q *DepartmentQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != department.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
-		}
-		if _q.withTenant != nil {
-			_spec.Node.AddColumnOnce(department.FieldTenantID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

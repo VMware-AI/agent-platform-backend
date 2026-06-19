@@ -10,7 +10,6 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/VMware-AI/agent-platform-backend/ent/department"
 	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
 	"github.com/google/uuid"
 )
@@ -68,21 +67,6 @@ func (_c *TenantCreate) SetNillableID(v *uuid.UUID) *TenantCreate {
 		_c.SetID(*v)
 	}
 	return _c
-}
-
-// AddDepartmentIDs adds the "departments" edge to the Department entity by IDs.
-func (_c *TenantCreate) AddDepartmentIDs(ids ...uuid.UUID) *TenantCreate {
-	_c.mutation.AddDepartmentIDs(ids...)
-	return _c
-}
-
-// AddDepartments adds the "departments" edges to the Department entity.
-func (_c *TenantCreate) AddDepartments(v ...*Department) *TenantCreate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddDepartmentIDs(ids...)
 }
 
 // Mutation returns the TenantMutation object of the builder.
@@ -196,22 +180,6 @@ func (_c *TenantCreate) createSpec() (*Tenant, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Name(); ok {
 		_spec.SetField(tenant.FieldName, field.TypeString, value)
 		_node.Name = value
-	}
-	if nodes := _c.mutation.DepartmentsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   tenant.DepartmentsTable,
-			Columns: []string{tenant.DepartmentsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(department.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

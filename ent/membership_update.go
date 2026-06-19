@@ -11,10 +11,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/VMware-AI/agent-platform-backend/ent/department"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
-	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/google/uuid"
 )
 
@@ -37,6 +35,34 @@ func (_u *MembershipUpdate) SetUpdatedAt(v time.Time) *MembershipUpdate {
 	return _u
 }
 
+// SetUserID sets the "user_id" field.
+func (_u *MembershipUpdate) SetUserID(v uuid.UUID) *MembershipUpdate {
+	_u.mutation.SetUserID(v)
+	return _u
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (_u *MembershipUpdate) SetNillableUserID(v *uuid.UUID) *MembershipUpdate {
+	if v != nil {
+		_u.SetUserID(*v)
+	}
+	return _u
+}
+
+// SetDepartmentID sets the "department_id" field.
+func (_u *MembershipUpdate) SetDepartmentID(v uuid.UUID) *MembershipUpdate {
+	_u.mutation.SetDepartmentID(v)
+	return _u
+}
+
+// SetNillableDepartmentID sets the "department_id" field if the given value is not nil.
+func (_u *MembershipUpdate) SetNillableDepartmentID(v *uuid.UUID) *MembershipUpdate {
+	if v != nil {
+		_u.SetDepartmentID(*v)
+	}
+	return _u
+}
+
 // SetRole sets the "role" field.
 func (_u *MembershipUpdate) SetRole(v membership.Role) *MembershipUpdate {
 	_u.mutation.SetRole(v)
@@ -51,43 +77,9 @@ func (_u *MembershipUpdate) SetNillableRole(v *membership.Role) *MembershipUpdat
 	return _u
 }
 
-// SetUserID sets the "user" edge to the User entity by ID.
-func (_u *MembershipUpdate) SetUserID(id uuid.UUID) *MembershipUpdate {
-	_u.mutation.SetUserID(id)
-	return _u
-}
-
-// SetUser sets the "user" edge to the User entity.
-func (_u *MembershipUpdate) SetUser(v *User) *MembershipUpdate {
-	return _u.SetUserID(v.ID)
-}
-
-// SetDepartmentID sets the "department" edge to the Department entity by ID.
-func (_u *MembershipUpdate) SetDepartmentID(id uuid.UUID) *MembershipUpdate {
-	_u.mutation.SetDepartmentID(id)
-	return _u
-}
-
-// SetDepartment sets the "department" edge to the Department entity.
-func (_u *MembershipUpdate) SetDepartment(v *Department) *MembershipUpdate {
-	return _u.SetDepartmentID(v.ID)
-}
-
 // Mutation returns the MembershipMutation object of the builder.
 func (_u *MembershipUpdate) Mutation() *MembershipMutation {
 	return _u.mutation
-}
-
-// ClearUser clears the "user" edge to the User entity.
-func (_u *MembershipUpdate) ClearUser() *MembershipUpdate {
-	_u.mutation.ClearUser()
-	return _u
-}
-
-// ClearDepartment clears the "department" edge to the Department entity.
-func (_u *MembershipUpdate) ClearDepartment() *MembershipUpdate {
-	_u.mutation.ClearDepartment()
-	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -133,12 +125,6 @@ func (_u *MembershipUpdate) check() error {
 			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "Membership.role": %w`, err)}
 		}
 	}
-	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "Membership.user"`)
-	}
-	if _u.mutation.DepartmentCleared() && len(_u.mutation.DepartmentIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "Membership.department"`)
-	}
 	return nil
 }
 
@@ -146,7 +132,7 @@ func (_u *MembershipUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if err := _u.check(); err != nil {
 		return _node, err
 	}
-	_spec := sqlgraph.NewUpdateSpec(membership.Table, membership.Columns, sqlgraph.NewFieldSpec(membership.FieldID, field.TypeInt))
+	_spec := sqlgraph.NewUpdateSpec(membership.Table, membership.Columns, sqlgraph.NewFieldSpec(membership.FieldID, field.TypeUUID))
 	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -157,66 +143,14 @@ func (_u *MembershipUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(membership.FieldUpdatedAt, field.TypeTime, value)
 	}
+	if value, ok := _u.mutation.UserID(); ok {
+		_spec.SetField(membership.FieldUserID, field.TypeUUID, value)
+	}
+	if value, ok := _u.mutation.DepartmentID(); ok {
+		_spec.SetField(membership.FieldDepartmentID, field.TypeUUID, value)
+	}
 	if value, ok := _u.mutation.Role(); ok {
 		_spec.SetField(membership.FieldRole, field.TypeEnum, value)
-	}
-	if _u.mutation.UserCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   membership.UserTable,
-			Columns: []string{membership.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   membership.UserTable,
-			Columns: []string{membership.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.DepartmentCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   membership.DepartmentTable,
-			Columns: []string{membership.DepartmentColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(department.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.DepartmentIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   membership.DepartmentTable,
-			Columns: []string{membership.DepartmentColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(department.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -244,6 +178,34 @@ func (_u *MembershipUpdateOne) SetUpdatedAt(v time.Time) *MembershipUpdateOne {
 	return _u
 }
 
+// SetUserID sets the "user_id" field.
+func (_u *MembershipUpdateOne) SetUserID(v uuid.UUID) *MembershipUpdateOne {
+	_u.mutation.SetUserID(v)
+	return _u
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (_u *MembershipUpdateOne) SetNillableUserID(v *uuid.UUID) *MembershipUpdateOne {
+	if v != nil {
+		_u.SetUserID(*v)
+	}
+	return _u
+}
+
+// SetDepartmentID sets the "department_id" field.
+func (_u *MembershipUpdateOne) SetDepartmentID(v uuid.UUID) *MembershipUpdateOne {
+	_u.mutation.SetDepartmentID(v)
+	return _u
+}
+
+// SetNillableDepartmentID sets the "department_id" field if the given value is not nil.
+func (_u *MembershipUpdateOne) SetNillableDepartmentID(v *uuid.UUID) *MembershipUpdateOne {
+	if v != nil {
+		_u.SetDepartmentID(*v)
+	}
+	return _u
+}
+
 // SetRole sets the "role" field.
 func (_u *MembershipUpdateOne) SetRole(v membership.Role) *MembershipUpdateOne {
 	_u.mutation.SetRole(v)
@@ -258,43 +220,9 @@ func (_u *MembershipUpdateOne) SetNillableRole(v *membership.Role) *MembershipUp
 	return _u
 }
 
-// SetUserID sets the "user" edge to the User entity by ID.
-func (_u *MembershipUpdateOne) SetUserID(id uuid.UUID) *MembershipUpdateOne {
-	_u.mutation.SetUserID(id)
-	return _u
-}
-
-// SetUser sets the "user" edge to the User entity.
-func (_u *MembershipUpdateOne) SetUser(v *User) *MembershipUpdateOne {
-	return _u.SetUserID(v.ID)
-}
-
-// SetDepartmentID sets the "department" edge to the Department entity by ID.
-func (_u *MembershipUpdateOne) SetDepartmentID(id uuid.UUID) *MembershipUpdateOne {
-	_u.mutation.SetDepartmentID(id)
-	return _u
-}
-
-// SetDepartment sets the "department" edge to the Department entity.
-func (_u *MembershipUpdateOne) SetDepartment(v *Department) *MembershipUpdateOne {
-	return _u.SetDepartmentID(v.ID)
-}
-
 // Mutation returns the MembershipMutation object of the builder.
 func (_u *MembershipUpdateOne) Mutation() *MembershipMutation {
 	return _u.mutation
-}
-
-// ClearUser clears the "user" edge to the User entity.
-func (_u *MembershipUpdateOne) ClearUser() *MembershipUpdateOne {
-	_u.mutation.ClearUser()
-	return _u
-}
-
-// ClearDepartment clears the "department" edge to the Department entity.
-func (_u *MembershipUpdateOne) ClearDepartment() *MembershipUpdateOne {
-	_u.mutation.ClearDepartment()
-	return _u
 }
 
 // Where appends a list predicates to the MembershipUpdate builder.
@@ -353,12 +281,6 @@ func (_u *MembershipUpdateOne) check() error {
 			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "Membership.role": %w`, err)}
 		}
 	}
-	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "Membership.user"`)
-	}
-	if _u.mutation.DepartmentCleared() && len(_u.mutation.DepartmentIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "Membership.department"`)
-	}
 	return nil
 }
 
@@ -366,7 +288,7 @@ func (_u *MembershipUpdateOne) sqlSave(ctx context.Context) (_node *Membership, 
 	if err := _u.check(); err != nil {
 		return _node, err
 	}
-	_spec := sqlgraph.NewUpdateSpec(membership.Table, membership.Columns, sqlgraph.NewFieldSpec(membership.FieldID, field.TypeInt))
+	_spec := sqlgraph.NewUpdateSpec(membership.Table, membership.Columns, sqlgraph.NewFieldSpec(membership.FieldID, field.TypeUUID))
 	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Membership.id" for update`)}
@@ -394,66 +316,14 @@ func (_u *MembershipUpdateOne) sqlSave(ctx context.Context) (_node *Membership, 
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(membership.FieldUpdatedAt, field.TypeTime, value)
 	}
+	if value, ok := _u.mutation.UserID(); ok {
+		_spec.SetField(membership.FieldUserID, field.TypeUUID, value)
+	}
+	if value, ok := _u.mutation.DepartmentID(); ok {
+		_spec.SetField(membership.FieldDepartmentID, field.TypeUUID, value)
+	}
 	if value, ok := _u.mutation.Role(); ok {
 		_spec.SetField(membership.FieldRole, field.TypeEnum, value)
-	}
-	if _u.mutation.UserCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   membership.UserTable,
-			Columns: []string{membership.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   membership.UserTable,
-			Columns: []string{membership.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.DepartmentCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   membership.DepartmentTable,
-			Columns: []string{membership.DepartmentColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(department.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.DepartmentIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   membership.DepartmentTable,
-			Columns: []string{membership.DepartmentColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(department.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Membership{config: _u.config}
 	_spec.Assign = _node.assignValues

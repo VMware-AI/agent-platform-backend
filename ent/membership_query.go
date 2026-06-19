@@ -11,23 +11,18 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/VMware-AI/agent-platform-backend/ent/department"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
-	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/google/uuid"
 )
 
 // MembershipQuery is the builder for querying Membership entities.
 type MembershipQuery struct {
 	config
-	ctx            *QueryContext
-	order          []membership.OrderOption
-	inters         []Interceptor
-	predicates     []predicate.Membership
-	withUser       *UserQuery
-	withDepartment *DepartmentQuery
-	withFKs        bool
+	ctx        *QueryContext
+	order      []membership.OrderOption
+	inters     []Interceptor
+	predicates []predicate.Membership
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -64,50 +59,6 @@ func (_q *MembershipQuery) Order(o ...membership.OrderOption) *MembershipQuery {
 	return _q
 }
 
-// QueryUser chains the current query on the "user" edge.
-func (_q *MembershipQuery) QueryUser() *UserQuery {
-	query := (&UserClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(membership.Table, membership.FieldID, selector),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, membership.UserTable, membership.UserColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryDepartment chains the current query on the "department" edge.
-func (_q *MembershipQuery) QueryDepartment() *DepartmentQuery {
-	query := (&DepartmentClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(membership.Table, membership.FieldID, selector),
-			sqlgraph.To(department.Table, department.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, membership.DepartmentTable, membership.DepartmentColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
 // First returns the first Membership entity from the query.
 // Returns a *NotFoundError when no Membership was found.
 func (_q *MembershipQuery) First(ctx context.Context) (*Membership, error) {
@@ -132,8 +83,8 @@ func (_q *MembershipQuery) FirstX(ctx context.Context) *Membership {
 
 // FirstID returns the first Membership ID from the query.
 // Returns a *NotFoundError when no Membership ID was found.
-func (_q *MembershipQuery) FirstID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (_q *MembershipQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
@@ -145,7 +96,7 @@ func (_q *MembershipQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (_q *MembershipQuery) FirstIDX(ctx context.Context) int {
+func (_q *MembershipQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -183,8 +134,8 @@ func (_q *MembershipQuery) OnlyX(ctx context.Context) *Membership {
 // OnlyID is like Only, but returns the only Membership ID in the query.
 // Returns a *NotSingularError when more than one Membership ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (_q *MembershipQuery) OnlyID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (_q *MembershipQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
@@ -200,7 +151,7 @@ func (_q *MembershipQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (_q *MembershipQuery) OnlyIDX(ctx context.Context) int {
+func (_q *MembershipQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -228,7 +179,7 @@ func (_q *MembershipQuery) AllX(ctx context.Context) []*Membership {
 }
 
 // IDs executes the query and returns a list of Membership IDs.
-func (_q *MembershipQuery) IDs(ctx context.Context) (ids []int, err error) {
+func (_q *MembershipQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
 	if _q.ctx.Unique == nil && _q.path != nil {
 		_q.Unique(true)
 	}
@@ -240,7 +191,7 @@ func (_q *MembershipQuery) IDs(ctx context.Context) (ids []int, err error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (_q *MembershipQuery) IDsX(ctx context.Context) []int {
+func (_q *MembershipQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -295,39 +246,15 @@ func (_q *MembershipQuery) Clone() *MembershipQuery {
 		return nil
 	}
 	return &MembershipQuery{
-		config:         _q.config,
-		ctx:            _q.ctx.Clone(),
-		order:          append([]membership.OrderOption{}, _q.order...),
-		inters:         append([]Interceptor{}, _q.inters...),
-		predicates:     append([]predicate.Membership{}, _q.predicates...),
-		withUser:       _q.withUser.Clone(),
-		withDepartment: _q.withDepartment.Clone(),
+		config:     _q.config,
+		ctx:        _q.ctx.Clone(),
+		order:      append([]membership.OrderOption{}, _q.order...),
+		inters:     append([]Interceptor{}, _q.inters...),
+		predicates: append([]predicate.Membership{}, _q.predicates...),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
-}
-
-// WithUser tells the query-builder to eager-load the nodes that are connected to
-// the "user" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *MembershipQuery) WithUser(opts ...func(*UserQuery)) *MembershipQuery {
-	query := (&UserClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withUser = query
-	return _q
-}
-
-// WithDepartment tells the query-builder to eager-load the nodes that are connected to
-// the "department" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *MembershipQuery) WithDepartment(opts ...func(*DepartmentQuery)) *MembershipQuery {
-	query := (&DepartmentClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withDepartment = query
-	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -406,27 +333,15 @@ func (_q *MembershipQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *MembershipQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Membership, error) {
 	var (
-		nodes       = []*Membership{}
-		withFKs     = _q.withFKs
-		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
-			_q.withUser != nil,
-			_q.withDepartment != nil,
-		}
+		nodes = []*Membership{}
+		_spec = _q.querySpec()
 	)
-	if _q.withUser != nil || _q.withDepartment != nil {
-		withFKs = true
-	}
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, membership.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Membership).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Membership{config: _q.config}
 		nodes = append(nodes, node)
-		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -438,84 +353,7 @@ func (_q *MembershipQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*M
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := _q.withUser; query != nil {
-		if err := _q.loadUser(ctx, query, nodes, nil,
-			func(n *Membership, e *User) { n.Edges.User = e }); err != nil {
-			return nil, err
-		}
-	}
-	if query := _q.withDepartment; query != nil {
-		if err := _q.loadDepartment(ctx, query, nodes, nil,
-			func(n *Membership, e *Department) { n.Edges.Department = e }); err != nil {
-			return nil, err
-		}
-	}
 	return nodes, nil
-}
-
-func (_q *MembershipQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*Membership, init func(*Membership), assign func(*Membership, *User)) error {
-	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*Membership)
-	for i := range nodes {
-		if nodes[i].user_memberships == nil {
-			continue
-		}
-		fk := *nodes[i].user_memberships
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
-	}
-	if len(ids) == 0 {
-		return nil
-	}
-	query.Where(user.IDIn(ids...))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "user_memberships" returned %v`, n.ID)
-		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
-	}
-	return nil
-}
-func (_q *MembershipQuery) loadDepartment(ctx context.Context, query *DepartmentQuery, nodes []*Membership, init func(*Membership), assign func(*Membership, *Department)) error {
-	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*Membership)
-	for i := range nodes {
-		if nodes[i].department_memberships == nil {
-			continue
-		}
-		fk := *nodes[i].department_memberships
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
-	}
-	if len(ids) == 0 {
-		return nil
-	}
-	query.Where(department.IDIn(ids...))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "department_memberships" returned %v`, n.ID)
-		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
-	}
-	return nil
 }
 
 func (_q *MembershipQuery) sqlCount(ctx context.Context) (int, error) {
@@ -528,7 +366,7 @@ func (_q *MembershipQuery) sqlCount(ctx context.Context) (int, error) {
 }
 
 func (_q *MembershipQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(membership.Table, membership.Columns, sqlgraph.NewFieldSpec(membership.FieldID, field.TypeInt))
+	_spec := sqlgraph.NewQuerySpec(membership.Table, membership.Columns, sqlgraph.NewFieldSpec(membership.FieldID, field.TypeUUID))
 	_spec.From = _q.sql
 	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique

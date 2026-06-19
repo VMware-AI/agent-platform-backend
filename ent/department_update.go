@@ -12,9 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/VMware-AI/agent-platform-backend/ent/department"
-	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
-	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
 	"github.com/google/uuid"
 )
 
@@ -48,6 +46,12 @@ func (_u *DepartmentUpdate) SetNillableTenantID(v *uuid.UUID) *DepartmentUpdate 
 	if v != nil {
 		_u.SetTenantID(*v)
 	}
+	return _u
+}
+
+// ClearTenantID clears the value of the "tenant_id" field.
+func (_u *DepartmentUpdate) ClearTenantID() *DepartmentUpdate {
+	_u.mutation.ClearTenantID()
 	return _u
 }
 
@@ -85,56 +89,9 @@ func (_u *DepartmentUpdate) ClearLitellmTeamID() *DepartmentUpdate {
 	return _u
 }
 
-// SetTenant sets the "tenant" edge to the Tenant entity.
-func (_u *DepartmentUpdate) SetTenant(v *Tenant) *DepartmentUpdate {
-	return _u.SetTenantID(v.ID)
-}
-
-// AddMembershipIDs adds the "memberships" edge to the Membership entity by IDs.
-func (_u *DepartmentUpdate) AddMembershipIDs(ids ...int) *DepartmentUpdate {
-	_u.mutation.AddMembershipIDs(ids...)
-	return _u
-}
-
-// AddMemberships adds the "memberships" edges to the Membership entity.
-func (_u *DepartmentUpdate) AddMemberships(v ...*Membership) *DepartmentUpdate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddMembershipIDs(ids...)
-}
-
 // Mutation returns the DepartmentMutation object of the builder.
 func (_u *DepartmentUpdate) Mutation() *DepartmentMutation {
 	return _u.mutation
-}
-
-// ClearTenant clears the "tenant" edge to the Tenant entity.
-func (_u *DepartmentUpdate) ClearTenant() *DepartmentUpdate {
-	_u.mutation.ClearTenant()
-	return _u
-}
-
-// ClearMemberships clears all "memberships" edges to the Membership entity.
-func (_u *DepartmentUpdate) ClearMemberships() *DepartmentUpdate {
-	_u.mutation.ClearMemberships()
-	return _u
-}
-
-// RemoveMembershipIDs removes the "memberships" edge to Membership entities by IDs.
-func (_u *DepartmentUpdate) RemoveMembershipIDs(ids ...int) *DepartmentUpdate {
-	_u.mutation.RemoveMembershipIDs(ids...)
-	return _u
-}
-
-// RemoveMemberships removes "memberships" edges to Membership entities.
-func (_u *DepartmentUpdate) RemoveMemberships(v ...*Membership) *DepartmentUpdate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveMembershipIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -180,9 +137,6 @@ func (_u *DepartmentUpdate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Department.name": %w`, err)}
 		}
 	}
-	if _u.mutation.TenantCleared() && len(_u.mutation.TenantIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "Department.tenant"`)
-	}
 	return nil
 }
 
@@ -201,6 +155,12 @@ func (_u *DepartmentUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(department.FieldUpdatedAt, field.TypeTime, value)
 	}
+	if value, ok := _u.mutation.TenantID(); ok {
+		_spec.SetField(department.FieldTenantID, field.TypeUUID, value)
+	}
+	if _u.mutation.TenantIDCleared() {
+		_spec.ClearField(department.FieldTenantID, field.TypeUUID)
+	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(department.FieldName, field.TypeString, value)
 	}
@@ -209,80 +169,6 @@ func (_u *DepartmentUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if _u.mutation.LitellmTeamIDCleared() {
 		_spec.ClearField(department.FieldLitellmTeamID, field.TypeString)
-	}
-	if _u.mutation.TenantCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   department.TenantTable,
-			Columns: []string{department.TenantColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(tenant.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.TenantIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   department.TenantTable,
-			Columns: []string{department.TenantColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(tenant.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.MembershipsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   department.MembershipsTable,
-			Columns: []string{department.MembershipsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(membership.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedMembershipsIDs(); len(nodes) > 0 && !_u.mutation.MembershipsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   department.MembershipsTable,
-			Columns: []string{department.MembershipsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(membership.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.MembershipsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   department.MembershipsTable,
-			Columns: []string{department.MembershipsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(membership.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -324,6 +210,12 @@ func (_u *DepartmentUpdateOne) SetNillableTenantID(v *uuid.UUID) *DepartmentUpda
 	return _u
 }
 
+// ClearTenantID clears the value of the "tenant_id" field.
+func (_u *DepartmentUpdateOne) ClearTenantID() *DepartmentUpdateOne {
+	_u.mutation.ClearTenantID()
+	return _u
+}
+
 // SetName sets the "name" field.
 func (_u *DepartmentUpdateOne) SetName(v string) *DepartmentUpdateOne {
 	_u.mutation.SetName(v)
@@ -358,56 +250,9 @@ func (_u *DepartmentUpdateOne) ClearLitellmTeamID() *DepartmentUpdateOne {
 	return _u
 }
 
-// SetTenant sets the "tenant" edge to the Tenant entity.
-func (_u *DepartmentUpdateOne) SetTenant(v *Tenant) *DepartmentUpdateOne {
-	return _u.SetTenantID(v.ID)
-}
-
-// AddMembershipIDs adds the "memberships" edge to the Membership entity by IDs.
-func (_u *DepartmentUpdateOne) AddMembershipIDs(ids ...int) *DepartmentUpdateOne {
-	_u.mutation.AddMembershipIDs(ids...)
-	return _u
-}
-
-// AddMemberships adds the "memberships" edges to the Membership entity.
-func (_u *DepartmentUpdateOne) AddMemberships(v ...*Membership) *DepartmentUpdateOne {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddMembershipIDs(ids...)
-}
-
 // Mutation returns the DepartmentMutation object of the builder.
 func (_u *DepartmentUpdateOne) Mutation() *DepartmentMutation {
 	return _u.mutation
-}
-
-// ClearTenant clears the "tenant" edge to the Tenant entity.
-func (_u *DepartmentUpdateOne) ClearTenant() *DepartmentUpdateOne {
-	_u.mutation.ClearTenant()
-	return _u
-}
-
-// ClearMemberships clears all "memberships" edges to the Membership entity.
-func (_u *DepartmentUpdateOne) ClearMemberships() *DepartmentUpdateOne {
-	_u.mutation.ClearMemberships()
-	return _u
-}
-
-// RemoveMembershipIDs removes the "memberships" edge to Membership entities by IDs.
-func (_u *DepartmentUpdateOne) RemoveMembershipIDs(ids ...int) *DepartmentUpdateOne {
-	_u.mutation.RemoveMembershipIDs(ids...)
-	return _u
-}
-
-// RemoveMemberships removes "memberships" edges to Membership entities.
-func (_u *DepartmentUpdateOne) RemoveMemberships(v ...*Membership) *DepartmentUpdateOne {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveMembershipIDs(ids...)
 }
 
 // Where appends a list predicates to the DepartmentUpdate builder.
@@ -466,9 +311,6 @@ func (_u *DepartmentUpdateOne) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Department.name": %w`, err)}
 		}
 	}
-	if _u.mutation.TenantCleared() && len(_u.mutation.TenantIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "Department.tenant"`)
-	}
 	return nil
 }
 
@@ -504,6 +346,12 @@ func (_u *DepartmentUpdateOne) sqlSave(ctx context.Context) (_node *Department, 
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(department.FieldUpdatedAt, field.TypeTime, value)
 	}
+	if value, ok := _u.mutation.TenantID(); ok {
+		_spec.SetField(department.FieldTenantID, field.TypeUUID, value)
+	}
+	if _u.mutation.TenantIDCleared() {
+		_spec.ClearField(department.FieldTenantID, field.TypeUUID)
+	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(department.FieldName, field.TypeString, value)
 	}
@@ -512,80 +360,6 @@ func (_u *DepartmentUpdateOne) sqlSave(ctx context.Context) (_node *Department, 
 	}
 	if _u.mutation.LitellmTeamIDCleared() {
 		_spec.ClearField(department.FieldLitellmTeamID, field.TypeString)
-	}
-	if _u.mutation.TenantCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   department.TenantTable,
-			Columns: []string{department.TenantColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(tenant.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.TenantIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   department.TenantTable,
-			Columns: []string{department.TenantColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(tenant.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.MembershipsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   department.MembershipsTable,
-			Columns: []string{department.MembershipsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(membership.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedMembershipsIDs(); len(nodes) > 0 && !_u.mutation.MembershipsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   department.MembershipsTable,
-			Columns: []string{department.MembershipsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(membership.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.MembershipsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   department.MembershipsTable,
-			Columns: []string{department.MembershipsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(membership.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Department{config: _u.config}
 	_spec.Assign = _node.assignValues
