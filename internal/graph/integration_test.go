@@ -49,7 +49,7 @@ func TestCreateUserAndLogin(t *testing.T) {
 	}
 
 	// login + create should have produced audit rows
-	conn, err := (&queryResolver{r}).AuditLogs(ctx, nil)
+	conn, err := (&queryResolver{r}).AuditLogs(ctx, nil, nil)
 	if err != nil {
 		t.Fatalf("AuditLogs: %v", err)
 	}

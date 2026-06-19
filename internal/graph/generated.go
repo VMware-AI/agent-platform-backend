@@ -85,6 +85,7 @@ type ComplexityRoot struct {
 		Action       func(childComplexity int) int
 		ActorUserID  func(childComplexity int) int
 		CreatedAt    func(childComplexity int) int
+		Detail       func(childComplexity int) int
 		ID           func(childComplexity int) int
 		IP           func(childComplexity int) int
 		ResourceID   func(childComplexity int) int
@@ -186,7 +187,7 @@ type ComplexityRoot struct {
 		AgentConfigs       func(childComplexity int, agentType *string) int
 		AgentTemplates     func(childComplexity int) int
 		Agents             func(childComplexity int) int
-		AuditLogs          func(childComplexity int, page *model.PageInput) int
+		AuditLogs          func(childComplexity int, filter *model.AuditFilter, page *model.PageInput) int
 		GatewayConnections func(childComplexity int) int
 		Me                 func(childComplexity int) int
 		MeteringSummary    func(childComplexity int, userID *string) int
@@ -335,7 +336,7 @@ type MutationResolver interface {
 type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
 	Users(ctx context.Context, page *model.PageInput) (*model.UserConnection, error)
-	AuditLogs(ctx context.Context, page *model.PageInput) (*model.AuditConnection, error)
+	AuditLogs(ctx context.Context, filter *model.AuditFilter, page *model.PageInput) (*model.AuditConnection, error)
 	AgentTemplates(ctx context.Context) ([]model.AgentTemplate, error)
 	AgentConfigs(ctx context.Context, agentType *string) ([]model.AgentConfig, error)
 	Agents(ctx context.Context) ([]model.Agent, error)
@@ -554,6 +555,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.AuditLog.CreatedAt(childComplexity), true
+	case "AuditLog.detail":
+		if e.ComplexityRoot.AuditLog.Detail == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AuditLog.Detail(childComplexity), true
 	case "AuditLog.id":
 		if e.ComplexityRoot.AuditLog.ID == nil {
 			break
@@ -1145,7 +1152,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Query.AuditLogs(childComplexity, args["page"].(*model.PageInput)), true
+		return e.ComplexityRoot.Query.AuditLogs(childComplexity, args["filter"].(*model.AuditFilter), args["page"].(*model.PageInput)), true
 	case "Query.gatewayConnections":
 		if e.ComplexityRoot.Query.GatewayConnections == nil {
 			break
@@ -1653,6 +1660,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	opCtx := graphql.GetOperationContext(ctx)
 	ec := newExecutionContext(opCtx, e, make(chan graphql.DeferredResult))
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
+		ec.unmarshalInputAuditFilter,
 		ec.unmarshalInputCreateAgentInput,
 		ec.unmarshalInputCreateUserInput,
 		ec.unmarshalInputDeployAgentInput,
@@ -2160,7 +2168,16 @@ type AuditLog {
   resourceId: String
   ip: String
   result: String!
+  detail: String
   createdAt: Time!
+}
+
+input AuditFilter {
+  actorUserId: ID
+  # action category prefix, e.g. "user." / "router." / "key." / "rate_limit."
+  actionPrefix: String
+  # substring match across action + resourceId
+  search: String
 }
 
 input CreateUserInput {
@@ -2194,7 +2211,7 @@ type AuditConnection {
 type Query {
   me: User!
   users(page: PageInput): UserConnection! @hasRole(any: [admin, tenant_admin])
-  auditLogs(page: PageInput): AuditConnection! @hasPermission(perm: "audit:view")
+  auditLogs(filter: AuditFilter, page: PageInput): AuditConnection! @hasPermission(perm: "audit:view")
 }
 
 type Mutation {
@@ -2371,6 +2388,8 @@ func (ec *executionContext) childFields_AuditLog(ctx context.Context, field grap
 		return ec.fieldContext_AuditLog_ip(ctx, field)
 	case "result":
 		return ec.fieldContext_AuditLog_result(ctx, field)
+	case "detail":
+		return ec.fieldContext_AuditLog_detail(ctx, field)
 	case "createdAt":
 		return ec.fieldContext_AuditLog_createdAt(ctx, field)
 	}
@@ -3322,14 +3341,22 @@ func (ec *executionContext) field_Query_agentConfigs_args(ctx context.Context, r
 func (ec *executionContext) field_Query_auditLogs_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "page",
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
+		func(ctx context.Context, v any) (*model.AuditFilter, error) {
+			return ec.unmarshalOAuditFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAuditFilter(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["filter"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "page",
 		func(ctx context.Context, v any) (*model.PageInput, error) {
 			return ec.unmarshalOPageInput2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPageInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["page"] = arg0
+	args["page"] = arg1
 	return args, nil
 }
 
@@ -4267,6 +4294,29 @@ func (ec *executionContext) _AuditLog_result(ctx context.Context, field graphql.
 	)
 }
 func (ec *executionContext) fieldContext_AuditLog_result(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AuditLog", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _AuditLog_detail(ctx context.Context, field graphql.CollectedField, obj *model.AuditLog) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AuditLog_detail(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Detail, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_AuditLog_detail(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("AuditLog", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
@@ -6902,7 +6952,7 @@ func (ec *executionContext) _Query_auditLogs(ctx context.Context, field graphql.
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().AuditLogs(ctx, fc.Args["page"].(*model.PageInput))
+			return ec.Resolvers.Query().AuditLogs(ctx, fc.Args["filter"].(*model.AuditFilter), fc.Args["page"].(*model.PageInput))
 		},
 		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
 			directive0 := next
@@ -10249,6 +10299,50 @@ func (ec *executionContext) fieldContext___Type_isOneOf(_ context.Context, field
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputAuditFilter(ctx context.Context, obj any) (model.AuditFilter, error) {
+	var it model.AuditFilter
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"actorUserId", "actionPrefix", "search"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "actorUserId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("actorUserId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ActorUserID = data
+		case "actionPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("actionPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ActionPrefix = data
+		case "search":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("search"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Search = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputCreateAgentInput(ctx context.Context, obj any) (model.CreateAgentInput, error) {
 	var it model.CreateAgentInput
 	if obj == nil {
@@ -11490,6 +11584,11 @@ func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet,
 		case "result":
 			out.Values[i] = ec._AuditLog_result(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "detail":
+			out.Values[i] = ec._AuditLog_detail(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
 		case "createdAt":
@@ -14697,6 +14796,14 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalOAuditFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAuditFilter(ctx context.Context, v any) (*model.AuditFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputAuditFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalOBoolean2bool(ctx context.Context, v any) (bool, error) {

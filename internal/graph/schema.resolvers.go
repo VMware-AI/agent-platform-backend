@@ -7,10 +7,12 @@ package graph
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
+	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
@@ -247,13 +249,30 @@ func (r *queryResolver) Users(ctx context.Context, page *model.PageInput) (*mode
 }
 
 // AuditLogs is the resolver for the auditLogs field.
-func (r *queryResolver) AuditLogs(ctx context.Context, page *model.PageInput) (*model.AuditConnection, error) {
-	limit, offset := pageBounds(page)
-	total, err := r.Ent.AuditLog.Query().Count(ctx)
+func (r *queryResolver) AuditLogs(ctx context.Context, filter *model.AuditFilter, page *model.PageInput) (*model.AuditConnection, error) {
+	q := r.Ent.AuditLog.Query()
+	if filter != nil {
+		if filter.ActorUserID != nil {
+			if aid, err := uuid.Parse(*filter.ActorUserID); err == nil {
+				q = q.Where(auditlog.ActorUserID(aid))
+			}
+		}
+		if filter.ActionPrefix != nil {
+			q = q.Where(auditlog.ActionHasPrefix(*filter.ActionPrefix))
+		}
+		if filter.Search != nil {
+			q = q.Where(auditlog.Or(
+				auditlog.ActionContainsFold(*filter.Search),
+				auditlog.ResourceIDContainsFold(*filter.Search),
+			))
+		}
+	}
+	total, err := q.Clone().Count(ctx)
 	if err != nil {
 		return nil, err
 	}
-	logs, err := r.Ent.AuditLog.Query().Limit(limit).Offset(offset).All(ctx)
+	limit, offset := pageBounds(page)
+	logs, err := q.Limit(limit).Offset(offset).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -280,6 +299,12 @@ func (r *queryResolver) AuditLogs(ctx context.Context, page *model.PageInput) (*
 		if l.IP != "" {
 			ip := l.IP
 			item.IP = &ip
+		}
+		if len(l.Detail) > 0 {
+			if b, err := json.Marshal(l.Detail); err == nil {
+				s := string(b)
+				item.Detail = &s
+			}
 		}
 		items = append(items, item)
 	}

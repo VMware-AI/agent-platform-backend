@@ -52,6 +52,12 @@ type AuditConnection struct {
 	Total int        `json:"total"`
 }
 
+type AuditFilter struct {
+	ActorUserID  *string `json:"actorUserId,omitempty"`
+	ActionPrefix *string `json:"actionPrefix,omitempty"`
+	Search       *string `json:"search,omitempty"`
+}
+
 type AuditLog struct {
 	ID           string    `json:"id"`
 	ActorUserID  *string   `json:"actorUserId,omitempty"`
@@ -60,6 +66,7 @@ type AuditLog struct {
 	ResourceID   *string   `json:"resourceId,omitempty"`
 	IP           *string   `json:"ip,omitempty"`
 	Result       string    `json:"result"`
+	Detail       *string   `json:"detail,omitempty"`
 	CreatedAt    time.Time `json:"createdAt"`
 }
 

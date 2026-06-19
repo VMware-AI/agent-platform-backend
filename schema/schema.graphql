@@ -40,7 +40,16 @@ type AuditLog {
   resourceId: String
   ip: String
   result: String!
+  detail: String
   createdAt: Time!
+}
+
+input AuditFilter {
+  actorUserId: ID
+  # action category prefix, e.g. "user." / "router." / "key." / "rate_limit."
+  actionPrefix: String
+  # substring match across action + resourceId
+  search: String
 }
 
 input CreateUserInput {
@@ -74,7 +83,7 @@ type AuditConnection {
 type Query {
   me: User!
   users(page: PageInput): UserConnection! @hasRole(any: [admin, tenant_admin])
-  auditLogs(page: PageInput): AuditConnection! @hasPermission(perm: "audit:view")
+  auditLogs(filter: AuditFilter, page: PageInput): AuditConnection! @hasPermission(perm: "audit:view")
 }
 
 type Mutation {
