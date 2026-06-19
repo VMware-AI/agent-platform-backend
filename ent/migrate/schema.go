@@ -8,6 +8,32 @@ import (
 )
 
 var (
+	// ArtifactsColumns holds the columns for the "artifacts" table.
+	ArtifactsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "name", Type: field.TypeString},
+		{Name: "kind", Type: field.TypeEnum, Enums: []string{"script", "config", "package"}},
+		{Name: "version", Type: field.TypeString},
+		{Name: "uri", Type: field.TypeString},
+		{Name: "sha256", Type: field.TypeString, Nullable: true},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
+		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
+	}
+	// ArtifactsTable holds the schema information for the "artifacts" table.
+	ArtifactsTable = &schema.Table{
+		Name:       "artifacts",
+		Columns:    ArtifactsColumns,
+		PrimaryKey: []*schema.Column{ArtifactsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "artifact_name_version",
+				Unique:  true,
+				Columns: []*schema.Column{ArtifactsColumns[3], ArtifactsColumns[5]},
+			},
+		},
+	}
 	// AuditLogsColumns holds the columns for the "audit_logs" table.
 	AuditLogsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -69,6 +95,22 @@ var (
 			},
 		},
 	}
+	// ImagesColumns holds the columns for the "images" table.
+	ImagesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "repository", Type: field.TypeString},
+		{Name: "tag", Type: field.TypeString},
+		{Name: "digest", Type: field.TypeString, Nullable: true},
+		{Name: "signed", Type: field.TypeBool, Default: false},
+	}
+	// ImagesTable holds the schema information for the "images" table.
+	ImagesTable = &schema.Table{
+		Name:       "images",
+		Columns:    ImagesColumns,
+		PrimaryKey: []*schema.Column{ImagesColumns[0]},
+	}
 	// MembershipsColumns holds the columns for the "memberships" table.
 	MembershipsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -110,6 +152,24 @@ var (
 		Columns:    PermissionsColumns,
 		PrimaryKey: []*schema.Column{PermissionsColumns[0]},
 	}
+	// ResourcePoolsColumns holds the columns for the "resource_pools" table.
+	ResourcePoolsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "name", Type: field.TypeString},
+		{Name: "kind", Type: field.TypeEnum, Enums: []string{"vcenter"}, Default: "vcenter"},
+		{Name: "endpoint", Type: field.TypeString},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"connected", "disconnected", "error"}, Default: "disconnected"},
+		{Name: "secret_ref", Type: field.TypeString, Nullable: true},
+		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
+	}
+	// ResourcePoolsTable holds the schema information for the "resource_pools" table.
+	ResourcePoolsTable = &schema.Table{
+		Name:       "resource_pools",
+		Columns:    ResourcePoolsColumns,
+		PrimaryKey: []*schema.Column{ResourcePoolsColumns[0]},
+	}
 	// RolesColumns holds the columns for the "roles" table.
 	RolesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -124,6 +184,22 @@ var (
 		Name:       "roles",
 		Columns:    RolesColumns,
 		PrimaryKey: []*schema.Column{RolesColumns[0]},
+	}
+	// SkillsColumns holds the columns for the "skills" table.
+	SkillsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "name", Type: field.TypeString},
+		{Name: "version", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+		{Name: "uri", Type: field.TypeString},
+	}
+	// SkillsTable holds the schema information for the "skills" table.
+	SkillsTable = &schema.Table{
+		Name:       "skills",
+		Columns:    SkillsColumns,
+		PrimaryKey: []*schema.Column{SkillsColumns[0]},
 	}
 	// TenantsColumns holds the columns for the "tenants" table.
 	TenantsColumns = []*schema.Column{
@@ -217,11 +293,15 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		ArtifactsTable,
 		AuditLogsTable,
 		DepartmentsTable,
+		ImagesTable,
 		MembershipsTable,
 		PermissionsTable,
+		ResourcePoolsTable,
 		RolesTable,
+		SkillsTable,
 		TenantsTable,
 		UsersTable,
 		RolePermissionsTable,

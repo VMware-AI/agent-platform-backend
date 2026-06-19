@@ -12,16 +12,24 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
+	// Artifact is the client for interacting with the Artifact builders.
+	Artifact *ArtifactClient
 	// AuditLog is the client for interacting with the AuditLog builders.
 	AuditLog *AuditLogClient
 	// Department is the client for interacting with the Department builders.
 	Department *DepartmentClient
+	// Image is the client for interacting with the Image builders.
+	Image *ImageClient
 	// Membership is the client for interacting with the Membership builders.
 	Membership *MembershipClient
 	// Permission is the client for interacting with the Permission builders.
 	Permission *PermissionClient
+	// ResourcePool is the client for interacting with the ResourcePool builders.
+	ResourcePool *ResourcePoolClient
 	// Role is the client for interacting with the Role builders.
 	Role *RoleClient
+	// Skill is the client for interacting with the Skill builders.
+	Skill *SkillClient
 	// Tenant is the client for interacting with the Tenant builders.
 	Tenant *TenantClient
 	// User is the client for interacting with the User builders.
@@ -157,11 +165,15 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
+	tx.Artifact = NewArtifactClient(tx.config)
 	tx.AuditLog = NewAuditLogClient(tx.config)
 	tx.Department = NewDepartmentClient(tx.config)
+	tx.Image = NewImageClient(tx.config)
 	tx.Membership = NewMembershipClient(tx.config)
 	tx.Permission = NewPermissionClient(tx.config)
+	tx.ResourcePool = NewResourcePoolClient(tx.config)
 	tx.Role = NewRoleClient(tx.config)
+	tx.Skill = NewSkillClient(tx.config)
 	tx.Tenant = NewTenantClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 }
@@ -173,7 +185,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: AuditLog.QueryXXX(), the query will be executed
+// applies a query, for example: Artifact.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

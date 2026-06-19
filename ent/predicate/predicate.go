@@ -6,11 +6,17 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// Artifact is the predicate function for artifact builders.
+type Artifact func(*sql.Selector)
+
 // AuditLog is the predicate function for auditlog builders.
 type AuditLog func(*sql.Selector)
 
 // Department is the predicate function for department builders.
 type Department func(*sql.Selector)
+
+// Image is the predicate function for image builders.
+type Image func(*sql.Selector)
 
 // Membership is the predicate function for membership builders.
 type Membership func(*sql.Selector)
@@ -18,8 +24,14 @@ type Membership func(*sql.Selector)
 // Permission is the predicate function for permission builders.
 type Permission func(*sql.Selector)
 
+// ResourcePool is the predicate function for resourcepool builders.
+type ResourcePool func(*sql.Selector)
+
 // Role is the predicate function for role builders.
 type Role func(*sql.Selector)
+
+// Skill is the predicate function for skill builders.
+type Skill func(*sql.Selector)
 
 // Tenant is the predicate function for tenant builders.
 type Tenant func(*sql.Selector)

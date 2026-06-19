@@ -9,6 +9,18 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent"
 )
 
+// The ArtifactFunc type is an adapter to allow the use of ordinary
+// function as Artifact mutator.
+type ArtifactFunc func(context.Context, *ent.ArtifactMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ArtifactFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ArtifactMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ArtifactMutation", m)
+}
+
 // The AuditLogFunc type is an adapter to allow the use of ordinary
 // function as AuditLog mutator.
 type AuditLogFunc func(context.Context, *ent.AuditLogMutation) (ent.Value, error)
@@ -31,6 +43,18 @@ func (f DepartmentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DepartmentMutation", m)
+}
+
+// The ImageFunc type is an adapter to allow the use of ordinary
+// function as Image mutator.
+type ImageFunc func(context.Context, *ent.ImageMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ImageFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ImageMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ImageMutation", m)
 }
 
 // The MembershipFunc type is an adapter to allow the use of ordinary
@@ -57,6 +81,18 @@ func (f PermissionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PermissionMutation", m)
 }
 
+// The ResourcePoolFunc type is an adapter to allow the use of ordinary
+// function as ResourcePool mutator.
+type ResourcePoolFunc func(context.Context, *ent.ResourcePoolMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ResourcePoolFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ResourcePoolMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ResourcePoolMutation", m)
+}
+
 // The RoleFunc type is an adapter to allow the use of ordinary
 // function as Role mutator.
 type RoleFunc func(context.Context, *ent.RoleMutation) (ent.Value, error)
@@ -67,6 +103,18 @@ func (f RoleFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error)
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RoleMutation", m)
+}
+
+// The SkillFunc type is an adapter to allow the use of ordinary
+// function as Skill mutator.
+type SkillFunc func(context.Context, *ent.SkillMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f SkillFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.SkillMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SkillMutation", m)
 }
 
 // The TenantFunc type is an adapter to allow the use of ordinary

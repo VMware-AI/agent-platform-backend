@@ -5,12 +5,16 @@ package ent
 import (
 	"time"
 
+	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/department"
+	"github.com/VMware-AI/agent-platform-backend/ent/image"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/permission"
+	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/ent/role"
 	"github.com/VMware-AI/agent-platform-backend/ent/schema"
+	"github.com/VMware-AI/agent-platform-backend/ent/skill"
 	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/google/uuid"
@@ -20,6 +24,37 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	artifactMixin := schema.Artifact{}.Mixin()
+	artifactMixinFields0 := artifactMixin[0].Fields()
+	_ = artifactMixinFields0
+	artifactFields := schema.Artifact{}.Fields()
+	_ = artifactFields
+	// artifactDescCreatedAt is the schema descriptor for created_at field.
+	artifactDescCreatedAt := artifactMixinFields0[0].Descriptor()
+	// artifact.DefaultCreatedAt holds the default value on creation for the created_at field.
+	artifact.DefaultCreatedAt = artifactDescCreatedAt.Default.(func() time.Time)
+	// artifactDescUpdatedAt is the schema descriptor for updated_at field.
+	artifactDescUpdatedAt := artifactMixinFields0[1].Descriptor()
+	// artifact.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	artifact.DefaultUpdatedAt = artifactDescUpdatedAt.Default.(func() time.Time)
+	// artifact.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	artifact.UpdateDefaultUpdatedAt = artifactDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// artifactDescName is the schema descriptor for name field.
+	artifactDescName := artifactFields[1].Descriptor()
+	// artifact.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	artifact.NameValidator = artifactDescName.Validators[0].(func(string) error)
+	// artifactDescVersion is the schema descriptor for version field.
+	artifactDescVersion := artifactFields[3].Descriptor()
+	// artifact.VersionValidator is a validator for the "version" field. It is called by the builders before save.
+	artifact.VersionValidator = artifactDescVersion.Validators[0].(func(string) error)
+	// artifactDescURI is the schema descriptor for uri field.
+	artifactDescURI := artifactFields[4].Descriptor()
+	// artifact.URIValidator is a validator for the "uri" field. It is called by the builders before save.
+	artifact.URIValidator = artifactDescURI.Validators[0].(func(string) error)
+	// artifactDescID is the schema descriptor for id field.
+	artifactDescID := artifactFields[0].Descriptor()
+	// artifact.DefaultID holds the default value on creation for the id field.
+	artifact.DefaultID = artifactDescID.Default.(func() uuid.UUID)
 	auditlogFields := schema.AuditLog{}.Fields()
 	_ = auditlogFields
 	// auditlogDescAction is the schema descriptor for action field.
@@ -57,6 +92,37 @@ func init() {
 	departmentDescID := departmentFields[0].Descriptor()
 	// department.DefaultID holds the default value on creation for the id field.
 	department.DefaultID = departmentDescID.Default.(func() uuid.UUID)
+	imageMixin := schema.Image{}.Mixin()
+	imageMixinFields0 := imageMixin[0].Fields()
+	_ = imageMixinFields0
+	imageFields := schema.Image{}.Fields()
+	_ = imageFields
+	// imageDescCreatedAt is the schema descriptor for created_at field.
+	imageDescCreatedAt := imageMixinFields0[0].Descriptor()
+	// image.DefaultCreatedAt holds the default value on creation for the created_at field.
+	image.DefaultCreatedAt = imageDescCreatedAt.Default.(func() time.Time)
+	// imageDescUpdatedAt is the schema descriptor for updated_at field.
+	imageDescUpdatedAt := imageMixinFields0[1].Descriptor()
+	// image.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	image.DefaultUpdatedAt = imageDescUpdatedAt.Default.(func() time.Time)
+	// image.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	image.UpdateDefaultUpdatedAt = imageDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// imageDescRepository is the schema descriptor for repository field.
+	imageDescRepository := imageFields[1].Descriptor()
+	// image.RepositoryValidator is a validator for the "repository" field. It is called by the builders before save.
+	image.RepositoryValidator = imageDescRepository.Validators[0].(func(string) error)
+	// imageDescTag is the schema descriptor for tag field.
+	imageDescTag := imageFields[2].Descriptor()
+	// image.TagValidator is a validator for the "tag" field. It is called by the builders before save.
+	image.TagValidator = imageDescTag.Validators[0].(func(string) error)
+	// imageDescSigned is the schema descriptor for signed field.
+	imageDescSigned := imageFields[4].Descriptor()
+	// image.DefaultSigned holds the default value on creation for the signed field.
+	image.DefaultSigned = imageDescSigned.Default.(bool)
+	// imageDescID is the schema descriptor for id field.
+	imageDescID := imageFields[0].Descriptor()
+	// image.DefaultID holds the default value on creation for the id field.
+	image.DefaultID = imageDescID.Default.(func() uuid.UUID)
 	membershipMixin := schema.Membership{}.Mixin()
 	membershipMixinFields0 := membershipMixin[0].Fields()
 	_ = membershipMixinFields0
@@ -82,6 +148,33 @@ func init() {
 	permissionDescID := permissionFields[0].Descriptor()
 	// permission.DefaultID holds the default value on creation for the id field.
 	permission.DefaultID = permissionDescID.Default.(func() uuid.UUID)
+	resourcepoolMixin := schema.ResourcePool{}.Mixin()
+	resourcepoolMixinFields0 := resourcepoolMixin[0].Fields()
+	_ = resourcepoolMixinFields0
+	resourcepoolFields := schema.ResourcePool{}.Fields()
+	_ = resourcepoolFields
+	// resourcepoolDescCreatedAt is the schema descriptor for created_at field.
+	resourcepoolDescCreatedAt := resourcepoolMixinFields0[0].Descriptor()
+	// resourcepool.DefaultCreatedAt holds the default value on creation for the created_at field.
+	resourcepool.DefaultCreatedAt = resourcepoolDescCreatedAt.Default.(func() time.Time)
+	// resourcepoolDescUpdatedAt is the schema descriptor for updated_at field.
+	resourcepoolDescUpdatedAt := resourcepoolMixinFields0[1].Descriptor()
+	// resourcepool.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	resourcepool.DefaultUpdatedAt = resourcepoolDescUpdatedAt.Default.(func() time.Time)
+	// resourcepool.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	resourcepool.UpdateDefaultUpdatedAt = resourcepoolDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// resourcepoolDescName is the schema descriptor for name field.
+	resourcepoolDescName := resourcepoolFields[1].Descriptor()
+	// resourcepool.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	resourcepool.NameValidator = resourcepoolDescName.Validators[0].(func(string) error)
+	// resourcepoolDescEndpoint is the schema descriptor for endpoint field.
+	resourcepoolDescEndpoint := resourcepoolFields[3].Descriptor()
+	// resourcepool.EndpointValidator is a validator for the "endpoint" field. It is called by the builders before save.
+	resourcepool.EndpointValidator = resourcepoolDescEndpoint.Validators[0].(func(string) error)
+	// resourcepoolDescID is the schema descriptor for id field.
+	resourcepoolDescID := resourcepoolFields[0].Descriptor()
+	// resourcepool.DefaultID holds the default value on creation for the id field.
+	resourcepool.DefaultID = resourcepoolDescID.Default.(func() uuid.UUID)
 	roleMixin := schema.Role{}.Mixin()
 	roleMixinFields0 := roleMixin[0].Fields()
 	_ = roleMixinFields0
@@ -109,6 +202,37 @@ func init() {
 	roleDescID := roleFields[0].Descriptor()
 	// role.DefaultID holds the default value on creation for the id field.
 	role.DefaultID = roleDescID.Default.(func() uuid.UUID)
+	skillMixin := schema.Skill{}.Mixin()
+	skillMixinFields0 := skillMixin[0].Fields()
+	_ = skillMixinFields0
+	skillFields := schema.Skill{}.Fields()
+	_ = skillFields
+	// skillDescCreatedAt is the schema descriptor for created_at field.
+	skillDescCreatedAt := skillMixinFields0[0].Descriptor()
+	// skill.DefaultCreatedAt holds the default value on creation for the created_at field.
+	skill.DefaultCreatedAt = skillDescCreatedAt.Default.(func() time.Time)
+	// skillDescUpdatedAt is the schema descriptor for updated_at field.
+	skillDescUpdatedAt := skillMixinFields0[1].Descriptor()
+	// skill.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	skill.DefaultUpdatedAt = skillDescUpdatedAt.Default.(func() time.Time)
+	// skill.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	skill.UpdateDefaultUpdatedAt = skillDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// skillDescName is the schema descriptor for name field.
+	skillDescName := skillFields[1].Descriptor()
+	// skill.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	skill.NameValidator = skillDescName.Validators[0].(func(string) error)
+	// skillDescVersion is the schema descriptor for version field.
+	skillDescVersion := skillFields[2].Descriptor()
+	// skill.VersionValidator is a validator for the "version" field. It is called by the builders before save.
+	skill.VersionValidator = skillDescVersion.Validators[0].(func(string) error)
+	// skillDescURI is the schema descriptor for uri field.
+	skillDescURI := skillFields[4].Descriptor()
+	// skill.URIValidator is a validator for the "uri" field. It is called by the builders before save.
+	skill.URIValidator = skillDescURI.Validators[0].(func(string) error)
+	// skillDescID is the schema descriptor for id field.
+	skillDescID := skillFields[0].Descriptor()
+	// skill.DefaultID holds the default value on creation for the id field.
+	skill.DefaultID = skillDescID.Default.(func() uuid.UUID)
 	tenantMixin := schema.Tenant{}.Mixin()
 	tenantMixinFields0 := tenantMixin[0].Fields()
 	_ = tenantMixinFields0
