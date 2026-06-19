@@ -62,8 +62,10 @@ func main() {
 	}
 
 	var gw gateway.Client
+	var gwModels gateway.ModelManager
 	if base := os.Getenv("LITELLM_BASE_URL"); base != "" {
-		gw = gateway.NewHTTPClient(base, os.Getenv("LITELLM_MASTER_KEY"))
+		hc := gateway.NewHTTPClient(base, os.Getenv("LITELLM_MASTER_KEY"))
+		gw, gwModels = hc, hc
 		log.Printf("model gateway: %s", base)
 	} else {
 		log.Printf("model gateway: not configured (set LITELLM_BASE_URL)")
@@ -87,6 +89,7 @@ func main() {
 		SessionTTL:     ttl,
 		SecureCookies:  cfg.Env == "prod",
 		Gateway:        gw,
+		GatewayModels:  gwModels,
 		Secrets:        sec,
 		GatewayURL:     os.Getenv("GATEWAY_PUBLIC_URL"),
 		VCenterConnect: vcConnect,

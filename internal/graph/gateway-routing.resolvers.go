@@ -1,0 +1,285 @@
+package graph
+
+// This file will be automatically regenerated based on the schema, any resolver
+// implementations will be copied through when generating.
+
+import (
+	"context"
+
+	"github.com/google/uuid"
+	"github.com/vektah/gqlparser/v2/gqlerror"
+
+	"github.com/VMware-AI/agent-platform-backend/ent"
+	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
+	"github.com/VMware-AI/agent-platform-backend/ent/modelroute"
+	"github.com/VMware-AI/agent-platform-backend/ent/routertier"
+	"github.com/VMware-AI/agent-platform-backend/ent/upstream"
+	"github.com/VMware-AI/agent-platform-backend/internal/auth"
+	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
+	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
+)
+
+// --- Gateway connections (模型网关接入) ---
+
+func (r *mutationResolver) RegisterGatewayConnection(ctx context.Context, input model.RegisterGatewayConnectionInput) (*model.GatewayConnection, error) {
+	c := r.Ent.GatewayConnection.Create().SetName(input.Name).SetEndpoint(input.Endpoint)
+	if input.MasterKeyRef != nil {
+		c.SetMasterKeyRef(*input.MasterKeyRef)
+	}
+	if input.LoadBalanceStrategy != nil {
+		c.SetLoadBalanceStrategy(gatewayconnection.LoadBalanceStrategy(*input.LoadBalanceStrategy))
+	}
+	g, err := c.Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	r.audit(ctx, "gateway.register", "gateway_connection", g.ID.String(), true, actorID(auth.FromContext(ctx)))
+	return toModelGatewayConnection(g), nil
+}
+
+func (r *mutationResolver) TestGatewayConnection(ctx context.Context, id string) (model.GatewayStatus, error) {
+	gid, err := uuid.Parse(id)
+	if err != nil {
+		return "", gqlerror.Errorf("invalid id")
+	}
+	g, err := r.Ent.GatewayConnection.Get(ctx, gid)
+	if err != nil {
+		return "", err
+	}
+	status := gatewayconnection.StatusDisconnected
+	if r.GatewayModels != nil {
+		if err := r.GatewayModels.TestConnection(ctx); err == nil {
+			status = gatewayconnection.StatusConnected
+		} else {
+			status = gatewayconnection.StatusError
+		}
+	}
+	g, err = r.Ent.GatewayConnection.UpdateOne(g).SetStatus(status).Save(ctx)
+	if err != nil {
+		return "", err
+	}
+	r.audit(ctx, "gateway.test", "gateway_connection", id, true, actorID(auth.FromContext(ctx)))
+	return model.GatewayStatus(string(g.Status)), nil
+}
+
+func (r *mutationResolver) DeleteGatewayConnection(ctx context.Context, id string) (bool, error) {
+	gid, err := uuid.Parse(id)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid id")
+	}
+	if err := r.Ent.GatewayConnection.DeleteOneID(gid).Exec(ctx); err != nil {
+		return false, err
+	}
+	r.audit(ctx, "gateway.delete", "gateway_connection", id, true, actorID(auth.FromContext(ctx)))
+	return true, nil
+}
+
+func (r *queryResolver) GatewayConnections(ctx context.Context) ([]model.GatewayConnection, error) {
+	gs, err := r.Ent.GatewayConnection.Query().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.GatewayConnection, 0, len(gs))
+	for _, g := range gs {
+		out = append(out, *toModelGatewayConnection(g))
+	}
+	return out, nil
+}
+
+// --- Upstreams (多上游接入) ---
+
+func (r *mutationResolver) UpsertUpstream(ctx context.Context, input model.UpsertUpstreamInput) (*model.Upstream, error) {
+	enabled := true
+	if input.Enabled != nil {
+		enabled = *input.Enabled
+	}
+	apply := func(setName bool) (*ent.Upstream, error) {
+		existing, err := r.Ent.Upstream.Query().Where(upstream.Name(input.Name)).Only(ctx)
+		if ent.IsNotFound(err) {
+			c := r.Ent.Upstream.Create().
+				SetName(input.Name).
+				SetProvider(upstream.Provider(input.Provider)).
+				SetModel(input.Model).
+				SetEnabled(enabled)
+			if input.APIBase != nil {
+				c.SetAPIBase(*input.APIBase)
+			}
+			if input.APIKeyRef != nil {
+				c.SetAPIKeyRef(*input.APIKeyRef)
+			}
+			return c.Save(ctx)
+		}
+		if err != nil {
+			return nil, err
+		}
+		u := r.Ent.Upstream.UpdateOne(existing).
+			SetProvider(upstream.Provider(input.Provider)).
+			SetModel(input.Model).
+			SetEnabled(enabled)
+		if input.APIBase != nil {
+			u.SetAPIBase(*input.APIBase)
+		}
+		if input.APIKeyRef != nil {
+			u.SetAPIKeyRef(*input.APIKeyRef)
+		}
+		return u.Save(ctx)
+	}
+	u, err := apply(true)
+	if err != nil {
+		return nil, err
+	}
+
+	// Sync the deployment into the gateway's model pool (litellm /model/new).
+	if r.GatewayModels != nil {
+		apiKey := ""
+		if input.APIKeyRef != nil && r.Secrets != nil {
+			cred, err := r.Secrets.Resolve(ctx, *input.APIKeyRef)
+			if err != nil {
+				return nil, gqlerror.Errorf("resolve upstream api key: %s", err.Error())
+			}
+			apiKey = cred.APIKey
+			if apiKey == "" {
+				apiKey = cred.Password
+			}
+		}
+		if err := r.GatewayModels.NewModel(ctx, gateway.ModelSpec{
+			ModelName: u.Name, Model: u.Model, APIBase: u.APIBase, APIKey: apiKey,
+		}); err != nil {
+			return nil, gqlerror.Errorf("sync upstream to gateway: %s", err.Error())
+		}
+	}
+	r.audit(ctx, "upstream.upsert", "upstream", u.ID.String(), true, actorID(auth.FromContext(ctx)))
+	return toModelUpstream(u), nil
+}
+
+func (r *mutationResolver) DeleteUpstream(ctx context.Context, id string) (bool, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid id")
+	}
+	if err := r.Ent.Upstream.DeleteOneID(uid).Exec(ctx); err != nil {
+		return false, err
+	}
+	r.audit(ctx, "upstream.delete", "upstream", id, true, actorID(auth.FromContext(ctx)))
+	return true, nil
+}
+
+func (r *queryResolver) Upstreams(ctx context.Context) ([]model.Upstream, error) {
+	us, err := r.Ent.Upstream.Query().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.Upstream, 0, len(us))
+	for _, u := range us {
+		out = append(out, *toModelUpstream(u))
+	}
+	return out, nil
+}
+
+// --- Model routes (模型路由配置) ---
+
+func (r *mutationResolver) UpsertModelRoute(ctx context.Context, input model.UpsertModelRouteInput) (*model.ModelRoute, error) {
+	enabled := true
+	if input.Enabled != nil {
+		enabled = *input.Enabled
+	}
+	existing, err := r.Ent.ModelRoute.Query().Where(modelroute.Name(input.Name)).Only(ctx)
+	var mr *ent.ModelRoute
+	switch {
+	case ent.IsNotFound(err):
+		c := r.Ent.ModelRoute.Create().SetName(input.Name).SetModelAlias(input.ModelAlias).SetEnabled(enabled).SetUpstreams(input.Upstreams)
+		if input.Strategy != nil {
+			c.SetStrategy(modelroute.Strategy(*input.Strategy))
+		}
+		mr, err = c.Save(ctx)
+	case err != nil:
+		return nil, err
+	default:
+		u := r.Ent.ModelRoute.UpdateOne(existing).SetModelAlias(input.ModelAlias).SetEnabled(enabled).SetUpstreams(input.Upstreams)
+		if input.Strategy != nil {
+			u.SetStrategy(modelroute.Strategy(*input.Strategy))
+		}
+		mr, err = u.Save(ctx)
+	}
+	if err != nil {
+		return nil, err
+	}
+	r.audit(ctx, "model_route.upsert", "model_route", mr.ID.String(), true, actorID(auth.FromContext(ctx)))
+	return toModelModelRoute(mr), nil
+}
+
+func (r *mutationResolver) SetModelRouteEnabled(ctx context.Context, id string, enabled bool) (*model.ModelRoute, error) {
+	rid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid id")
+	}
+	mr, err := r.Ent.ModelRoute.UpdateOneID(rid).SetEnabled(enabled).Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	r.audit(ctx, "model_route.set_enabled", "model_route", id, true, actorID(auth.FromContext(ctx)))
+	return toModelModelRoute(mr), nil
+}
+
+func (r *queryResolver) ModelRoutes(ctx context.Context) ([]model.ModelRoute, error) {
+	rs, err := r.Ent.ModelRoute.Query().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.ModelRoute, 0, len(rs))
+	for _, mr := range rs {
+		out = append(out, *toModelModelRoute(mr))
+	}
+	return out, nil
+}
+
+// --- Difficulty router (难度路由之魂) ---
+
+// SetRouterTier maps a difficulty tier to a model alias and re-syncs the litellm
+// Complexity Router: simple questions → cheap model, hard → strong model.
+func (r *mutationResolver) SetRouterTier(ctx context.Context, tier model.RouterTierLevel, modelAlias string) (*model.RouterTier, error) {
+	existing, err := r.Ent.RouterTier.Query().Where(routertier.TierEQ(routertier.Tier(tier))).Only(ctx)
+	var rt *ent.RouterTier
+	switch {
+	case ent.IsNotFound(err):
+		rt, err = r.Ent.RouterTier.Create().SetTier(routertier.Tier(tier)).SetModelAlias(modelAlias).Save(ctx)
+	case err != nil:
+		return nil, err
+	default:
+		rt, err = r.Ent.RouterTier.UpdateOne(existing).SetModelAlias(modelAlias).Save(ctx)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Re-sync the whole tier map to the gateway's Complexity Router.
+	all, err := r.Ent.RouterTier.Query().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	tiers := make(map[string]string, len(all))
+	for _, t := range all {
+		tiers[string(t.Tier)] = t.ModelAlias
+	}
+	if r.GatewayModels != nil {
+		if err := r.GatewayModels.UpsertComplexityRouter(ctx, gateway.RouterSpec{
+			ModelName: "smart", Tiers: tiers, DefaultModel: tiers["MEDIUM"],
+		}); err != nil {
+			return nil, gqlerror.Errorf("sync complexity router: %s", err.Error())
+		}
+	}
+	r.audit(ctx, "router.set_tier", "router_tier", rt.ID.String(), true, actorID(auth.FromContext(ctx)))
+	return toModelRouterTier(rt), nil
+}
+
+func (r *queryResolver) RouterTiers(ctx context.Context) ([]model.RouterTier, error) {
+	ts, err := r.Ent.RouterTier.Query().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.RouterTier, 0, len(ts))
+	for _, t := range ts {
+		out = append(out, *toModelRouterTier(t))
+	}
+	return out, nil
+}

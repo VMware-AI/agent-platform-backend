@@ -89,6 +89,15 @@ type DeployedAgent struct {
 	VirtualKeySecret string `json:"virtualKeySecret"`
 }
 
+type GatewayConnection struct {
+	ID                  string              `json:"id"`
+	Name                string              `json:"name"`
+	Endpoint            string              `json:"endpoint"`
+	Status              GatewayStatus       `json:"status"`
+	LoadBalanceStrategy LoadBalanceStrategy `json:"loadBalanceStrategy"`
+	CreatedAt           time.Time           `json:"createdAt"`
+}
+
 type IssueVirtualKeyInput struct {
 	UserID    string   `json:"userId"`
 	TeamID    *string  `json:"teamId,omitempty"`
@@ -109,6 +118,16 @@ type MeteringSummary struct {
 	TotalOutputTokens int          `json:"totalOutputTokens"`
 	TotalCost         float64      `json:"totalCost"`
 	ByModel           []ModelUsage `json:"byModel"`
+}
+
+type ModelRoute struct {
+	ID         string              `json:"id"`
+	Name       string              `json:"name"`
+	ModelAlias string              `json:"modelAlias"`
+	Upstreams  []string            `json:"upstreams"`
+	Strategy   LoadBalanceStrategy `json:"strategy"`
+	Enabled    bool                `json:"enabled"`
+	CreatedAt  time.Time           `json:"createdAt"`
 }
 
 type ModelUsage struct {
@@ -158,6 +177,13 @@ type RecordTokenUsageInput struct {
 	Cost         *float64 `json:"cost,omitempty"`
 }
 
+type RegisterGatewayConnectionInput struct {
+	Name                string               `json:"name"`
+	Endpoint            string               `json:"endpoint"`
+	MasterKeyRef        *string              `json:"masterKeyRef,omitempty"`
+	LoadBalanceStrategy *LoadBalanceStrategy `json:"loadBalanceStrategy,omitempty"`
+}
+
 type RegisterResourcePoolInput struct {
 	Name      string  `json:"name"`
 	Endpoint  string  `json:"endpoint"`
@@ -184,6 +210,12 @@ type ResourcePool struct {
 	Endpoint  string             `json:"endpoint"`
 	Status    ResourcePoolStatus `json:"status"`
 	CreatedAt time.Time          `json:"createdAt"`
+}
+
+type RouterTier struct {
+	ID         string          `json:"id"`
+	Tier       RouterTierLevel `json:"tier"`
+	ModelAlias string          `json:"modelAlias"`
 }
 
 type TempPasswordPayload struct {
@@ -217,11 +249,38 @@ type UpsertAgentTemplateInput struct {
 	Version        *string             `json:"version,omitempty"`
 }
 
+type UpsertModelRouteInput struct {
+	Name       string               `json:"name"`
+	ModelAlias string               `json:"modelAlias"`
+	Upstreams  []string             `json:"upstreams,omitempty"`
+	Strategy   *LoadBalanceStrategy `json:"strategy,omitempty"`
+	Enabled    *bool                `json:"enabled,omitempty"`
+}
+
 type UpsertRateLimitPolicyInput struct {
 	Name    string `json:"name"`
 	Rpm     *int   `json:"rpm,omitempty"`
 	Tpm     *int   `json:"tpm,omitempty"`
 	Enabled *bool  `json:"enabled,omitempty"`
+}
+
+type UpsertUpstreamInput struct {
+	Name      string           `json:"name"`
+	Provider  UpstreamProvider `json:"provider"`
+	APIBase   *string          `json:"apiBase,omitempty"`
+	APIKeyRef *string          `json:"apiKeyRef,omitempty"`
+	Model     string           `json:"model"`
+	Enabled   *bool            `json:"enabled,omitempty"`
+}
+
+type Upstream struct {
+	ID        string           `json:"id"`
+	Name      string           `json:"name"`
+	Provider  UpstreamProvider `json:"provider"`
+	APIBase   *string          `json:"apiBase,omitempty"`
+	Model     string           `json:"model"`
+	Enabled   bool             `json:"enabled"`
+	CreatedAt time.Time        `json:"createdAt"`
 }
 
 type User struct {
@@ -367,6 +426,63 @@ func (e AgentTemplateStatus) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type GatewayStatus string
+
+const (
+	GatewayStatusConnected    GatewayStatus = "connected"
+	GatewayStatusDisconnected GatewayStatus = "disconnected"
+	GatewayStatusError        GatewayStatus = "error"
+)
+
+var AllGatewayStatus = []GatewayStatus{
+	GatewayStatusConnected,
+	GatewayStatusDisconnected,
+	GatewayStatusError,
+}
+
+func (e GatewayStatus) IsValid() bool {
+	switch e {
+	case GatewayStatusConnected, GatewayStatusDisconnected, GatewayStatusError:
+		return true
+	}
+	return false
+}
+
+func (e GatewayStatus) String() string {
+	return string(e)
+}
+
+func (e *GatewayStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = GatewayStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid GatewayStatus", str)
+	}
+	return nil
+}
+
+func (e GatewayStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *GatewayStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e GatewayStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type InstallMethod string
 
 const (
@@ -419,6 +535,67 @@ func (e *InstallMethod) UnmarshalJSON(b []byte) error {
 }
 
 func (e InstallMethod) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type LoadBalanceStrategy string
+
+const (
+	LoadBalanceStrategySimpleShuffle LoadBalanceStrategy = "simple_shuffle"
+	LoadBalanceStrategyLatency       LoadBalanceStrategy = "latency"
+	LoadBalanceStrategyUsageV2       LoadBalanceStrategy = "usage_v2"
+	LoadBalanceStrategyLeastBusy     LoadBalanceStrategy = "least_busy"
+	LoadBalanceStrategyCost          LoadBalanceStrategy = "cost"
+)
+
+var AllLoadBalanceStrategy = []LoadBalanceStrategy{
+	LoadBalanceStrategySimpleShuffle,
+	LoadBalanceStrategyLatency,
+	LoadBalanceStrategyUsageV2,
+	LoadBalanceStrategyLeastBusy,
+	LoadBalanceStrategyCost,
+}
+
+func (e LoadBalanceStrategy) IsValid() bool {
+	switch e {
+	case LoadBalanceStrategySimpleShuffle, LoadBalanceStrategyLatency, LoadBalanceStrategyUsageV2, LoadBalanceStrategyLeastBusy, LoadBalanceStrategyCost:
+		return true
+	}
+	return false
+}
+
+func (e LoadBalanceStrategy) String() string {
+	return string(e)
+}
+
+func (e *LoadBalanceStrategy) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = LoadBalanceStrategy(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid LoadBalanceStrategy", str)
+	}
+	return nil
+}
+
+func (e LoadBalanceStrategy) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *LoadBalanceStrategy) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e LoadBalanceStrategy) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil
@@ -535,6 +712,126 @@ func (e *Role) UnmarshalJSON(b []byte) error {
 }
 
 func (e Role) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type RouterTierLevel string
+
+const (
+	RouterTierLevelSimple    RouterTierLevel = "SIMPLE"
+	RouterTierLevelMedium    RouterTierLevel = "MEDIUM"
+	RouterTierLevelComplex   RouterTierLevel = "COMPLEX"
+	RouterTierLevelReasoning RouterTierLevel = "REASONING"
+)
+
+var AllRouterTierLevel = []RouterTierLevel{
+	RouterTierLevelSimple,
+	RouterTierLevelMedium,
+	RouterTierLevelComplex,
+	RouterTierLevelReasoning,
+}
+
+func (e RouterTierLevel) IsValid() bool {
+	switch e {
+	case RouterTierLevelSimple, RouterTierLevelMedium, RouterTierLevelComplex, RouterTierLevelReasoning:
+		return true
+	}
+	return false
+}
+
+func (e RouterTierLevel) String() string {
+	return string(e)
+}
+
+func (e *RouterTierLevel) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = RouterTierLevel(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid RouterTierLevel", str)
+	}
+	return nil
+}
+
+func (e RouterTierLevel) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *RouterTierLevel) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e RouterTierLevel) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type UpstreamProvider string
+
+const (
+	UpstreamProviderVllm      UpstreamProvider = "vllm"
+	UpstreamProviderOpenai    UpstreamProvider = "openai"
+	UpstreamProviderAnthropic UpstreamProvider = "anthropic"
+	UpstreamProviderMinimax   UpstreamProvider = "minimax"
+	UpstreamProviderCodex     UpstreamProvider = "codex"
+)
+
+var AllUpstreamProvider = []UpstreamProvider{
+	UpstreamProviderVllm,
+	UpstreamProviderOpenai,
+	UpstreamProviderAnthropic,
+	UpstreamProviderMinimax,
+	UpstreamProviderCodex,
+}
+
+func (e UpstreamProvider) IsValid() bool {
+	switch e {
+	case UpstreamProviderVllm, UpstreamProviderOpenai, UpstreamProviderAnthropic, UpstreamProviderMinimax, UpstreamProviderCodex:
+		return true
+	}
+	return false
+}
+
+func (e UpstreamProvider) String() string {
+	return string(e)
+}
+
+func (e *UpstreamProvider) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = UpstreamProvider(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid UpstreamProvider", str)
+	}
+	return nil
+}
+
+func (e UpstreamProvider) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *UpstreamProvider) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e UpstreamProvider) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

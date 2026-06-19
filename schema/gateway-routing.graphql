@@ -1,0 +1,106 @@
+# Compute gateway routing (算力网关): connections, upstreams, model routes,
+# and the difficulty router. See LLD-07. The development focus.
+
+enum GatewayStatus {
+  connected
+  disconnected
+  error
+}
+enum LoadBalanceStrategy {
+  simple_shuffle
+  latency
+  usage_v2
+  least_busy
+  cost
+}
+enum UpstreamProvider {
+  vllm
+  openai
+  anthropic
+  minimax
+  codex
+}
+enum RouterTierLevel {
+  SIMPLE
+  MEDIUM
+  COMPLEX
+  REASONING
+}
+
+type GatewayConnection {
+  id: ID!
+  name: String!
+  endpoint: String!
+  status: GatewayStatus!
+  loadBalanceStrategy: LoadBalanceStrategy!
+  createdAt: Time!
+}
+
+type Upstream {
+  id: ID!
+  name: String!
+  provider: UpstreamProvider!
+  apiBase: String
+  model: String!
+  enabled: Boolean!
+  createdAt: Time!
+}
+
+type ModelRoute {
+  id: ID!
+  name: String!
+  modelAlias: String!
+  upstreams: [String!]!
+  strategy: LoadBalanceStrategy!
+  enabled: Boolean!
+  createdAt: Time!
+}
+
+type RouterTier {
+  id: ID!
+  tier: RouterTierLevel!
+  modelAlias: String!
+}
+
+input RegisterGatewayConnectionInput {
+  name: String!
+  endpoint: String!
+  masterKeyRef: String
+  loadBalanceStrategy: LoadBalanceStrategy
+}
+input UpsertUpstreamInput {
+  name: String!
+  provider: UpstreamProvider!
+  apiBase: String
+  apiKeyRef: String
+  model: String!
+  enabled: Boolean
+}
+input UpsertModelRouteInput {
+  name: String!
+  modelAlias: String!
+  upstreams: [String!]
+  strategy: LoadBalanceStrategy
+  enabled: Boolean
+}
+
+extend type Query {
+  gatewayConnections: [GatewayConnection!]! @hasRole(any: [admin])
+  upstreams: [Upstream!]! @hasPermission(perm: "route:manage")
+  modelRoutes: [ModelRoute!]! @hasPermission(perm: "route:manage")
+  routerTiers: [RouterTier!]! @hasPermission(perm: "route:manage")
+}
+
+extend type Mutation {
+  registerGatewayConnection(input: RegisterGatewayConnectionInput!): GatewayConnection! @hasRole(any: [admin])
+  testGatewayConnection(id: ID!): GatewayStatus! @hasRole(any: [admin])
+  deleteGatewayConnection(id: ID!): Boolean! @hasRole(any: [admin])
+
+  upsertUpstream(input: UpsertUpstreamInput!): Upstream! @hasPermission(perm: "route:manage")
+  deleteUpstream(id: ID!): Boolean! @hasPermission(perm: "route:manage")
+  upsertModelRoute(input: UpsertModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
+  setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute! @hasPermission(perm: "route:manage")
+
+  # The difficulty router: map a tier to a model alias → syncs litellm Complexity Router.
+  setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier! @hasPermission(perm: "route:manage")
+}

@@ -24,6 +24,8 @@ type Resolver struct {
 	SecureCookies bool
 	// Gateway governs LiteLLM virtual keys; nil if no gateway is configured.
 	Gateway gateway.Client
+	// GatewayModels manages the model pool + difficulty router (nil disables sync).
+	GatewayModels gateway.ModelManager
 	// Secrets resolves resource-pool credentials (Vaultwarden); nil disables deploy.
 	Secrets secrets.Resolver
 	// GatewayURL is the LLM gateway base URL injected into provisioned VMs.

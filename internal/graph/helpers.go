@@ -239,6 +239,57 @@ func derefString(p *string) string {
 	return ""
 }
 
+func toModelGatewayConnection(g *ent.GatewayConnection) *model.GatewayConnection {
+	return &model.GatewayConnection{
+		ID:                  g.ID.String(),
+		Name:                g.Name,
+		Endpoint:            g.Endpoint,
+		Status:              model.GatewayStatus(string(g.Status)),
+		LoadBalanceStrategy: model.LoadBalanceStrategy(string(g.LoadBalanceStrategy)),
+		CreatedAt:           g.CreatedAt,
+	}
+}
+
+func toModelUpstream(u *ent.Upstream) *model.Upstream {
+	m := &model.Upstream{
+		ID:        u.ID.String(),
+		Name:      u.Name,
+		Provider:  model.UpstreamProvider(string(u.Provider)),
+		Model:     u.Model,
+		Enabled:   u.Enabled,
+		CreatedAt: u.CreatedAt,
+	}
+	if u.APIBase != "" {
+		b := u.APIBase
+		m.APIBase = &b
+	}
+	return m
+}
+
+func toModelModelRoute(r *ent.ModelRoute) *model.ModelRoute {
+	ups := r.Upstreams
+	if ups == nil {
+		ups = []string{}
+	}
+	return &model.ModelRoute{
+		ID:         r.ID.String(),
+		Name:       r.Name,
+		ModelAlias: r.ModelAlias,
+		Upstreams:  ups,
+		Strategy:   model.LoadBalanceStrategy(string(r.Strategy)),
+		Enabled:    r.Enabled,
+		CreatedAt:  r.CreatedAt,
+	}
+}
+
+func toModelRouterTier(t *ent.RouterTier) *model.RouterTier {
+	return &model.RouterTier{
+		ID:         t.ID.String(),
+		Tier:       model.RouterTierLevel(string(t.Tier)),
+		ModelAlias: t.ModelAlias,
+	}
+}
+
 // clientIP extracts the remote address from the request in context.
 func clientIP(ctx context.Context) string {
 	if r := httpx.Request(ctx); r != nil {
