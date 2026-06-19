@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -21,6 +23,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/deploy"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph"
+	"github.com/VMware-AI/agent-platform-backend/internal/httpx"
 	"github.com/VMware-AI/agent-platform-backend/internal/secrets"
 	"github.com/VMware-AI/agent-platform-backend/internal/session"
 	"github.com/VMware-AI/agent-platform-backend/internal/store"
@@ -101,6 +104,7 @@ func main() {
 	srv.AddTransport(transport.GET{})
 	srv.AddTransport(transport.POST{})
 	srv.Use(extension.Introspection{})
+	srv.Use(extension.FixedComplexityLimit(200)) // guard against deep/expensive queries
 
 	mux := http.NewServeMux()
 	mux.Handle("/query", auth.SessionMiddleware(sessions)(srv))
@@ -110,9 +114,30 @@ func main() {
 		_, _ = w.Write([]byte("ok"))
 	})
 
-	log.Printf("agent-platform-backend listening on %s (env=%s)", cfg.HTTPAddr, cfg.Env)
-	if err := http.ListenAndServe(cfg.HTTPAddr, mux); err != nil {
-		log.Fatalf("server: %v", err)
+	httpSrv := &http.Server{
+		Addr:              cfg.HTTPAddr,
+		Handler:           httpx.RequestLogger(mux),
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
+
+	shutCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	go func() {
+		log.Printf("agent-platform-backend listening on %s (env=%s)", cfg.HTTPAddr, cfg.Env)
+		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("server: %v", err)
+		}
+	}()
+
+	<-shutCtx.Done()
+	log.Printf("shutting down…")
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("graceful shutdown failed: %v", err)
 	}
 }
 
