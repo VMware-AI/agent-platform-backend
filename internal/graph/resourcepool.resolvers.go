@@ -7,30 +7,13 @@ package graph
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
-
-// connectPool resolves a pool's credentials and dials its vCenter.
-func (r *Resolver) connectPool(ctx context.Context, pool *ent.ResourcePool) (VCenterClient, error) {
-	if r.Secrets == nil || r.VCenterConnect == nil {
-		return nil, fmt.Errorf("resource-pool connect not configured")
-	}
-	if pool.SecretRef == "" {
-		return nil, fmt.Errorf("resource pool has no secret_ref")
-	}
-	cred, err := r.Secrets.Resolve(ctx, pool.SecretRef)
-	if err != nil {
-		return nil, fmt.Errorf("resolve credentials: %w", err)
-	}
-	return r.VCenterConnect(ctx, pool.Endpoint, cred.Username, cred.Password, true)
-}
 
 // RegisterResourcePool is the resolver for the registerResourcePool field.
 func (r *mutationResolver) RegisterResourcePool(ctx context.Context, input model.RegisterResourcePoolInput) (*model.ResourcePool, error) {

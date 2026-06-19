@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/google/uuid"
@@ -309,6 +310,51 @@ func toModelRouterTier(t *ent.RouterTier) *model.RouterTier {
 		Tier:       model.RouterTierLevel(string(t.Tier)),
 		ModelAlias: t.ModelAlias,
 	}
+}
+
+func toModelArtifact(a *ent.Artifact) *model.Artifact {
+	m := &model.Artifact{
+		ID: a.ID.String(), Name: a.Name, Kind: model.ArtifactKind(string(a.Kind)),
+		Version: a.Version, URI: a.URI, CreatedAt: a.CreatedAt,
+	}
+	if a.Sha256 != "" {
+		s := a.Sha256
+		m.Sha256 = &s
+	}
+	return m
+}
+
+func toModelSkill(s *ent.Skill) *model.Skill {
+	m := &model.Skill{ID: s.ID.String(), Name: s.Name, Version: s.Version, URI: s.URI, CreatedAt: s.CreatedAt}
+	if s.Description != "" {
+		d := s.Description
+		m.Description = &d
+	}
+	return m
+}
+
+func toModelImage(i *ent.Image) *model.Image {
+	m := &model.Image{ID: i.ID.String(), Repository: i.Repository, Tag: i.Tag, Signed: i.Signed, CreatedAt: i.CreatedAt}
+	if i.Digest != "" {
+		d := i.Digest
+		m.Digest = &d
+	}
+	return m
+}
+
+// connectPool resolves a resource pool's credentials and dials its vCenter.
+func (r *Resolver) connectPool(ctx context.Context, pool *ent.ResourcePool) (VCenterClient, error) {
+	if r.Secrets == nil || r.VCenterConnect == nil {
+		return nil, fmt.Errorf("resource-pool connect not configured")
+	}
+	if pool.SecretRef == "" {
+		return nil, fmt.Errorf("resource pool has no secret_ref")
+	}
+	cred, err := r.Secrets.Resolve(ctx, pool.SecretRef)
+	if err != nil {
+		return nil, fmt.Errorf("resolve credentials: %w", err)
+	}
+	return r.VCenterConnect(ctx, pool.Endpoint, cred.Username, cred.Password, true)
 }
 
 // clientIP extracts the remote address from the request in context.

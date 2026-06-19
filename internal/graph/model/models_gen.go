@@ -47,6 +47,16 @@ type AgentUsage struct {
 	Cost         float64 `json:"cost"`
 }
 
+type Artifact struct {
+	ID        string       `json:"id"`
+	Name      string       `json:"name"`
+	Kind      ArtifactKind `json:"kind"`
+	Version   string       `json:"version"`
+	URI       string       `json:"uri"`
+	Sha256    *string      `json:"sha256,omitempty"`
+	CreatedAt time.Time    `json:"createdAt"`
+}
+
 type AuditConnection struct {
 	Items []AuditLog `json:"items"`
 	Total int        `json:"total"`
@@ -117,6 +127,15 @@ type GatewayConnection struct {
 	Status              GatewayStatus       `json:"status"`
 	LoadBalanceStrategy LoadBalanceStrategy `json:"loadBalanceStrategy"`
 	CreatedAt           time.Time           `json:"createdAt"`
+}
+
+type Image struct {
+	ID         string    `json:"id"`
+	Repository string    `json:"repository"`
+	Tag        string    `json:"tag"`
+	Digest     *string   `json:"digest,omitempty"`
+	Signed     bool      `json:"signed"`
+	CreatedAt  time.Time `json:"createdAt"`
 }
 
 type IssueVirtualKeyInput struct {
@@ -257,6 +276,15 @@ type RouterTier struct {
 	ModelAlias string          `json:"modelAlias"`
 }
 
+type Skill struct {
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Version     string    `json:"version"`
+	Description *string   `json:"description,omitempty"`
+	URI         string    `json:"uri"`
+	CreatedAt   time.Time `json:"createdAt"`
+}
+
 type TempPasswordPayload struct {
 	UserID       string `json:"userId"`
 	TempPassword string `json:"tempPassword"`
@@ -294,6 +322,21 @@ type UpsertAgentTemplateInput struct {
 	Version        *string             `json:"version,omitempty"`
 }
 
+type UpsertArtifactInput struct {
+	Name    string       `json:"name"`
+	Kind    ArtifactKind `json:"kind"`
+	Version string       `json:"version"`
+	URI     string       `json:"uri"`
+	Sha256  *string      `json:"sha256,omitempty"`
+}
+
+type UpsertImageInput struct {
+	Repository string  `json:"repository"`
+	Tag        string  `json:"tag"`
+	Digest     *string `json:"digest,omitempty"`
+	Signed     *bool   `json:"signed,omitempty"`
+}
+
 type UpsertModelRouteInput struct {
 	Name             string               `json:"name"`
 	ModelAlias       string               `json:"modelAlias"`
@@ -308,6 +351,13 @@ type UpsertRateLimitPolicyInput struct {
 	Rpm     *int   `json:"rpm,omitempty"`
 	Tpm     *int   `json:"tpm,omitempty"`
 	Enabled *bool  `json:"enabled,omitempty"`
+}
+
+type UpsertSkillInput struct {
+	Name        string  `json:"name"`
+	Version     string  `json:"version"`
+	Description *string `json:"description,omitempty"`
+	URI         string  `json:"uri"`
 }
 
 type UpsertUpstreamInput struct {
@@ -469,6 +519,63 @@ func (e *AgentTemplateStatus) UnmarshalJSON(b []byte) error {
 }
 
 func (e AgentTemplateStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type ArtifactKind string
+
+const (
+	ArtifactKindScript  ArtifactKind = "script"
+	ArtifactKindConfig  ArtifactKind = "config"
+	ArtifactKindPackage ArtifactKind = "package"
+)
+
+var AllArtifactKind = []ArtifactKind{
+	ArtifactKindScript,
+	ArtifactKindConfig,
+	ArtifactKindPackage,
+}
+
+func (e ArtifactKind) IsValid() bool {
+	switch e {
+	case ArtifactKindScript, ArtifactKindConfig, ArtifactKindPackage:
+		return true
+	}
+	return false
+}
+
+func (e ArtifactKind) String() string {
+	return string(e)
+}
+
+func (e *ArtifactKind) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ArtifactKind(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ArtifactKind", str)
+	}
+	return nil
+}
+
+func (e ArtifactKind) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *ArtifactKind) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e ArtifactKind) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

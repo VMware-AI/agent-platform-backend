@@ -1,0 +1,70 @@
+# Content lib (制品库) / Skill hub / Harbor (镜像仓) CRUD. See LLD-06.
+
+enum ArtifactKind {
+  script
+  config
+  package
+}
+
+type Artifact {
+  id: ID!
+  name: String!
+  kind: ArtifactKind!
+  version: String!
+  uri: String!
+  sha256: String
+  createdAt: Time!
+}
+
+type Skill {
+  id: ID!
+  name: String!
+  version: String!
+  description: String
+  uri: String!
+  createdAt: Time!
+}
+
+type Image {
+  id: ID!
+  repository: String!
+  tag: String!
+  digest: String
+  signed: Boolean!
+  createdAt: Time!
+}
+
+input UpsertArtifactInput {
+  name: String!
+  kind: ArtifactKind!
+  version: String!
+  uri: String!
+  sha256: String
+}
+input UpsertSkillInput {
+  name: String!
+  version: String!
+  description: String
+  uri: String!
+}
+input UpsertImageInput {
+  repository: String!
+  tag: String!
+  digest: String
+  signed: Boolean
+}
+
+extend type Query {
+  artifacts: [Artifact!]!
+  skills: [Skill!]!
+  images: [Image!]!
+}
+
+extend type Mutation {
+  upsertArtifact(input: UpsertArtifactInput!): Artifact! @hasRole(any: [admin])
+  deleteArtifact(id: ID!): Boolean! @hasRole(any: [admin])
+  upsertSkill(input: UpsertSkillInput!): Skill! @hasRole(any: [admin])
+  deleteSkill(id: ID!): Boolean! @hasRole(any: [admin])
+  upsertImage(input: UpsertImageInput!): Image! @hasRole(any: [admin])
+  deleteImage(id: ID!): Boolean! @hasRole(any: [admin])
+}
