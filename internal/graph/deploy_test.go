@@ -7,7 +7,6 @@ import (
 	"github.com/vmware/govmomi/simulator"
 
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
-	"github.com/VMware-AI/agent-platform-backend/internal/deploy"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/VMware-AI/agent-platform-backend/internal/secrets"
 	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
@@ -42,7 +41,7 @@ func TestDeployAgent_EndToEnd(t *testing.T) {
 		"vault://oc1": {Username: "svc", Password: "pw"},
 	})
 	r.GatewayURL = "https://gw.internal"
-	r.VCenterConnect = func(ctx context.Context, endpoint, user, pass string, insecure bool) (deploy.GuestinfoSetter, error) {
+	r.VCenterConnect = func(ctx context.Context, endpoint, user, pass string, insecure bool) (VCenterClient, error) {
 		return vcenter.Connect(ctx, endpoint, user, pass, insecure)
 	}
 

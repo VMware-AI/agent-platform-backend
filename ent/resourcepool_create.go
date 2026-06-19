@@ -103,6 +103,62 @@ func (_c *ResourcePoolCreate) SetNillableSecretRef(v *string) *ResourcePoolCreat
 	return _c
 }
 
+// SetDatacenterCount sets the "datacenter_count" field.
+func (_c *ResourcePoolCreate) SetDatacenterCount(v int) *ResourcePoolCreate {
+	_c.mutation.SetDatacenterCount(v)
+	return _c
+}
+
+// SetNillableDatacenterCount sets the "datacenter_count" field if the given value is not nil.
+func (_c *ResourcePoolCreate) SetNillableDatacenterCount(v *int) *ResourcePoolCreate {
+	if v != nil {
+		_c.SetDatacenterCount(*v)
+	}
+	return _c
+}
+
+// SetClusterCount sets the "cluster_count" field.
+func (_c *ResourcePoolCreate) SetClusterCount(v int) *ResourcePoolCreate {
+	_c.mutation.SetClusterCount(v)
+	return _c
+}
+
+// SetNillableClusterCount sets the "cluster_count" field if the given value is not nil.
+func (_c *ResourcePoolCreate) SetNillableClusterCount(v *int) *ResourcePoolCreate {
+	if v != nil {
+		_c.SetClusterCount(*v)
+	}
+	return _c
+}
+
+// SetHostCount sets the "host_count" field.
+func (_c *ResourcePoolCreate) SetHostCount(v int) *ResourcePoolCreate {
+	_c.mutation.SetHostCount(v)
+	return _c
+}
+
+// SetNillableHostCount sets the "host_count" field if the given value is not nil.
+func (_c *ResourcePoolCreate) SetNillableHostCount(v *int) *ResourcePoolCreate {
+	if v != nil {
+		_c.SetHostCount(*v)
+	}
+	return _c
+}
+
+// SetVMCount sets the "vm_count" field.
+func (_c *ResourcePoolCreate) SetVMCount(v int) *ResourcePoolCreate {
+	_c.mutation.SetVMCount(v)
+	return _c
+}
+
+// SetNillableVMCount sets the "vm_count" field if the given value is not nil.
+func (_c *ResourcePoolCreate) SetNillableVMCount(v *int) *ResourcePoolCreate {
+	if v != nil {
+		_c.SetVMCount(*v)
+	}
+	return _c
+}
+
 // SetTenantID sets the "tenant_id" field.
 func (_c *ResourcePoolCreate) SetTenantID(v uuid.UUID) *ResourcePoolCreate {
 	_c.mutation.SetTenantID(v)
@@ -182,6 +238,22 @@ func (_c *ResourcePoolCreate) defaults() {
 		v := resourcepool.DefaultStatus
 		_c.mutation.SetStatus(v)
 	}
+	if _, ok := _c.mutation.DatacenterCount(); !ok {
+		v := resourcepool.DefaultDatacenterCount
+		_c.mutation.SetDatacenterCount(v)
+	}
+	if _, ok := _c.mutation.ClusterCount(); !ok {
+		v := resourcepool.DefaultClusterCount
+		_c.mutation.SetClusterCount(v)
+	}
+	if _, ok := _c.mutation.HostCount(); !ok {
+		v := resourcepool.DefaultHostCount
+		_c.mutation.SetHostCount(v)
+	}
+	if _, ok := _c.mutation.VMCount(); !ok {
+		v := resourcepool.DefaultVMCount
+		_c.mutation.SetVMCount(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := resourcepool.DefaultID()
 		_c.mutation.SetID(v)
@@ -226,6 +298,38 @@ func (_c *ResourcePoolCreate) check() error {
 	if v, ok := _c.mutation.Status(); ok {
 		if err := resourcepool.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "ResourcePool.status": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.DatacenterCount(); !ok {
+		return &ValidationError{Name: "datacenter_count", err: errors.New(`ent: missing required field "ResourcePool.datacenter_count"`)}
+	}
+	if v, ok := _c.mutation.DatacenterCount(); ok {
+		if err := resourcepool.DatacenterCountValidator(v); err != nil {
+			return &ValidationError{Name: "datacenter_count", err: fmt.Errorf(`ent: validator failed for field "ResourcePool.datacenter_count": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.ClusterCount(); !ok {
+		return &ValidationError{Name: "cluster_count", err: errors.New(`ent: missing required field "ResourcePool.cluster_count"`)}
+	}
+	if v, ok := _c.mutation.ClusterCount(); ok {
+		if err := resourcepool.ClusterCountValidator(v); err != nil {
+			return &ValidationError{Name: "cluster_count", err: fmt.Errorf(`ent: validator failed for field "ResourcePool.cluster_count": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.HostCount(); !ok {
+		return &ValidationError{Name: "host_count", err: errors.New(`ent: missing required field "ResourcePool.host_count"`)}
+	}
+	if v, ok := _c.mutation.HostCount(); ok {
+		if err := resourcepool.HostCountValidator(v); err != nil {
+			return &ValidationError{Name: "host_count", err: fmt.Errorf(`ent: validator failed for field "ResourcePool.host_count": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.VMCount(); !ok {
+		return &ValidationError{Name: "vm_count", err: errors.New(`ent: missing required field "ResourcePool.vm_count"`)}
+	}
+	if v, ok := _c.mutation.VMCount(); ok {
+		if err := resourcepool.VMCountValidator(v); err != nil {
+			return &ValidationError{Name: "vm_count", err: fmt.Errorf(`ent: validator failed for field "ResourcePool.vm_count": %w`, err)}
 		}
 	}
 	return nil
@@ -290,6 +394,22 @@ func (_c *ResourcePoolCreate) createSpec() (*ResourcePool, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.SecretRef(); ok {
 		_spec.SetField(resourcepool.FieldSecretRef, field.TypeString, value)
 		_node.SecretRef = value
+	}
+	if value, ok := _c.mutation.DatacenterCount(); ok {
+		_spec.SetField(resourcepool.FieldDatacenterCount, field.TypeInt, value)
+		_node.DatacenterCount = value
+	}
+	if value, ok := _c.mutation.ClusterCount(); ok {
+		_spec.SetField(resourcepool.FieldClusterCount, field.TypeInt, value)
+		_node.ClusterCount = value
+	}
+	if value, ok := _c.mutation.HostCount(); ok {
+		_spec.SetField(resourcepool.FieldHostCount, field.TypeInt, value)
+		_node.HostCount = value
+	}
+	if value, ok := _c.mutation.VMCount(); ok {
+		_spec.SetField(resourcepool.FieldVMCount, field.TypeInt, value)
+		_node.VMCount = value
 	}
 	if value, ok := _c.mutation.TenantID(); ok {
 		_spec.SetField(resourcepool.FieldTenantID, field.TypeUUID, value)

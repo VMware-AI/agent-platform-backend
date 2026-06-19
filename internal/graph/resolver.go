@@ -5,15 +5,22 @@ import (
 	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
-	"github.com/VMware-AI/agent-platform-backend/internal/deploy"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/secrets"
 	"github.com/VMware-AI/agent-platform-backend/internal/session"
+	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 )
 
-// VCenterConnector dials a vCenter and returns a guestinfo-capable client.
-// Injectable so deployAgent can run against vcsim in tests.
-type VCenterConnector func(ctx context.Context, endpoint, user, pass string, insecure bool) (deploy.GuestinfoSetter, error)
+// VCenterClient is what resolvers need from a connected vCenter (deploy +
+// inventory). *vcenter.Client satisfies it; a fake satisfies it in tests.
+type VCenterClient interface {
+	SetGuestinfo(ctx context.Context, vmName string, kv map[string]string) error
+	Inventory(ctx context.Context) (vcenter.Inventory, error)
+	Logout(ctx context.Context) error
+}
+
+// VCenterConnector dials a vCenter. Injectable so resolvers run against vcsim.
+type VCenterConnector func(ctx context.Context, endpoint, user, pass string, insecure bool) (VCenterClient, error)
 
 // Resolver is the GraphQL root resolver, holding shared dependencies.
 type Resolver struct {

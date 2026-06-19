@@ -312,6 +312,10 @@ var (
 		{Name: "endpoint", Type: field.TypeString},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"connected", "disconnected", "error"}, Default: "disconnected"},
 		{Name: "secret_ref", Type: field.TypeString, Nullable: true},
+		{Name: "datacenter_count", Type: field.TypeInt, Default: 0},
+		{Name: "cluster_count", Type: field.TypeInt, Default: 0},
+		{Name: "host_count", Type: field.TypeInt, Default: 0},
+		{Name: "vm_count", Type: field.TypeInt, Default: 0},
 		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// ResourcePoolsTable holds the schema information for the "resource_pools" table.

@@ -32,6 +32,14 @@ type ResourcePool struct {
 	Status resourcepool.Status `json:"status,omitempty"`
 	// SecretRef holds the value of the "secret_ref" field.
 	SecretRef string `json:"secret_ref,omitempty"`
+	// DatacenterCount holds the value of the "datacenter_count" field.
+	DatacenterCount int `json:"datacenter_count,omitempty"`
+	// ClusterCount holds the value of the "cluster_count" field.
+	ClusterCount int `json:"cluster_count,omitempty"`
+	// HostCount holds the value of the "host_count" field.
+	HostCount int `json:"host_count,omitempty"`
+	// VMCount holds the value of the "vm_count" field.
+	VMCount int `json:"vm_count,omitempty"`
 	// TenantID holds the value of the "tenant_id" field.
 	TenantID     *uuid.UUID `json:"tenant_id,omitempty"`
 	selectValues sql.SelectValues
@@ -44,6 +52,8 @@ func (*ResourcePool) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case resourcepool.FieldTenantID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case resourcepool.FieldDatacenterCount, resourcepool.FieldClusterCount, resourcepool.FieldHostCount, resourcepool.FieldVMCount:
+			values[i] = new(sql.NullInt64)
 		case resourcepool.FieldName, resourcepool.FieldKind, resourcepool.FieldEndpoint, resourcepool.FieldStatus, resourcepool.FieldSecretRef:
 			values[i] = new(sql.NullString)
 		case resourcepool.FieldCreatedAt, resourcepool.FieldUpdatedAt:
@@ -113,6 +123,30 @@ func (_m *ResourcePool) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.SecretRef = value.String
 			}
+		case resourcepool.FieldDatacenterCount:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field datacenter_count", values[i])
+			} else if value.Valid {
+				_m.DatacenterCount = int(value.Int64)
+			}
+		case resourcepool.FieldClusterCount:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field cluster_count", values[i])
+			} else if value.Valid {
+				_m.ClusterCount = int(value.Int64)
+			}
+		case resourcepool.FieldHostCount:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field host_count", values[i])
+			} else if value.Valid {
+				_m.HostCount = int(value.Int64)
+			}
+		case resourcepool.FieldVMCount:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field vm_count", values[i])
+			} else if value.Valid {
+				_m.VMCount = int(value.Int64)
+			}
 		case resourcepool.FieldTenantID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field tenant_id", values[i])
@@ -176,6 +210,18 @@ func (_m *ResourcePool) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("secret_ref=")
 	builder.WriteString(_m.SecretRef)
+	builder.WriteString(", ")
+	builder.WriteString("datacenter_count=")
+	builder.WriteString(fmt.Sprintf("%v", _m.DatacenterCount))
+	builder.WriteString(", ")
+	builder.WriteString("cluster_count=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ClusterCount))
+	builder.WriteString(", ")
+	builder.WriteString("host_count=")
+	builder.WriteString(fmt.Sprintf("%v", _m.HostCount))
+	builder.WriteString(", ")
+	builder.WriteString("vm_count=")
+	builder.WriteString(fmt.Sprintf("%v", _m.VMCount))
 	builder.WriteString(", ")
 	if v := _m.TenantID; v != nil {
 		builder.WriteString("tenant_id=")

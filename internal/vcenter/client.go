@@ -107,6 +107,59 @@ func (c *Client) findVM(ctx context.Context, name string) (*object.VirtualMachin
 	return nil, fmt.Errorf("vcenter: vm %q not found", name)
 }
 
+// Inventory counts the resource pool's datacenters/clusters/hosts/VMs
+// (0619 第13页 资源池接入列).
+type Inventory struct {
+	Datacenters int
+	Clusters    int
+	Hosts       int
+	VMs         int
+}
+
+// Inventory returns entity counts via container views.
+func (c *Client) Inventory(ctx context.Context) (Inventory, error) {
+	m := view.NewManager(c.vc.Client)
+	root := c.vc.ServiceContent.RootFolder
+
+	count := func(kind string, dest any) (int, error) {
+		v, err := m.CreateContainerView(ctx, root, []string{kind}, true)
+		if err != nil {
+			return 0, err
+		}
+		defer func() { _ = v.Destroy(ctx) }()
+		if err := v.Retrieve(ctx, []string{kind}, []string{"name"}, dest); err != nil {
+			return 0, err
+		}
+		switch d := dest.(type) {
+		case *[]mo.Datacenter:
+			return len(*d), nil
+		case *[]mo.ClusterComputeResource:
+			return len(*d), nil
+		case *[]mo.HostSystem:
+			return len(*d), nil
+		case *[]mo.VirtualMachine:
+			return len(*d), nil
+		}
+		return 0, nil
+	}
+
+	var inv Inventory
+	var err error
+	if inv.Datacenters, err = count("Datacenter", &[]mo.Datacenter{}); err != nil {
+		return inv, err
+	}
+	if inv.Clusters, err = count("ClusterComputeResource", &[]mo.ClusterComputeResource{}); err != nil {
+		return inv, err
+	}
+	if inv.Hosts, err = count("HostSystem", &[]mo.HostSystem{}); err != nil {
+		return inv, err
+	}
+	if inv.VMs, err = count("VirtualMachine", &[]mo.VirtualMachine{}); err != nil {
+		return inv, err
+	}
+	return inv, nil
+}
+
 // Logout terminates the session.
 func (c *Client) Logout(ctx context.Context) error {
 	return c.vc.Logout(ctx)

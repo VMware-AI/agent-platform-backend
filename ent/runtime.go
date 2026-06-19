@@ -388,6 +388,30 @@ func init() {
 	resourcepoolDescEndpoint := resourcepoolFields[3].Descriptor()
 	// resourcepool.EndpointValidator is a validator for the "endpoint" field. It is called by the builders before save.
 	resourcepool.EndpointValidator = resourcepoolDescEndpoint.Validators[0].(func(string) error)
+	// resourcepoolDescDatacenterCount is the schema descriptor for datacenter_count field.
+	resourcepoolDescDatacenterCount := resourcepoolFields[6].Descriptor()
+	// resourcepool.DefaultDatacenterCount holds the default value on creation for the datacenter_count field.
+	resourcepool.DefaultDatacenterCount = resourcepoolDescDatacenterCount.Default.(int)
+	// resourcepool.DatacenterCountValidator is a validator for the "datacenter_count" field. It is called by the builders before save.
+	resourcepool.DatacenterCountValidator = resourcepoolDescDatacenterCount.Validators[0].(func(int) error)
+	// resourcepoolDescClusterCount is the schema descriptor for cluster_count field.
+	resourcepoolDescClusterCount := resourcepoolFields[7].Descriptor()
+	// resourcepool.DefaultClusterCount holds the default value on creation for the cluster_count field.
+	resourcepool.DefaultClusterCount = resourcepoolDescClusterCount.Default.(int)
+	// resourcepool.ClusterCountValidator is a validator for the "cluster_count" field. It is called by the builders before save.
+	resourcepool.ClusterCountValidator = resourcepoolDescClusterCount.Validators[0].(func(int) error)
+	// resourcepoolDescHostCount is the schema descriptor for host_count field.
+	resourcepoolDescHostCount := resourcepoolFields[8].Descriptor()
+	// resourcepool.DefaultHostCount holds the default value on creation for the host_count field.
+	resourcepool.DefaultHostCount = resourcepoolDescHostCount.Default.(int)
+	// resourcepool.HostCountValidator is a validator for the "host_count" field. It is called by the builders before save.
+	resourcepool.HostCountValidator = resourcepoolDescHostCount.Validators[0].(func(int) error)
+	// resourcepoolDescVMCount is the schema descriptor for vm_count field.
+	resourcepoolDescVMCount := resourcepoolFields[9].Descriptor()
+	// resourcepool.DefaultVMCount holds the default value on creation for the vm_count field.
+	resourcepool.DefaultVMCount = resourcepoolDescVMCount.Default.(int)
+	// resourcepool.VMCountValidator is a validator for the "vm_count" field. It is called by the builders before save.
+	resourcepool.VMCountValidator = resourcepoolDescVMCount.Validators[0].(func(int) error)
 	// resourcepoolDescID is the schema descriptor for id field.
 	resourcepoolDescID := resourcepoolFields[0].Descriptor()
 	// resourcepool.DefaultID holds the default value on creation for the id field.

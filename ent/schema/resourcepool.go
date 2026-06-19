@@ -24,6 +24,11 @@ func (ResourcePool) Fields() []ent.Field {
 		field.Enum("status").Values("connected", "disconnected", "error").Default("disconnected"),
 		// Reference into the secret store; never the credential itself.
 		field.String("secret_ref").Optional(),
+		// Inventory counts from the last sync (0619 第13页).
+		field.Int("datacenter_count").NonNegative().Default(0),
+		field.Int("cluster_count").NonNegative().Default(0),
+		field.Int("host_count").NonNegative().Default(0),
+		field.Int("vm_count").NonNegative().Default(0),
 		field.UUID("tenant_id", uuid.UUID{}).Optional().Nillable(),
 	}
 }

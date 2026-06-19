@@ -20,7 +20,6 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/config"
-	"github.com/VMware-AI/agent-platform-backend/internal/deploy"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph"
 	"github.com/VMware-AI/agent-platform-backend/internal/httpx"
@@ -79,7 +78,7 @@ func main() {
 		sec = secrets.EnvResolver{}
 		log.Printf("secrets: env:// resolver (dev)")
 	}
-	vcConnect := func(ctx context.Context, endpoint, user, pass string, insecure bool) (deploy.GuestinfoSetter, error) {
+	vcConnect := func(ctx context.Context, endpoint, user, pass string, insecure bool) (graph.VCenterClient, error) {
 		return vcenter.Connect(ctx, endpoint, user, pass, insecure)
 	}
 

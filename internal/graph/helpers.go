@@ -67,12 +67,16 @@ func toModelUser(u *ent.User) *model.User {
 // (secret_ref is intentionally not exposed).
 func toModelResourcePool(p *ent.ResourcePool) *model.ResourcePool {
 	return &model.ResourcePool{
-		ID:        p.ID.String(),
-		Name:      p.Name,
-		Kind:      string(p.Kind),
-		Endpoint:  p.Endpoint,
-		Status:    model.ResourcePoolStatus(string(p.Status)),
-		CreatedAt: p.CreatedAt,
+		ID:              p.ID.String(),
+		Name:            p.Name,
+		Kind:            string(p.Kind),
+		Endpoint:        p.Endpoint,
+		Status:          model.ResourcePoolStatus(string(p.Status)),
+		DatacenterCount: p.DatacenterCount,
+		ClusterCount:    p.ClusterCount,
+		HostCount:       p.HostCount,
+		VMCount:         p.VMCount,
+		CreatedAt:       p.CreatedAt,
 	}
 }
 

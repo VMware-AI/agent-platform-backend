@@ -29,6 +29,14 @@ const (
 	FieldStatus = "status"
 	// FieldSecretRef holds the string denoting the secret_ref field in the database.
 	FieldSecretRef = "secret_ref"
+	// FieldDatacenterCount holds the string denoting the datacenter_count field in the database.
+	FieldDatacenterCount = "datacenter_count"
+	// FieldClusterCount holds the string denoting the cluster_count field in the database.
+	FieldClusterCount = "cluster_count"
+	// FieldHostCount holds the string denoting the host_count field in the database.
+	FieldHostCount = "host_count"
+	// FieldVMCount holds the string denoting the vm_count field in the database.
+	FieldVMCount = "vm_count"
 	// FieldTenantID holds the string denoting the tenant_id field in the database.
 	FieldTenantID = "tenant_id"
 	// Table holds the table name of the resourcepool in the database.
@@ -45,6 +53,10 @@ var Columns = []string{
 	FieldEndpoint,
 	FieldStatus,
 	FieldSecretRef,
+	FieldDatacenterCount,
+	FieldClusterCount,
+	FieldHostCount,
+	FieldVMCount,
 	FieldTenantID,
 }
 
@@ -69,6 +81,22 @@ var (
 	NameValidator func(string) error
 	// EndpointValidator is a validator for the "endpoint" field. It is called by the builders before save.
 	EndpointValidator func(string) error
+	// DefaultDatacenterCount holds the default value on creation for the "datacenter_count" field.
+	DefaultDatacenterCount int
+	// DatacenterCountValidator is a validator for the "datacenter_count" field. It is called by the builders before save.
+	DatacenterCountValidator func(int) error
+	// DefaultClusterCount holds the default value on creation for the "cluster_count" field.
+	DefaultClusterCount int
+	// ClusterCountValidator is a validator for the "cluster_count" field. It is called by the builders before save.
+	ClusterCountValidator func(int) error
+	// DefaultHostCount holds the default value on creation for the "host_count" field.
+	DefaultHostCount int
+	// HostCountValidator is a validator for the "host_count" field. It is called by the builders before save.
+	HostCountValidator func(int) error
+	// DefaultVMCount holds the default value on creation for the "vm_count" field.
+	DefaultVMCount int
+	// VMCountValidator is a validator for the "vm_count" field. It is called by the builders before save.
+	VMCountValidator func(int) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -166,6 +194,26 @@ func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 // BySecretRef orders the results by the secret_ref field.
 func BySecretRef(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSecretRef, opts...).ToFunc()
+}
+
+// ByDatacenterCount orders the results by the datacenter_count field.
+func ByDatacenterCount(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDatacenterCount, opts...).ToFunc()
+}
+
+// ByClusterCount orders the results by the cluster_count field.
+func ByClusterCount(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldClusterCount, opts...).ToFunc()
+}
+
+// ByHostCount orders the results by the host_count field.
+func ByHostCount(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHostCount, opts...).ToFunc()
+}
+
+// ByVMCount orders the results by the vm_count field.
+func ByVMCount(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldVMCount, opts...).ToFunc()
 }
 
 // ByTenantID orders the results by the tenant_id field.

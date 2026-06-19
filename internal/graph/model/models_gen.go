@@ -239,12 +239,16 @@ type RequestLogFilter struct {
 }
 
 type ResourcePool struct {
-	ID        string             `json:"id"`
-	Name      string             `json:"name"`
-	Kind      string             `json:"kind"`
-	Endpoint  string             `json:"endpoint"`
-	Status    ResourcePoolStatus `json:"status"`
-	CreatedAt time.Time          `json:"createdAt"`
+	ID              string             `json:"id"`
+	Name            string             `json:"name"`
+	Kind            string             `json:"kind"`
+	Endpoint        string             `json:"endpoint"`
+	Status          ResourcePoolStatus `json:"status"`
+	DatacenterCount int                `json:"datacenterCount"`
+	ClusterCount    int                `json:"clusterCount"`
+	HostCount       int                `json:"hostCount"`
+	VMCount         int                `json:"vmCount"`
+	CreatedAt       time.Time          `json:"createdAt"`
 }
 
 type RouterTier struct {
@@ -267,6 +271,12 @@ type TokenUsage struct {
 	OutputTokens int       `json:"outputTokens"`
 	Cost         float64   `json:"cost"`
 	CreatedAt    time.Time `json:"createdAt"`
+}
+
+type UpdateResourcePoolInput struct {
+	Name      *string `json:"name,omitempty"`
+	Endpoint  *string `json:"endpoint,omitempty"`
+	SecretRef *string `json:"secretRef,omitempty"`
 }
 
 type UpdateUserInput struct {

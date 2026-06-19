@@ -152,35 +152,38 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		ChangePassword            func(childComplexity int, oldPassword string, newPassword string) int
-		CreateAgent               func(childComplexity int, input model.CreateAgentInput) int
-		CreateUser                func(childComplexity int, input model.CreateUserInput) int
-		DeleteGatewayConnection   func(childComplexity int, id string) int
-		DeleteResourcePool        func(childComplexity int, id string) int
-		DeleteUpstream            func(childComplexity int, id string) int
-		DeleteUser                func(childComplexity int, id string) int
-		DeployAgent               func(childComplexity int, input model.DeployAgentInput) int
-		IssueVirtualKey           func(childComplexity int, input model.IssueVirtualKeyInput) int
-		Login                     func(childComplexity int, username string, password string) int
-		Logout                    func(childComplexity int) int
-		RecordRequestLog          func(childComplexity int, input model.RecordRequestLogInput) int
-		RecordTokenUsage          func(childComplexity int, input model.RecordTokenUsageInput) int
-		RegisterGatewayConnection func(childComplexity int, input model.RegisterGatewayConnectionInput) int
-		RegisterResourcePool      func(childComplexity int, input model.RegisterResourcePoolInput) int
-		ResetPassword             func(childComplexity int, userID string) int
-		RevokeVirtualKey          func(childComplexity int, id string) int
-		SetAgentStatus            func(childComplexity int, id string, status model.AgentStatus) int
-		SetModelRouteEnabled      func(childComplexity int, id string, enabled bool) int
-		SetRateLimitPolicyEnabled func(childComplexity int, id string, enabled bool) int
-		SetRouterTier             func(childComplexity int, tier model.RouterTierLevel, modelAlias string) int
-		SetUserActive             func(childComplexity int, id string, active bool) int
-		SetVirtualKeyEnabled      func(childComplexity int, id string, enabled bool) int
-		TestGatewayConnection     func(childComplexity int, id string) int
-		UpdateUser                func(childComplexity int, id string, input model.UpdateUserInput) int
-		UpsertAgentTemplate       func(childComplexity int, input model.UpsertAgentTemplateInput) int
-		UpsertModelRoute          func(childComplexity int, input model.UpsertModelRouteInput) int
-		UpsertRateLimitPolicy     func(childComplexity int, input model.UpsertRateLimitPolicyInput) int
-		UpsertUpstream            func(childComplexity int, input model.UpsertUpstreamInput) int
+		ChangePassword             func(childComplexity int, oldPassword string, newPassword string) int
+		CreateAgent                func(childComplexity int, input model.CreateAgentInput) int
+		CreateUser                 func(childComplexity int, input model.CreateUserInput) int
+		DeleteGatewayConnection    func(childComplexity int, id string) int
+		DeleteResourcePool         func(childComplexity int, id string) int
+		DeleteUpstream             func(childComplexity int, id string) int
+		DeleteUser                 func(childComplexity int, id string) int
+		DeployAgent                func(childComplexity int, input model.DeployAgentInput) int
+		IssueVirtualKey            func(childComplexity int, input model.IssueVirtualKeyInput) int
+		Login                      func(childComplexity int, username string, password string) int
+		Logout                     func(childComplexity int) int
+		RecordRequestLog           func(childComplexity int, input model.RecordRequestLogInput) int
+		RecordTokenUsage           func(childComplexity int, input model.RecordTokenUsageInput) int
+		RegisterGatewayConnection  func(childComplexity int, input model.RegisterGatewayConnectionInput) int
+		RegisterResourcePool       func(childComplexity int, input model.RegisterResourcePoolInput) int
+		ResetPassword              func(childComplexity int, userID string) int
+		RevokeVirtualKey           func(childComplexity int, id string) int
+		SetAgentStatus             func(childComplexity int, id string, status model.AgentStatus) int
+		SetModelRouteEnabled       func(childComplexity int, id string, enabled bool) int
+		SetRateLimitPolicyEnabled  func(childComplexity int, id string, enabled bool) int
+		SetRouterTier              func(childComplexity int, tier model.RouterTierLevel, modelAlias string) int
+		SetUserActive              func(childComplexity int, id string, active bool) int
+		SetVirtualKeyEnabled       func(childComplexity int, id string, enabled bool) int
+		SyncResourcePool           func(childComplexity int, id string) int
+		TestGatewayConnection      func(childComplexity int, id string) int
+		TestResourcePoolConnection func(childComplexity int, id string) int
+		UpdateResourcePool         func(childComplexity int, id string, input model.UpdateResourcePoolInput) int
+		UpdateUser                 func(childComplexity int, id string, input model.UpdateUserInput) int
+		UpsertAgentTemplate        func(childComplexity int, input model.UpsertAgentTemplateInput) int
+		UpsertModelRoute           func(childComplexity int, input model.UpsertModelRouteInput) int
+		UpsertRateLimitPolicy      func(childComplexity int, input model.UpsertRateLimitPolicyInput) int
+		UpsertUpstream             func(childComplexity int, input model.UpsertUpstreamInput) int
 	}
 
 	Query struct {
@@ -226,12 +229,16 @@ type ComplexityRoot struct {
 	}
 
 	ResourcePool struct {
-		CreatedAt func(childComplexity int) int
-		Endpoint  func(childComplexity int) int
-		ID        func(childComplexity int) int
-		Kind      func(childComplexity int) int
-		Name      func(childComplexity int) int
-		Status    func(childComplexity int) int
+		ClusterCount    func(childComplexity int) int
+		CreatedAt       func(childComplexity int) int
+		DatacenterCount func(childComplexity int) int
+		Endpoint        func(childComplexity int) int
+		HostCount       func(childComplexity int) int
+		ID              func(childComplexity int) int
+		Kind            func(childComplexity int) int
+		Name            func(childComplexity int) int
+		Status          func(childComplexity int) int
+		VMCount         func(childComplexity int) int
 	}
 
 	RouterTier struct {
@@ -328,7 +335,10 @@ type MutationResolver interface {
 	UpsertRateLimitPolicy(ctx context.Context, input model.UpsertRateLimitPolicyInput) (*model.RateLimitPolicy, error)
 	SetRateLimitPolicyEnabled(ctx context.Context, id string, enabled bool) (*model.RateLimitPolicy, error)
 	RegisterResourcePool(ctx context.Context, input model.RegisterResourcePoolInput) (*model.ResourcePool, error)
+	UpdateResourcePool(ctx context.Context, id string, input model.UpdateResourcePoolInput) (*model.ResourcePool, error)
 	DeleteResourcePool(ctx context.Context, id string) (bool, error)
+	TestResourcePoolConnection(ctx context.Context, id string) (*model.ResourcePool, error)
+	SyncResourcePool(ctx context.Context, id string) (*model.ResourcePool, error)
 	IssueVirtualKey(ctx context.Context, input model.IssueVirtualKeyInput) (*model.IssuedVirtualKey, error)
 	RevokeVirtualKey(ctx context.Context, id string) (bool, error)
 	SetVirtualKeyEnabled(ctx context.Context, id string, enabled bool) (*model.VirtualKey, error)
@@ -1052,6 +1062,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.SetVirtualKeyEnabled(childComplexity, args["id"].(string), args["enabled"].(bool)), true
+	case "Mutation.syncResourcePool":
+		if e.ComplexityRoot.Mutation.SyncResourcePool == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_syncResourcePool_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.SyncResourcePool(childComplexity, args["id"].(string)), true
 	case "Mutation.testGatewayConnection":
 		if e.ComplexityRoot.Mutation.TestGatewayConnection == nil {
 			break
@@ -1063,6 +1084,28 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.TestGatewayConnection(childComplexity, args["id"].(string)), true
+	case "Mutation.testResourcePoolConnection":
+		if e.ComplexityRoot.Mutation.TestResourcePoolConnection == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_testResourcePoolConnection_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.TestResourcePoolConnection(childComplexity, args["id"].(string)), true
+	case "Mutation.updateResourcePool":
+		if e.ComplexityRoot.Mutation.UpdateResourcePool == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateResourcePool_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.UpdateResourcePool(childComplexity, args["id"].(string), args["input"].(model.UpdateResourcePoolInput)), true
 	case "Mutation.updateUser":
 		if e.ComplexityRoot.Mutation.UpdateUser == nil {
 			break
@@ -1356,18 +1399,36 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.RequestLog.UserID(childComplexity), true
 
+	case "ResourcePool.clusterCount":
+		if e.ComplexityRoot.ResourcePool.ClusterCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ResourcePool.ClusterCount(childComplexity), true
 	case "ResourcePool.createdAt":
 		if e.ComplexityRoot.ResourcePool.CreatedAt == nil {
 			break
 		}
 
 		return e.ComplexityRoot.ResourcePool.CreatedAt(childComplexity), true
+	case "ResourcePool.datacenterCount":
+		if e.ComplexityRoot.ResourcePool.DatacenterCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ResourcePool.DatacenterCount(childComplexity), true
 	case "ResourcePool.endpoint":
 		if e.ComplexityRoot.ResourcePool.Endpoint == nil {
 			break
 		}
 
 		return e.ComplexityRoot.ResourcePool.Endpoint(childComplexity), true
+	case "ResourcePool.hostCount":
+		if e.ComplexityRoot.ResourcePool.HostCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ResourcePool.HostCount(childComplexity), true
 	case "ResourcePool.id":
 		if e.ComplexityRoot.ResourcePool.ID == nil {
 			break
@@ -1392,6 +1453,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ResourcePool.Status(childComplexity), true
+	case "ResourcePool.vmCount":
+		if e.ComplexityRoot.ResourcePool.VMCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ResourcePool.VMCount(childComplexity), true
 
 	case "RouterTier.id":
 		if e.ComplexityRoot.RouterTier.ID == nil {
@@ -1671,6 +1738,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputRegisterGatewayConnectionInput,
 		ec.unmarshalInputRegisterResourcePoolInput,
 		ec.unmarshalInputRequestLogFilter,
+		ec.unmarshalInputUpdateResourcePoolInput,
 		ec.unmarshalInputUpdateUserInput,
 		ec.unmarshalInputUpsertAgentTemplateInput,
 		ec.unmarshalInputUpsertModelRouteInput,
@@ -2093,7 +2161,7 @@ extend type Mutation {
   setRateLimitPolicyEnabled(id: ID!, enabled: Boolean!): RateLimitPolicy! @hasPermission(perm: "route:manage")
 }
 `, BuiltIn: false},
-	{Name: "../../schema/resourcepool.graphql", Input: `# Resource pool (vCenter) registration. See LLD-03 / LLD-06.
+	{Name: "../../schema/resourcepool.graphql", Input: `# Resource pool (vCenter) registration + inventory. See LLD-03 / LLD-06, 0619 第13页.
 
 enum ResourcePoolStatus {
   connected
@@ -2107,6 +2175,10 @@ type ResourcePool {
   kind: String!
   endpoint: String!
   status: ResourcePoolStatus!
+  datacenterCount: Int!
+  clusterCount: Int!
+  hostCount: Int!
+  vmCount: Int!
   createdAt: Time!
 }
 
@@ -2117,13 +2189,24 @@ input RegisterResourcePoolInput {
   secretRef: String
 }
 
+input UpdateResourcePoolInput {
+  name: String
+  endpoint: String
+  secretRef: String
+}
+
 extend type Query {
   resourcePools: [ResourcePool!]! @hasRole(any: [admin])
 }
 
 extend type Mutation {
   registerResourcePool(input: RegisterResourcePoolInput!): ResourcePool! @hasRole(any: [admin])
+  updateResourcePool(id: ID!, input: UpdateResourcePoolInput!): ResourcePool! @hasRole(any: [admin])
   deleteResourcePool(id: ID!): Boolean! @hasRole(any: [admin])
+  # Resolve credentials → connect → set status (0619 第13页 连接状态).
+  testResourcePoolConnection(id: ID!): ResourcePool! @hasRole(any: [admin])
+  # Connect → count datacenters/clusters/hosts/VMs → persist (同步数据).
+  syncResourcePool(id: ID!): ResourcePool! @hasRole(any: [admin])
 }
 `, BuiltIn: false},
 	{Name: "../../schema/schema.graphql", Input: `# Agent Platform — GraphQL contract (single source of truth).
@@ -2570,6 +2653,14 @@ func (ec *executionContext) childFields_ResourcePool(ctx context.Context, field 
 		return ec.fieldContext_ResourcePool_endpoint(ctx, field)
 	case "status":
 		return ec.fieldContext_ResourcePool_status(ctx, field)
+	case "datacenterCount":
+		return ec.fieldContext_ResourcePool_datacenterCount(ctx, field)
+	case "clusterCount":
+		return ec.fieldContext_ResourcePool_clusterCount(ctx, field)
+	case "hostCount":
+		return ec.fieldContext_ResourcePool_hostCount(ctx, field)
+	case "vmCount":
+		return ec.fieldContext_ResourcePool_vmCount(ctx, field)
 	case "createdAt":
 		return ec.fieldContext_ResourcePool_createdAt(ctx, field)
 	}
@@ -3218,6 +3309,20 @@ func (ec *executionContext) field_Mutation_setVirtualKeyEnabled_args(ctx context
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_syncResourcePool_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_testGatewayConnection_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -3229,6 +3334,42 @@ func (ec *executionContext) field_Mutation_testGatewayConnection_args(ctx contex
 		return nil, err
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_testResourcePoolConnection_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateResourcePool_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.UpdateResourcePoolInput, error) {
+			return ec.unmarshalNUpdateResourcePoolInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUpdateResourcePoolInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg1
 	return args, nil
 }
 
@@ -6600,6 +6741,68 @@ func (ec *executionContext) fieldContext_Mutation_registerResourcePool(ctx conte
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_updateResourcePool(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_updateResourcePool(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().UpdateResourcePool(ctx, fc.Args["id"].(string), fc.Args["input"].(model.UpdateResourcePoolInput))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.ResourcePool
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.ResourcePool
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ResourcePool) graphql.Marshaler {
+			return ec.marshalNResourcePool2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_updateResourcePool(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ResourcePool(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateResourcePool_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_deleteResourcePool(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -6656,6 +6859,130 @@ func (ec *executionContext) fieldContext_Mutation_deleteResourcePool(ctx context
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_deleteResourcePool_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_testResourcePoolConnection(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_testResourcePoolConnection(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().TestResourcePoolConnection(ctx, fc.Args["id"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.ResourcePool
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.ResourcePool
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ResourcePool) graphql.Marshaler {
+			return ec.marshalNResourcePool2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_testResourcePoolConnection(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ResourcePool(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_testResourcePoolConnection_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_syncResourcePool(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_syncResourcePool(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().SyncResourcePool(ctx, fc.Args["id"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.ResourcePool
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.ResourcePool
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ResourcePool) graphql.Marshaler {
+			return ec.marshalNResourcePool2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_syncResourcePool(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ResourcePool(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_syncResourcePool_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -8240,6 +8567,98 @@ func (ec *executionContext) _ResourcePool_status(ctx context.Context, field grap
 }
 func (ec *executionContext) fieldContext_ResourcePool_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type ResourcePoolStatus does not have child fields"))
+}
+
+func (ec *executionContext) _ResourcePool_datacenterCount(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ResourcePool_datacenterCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DatacenterCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ResourcePool_datacenterCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ResourcePool_clusterCount(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ResourcePool_clusterCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ClusterCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ResourcePool_clusterCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ResourcePool_hostCount(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ResourcePool_hostCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.HostCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ResourcePool_hostCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ResourcePool_vmCount(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ResourcePool_vmCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.VMCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ResourcePool_vmCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
 func (ec *executionContext) _ResourcePool_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
@@ -10937,6 +11356,50 @@ func (ec *executionContext) unmarshalInputRequestLogFilter(ctx context.Context, 
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputUpdateResourcePoolInput(ctx context.Context, obj any) (model.UpdateResourcePoolInput, error) {
+	var it model.UpdateResourcePoolInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name", "endpoint", "secretRef"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "endpoint":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("endpoint"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Endpoint = data
+		case "secretRef":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretRef"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretRef = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputUpdateUserInput(ctx context.Context, obj any) (model.UpdateUserInput, error) {
 	var it model.UpdateUserInput
 	if obj == nil {
@@ -12255,9 +12718,30 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "updateResourcePool":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateResourcePool(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "deleteResourcePool":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_deleteResourcePool(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "testResourcePoolConnection":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_testResourcePoolConnection(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "syncResourcePool":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_syncResourcePool(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -12900,6 +13384,26 @@ func (ec *executionContext) _ResourcePool(ctx context.Context, sel ast.Selection
 			}
 		case "status":
 			out.Values[i] = ec._ResourcePool_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "datacenterCount":
+			out.Values[i] = ec._ResourcePool_datacenterCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "clusterCount":
+			out.Values[i] = ec._ResourcePool_clusterCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "hostCount":
+			out.Values[i] = ec._ResourcePool_hostCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "vmCount":
+			out.Values[i] = ec._ResourcePool_vmCount(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -14506,6 +15010,11 @@ func (ec *executionContext) marshalNTokenUsage2ᚖgithubᚗcomᚋVMwareᚑAIᚋa
 		return graphql.Null
 	}
 	return ec._TokenUsage(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNUpdateResourcePoolInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUpdateResourcePoolInput(ctx context.Context, v any) (model.UpdateResourcePoolInput, error) {
+	res, err := ec.unmarshalInputUpdateResourcePoolInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNUpdateUserInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUpdateUserInput(ctx context.Context, v any) (model.UpdateUserInput, error) {

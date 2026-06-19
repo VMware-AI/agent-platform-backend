@@ -80,6 +80,26 @@ func SecretRef(v string) predicate.ResourcePool {
 	return predicate.ResourcePool(sql.FieldEQ(FieldSecretRef, v))
 }
 
+// DatacenterCount applies equality check predicate on the "datacenter_count" field. It's identical to DatacenterCountEQ.
+func DatacenterCount(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldEQ(FieldDatacenterCount, v))
+}
+
+// ClusterCount applies equality check predicate on the "cluster_count" field. It's identical to ClusterCountEQ.
+func ClusterCount(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldEQ(FieldClusterCount, v))
+}
+
+// HostCount applies equality check predicate on the "host_count" field. It's identical to HostCountEQ.
+func HostCount(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldEQ(FieldHostCount, v))
+}
+
+// VMCount applies equality check predicate on the "vm_count" field. It's identical to VMCountEQ.
+func VMCount(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldEQ(FieldVMCount, v))
+}
+
 // TenantID applies equality check predicate on the "tenant_id" field. It's identical to TenantIDEQ.
 func TenantID(v uuid.UUID) predicate.ResourcePool {
 	return predicate.ResourcePool(sql.FieldEQ(FieldTenantID, v))
@@ -408,6 +428,166 @@ func SecretRefEqualFold(v string) predicate.ResourcePool {
 // SecretRefContainsFold applies the ContainsFold predicate on the "secret_ref" field.
 func SecretRefContainsFold(v string) predicate.ResourcePool {
 	return predicate.ResourcePool(sql.FieldContainsFold(FieldSecretRef, v))
+}
+
+// DatacenterCountEQ applies the EQ predicate on the "datacenter_count" field.
+func DatacenterCountEQ(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldEQ(FieldDatacenterCount, v))
+}
+
+// DatacenterCountNEQ applies the NEQ predicate on the "datacenter_count" field.
+func DatacenterCountNEQ(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldNEQ(FieldDatacenterCount, v))
+}
+
+// DatacenterCountIn applies the In predicate on the "datacenter_count" field.
+func DatacenterCountIn(vs ...int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldIn(FieldDatacenterCount, vs...))
+}
+
+// DatacenterCountNotIn applies the NotIn predicate on the "datacenter_count" field.
+func DatacenterCountNotIn(vs ...int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldNotIn(FieldDatacenterCount, vs...))
+}
+
+// DatacenterCountGT applies the GT predicate on the "datacenter_count" field.
+func DatacenterCountGT(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldGT(FieldDatacenterCount, v))
+}
+
+// DatacenterCountGTE applies the GTE predicate on the "datacenter_count" field.
+func DatacenterCountGTE(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldGTE(FieldDatacenterCount, v))
+}
+
+// DatacenterCountLT applies the LT predicate on the "datacenter_count" field.
+func DatacenterCountLT(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldLT(FieldDatacenterCount, v))
+}
+
+// DatacenterCountLTE applies the LTE predicate on the "datacenter_count" field.
+func DatacenterCountLTE(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldLTE(FieldDatacenterCount, v))
+}
+
+// ClusterCountEQ applies the EQ predicate on the "cluster_count" field.
+func ClusterCountEQ(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldEQ(FieldClusterCount, v))
+}
+
+// ClusterCountNEQ applies the NEQ predicate on the "cluster_count" field.
+func ClusterCountNEQ(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldNEQ(FieldClusterCount, v))
+}
+
+// ClusterCountIn applies the In predicate on the "cluster_count" field.
+func ClusterCountIn(vs ...int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldIn(FieldClusterCount, vs...))
+}
+
+// ClusterCountNotIn applies the NotIn predicate on the "cluster_count" field.
+func ClusterCountNotIn(vs ...int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldNotIn(FieldClusterCount, vs...))
+}
+
+// ClusterCountGT applies the GT predicate on the "cluster_count" field.
+func ClusterCountGT(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldGT(FieldClusterCount, v))
+}
+
+// ClusterCountGTE applies the GTE predicate on the "cluster_count" field.
+func ClusterCountGTE(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldGTE(FieldClusterCount, v))
+}
+
+// ClusterCountLT applies the LT predicate on the "cluster_count" field.
+func ClusterCountLT(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldLT(FieldClusterCount, v))
+}
+
+// ClusterCountLTE applies the LTE predicate on the "cluster_count" field.
+func ClusterCountLTE(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldLTE(FieldClusterCount, v))
+}
+
+// HostCountEQ applies the EQ predicate on the "host_count" field.
+func HostCountEQ(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldEQ(FieldHostCount, v))
+}
+
+// HostCountNEQ applies the NEQ predicate on the "host_count" field.
+func HostCountNEQ(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldNEQ(FieldHostCount, v))
+}
+
+// HostCountIn applies the In predicate on the "host_count" field.
+func HostCountIn(vs ...int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldIn(FieldHostCount, vs...))
+}
+
+// HostCountNotIn applies the NotIn predicate on the "host_count" field.
+func HostCountNotIn(vs ...int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldNotIn(FieldHostCount, vs...))
+}
+
+// HostCountGT applies the GT predicate on the "host_count" field.
+func HostCountGT(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldGT(FieldHostCount, v))
+}
+
+// HostCountGTE applies the GTE predicate on the "host_count" field.
+func HostCountGTE(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldGTE(FieldHostCount, v))
+}
+
+// HostCountLT applies the LT predicate on the "host_count" field.
+func HostCountLT(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldLT(FieldHostCount, v))
+}
+
+// HostCountLTE applies the LTE predicate on the "host_count" field.
+func HostCountLTE(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldLTE(FieldHostCount, v))
+}
+
+// VMCountEQ applies the EQ predicate on the "vm_count" field.
+func VMCountEQ(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldEQ(FieldVMCount, v))
+}
+
+// VMCountNEQ applies the NEQ predicate on the "vm_count" field.
+func VMCountNEQ(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldNEQ(FieldVMCount, v))
+}
+
+// VMCountIn applies the In predicate on the "vm_count" field.
+func VMCountIn(vs ...int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldIn(FieldVMCount, vs...))
+}
+
+// VMCountNotIn applies the NotIn predicate on the "vm_count" field.
+func VMCountNotIn(vs ...int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldNotIn(FieldVMCount, vs...))
+}
+
+// VMCountGT applies the GT predicate on the "vm_count" field.
+func VMCountGT(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldGT(FieldVMCount, v))
+}
+
+// VMCountGTE applies the GTE predicate on the "vm_count" field.
+func VMCountGTE(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldGTE(FieldVMCount, v))
+}
+
+// VMCountLT applies the LT predicate on the "vm_count" field.
+func VMCountLT(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldLT(FieldVMCount, v))
+}
+
+// VMCountLTE applies the LTE predicate on the "vm_count" field.
+func VMCountLTE(v int) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldLTE(FieldVMCount, v))
 }
 
 // TenantIDEQ applies the EQ predicate on the "tenant_id" field.

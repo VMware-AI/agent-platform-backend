@@ -1,4 +1,4 @@
-# Resource pool (vCenter) registration. See LLD-03 / LLD-06.
+# Resource pool (vCenter) registration + inventory. See LLD-03 / LLD-06, 0619 第13页.
 
 enum ResourcePoolStatus {
   connected
@@ -12,6 +12,10 @@ type ResourcePool {
   kind: String!
   endpoint: String!
   status: ResourcePoolStatus!
+  datacenterCount: Int!
+  clusterCount: Int!
+  hostCount: Int!
+  vmCount: Int!
   createdAt: Time!
 }
 
@@ -22,11 +26,22 @@ input RegisterResourcePoolInput {
   secretRef: String
 }
 
+input UpdateResourcePoolInput {
+  name: String
+  endpoint: String
+  secretRef: String
+}
+
 extend type Query {
   resourcePools: [ResourcePool!]! @hasRole(any: [admin])
 }
 
 extend type Mutation {
   registerResourcePool(input: RegisterResourcePoolInput!): ResourcePool! @hasRole(any: [admin])
+  updateResourcePool(id: ID!, input: UpdateResourcePoolInput!): ResourcePool! @hasRole(any: [admin])
   deleteResourcePool(id: ID!): Boolean! @hasRole(any: [admin])
+  # Resolve credentials → connect → set status (0619 第13页 连接状态).
+  testResourcePoolConnection(id: ID!): ResourcePool! @hasRole(any: [admin])
+  # Connect → count datacenters/clusters/hosts/VMs → persist (同步数据).
+  syncResourcePool(id: ID!): ResourcePool! @hasRole(any: [admin])
 }
