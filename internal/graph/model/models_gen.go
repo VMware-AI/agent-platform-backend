@@ -99,6 +99,10 @@ type CreateAgentInput struct {
 	ResourcePoolID *string `json:"resourcePoolId,omitempty"`
 }
 
+type CreateCustomRoleInput struct {
+	Name string `json:"name"`
+}
+
 type CreateDepartmentInput struct {
 	TenantID  *string  `json:"tenantId,omitempty"`
 	Name      string   `json:"name"`
@@ -111,6 +115,14 @@ type CreateUserInput struct {
 	Password string  `json:"password"`
 	Role     Role    `json:"role"`
 	TenantID *string `json:"tenantId,omitempty"`
+}
+
+type CustomRole struct {
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	IsSystem    bool      `json:"isSystem"`
+	Permissions []string  `json:"permissions"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 type DateUsage struct {
@@ -216,6 +228,12 @@ type Mutation struct {
 type PageInput struct {
 	Limit  *int `json:"limit,omitempty"`
 	Offset *int `json:"offset,omitempty"`
+}
+
+type Permission struct {
+	ID          string  `json:"id"`
+	Key         string  `json:"key"`
+	Description *string `json:"description,omitempty"`
 }
 
 type Query struct {

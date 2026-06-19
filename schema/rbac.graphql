@@ -1,0 +1,37 @@
+# Fine-grained custom roles & permissions (角色与权限页). See LLD-01 §1.2/§4.2.
+# Distinct from the platform `Role` enum (User.role); these power custom roles +
+# the permission matrix UI.
+
+type Permission {
+  id: ID!
+  key: String!
+  description: String
+}
+
+type CustomRole {
+  id: ID!
+  name: String!
+  isSystem: Boolean!
+  permissions: [String!]!
+  createdAt: Time!
+}
+
+input CreateCustomRoleInput {
+  name: String!
+}
+
+extend type Query {
+  customRoles: [CustomRole!]! @hasRole(any: [admin])
+  permissions: [Permission!]! @hasRole(any: [admin])
+  userRoles(userId: ID!): [CustomRole!]! @hasRole(any: [admin])
+}
+
+extend type Mutation {
+  createCustomRole(input: CreateCustomRoleInput!): CustomRole! @hasRole(any: [admin])
+  deleteCustomRole(id: ID!): Boolean! @hasRole(any: [admin])
+  upsertPermission(key: String!, description: String): Permission! @hasRole(any: [admin])
+  # Replace the role's permission set (the matrix row).
+  setRolePermissions(roleId: ID!, permissionKeys: [String!]!): CustomRole! @hasRole(any: [admin])
+  assignUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin])
+  removeUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin])
+}

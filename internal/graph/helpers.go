@@ -378,6 +378,31 @@ func entMembershipRoleToGQL(s string) model.MembershipRole {
 	return model.MembershipRole(s)
 }
 
+func toModelPermission(p *ent.Permission) *model.Permission {
+	m := &model.Permission{ID: p.ID.String(), Key: p.Key}
+	if p.Description != "" {
+		d := p.Description
+		m.Description = &d
+	}
+	return m
+}
+
+// modelCustomRole maps an ent.Role to the GraphQL model, loading its permission keys.
+func (r *Resolver) modelCustomRole(ctx context.Context, role *ent.Role) (*model.CustomRole, error) {
+	perms, err := role.QueryPermissions().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	keys := make([]string, 0, len(perms))
+	for _, p := range perms {
+		keys = append(keys, p.Key)
+	}
+	return &model.CustomRole{
+		ID: role.ID.String(), Name: role.Name, IsSystem: role.IsSystem,
+		Permissions: keys, CreatedAt: role.CreatedAt,
+	}, nil
+}
+
 // connectPool resolves a resource pool's credentials and dials its vCenter.
 func (r *Resolver) connectPool(ctx context.Context, pool *ent.ResourcePool) (VCenterClient, error) {
 	if r.Secrets == nil || r.VCenterConnect == nil {

@@ -1,0 +1,174 @@
+package graph
+
+// This file will be automatically regenerated based on the schema, any resolver
+// implementations will be copied through when generating.
+
+import (
+	"context"
+
+	"github.com/google/uuid"
+	"github.com/vektah/gqlparser/v2/gqlerror"
+
+	"github.com/VMware-AI/agent-platform-backend/ent"
+	"github.com/VMware-AI/agent-platform-backend/ent/permission"
+	"github.com/VMware-AI/agent-platform-backend/internal/auth"
+	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
+)
+
+func (r *mutationResolver) CreateCustomRole(ctx context.Context, input model.CreateCustomRoleInput) (*model.CustomRole, error) {
+	role, err := r.Ent.Role.Create().SetName(input.Name).Save(ctx)
+	if err != nil {
+		if ent.IsConstraintError(err) {
+			return nil, gqlerror.Errorf("role name already exists")
+		}
+		return nil, err
+	}
+	r.audit(ctx, "role.create", "role", role.ID.String(), true, actorID(auth.FromContext(ctx)))
+	return r.modelCustomRole(ctx, role)
+}
+
+func (r *mutationResolver) DeleteCustomRole(ctx context.Context, id string) (bool, error) {
+	rid, err := uuid.Parse(id)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid id")
+	}
+	if err := r.Ent.Role.DeleteOneID(rid).Exec(ctx); err != nil {
+		return false, err
+	}
+	r.audit(ctx, "role.delete", "role", id, true, actorID(auth.FromContext(ctx)))
+	return true, nil
+}
+
+func (r *mutationResolver) UpsertPermission(ctx context.Context, key string, description *string) (*model.Permission, error) {
+	existing, err := r.Ent.Permission.Query().Where(permission.Key(key)).Only(ctx)
+	var p *ent.Permission
+	switch {
+	case ent.IsNotFound(err):
+		c := r.Ent.Permission.Create().SetKey(key)
+		if description != nil {
+			c.SetDescription(*description)
+		}
+		p, err = c.Save(ctx)
+	case err != nil:
+		return nil, err
+	default:
+		u := existing.Update()
+		if description != nil {
+			u.SetDescription(*description)
+		}
+		p, err = u.Save(ctx)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return toModelPermission(p), nil
+}
+
+// SetRolePermissions replaces a role's permission set (the matrix row).
+func (r *mutationResolver) SetRolePermissions(ctx context.Context, roleID string, permissionKeys []string) (*model.CustomRole, error) {
+	rid, err := uuid.Parse(roleID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid roleId")
+	}
+	permIDs := make([]uuid.UUID, 0, len(permissionKeys))
+	for _, key := range permissionKeys {
+		p, err := r.Ent.Permission.Query().Where(permission.Key(key)).Only(ctx)
+		if ent.IsNotFound(err) {
+			p, err = r.Ent.Permission.Create().SetKey(key).Save(ctx)
+		}
+		if err != nil {
+			return nil, err
+		}
+		permIDs = append(permIDs, p.ID)
+	}
+	role, err := r.Ent.Role.UpdateOneID(rid).ClearPermissions().AddPermissionIDs(permIDs...).Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	r.audit(ctx, "role.set_permissions", "role", roleID, true, actorID(auth.FromContext(ctx)))
+	return r.modelCustomRole(ctx, role)
+}
+
+func (r *mutationResolver) AssignUserRole(ctx context.Context, userID string, roleID string) (bool, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid userId")
+	}
+	rid, err := uuid.Parse(roleID)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid roleId")
+	}
+	if err := r.Ent.User.UpdateOneID(uid).AddRoleIDs(rid).Exec(ctx); err != nil {
+		return false, err
+	}
+	r.audit(ctx, "user.assign_role", "user", userID, true, actorID(auth.FromContext(ctx)))
+	return true, nil
+}
+
+func (r *mutationResolver) RemoveUserRole(ctx context.Context, userID string, roleID string) (bool, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid userId")
+	}
+	rid, err := uuid.Parse(roleID)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid roleId")
+	}
+	if err := r.Ent.User.UpdateOneID(uid).RemoveRoleIDs(rid).Exec(ctx); err != nil {
+		return false, err
+	}
+	r.audit(ctx, "user.remove_role", "user", userID, true, actorID(auth.FromContext(ctx)))
+	return true, nil
+}
+
+func (r *queryResolver) CustomRoles(ctx context.Context) ([]model.CustomRole, error) {
+	roles, err := r.Ent.Role.Query().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.CustomRole, 0, len(roles))
+	for _, role := range roles {
+		mr, err := r.modelCustomRole(ctx, role)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *mr)
+	}
+	return out, nil
+}
+
+func (r *queryResolver) Permissions(ctx context.Context) ([]model.Permission, error) {
+	ps, err := r.Ent.Permission.Query().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.Permission, 0, len(ps))
+	for _, p := range ps {
+		out = append(out, *toModelPermission(p))
+	}
+	return out, nil
+}
+
+func (r *queryResolver) UserRoles(ctx context.Context, userID string) ([]model.CustomRole, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid userId")
+	}
+	u, err := r.Ent.User.Get(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+	roles, err := u.QueryRoles().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.CustomRole, 0, len(roles))
+	for _, role := range roles {
+		mr, err := r.modelCustomRole(ctx, role)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *mr)
+	}
+	return out, nil
+}
