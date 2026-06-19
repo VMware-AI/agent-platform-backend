@@ -19,6 +19,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/schema"
 	"github.com/VMware-AI/agent-platform-backend/ent/skill"
 	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
+	"github.com/VMware-AI/agent-platform-backend/ent/tokenusage"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/google/uuid"
@@ -345,6 +346,36 @@ func init() {
 	tenantDescID := tenantFields[0].Descriptor()
 	// tenant.DefaultID holds the default value on creation for the id field.
 	tenant.DefaultID = tenantDescID.Default.(func() uuid.UUID)
+	tokenusageFields := schema.TokenUsage{}.Fields()
+	_ = tokenusageFields
+	// tokenusageDescModel is the schema descriptor for model field.
+	tokenusageDescModel := tokenusageFields[3].Descriptor()
+	// tokenusage.ModelValidator is a validator for the "model" field. It is called by the builders before save.
+	tokenusage.ModelValidator = tokenusageDescModel.Validators[0].(func(string) error)
+	// tokenusageDescInputTokens is the schema descriptor for input_tokens field.
+	tokenusageDescInputTokens := tokenusageFields[4].Descriptor()
+	// tokenusage.DefaultInputTokens holds the default value on creation for the input_tokens field.
+	tokenusage.DefaultInputTokens = tokenusageDescInputTokens.Default.(int)
+	// tokenusage.InputTokensValidator is a validator for the "input_tokens" field. It is called by the builders before save.
+	tokenusage.InputTokensValidator = tokenusageDescInputTokens.Validators[0].(func(int) error)
+	// tokenusageDescOutputTokens is the schema descriptor for output_tokens field.
+	tokenusageDescOutputTokens := tokenusageFields[5].Descriptor()
+	// tokenusage.DefaultOutputTokens holds the default value on creation for the output_tokens field.
+	tokenusage.DefaultOutputTokens = tokenusageDescOutputTokens.Default.(int)
+	// tokenusage.OutputTokensValidator is a validator for the "output_tokens" field. It is called by the builders before save.
+	tokenusage.OutputTokensValidator = tokenusageDescOutputTokens.Validators[0].(func(int) error)
+	// tokenusageDescCost is the schema descriptor for cost field.
+	tokenusageDescCost := tokenusageFields[6].Descriptor()
+	// tokenusage.DefaultCost holds the default value on creation for the cost field.
+	tokenusage.DefaultCost = tokenusageDescCost.Default.(float64)
+	// tokenusageDescCreatedAt is the schema descriptor for created_at field.
+	tokenusageDescCreatedAt := tokenusageFields[10].Descriptor()
+	// tokenusage.DefaultCreatedAt holds the default value on creation for the created_at field.
+	tokenusage.DefaultCreatedAt = tokenusageDescCreatedAt.Default.(func() time.Time)
+	// tokenusageDescID is the schema descriptor for id field.
+	tokenusageDescID := tokenusageFields[0].Descriptor()
+	// tokenusage.DefaultID holds the default value on creation for the id field.
+	tokenusage.DefaultID = tokenusageDescID.Default.(func() uuid.UUID)
 	userMixin := schema.User{}.Mixin()
 	userMixinFields0 := userMixin[0].Fields()
 	_ = userMixinFields0

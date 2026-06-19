@@ -45,6 +45,9 @@ type Skill func(*sql.Selector)
 // Tenant is the predicate function for tenant builders.
 type Tenant func(*sql.Selector)
 
+// TokenUsage is the predicate function for tokenusage builders.
+type TokenUsage func(*sql.Selector)
+
 // User is the predicate function for user builders.
 type User func(*sql.Selector)
 

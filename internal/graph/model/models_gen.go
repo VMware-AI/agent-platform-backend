@@ -91,6 +91,20 @@ type IssuedVirtualKey struct {
 	Secret     string      `json:"secret"`
 }
 
+type MeteringSummary struct {
+	TotalInputTokens  int          `json:"totalInputTokens"`
+	TotalOutputTokens int          `json:"totalOutputTokens"`
+	TotalCost         float64      `json:"totalCost"`
+	ByModel           []ModelUsage `json:"byModel"`
+}
+
+type ModelUsage struct {
+	Model        string  `json:"model"`
+	InputTokens  int     `json:"inputTokens"`
+	OutputTokens int     `json:"outputTokens"`
+	Cost         float64 `json:"cost"`
+}
+
 type Mutation struct {
 }
 
@@ -100,6 +114,15 @@ type PageInput struct {
 }
 
 type Query struct {
+}
+
+type RecordTokenUsageInput struct {
+	UserID       string   `json:"userId"`
+	AgentID      *string  `json:"agentId,omitempty"`
+	Model        string   `json:"model"`
+	InputTokens  int      `json:"inputTokens"`
+	OutputTokens int      `json:"outputTokens"`
+	Cost         *float64 `json:"cost,omitempty"`
 }
 
 type RegisterResourcePoolInput struct {
@@ -120,6 +143,17 @@ type ResourcePool struct {
 type TempPasswordPayload struct {
 	UserID       string `json:"userId"`
 	TempPassword string `json:"tempPassword"`
+}
+
+type TokenUsage struct {
+	ID           string    `json:"id"`
+	UserID       string    `json:"userId"`
+	AgentID      *string   `json:"agentId,omitempty"`
+	Model        string    `json:"model"`
+	InputTokens  int       `json:"inputTokens"`
+	OutputTokens int       `json:"outputTokens"`
+	Cost         float64   `json:"cost"`
+	CreatedAt    time.Time `json:"createdAt"`
 }
 
 type UpdateUserInput struct {

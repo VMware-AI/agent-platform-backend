@@ -95,6 +95,20 @@ type ComplexityRoot struct {
 		VirtualKey func(childComplexity int) int
 	}
 
+	MeteringSummary struct {
+		ByModel           func(childComplexity int) int
+		TotalCost         func(childComplexity int) int
+		TotalInputTokens  func(childComplexity int) int
+		TotalOutputTokens func(childComplexity int) int
+	}
+
+	ModelUsage struct {
+		Cost         func(childComplexity int) int
+		InputTokens  func(childComplexity int) int
+		Model        func(childComplexity int) int
+		OutputTokens func(childComplexity int) int
+	}
+
 	Mutation struct {
 		ChangePassword       func(childComplexity int, oldPassword string, newPassword string) int
 		CreateAgent          func(childComplexity int, input model.CreateAgentInput) int
@@ -104,6 +118,7 @@ type ComplexityRoot struct {
 		IssueVirtualKey      func(childComplexity int, input model.IssueVirtualKeyInput) int
 		Login                func(childComplexity int, username string, password string) int
 		Logout               func(childComplexity int) int
+		RecordTokenUsage     func(childComplexity int, input model.RecordTokenUsageInput) int
 		RegisterResourcePool func(childComplexity int, input model.RegisterResourcePoolInput) int
 		ResetPassword        func(childComplexity int, userID string) int
 		RevokeVirtualKey     func(childComplexity int, id string) int
@@ -114,14 +129,16 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		AgentConfigs   func(childComplexity int, agentType *string) int
-		AgentTemplates func(childComplexity int) int
-		Agents         func(childComplexity int) int
-		AuditLogs      func(childComplexity int, page *model.PageInput) int
-		Me             func(childComplexity int) int
-		ResourcePools  func(childComplexity int) int
-		Users          func(childComplexity int, page *model.PageInput) int
-		VirtualKeys    func(childComplexity int, userID *string) int
+		AgentConfigs    func(childComplexity int, agentType *string) int
+		AgentTemplates  func(childComplexity int) int
+		Agents          func(childComplexity int) int
+		AuditLogs       func(childComplexity int, page *model.PageInput) int
+		Me              func(childComplexity int) int
+		MeteringSummary func(childComplexity int, userID *string) int
+		ResourcePools   func(childComplexity int) int
+		TokenUsage      func(childComplexity int, userID *string, page *model.PageInput) int
+		Users           func(childComplexity int, page *model.PageInput) int
+		VirtualKeys     func(childComplexity int, userID *string) int
 	}
 
 	ResourcePool struct {
@@ -135,6 +152,17 @@ type ComplexityRoot struct {
 
 	TempPasswordPayload struct {
 		TempPassword func(childComplexity int) int
+		UserID       func(childComplexity int) int
+	}
+
+	TokenUsage struct {
+		AgentID      func(childComplexity int) int
+		Cost         func(childComplexity int) int
+		CreatedAt    func(childComplexity int) int
+		ID           func(childComplexity int) int
+		InputTokens  func(childComplexity int) int
+		Model        func(childComplexity int) int
+		OutputTokens func(childComplexity int) int
 		UserID       func(childComplexity int) int
 	}
 
@@ -184,6 +212,7 @@ type MutationResolver interface {
 	UpsertAgentTemplate(ctx context.Context, input model.UpsertAgentTemplateInput) (*model.AgentTemplate, error)
 	CreateAgent(ctx context.Context, input model.CreateAgentInput) (*model.Agent, error)
 	SetAgentStatus(ctx context.Context, id string, status model.AgentStatus) (*model.Agent, error)
+	RecordTokenUsage(ctx context.Context, input model.RecordTokenUsageInput) (*model.TokenUsage, error)
 	RegisterResourcePool(ctx context.Context, input model.RegisterResourcePoolInput) (*model.ResourcePool, error)
 	DeleteResourcePool(ctx context.Context, id string) (bool, error)
 	IssueVirtualKey(ctx context.Context, input model.IssueVirtualKeyInput) (*model.IssuedVirtualKey, error)
@@ -196,6 +225,8 @@ type QueryResolver interface {
 	AgentTemplates(ctx context.Context) ([]model.AgentTemplate, error)
 	AgentConfigs(ctx context.Context, agentType *string) ([]model.AgentConfig, error)
 	Agents(ctx context.Context) ([]model.Agent, error)
+	TokenUsage(ctx context.Context, userID *string, page *model.PageInput) ([]model.TokenUsage, error)
+	MeteringSummary(ctx context.Context, userID *string) (*model.MeteringSummary, error)
 	ResourcePools(ctx context.Context) ([]model.ResourcePool, error)
 	VirtualKeys(ctx context.Context, userID *string) ([]model.VirtualKey, error)
 }
@@ -435,6 +466,56 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.IssuedVirtualKey.VirtualKey(childComplexity), true
 
+	case "MeteringSummary.byModel":
+		if e.ComplexityRoot.MeteringSummary.ByModel == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringSummary.ByModel(childComplexity), true
+	case "MeteringSummary.totalCost":
+		if e.ComplexityRoot.MeteringSummary.TotalCost == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringSummary.TotalCost(childComplexity), true
+	case "MeteringSummary.totalInputTokens":
+		if e.ComplexityRoot.MeteringSummary.TotalInputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringSummary.TotalInputTokens(childComplexity), true
+	case "MeteringSummary.totalOutputTokens":
+		if e.ComplexityRoot.MeteringSummary.TotalOutputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringSummary.TotalOutputTokens(childComplexity), true
+
+	case "ModelUsage.cost":
+		if e.ComplexityRoot.ModelUsage.Cost == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelUsage.Cost(childComplexity), true
+	case "ModelUsage.inputTokens":
+		if e.ComplexityRoot.ModelUsage.InputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelUsage.InputTokens(childComplexity), true
+	case "ModelUsage.model":
+		if e.ComplexityRoot.ModelUsage.Model == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelUsage.Model(childComplexity), true
+	case "ModelUsage.outputTokens":
+		if e.ComplexityRoot.ModelUsage.OutputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelUsage.OutputTokens(childComplexity), true
+
 	case "Mutation.changePassword":
 		if e.ComplexityRoot.Mutation.ChangePassword == nil {
 			break
@@ -518,6 +599,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.Logout(childComplexity), true
+	case "Mutation.recordTokenUsage":
+		if e.ComplexityRoot.Mutation.RecordTokenUsage == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_recordTokenUsage_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.RecordTokenUsage(childComplexity, args["input"].(model.RecordTokenUsageInput)), true
 	case "Mutation.registerResourcePool":
 		if e.ComplexityRoot.Mutation.RegisterResourcePool == nil {
 			break
@@ -637,12 +729,34 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Me(childComplexity), true
+	case "Query.meteringSummary":
+		if e.ComplexityRoot.Query.MeteringSummary == nil {
+			break
+		}
+
+		args, err := ec.field_Query_meteringSummary_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.MeteringSummary(childComplexity, args["userId"].(*string)), true
 	case "Query.resourcePools":
 		if e.ComplexityRoot.Query.ResourcePools == nil {
 			break
 		}
 
 		return e.ComplexityRoot.Query.ResourcePools(childComplexity), true
+	case "Query.tokenUsage":
+		if e.ComplexityRoot.Query.TokenUsage == nil {
+			break
+		}
+
+		args, err := ec.field_Query_tokenUsage_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.TokenUsage(childComplexity, args["userId"].(*string), args["page"].(*model.PageInput)), true
 	case "Query.users":
 		if e.ComplexityRoot.Query.Users == nil {
 			break
@@ -715,6 +829,55 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.TempPasswordPayload.UserID(childComplexity), true
+
+	case "TokenUsage.agentId":
+		if e.ComplexityRoot.TokenUsage.AgentID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.TokenUsage.AgentID(childComplexity), true
+	case "TokenUsage.cost":
+		if e.ComplexityRoot.TokenUsage.Cost == nil {
+			break
+		}
+
+		return e.ComplexityRoot.TokenUsage.Cost(childComplexity), true
+	case "TokenUsage.createdAt":
+		if e.ComplexityRoot.TokenUsage.CreatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.TokenUsage.CreatedAt(childComplexity), true
+	case "TokenUsage.id":
+		if e.ComplexityRoot.TokenUsage.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.TokenUsage.ID(childComplexity), true
+	case "TokenUsage.inputTokens":
+		if e.ComplexityRoot.TokenUsage.InputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.TokenUsage.InputTokens(childComplexity), true
+	case "TokenUsage.model":
+		if e.ComplexityRoot.TokenUsage.Model == nil {
+			break
+		}
+
+		return e.ComplexityRoot.TokenUsage.Model(childComplexity), true
+	case "TokenUsage.outputTokens":
+		if e.ComplexityRoot.TokenUsage.OutputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.TokenUsage.OutputTokens(childComplexity), true
+	case "TokenUsage.userId":
+		if e.ComplexityRoot.TokenUsage.UserID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.TokenUsage.UserID(childComplexity), true
 
 	case "User.createdAt":
 		if e.ComplexityRoot.User.CreatedAt == nil {
@@ -851,6 +1014,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCreateUserInput,
 		ec.unmarshalInputIssueVirtualKeyInput,
 		ec.unmarshalInputPageInput,
+		ec.unmarshalInputRecordTokenUsageInput,
 		ec.unmarshalInputRegisterResourcePoolInput,
 		ec.unmarshalInputUpdateUserInput,
 		ec.unmarshalInputUpsertAgentTemplateInput,
@@ -1011,6 +1175,54 @@ extend type Mutation {
   # Self-service: any authenticated user creates their own agent (owner = caller).
   createAgent(input: CreateAgentInput!): Agent!
   setAgentStatus(id: ID!, status: AgentStatus!): Agent!
+}
+`, BuiltIn: false},
+	{Name: "../../schema/metering.graphql", Input: `# Metering center (计量中心, 0619 可观测性). Token usage + aggregation.
+
+type TokenUsage {
+  id: ID!
+  userId: ID!
+  agentId: ID
+  model: String!
+  inputTokens: Int!
+  outputTokens: Int!
+  cost: Float!
+  createdAt: Time!
+}
+
+type ModelUsage {
+  model: String!
+  inputTokens: Int!
+  outputTokens: Int!
+  cost: Float!
+}
+
+type MeteringSummary {
+  totalInputTokens: Int!
+  totalOutputTokens: Int!
+  totalCost: Float!
+  byModel: [ModelUsage!]!
+}
+
+input RecordTokenUsageInput {
+  userId: ID!
+  agentId: ID
+  model: String!
+  inputTokens: Int!
+  outputTokens: Int!
+  cost: Float
+}
+
+extend type Query {
+  # metering:view permission (admin + observability).
+  tokenUsage(userId: ID, page: PageInput): [TokenUsage!]! @hasPermission(perm: "metering:view")
+  meteringSummary(userId: ID): MeteringSummary! @hasPermission(perm: "metering:view")
+}
+
+extend type Mutation {
+  # Ingest path (gateway usage callback / telemetry). Admin-scoped for M1;
+  # TODO: dedicated service token.
+  recordTokenUsage(input: RecordTokenUsageInput!): TokenUsage! @hasRole(any: [admin])
 }
 `, BuiltIn: false},
 	{Name: "../../schema/resourcepool.graphql", Input: `# Resource pool (vCenter) registration. See LLD-03 / LLD-06.
@@ -1303,6 +1515,34 @@ func (ec *executionContext) childFields_IssuedVirtualKey(ctx context.Context, fi
 	return nil, fmt.Errorf("no field named %q was found under type IssuedVirtualKey", field.Name)
 }
 
+func (ec *executionContext) childFields_MeteringSummary(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "totalInputTokens":
+		return ec.fieldContext_MeteringSummary_totalInputTokens(ctx, field)
+	case "totalOutputTokens":
+		return ec.fieldContext_MeteringSummary_totalOutputTokens(ctx, field)
+	case "totalCost":
+		return ec.fieldContext_MeteringSummary_totalCost(ctx, field)
+	case "byModel":
+		return ec.fieldContext_MeteringSummary_byModel(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type MeteringSummary", field.Name)
+}
+
+func (ec *executionContext) childFields_ModelUsage(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "model":
+		return ec.fieldContext_ModelUsage_model(ctx, field)
+	case "inputTokens":
+		return ec.fieldContext_ModelUsage_inputTokens(ctx, field)
+	case "outputTokens":
+		return ec.fieldContext_ModelUsage_outputTokens(ctx, field)
+	case "cost":
+		return ec.fieldContext_ModelUsage_cost(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type ModelUsage", field.Name)
+}
+
 func (ec *executionContext) childFields_ResourcePool(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -1329,6 +1569,28 @@ func (ec *executionContext) childFields_TempPasswordPayload(ctx context.Context,
 		return ec.fieldContext_TempPasswordPayload_tempPassword(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type TempPasswordPayload", field.Name)
+}
+
+func (ec *executionContext) childFields_TokenUsage(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_TokenUsage_id(ctx, field)
+	case "userId":
+		return ec.fieldContext_TokenUsage_userId(ctx, field)
+	case "agentId":
+		return ec.fieldContext_TokenUsage_agentId(ctx, field)
+	case "model":
+		return ec.fieldContext_TokenUsage_model(ctx, field)
+	case "inputTokens":
+		return ec.fieldContext_TokenUsage_inputTokens(ctx, field)
+	case "outputTokens":
+		return ec.fieldContext_TokenUsage_outputTokens(ctx, field)
+	case "cost":
+		return ec.fieldContext_TokenUsage_cost(ctx, field)
+	case "createdAt":
+		return ec.fieldContext_TokenUsage_createdAt(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type TokenUsage", field.Name)
 }
 
 func (ec *executionContext) childFields_User(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -1647,6 +1909,20 @@ func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawAr
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_recordTokenUsage_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.RecordTokenUsageInput, error) {
+			return ec.unmarshalNRecordTokenUsageInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRecordTokenUsageInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_registerResourcePool_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -1808,6 +2084,42 @@ func (ec *executionContext) field_Query_auditLogs_args(ctx context.Context, rawA
 		return nil, err
 	}
 	args["page"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_meteringSummary_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "userId",
+		func(ctx context.Context, v any) (*string, error) {
+			return ec.unmarshalOID2ᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["userId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_tokenUsage_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "userId",
+		func(ctx context.Context, v any) (*string, error) {
+			return ec.unmarshalOID2ᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["userId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "page",
+		func(ctx context.Context, v any) (*model.PageInput, error) {
+			return ec.unmarshalOPageInput2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPageInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["page"] = arg1
 	return args, nil
 }
 
@@ -2731,6 +3043,199 @@ func (ec *executionContext) fieldContext_IssuedVirtualKey_secret(_ context.Conte
 	return graphql.NewScalarFieldContext("IssuedVirtualKey", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _MeteringSummary_totalInputTokens(ctx context.Context, field graphql.CollectedField, obj *model.MeteringSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringSummary_totalInputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalInputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringSummary_totalInputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("MeteringSummary", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _MeteringSummary_totalOutputTokens(ctx context.Context, field graphql.CollectedField, obj *model.MeteringSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringSummary_totalOutputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalOutputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringSummary_totalOutputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("MeteringSummary", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _MeteringSummary_totalCost(ctx context.Context, field graphql.CollectedField, obj *model.MeteringSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringSummary_totalCost(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalCost, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringSummary_totalCost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("MeteringSummary", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _MeteringSummary_byModel(ctx context.Context, field graphql.CollectedField, obj *model.MeteringSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringSummary_byModel(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ByModel, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.ModelUsage) graphql.Marshaler {
+			return ec.marshalNModelUsage2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelUsageᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringSummary_byModel(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MeteringSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ModelUsage(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ModelUsage_model(ctx context.Context, field graphql.CollectedField, obj *model.ModelUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelUsage_model(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Model, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelUsage_model(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelUsage", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ModelUsage_inputTokens(ctx context.Context, field graphql.CollectedField, obj *model.ModelUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelUsage_inputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.InputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelUsage_inputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelUsage", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ModelUsage_outputTokens(ctx context.Context, field graphql.CollectedField, obj *model.ModelUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelUsage_outputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OutputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelUsage_outputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelUsage", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ModelUsage_cost(ctx context.Context, field graphql.CollectedField, obj *model.ModelUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelUsage_cost(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Cost, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelUsage_cost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelUsage", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
 func (ec *executionContext) _Mutation_login(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -3302,6 +3807,68 @@ func (ec *executionContext) fieldContext_Mutation_setAgentStatus(ctx context.Con
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_recordTokenUsage(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_recordTokenUsage(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().RecordTokenUsage(ctx, fc.Args["input"].(model.RecordTokenUsageInput))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.TokenUsage
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.TokenUsage
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.TokenUsage) graphql.Marshaler {
+			return ec.marshalNTokenUsage2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTokenUsage(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_recordTokenUsage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_TokenUsage(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_recordTokenUsage_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_registerResourcePool(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -3814,6 +4381,130 @@ func (ec *executionContext) fieldContext_Query_agents(_ context.Context, field g
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_tokenUsage(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_tokenUsage(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().TokenUsage(ctx, fc.Args["userId"].(*string), fc.Args["page"].(*model.PageInput))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				perm, err := ec.unmarshalNString2string(ctx, "metering:view")
+				if err != nil {
+					var zeroVal []model.TokenUsage
+					return zeroVal, err
+				}
+				if ec.Directives.HasPermission == nil {
+					var zeroVal []model.TokenUsage
+					return zeroVal, errors.New("directive hasPermission is not implemented")
+				}
+				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v []model.TokenUsage) graphql.Marshaler {
+			return ec.marshalNTokenUsage2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTokenUsageᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_tokenUsage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_TokenUsage(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_tokenUsage_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_meteringSummary(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_meteringSummary(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().MeteringSummary(ctx, fc.Args["userId"].(*string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				perm, err := ec.unmarshalNString2string(ctx, "metering:view")
+				if err != nil {
+					var zeroVal *model.MeteringSummary
+					return zeroVal, err
+				}
+				if ec.Directives.HasPermission == nil {
+					var zeroVal *model.MeteringSummary
+					return zeroVal, errors.New("directive hasPermission is not implemented")
+				}
+				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.MeteringSummary) graphql.Marshaler {
+			return ec.marshalNMeteringSummary2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringSummary(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_meteringSummary(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_MeteringSummary(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_meteringSummary_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_resourcePools(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -4184,6 +4875,190 @@ func (ec *executionContext) _TempPasswordPayload_tempPassword(ctx context.Contex
 }
 func (ec *executionContext) fieldContext_TempPasswordPayload_tempPassword(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("TempPasswordPayload", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _TokenUsage_id(ctx context.Context, field graphql.CollectedField, obj *model.TokenUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_TokenUsage_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_TokenUsage_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("TokenUsage", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _TokenUsage_userId(ctx context.Context, field graphql.CollectedField, obj *model.TokenUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_TokenUsage_userId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.UserID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_TokenUsage_userId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("TokenUsage", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _TokenUsage_agentId(ctx context.Context, field graphql.CollectedField, obj *model.TokenUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_TokenUsage_agentId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.AgentID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOID2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_TokenUsage_agentId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("TokenUsage", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _TokenUsage_model(ctx context.Context, field graphql.CollectedField, obj *model.TokenUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_TokenUsage_model(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Model, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_TokenUsage_model(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("TokenUsage", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _TokenUsage_inputTokens(ctx context.Context, field graphql.CollectedField, obj *model.TokenUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_TokenUsage_inputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.InputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_TokenUsage_inputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("TokenUsage", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _TokenUsage_outputTokens(ctx context.Context, field graphql.CollectedField, obj *model.TokenUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_TokenUsage_outputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OutputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_TokenUsage_outputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("TokenUsage", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _TokenUsage_cost(ctx context.Context, field graphql.CollectedField, obj *model.TokenUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_TokenUsage_cost(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Cost, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_TokenUsage_cost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("TokenUsage", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _TokenUsage_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.TokenUsage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_TokenUsage_createdAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_TokenUsage_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("TokenUsage", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
 func (ec *executionContext) _User_id(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
@@ -5939,6 +6814,71 @@ func (ec *executionContext) unmarshalInputPageInput(ctx context.Context, obj any
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputRecordTokenUsageInput(ctx context.Context, obj any) (model.RecordTokenUsageInput, error) {
+	var it model.RecordTokenUsageInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"userId", "agentId", "model", "inputTokens", "outputTokens", "cost"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "userId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UserID = data
+		case "agentId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("agentId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.AgentID = data
+		case "model":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("model"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Model = data
+		case "inputTokens":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("inputTokens"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.InputTokens = data
+		case "outputTokens":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("outputTokens"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.OutputTokens = data
+		case "cost":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("cost"))
+			data, err := ec.unmarshalOFloat2ᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Cost = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputRegisterResourcePoolInput(ctx context.Context, obj any) (model.RegisterResourcePoolInput, error) {
 	var it model.RegisterResourcePoolInput
 	if obj == nil {
@@ -6513,6 +7453,114 @@ func (ec *executionContext) _IssuedVirtualKey(ctx context.Context, sel ast.Selec
 	return out
 }
 
+var meteringSummaryImplementors = []string{"MeteringSummary"}
+
+func (ec *executionContext) _MeteringSummary(ctx context.Context, sel ast.SelectionSet, obj *model.MeteringSummary) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, meteringSummaryImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("MeteringSummary")
+		case "totalInputTokens":
+			out.Values[i] = ec._MeteringSummary_totalInputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalOutputTokens":
+			out.Values[i] = ec._MeteringSummary_totalOutputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalCost":
+			out.Values[i] = ec._MeteringSummary_totalCost(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "byModel":
+			out.Values[i] = ec._MeteringSummary_byModel(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var modelUsageImplementors = []string{"ModelUsage"}
+
+func (ec *executionContext) _ModelUsage(ctx context.Context, sel ast.SelectionSet, obj *model.ModelUsage) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, modelUsageImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ModelUsage")
+		case "model":
+			out.Values[i] = ec._ModelUsage_model(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "inputTokens":
+			out.Values[i] = ec._ModelUsage_inputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "outputTokens":
+			out.Values[i] = ec._ModelUsage_outputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cost":
+			out.Values[i] = ec._ModelUsage_cost(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var mutationImplementors = []string{"Mutation"}
 
 func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -6605,6 +7653,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "setAgentStatus":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_setAgentStatus(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "recordTokenUsage":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_recordTokenUsage(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -6811,6 +7866,50 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "tokenUsage":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_tokenUsage(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "meteringSummary":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_meteringSummary(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "resourcePools":
 			field := field
 
@@ -6974,6 +8073,80 @@ func (ec *executionContext) _TempPasswordPayload(ctx context.Context, sel ast.Se
 			}
 		case "tempPassword":
 			out.Values[i] = ec._TempPasswordPayload_tempPassword(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var tokenUsageImplementors = []string{"TokenUsage"}
+
+func (ec *executionContext) _TokenUsage(ctx context.Context, sel ast.SelectionSet, obj *model.TokenUsage) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, tokenUsageImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("TokenUsage")
+		case "id":
+			out.Values[i] = ec._TokenUsage_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "userId":
+			out.Values[i] = ec._TokenUsage_userId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "agentId":
+			out.Values[i] = ec._TokenUsage_agentId(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "model":
+			out.Values[i] = ec._TokenUsage_model(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "inputTokens":
+			out.Values[i] = ec._TokenUsage_inputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "outputTokens":
+			out.Values[i] = ec._TokenUsage_outputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cost":
+			out.Values[i] = ec._TokenUsage_cost(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createdAt":
+			out.Values[i] = ec._TokenUsage_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -7774,6 +8947,22 @@ func (ec *executionContext) unmarshalNCreateUserInput2githubᚗcomᚋVMwareᚑAI
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalNFloat2float64(ctx context.Context, v any) (float64, error) {
+	res, err := graphql.UnmarshalFloatContext(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNFloat2float64(ctx context.Context, sel ast.SelectionSet, v float64) graphql.Marshaler {
+	_ = sel
+	res := graphql.MarshalFloatContext(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return graphql.WrapContextMarshaler(ctx, res)
+}
+
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v any) (string, error) {
 	res, err := graphql.UnmarshalID(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -7833,6 +9022,45 @@ func (ec *executionContext) marshalNIssuedVirtualKey2ᚖgithubᚗcomᚋVMwareᚑ
 		return graphql.Null
 	}
 	return ec._IssuedVirtualKey(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNMeteringSummary2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringSummary(ctx context.Context, sel ast.SelectionSet, v model.MeteringSummary) graphql.Marshaler {
+	return ec._MeteringSummary(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNMeteringSummary2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringSummary(ctx context.Context, sel ast.SelectionSet, v *model.MeteringSummary) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._MeteringSummary(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNModelUsage2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelUsage(ctx context.Context, sel ast.SelectionSet, v model.ModelUsage) graphql.Marshaler {
+	return ec._ModelUsage(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNModelUsage2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelUsageᚄ(ctx context.Context, sel ast.SelectionSet, v []model.ModelUsage) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNModelUsage2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelUsage(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNRecordTokenUsageInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRecordTokenUsageInput(ctx context.Context, v any) (model.RecordTokenUsageInput, error) {
+	res, err := ec.unmarshalInputRecordTokenUsageInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNRegisterResourcePoolInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRegisterResourcePoolInput(ctx context.Context, v any) (model.RegisterResourcePoolInput, error) {
@@ -7995,6 +9223,36 @@ func (ec *executionContext) marshalNTime2timeᚐTime(ctx context.Context, sel as
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNTokenUsage2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTokenUsage(ctx context.Context, sel ast.SelectionSet, v model.TokenUsage) graphql.Marshaler {
+	return ec._TokenUsage(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNTokenUsage2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTokenUsageᚄ(ctx context.Context, sel ast.SelectionSet, v []model.TokenUsage) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNTokenUsage2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTokenUsage(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNTokenUsage2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTokenUsage(ctx context.Context, sel ast.SelectionSet, v *model.TokenUsage) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._TokenUsage(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNUpdateUserInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUpdateUserInput(ctx context.Context, v any) (model.UpdateUserInput, error) {

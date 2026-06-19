@@ -283,6 +283,43 @@ var (
 		Columns:    TenantsColumns,
 		PrimaryKey: []*schema.Column{TenantsColumns[0]},
 	}
+	// TokenUsagesColumns holds the columns for the "token_usages" table.
+	TokenUsagesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "user_id", Type: field.TypeUUID},
+		{Name: "agent_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "model", Type: field.TypeString},
+		{Name: "input_tokens", Type: field.TypeInt, Default: 0},
+		{Name: "output_tokens", Type: field.TypeInt, Default: 0},
+		{Name: "cost", Type: field.TypeFloat64, Nullable: true, Default: 0},
+		{Name: "correlation_id", Type: field.TypeString, Nullable: true},
+		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "department_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// TokenUsagesTable holds the schema information for the "token_usages" table.
+	TokenUsagesTable = &schema.Table{
+		Name:       "token_usages",
+		Columns:    TokenUsagesColumns,
+		PrimaryKey: []*schema.Column{TokenUsagesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "tokenusage_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{TokenUsagesColumns[1]},
+			},
+			{
+				Name:    "tokenusage_model",
+				Unique:  false,
+				Columns: []*schema.Column{TokenUsagesColumns[3]},
+			},
+			{
+				Name:    "tokenusage_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{TokenUsagesColumns[10]},
+			},
+		},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -402,6 +439,7 @@ var (
 		RolesTable,
 		SkillsTable,
 		TenantsTable,
+		TokenUsagesTable,
 		UsersTable,
 		VirtualKeysTable,
 		RolePermissionsTable,

@@ -1,0 +1,106 @@
+package graph
+
+// This file will be automatically regenerated based on the schema, any resolver
+// implementations will be copied through when generating.
+
+import (
+	"context"
+
+	"github.com/google/uuid"
+	"github.com/vektah/gqlparser/v2/gqlerror"
+
+	"github.com/VMware-AI/agent-platform-backend/ent/tokenusage"
+	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
+)
+
+// RecordTokenUsage ingests a metering record (gateway usage callback / telemetry).
+func (r *mutationResolver) RecordTokenUsage(ctx context.Context, input model.RecordTokenUsageInput) (*model.TokenUsage, error) {
+	userID, err := uuid.Parse(input.UserID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid userId")
+	}
+	c := r.Ent.TokenUsage.Create().
+		SetUserID(userID).
+		SetModel(input.Model).
+		SetInputTokens(input.InputTokens).
+		SetOutputTokens(input.OutputTokens)
+	if input.AgentID != nil {
+		if aid, err := uuid.Parse(*input.AgentID); err == nil {
+			c.SetAgentID(aid)
+		}
+	}
+	if input.Cost != nil {
+		c.SetCost(*input.Cost)
+	}
+	tu, err := c.Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return toModelTokenUsage(tu), nil
+}
+
+// TokenUsage lists raw metering rows (optionally by user).
+func (r *queryResolver) TokenUsage(ctx context.Context, userID *string, page *model.PageInput) ([]model.TokenUsage, error) {
+	q := r.Ent.TokenUsage.Query()
+	if userID != nil {
+		uid, err := uuid.Parse(*userID)
+		if err != nil {
+			return nil, gqlerror.Errorf("invalid userId")
+		}
+		q = q.Where(tokenusage.UserID(uid))
+	}
+	limit, offset := pageBounds(page)
+	rows, err := q.Limit(limit).Offset(offset).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.TokenUsage, 0, len(rows))
+	for _, t := range rows {
+		out = append(out, *toModelTokenUsage(t))
+	}
+	return out, nil
+}
+
+// MeteringSummary aggregates token usage totals + per-model breakdown.
+func (r *queryResolver) MeteringSummary(ctx context.Context, userID *string) (*model.MeteringSummary, error) {
+	q := r.Ent.TokenUsage.Query()
+	if userID != nil {
+		uid, err := uuid.Parse(*userID)
+		if err != nil {
+			return nil, gqlerror.Errorf("invalid userId")
+		}
+		q = q.Where(tokenusage.UserID(uid))
+	}
+	rows, err := q.All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var totalIn, totalOut int
+	var totalCost float64
+	byModel := map[string]*model.ModelUsage{}
+	order := []string{}
+	for _, t := range rows {
+		totalIn += t.InputTokens
+		totalOut += t.OutputTokens
+		totalCost += t.Cost
+		mu, ok := byModel[t.Model]
+		if !ok {
+			mu = &model.ModelUsage{Model: t.Model}
+			byModel[t.Model] = mu
+			order = append(order, t.Model)
+		}
+		mu.InputTokens += t.InputTokens
+		mu.OutputTokens += t.OutputTokens
+		mu.Cost += t.Cost
+	}
+	models := make([]model.ModelUsage, 0, len(order))
+	for _, m := range order {
+		models = append(models, *byModel[m])
+	}
+	return &model.MeteringSummary{
+		TotalInputTokens:  totalIn,
+		TotalOutputTokens: totalOut,
+		TotalCost:         totalCost,
+		ByModel:           models,
+	}, nil
+}

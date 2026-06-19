@@ -157,6 +157,36 @@ func toModelAgent(a *ent.Agent) *model.Agent {
 	return m
 }
 
+// applyTemplateOptionals sets nullable string fields on a template mutation.
+func applyTemplateOptionals(m *ent.AgentTemplateMutation, input model.UpsertAgentTemplateInput) {
+	if input.Description != nil {
+		m.SetDescription(*input.Description)
+	}
+	if input.InstallCommand != nil {
+		m.SetInstallCommand(*input.InstallCommand)
+	}
+	if input.Version != nil {
+		m.SetVersion(*input.Version)
+	}
+}
+
+func toModelTokenUsage(t *ent.TokenUsage) *model.TokenUsage {
+	m := &model.TokenUsage{
+		ID:           t.ID.String(),
+		UserID:       t.UserID.String(),
+		Model:        t.Model,
+		InputTokens:  t.InputTokens,
+		OutputTokens: t.OutputTokens,
+		Cost:         t.Cost,
+		CreatedAt:    t.CreatedAt,
+	}
+	if t.AgentID != nil {
+		a := t.AgentID.String()
+		m.AgentID = &a
+	}
+	return m
+}
+
 // clientIP extracts the remote address from the request in context.
 func clientIP(ctx context.Context) string {
 	if r := httpx.Request(ctx); r != nil {

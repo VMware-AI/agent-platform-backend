@@ -25,6 +25,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/role"
 	"github.com/VMware-AI/agent-platform-backend/ent/skill"
 	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
+	"github.com/VMware-AI/agent-platform-backend/ent/tokenusage"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 )
@@ -100,6 +101,7 @@ func checkColumn(t, c string) error {
 			role.Table:          role.ValidColumn,
 			skill.Table:         skill.ValidColumn,
 			tenant.Table:        tenant.ValidColumn,
+			tokenusage.Table:    tokenusage.ValidColumn,
 			user.Table:          user.ValidColumn,
 			virtualkey.Table:    virtualkey.ValidColumn,
 		})

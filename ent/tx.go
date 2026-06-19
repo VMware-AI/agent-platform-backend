@@ -38,6 +38,8 @@ type Tx struct {
 	Skill *SkillClient
 	// Tenant is the client for interacting with the Tenant builders.
 	Tenant *TenantClient
+	// TokenUsage is the client for interacting with the TokenUsage builders.
+	TokenUsage *TokenUsageClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 	// VirtualKey is the client for interacting with the VirtualKey builders.
@@ -186,6 +188,7 @@ func (tx *Tx) init() {
 	tx.Role = NewRoleClient(tx.config)
 	tx.Skill = NewSkillClient(tx.config)
 	tx.Tenant = NewTenantClient(tx.config)
+	tx.TokenUsage = NewTokenUsageClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 	tx.VirtualKey = NewVirtualKeyClient(tx.config)
 }

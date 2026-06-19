@@ -1,0 +1,47 @@
+# Metering center (计量中心, 0619 可观测性). Token usage + aggregation.
+
+type TokenUsage {
+  id: ID!
+  userId: ID!
+  agentId: ID
+  model: String!
+  inputTokens: Int!
+  outputTokens: Int!
+  cost: Float!
+  createdAt: Time!
+}
+
+type ModelUsage {
+  model: String!
+  inputTokens: Int!
+  outputTokens: Int!
+  cost: Float!
+}
+
+type MeteringSummary {
+  totalInputTokens: Int!
+  totalOutputTokens: Int!
+  totalCost: Float!
+  byModel: [ModelUsage!]!
+}
+
+input RecordTokenUsageInput {
+  userId: ID!
+  agentId: ID
+  model: String!
+  inputTokens: Int!
+  outputTokens: Int!
+  cost: Float
+}
+
+extend type Query {
+  # metering:view permission (admin + observability).
+  tokenUsage(userId: ID, page: PageInput): [TokenUsage!]! @hasPermission(perm: "metering:view")
+  meteringSummary(userId: ID): MeteringSummary! @hasPermission(perm: "metering:view")
+}
+
+extend type Mutation {
+  # Ingest path (gateway usage callback / telemetry). Admin-scoped for M1;
+  # TODO: dedicated service token.
+  recordTokenUsage(input: RecordTokenUsageInput!): TokenUsage! @hasRole(any: [admin])
+}
