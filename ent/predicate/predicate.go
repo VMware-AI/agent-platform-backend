@@ -33,6 +33,12 @@ type Membership func(*sql.Selector)
 // Permission is the predicate function for permission builders.
 type Permission func(*sql.Selector)
 
+// RateLimitPolicy is the predicate function for ratelimitpolicy builders.
+type RateLimitPolicy func(*sql.Selector)
+
+// RequestLog is the predicate function for requestlog builders.
+type RequestLog func(*sql.Selector)
+
 // ResourcePool is the predicate function for resourcepool builders.
 type ResourcePool func(*sql.Selector)
 

@@ -117,6 +117,30 @@ func (f PermissionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PermissionMutation", m)
 }
 
+// The RateLimitPolicyFunc type is an adapter to allow the use of ordinary
+// function as RateLimitPolicy mutator.
+type RateLimitPolicyFunc func(context.Context, *ent.RateLimitPolicyMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f RateLimitPolicyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.RateLimitPolicyMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RateLimitPolicyMutation", m)
+}
+
+// The RequestLogFunc type is an adapter to allow the use of ordinary
+// function as RequestLog mutator.
+type RequestLogFunc func(context.Context, *ent.RequestLogMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f RequestLogFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.RequestLogMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RequestLogMutation", m)
+}
+
 // The ResourcePoolFunc type is an adapter to allow the use of ordinary
 // function as ResourcePool mutator.
 type ResourcePoolFunc func(context.Context, *ent.ResourcePoolMutation) (ent.Value, error)

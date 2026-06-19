@@ -30,6 +30,10 @@ type Tx struct {
 	Membership *MembershipClient
 	// Permission is the client for interacting with the Permission builders.
 	Permission *PermissionClient
+	// RateLimitPolicy is the client for interacting with the RateLimitPolicy builders.
+	RateLimitPolicy *RateLimitPolicyClient
+	// RequestLog is the client for interacting with the RequestLog builders.
+	RequestLog *RequestLogClient
 	// ResourcePool is the client for interacting with the ResourcePool builders.
 	ResourcePool *ResourcePoolClient
 	// Role is the client for interacting with the Role builders.
@@ -184,6 +188,8 @@ func (tx *Tx) init() {
 	tx.Image = NewImageClient(tx.config)
 	tx.Membership = NewMembershipClient(tx.config)
 	tx.Permission = NewPermissionClient(tx.config)
+	tx.RateLimitPolicy = NewRateLimitPolicyClient(tx.config)
+	tx.RequestLog = NewRequestLogClient(tx.config)
 	tx.ResourcePool = NewResourcePoolClient(tx.config)
 	tx.Role = NewRoleClient(tx.config)
 	tx.Skill = NewSkillClient(tx.config)

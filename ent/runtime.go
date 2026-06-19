@@ -14,6 +14,8 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/image"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/permission"
+	"github.com/VMware-AI/agent-platform-backend/ent/ratelimitpolicy"
+	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/ent/role"
 	"github.com/VMware-AI/agent-platform-backend/ent/schema"
@@ -238,6 +240,69 @@ func init() {
 	permissionDescID := permissionFields[0].Descriptor()
 	// permission.DefaultID holds the default value on creation for the id field.
 	permission.DefaultID = permissionDescID.Default.(func() uuid.UUID)
+	ratelimitpolicyMixin := schema.RateLimitPolicy{}.Mixin()
+	ratelimitpolicyMixinFields0 := ratelimitpolicyMixin[0].Fields()
+	_ = ratelimitpolicyMixinFields0
+	ratelimitpolicyFields := schema.RateLimitPolicy{}.Fields()
+	_ = ratelimitpolicyFields
+	// ratelimitpolicyDescCreatedAt is the schema descriptor for created_at field.
+	ratelimitpolicyDescCreatedAt := ratelimitpolicyMixinFields0[0].Descriptor()
+	// ratelimitpolicy.DefaultCreatedAt holds the default value on creation for the created_at field.
+	ratelimitpolicy.DefaultCreatedAt = ratelimitpolicyDescCreatedAt.Default.(func() time.Time)
+	// ratelimitpolicyDescUpdatedAt is the schema descriptor for updated_at field.
+	ratelimitpolicyDescUpdatedAt := ratelimitpolicyMixinFields0[1].Descriptor()
+	// ratelimitpolicy.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	ratelimitpolicy.DefaultUpdatedAt = ratelimitpolicyDescUpdatedAt.Default.(func() time.Time)
+	// ratelimitpolicy.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	ratelimitpolicy.UpdateDefaultUpdatedAt = ratelimitpolicyDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// ratelimitpolicyDescName is the schema descriptor for name field.
+	ratelimitpolicyDescName := ratelimitpolicyFields[1].Descriptor()
+	// ratelimitpolicy.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	ratelimitpolicy.NameValidator = ratelimitpolicyDescName.Validators[0].(func(string) error)
+	// ratelimitpolicyDescEnabled is the schema descriptor for enabled field.
+	ratelimitpolicyDescEnabled := ratelimitpolicyFields[4].Descriptor()
+	// ratelimitpolicy.DefaultEnabled holds the default value on creation for the enabled field.
+	ratelimitpolicy.DefaultEnabled = ratelimitpolicyDescEnabled.Default.(bool)
+	// ratelimitpolicyDescID is the schema descriptor for id field.
+	ratelimitpolicyDescID := ratelimitpolicyFields[0].Descriptor()
+	// ratelimitpolicy.DefaultID holds the default value on creation for the id field.
+	ratelimitpolicy.DefaultID = ratelimitpolicyDescID.Default.(func() uuid.UUID)
+	requestlogFields := schema.RequestLog{}.Fields()
+	_ = requestlogFields
+	// requestlogDescRequestID is the schema descriptor for request_id field.
+	requestlogDescRequestID := requestlogFields[1].Descriptor()
+	// requestlog.RequestIDValidator is a validator for the "request_id" field. It is called by the builders before save.
+	requestlog.RequestIDValidator = requestlogDescRequestID.Validators[0].(func(string) error)
+	// requestlogDescInputTokens is the schema descriptor for input_tokens field.
+	requestlogDescInputTokens := requestlogFields[5].Descriptor()
+	// requestlog.DefaultInputTokens holds the default value on creation for the input_tokens field.
+	requestlog.DefaultInputTokens = requestlogDescInputTokens.Default.(int)
+	// requestlog.InputTokensValidator is a validator for the "input_tokens" field. It is called by the builders before save.
+	requestlog.InputTokensValidator = requestlogDescInputTokens.Validators[0].(func(int) error)
+	// requestlogDescOutputTokens is the schema descriptor for output_tokens field.
+	requestlogDescOutputTokens := requestlogFields[6].Descriptor()
+	// requestlog.DefaultOutputTokens holds the default value on creation for the output_tokens field.
+	requestlog.DefaultOutputTokens = requestlogDescOutputTokens.Default.(int)
+	// requestlog.OutputTokensValidator is a validator for the "output_tokens" field. It is called by the builders before save.
+	requestlog.OutputTokensValidator = requestlogDescOutputTokens.Validators[0].(func(int) error)
+	// requestlogDescLatencyMs is the schema descriptor for latency_ms field.
+	requestlogDescLatencyMs := requestlogFields[7].Descriptor()
+	// requestlog.DefaultLatencyMs holds the default value on creation for the latency_ms field.
+	requestlog.DefaultLatencyMs = requestlogDescLatencyMs.Default.(int)
+	// requestlog.LatencyMsValidator is a validator for the "latency_ms" field. It is called by the builders before save.
+	requestlog.LatencyMsValidator = requestlogDescLatencyMs.Validators[0].(func(int) error)
+	// requestlogDescStatusCode is the schema descriptor for status_code field.
+	requestlogDescStatusCode := requestlogFields[8].Descriptor()
+	// requestlog.DefaultStatusCode holds the default value on creation for the status_code field.
+	requestlog.DefaultStatusCode = requestlogDescStatusCode.Default.(int)
+	// requestlogDescCreatedAt is the schema descriptor for created_at field.
+	requestlogDescCreatedAt := requestlogFields[9].Descriptor()
+	// requestlog.DefaultCreatedAt holds the default value on creation for the created_at field.
+	requestlog.DefaultCreatedAt = requestlogDescCreatedAt.Default.(func() time.Time)
+	// requestlogDescID is the schema descriptor for id field.
+	requestlogDescID := requestlogFields[0].Descriptor()
+	// requestlog.DefaultID holds the default value on creation for the id field.
+	requestlog.DefaultID = requestlogDescID.Default.(func() uuid.UUID)
 	resourcepoolMixin := schema.ResourcePool{}.Mixin()
 	resourcepoolMixinFields0 := resourcepoolMixin[0].Fields()
 	_ = resourcepoolMixinFields0

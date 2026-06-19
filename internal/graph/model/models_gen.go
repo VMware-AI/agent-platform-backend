@@ -116,6 +116,26 @@ type PageInput struct {
 type Query struct {
 }
 
+type RateLimitPolicy struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Rpm       *int      `json:"rpm,omitempty"`
+	Tpm       *int      `json:"tpm,omitempty"`
+	Enabled   bool      `json:"enabled"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type RecordRequestLogInput struct {
+	RequestID    string  `json:"requestId"`
+	UserID       *string `json:"userId,omitempty"`
+	AgentID      *string `json:"agentId,omitempty"`
+	Model        *string `json:"model,omitempty"`
+	InputTokens  *int    `json:"inputTokens,omitempty"`
+	OutputTokens *int    `json:"outputTokens,omitempty"`
+	LatencyMs    *int    `json:"latencyMs,omitempty"`
+	StatusCode   int     `json:"statusCode"`
+}
+
 type RecordTokenUsageInput struct {
 	UserID       string   `json:"userId"`
 	AgentID      *string  `json:"agentId,omitempty"`
@@ -129,6 +149,19 @@ type RegisterResourcePoolInput struct {
 	Name      string  `json:"name"`
 	Endpoint  string  `json:"endpoint"`
 	SecretRef *string `json:"secretRef,omitempty"`
+}
+
+type RequestLog struct {
+	ID           string    `json:"id"`
+	RequestID    string    `json:"requestId"`
+	UserID       *string   `json:"userId,omitempty"`
+	AgentID      *string   `json:"agentId,omitempty"`
+	Model        *string   `json:"model,omitempty"`
+	InputTokens  int       `json:"inputTokens"`
+	OutputTokens int       `json:"outputTokens"`
+	LatencyMs    int       `json:"latencyMs"`
+	StatusCode   int       `json:"statusCode"`
+	CreatedAt    time.Time `json:"createdAt"`
 }
 
 type ResourcePool struct {
@@ -169,6 +202,13 @@ type UpsertAgentTemplateInput struct {
 	InstallCommand *string             `json:"installCommand,omitempty"`
 	Status         AgentTemplateStatus `json:"status"`
 	Version        *string             `json:"version,omitempty"`
+}
+
+type UpsertRateLimitPolicyInput struct {
+	Name    string `json:"name"`
+	Rpm     *int   `json:"rpm,omitempty"`
+	Tpm     *int   `json:"tpm,omitempty"`
+	Enabled *bool  `json:"enabled,omitempty"`
 }
 
 type User struct {

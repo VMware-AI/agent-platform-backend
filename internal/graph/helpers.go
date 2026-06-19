@@ -187,6 +187,42 @@ func toModelTokenUsage(t *ent.TokenUsage) *model.TokenUsage {
 	return m
 }
 
+func toModelRequestLog(l *ent.RequestLog) *model.RequestLog {
+	m := &model.RequestLog{
+		ID:           l.ID.String(),
+		RequestID:    l.RequestID,
+		InputTokens:  l.InputTokens,
+		OutputTokens: l.OutputTokens,
+		LatencyMs:    l.LatencyMs,
+		StatusCode:   l.StatusCode,
+		CreatedAt:    l.CreatedAt,
+	}
+	if l.UserID != nil {
+		s := l.UserID.String()
+		m.UserID = &s
+	}
+	if l.AgentID != nil {
+		s := l.AgentID.String()
+		m.AgentID = &s
+	}
+	if l.Model != "" {
+		mod := l.Model
+		m.Model = &mod
+	}
+	return m
+}
+
+func toModelRateLimitPolicy(p *ent.RateLimitPolicy) *model.RateLimitPolicy {
+	return &model.RateLimitPolicy{
+		ID:        p.ID.String(),
+		Name:      p.Name,
+		Rpm:       p.Rpm,
+		Tpm:       p.Tpm,
+		Enabled:   p.Enabled,
+		CreatedAt: p.CreatedAt,
+	}
+}
+
 // clientIP extracts the remote address from the request in context.
 func clientIP(ctx context.Context) string {
 	if r := httpx.Request(ctx); r != nil {

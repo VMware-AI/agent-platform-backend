@@ -1,0 +1,52 @@
+# Request logs (请求日志) + rate-limit policies (限流策略). 0619.
+
+type RequestLog {
+  id: ID!
+  requestId: String!
+  userId: ID
+  agentId: ID
+  model: String
+  inputTokens: Int!
+  outputTokens: Int!
+  latencyMs: Int!
+  statusCode: Int!
+  createdAt: Time!
+}
+
+input RecordRequestLogInput {
+  requestId: String!
+  userId: ID
+  agentId: ID
+  model: String
+  inputTokens: Int
+  outputTokens: Int
+  latencyMs: Int
+  statusCode: Int!
+}
+
+type RateLimitPolicy {
+  id: ID!
+  name: String!
+  rpm: Int
+  tpm: Int
+  enabled: Boolean!
+  createdAt: Time!
+}
+
+input UpsertRateLimitPolicyInput {
+  name: String!
+  rpm: Int
+  tpm: Int
+  enabled: Boolean
+}
+
+extend type Query {
+  requestLogs(statusCode: Int, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
+  rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin])
+}
+
+extend type Mutation {
+  recordRequestLog(input: RecordRequestLogInput!): RequestLog! @hasRole(any: [admin])
+  upsertRateLimitPolicy(input: UpsertRateLimitPolicyInput!): RateLimitPolicy! @hasPermission(perm: "route:manage")
+  setRateLimitPolicyEnabled(id: ID!, enabled: Boolean!): RateLimitPolicy! @hasPermission(perm: "route:manage")
+}

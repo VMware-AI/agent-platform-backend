@@ -25,6 +25,8 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/image"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/permission"
+	"github.com/VMware-AI/agent-platform-backend/ent/ratelimitpolicy"
+	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/ent/role"
 	"github.com/VMware-AI/agent-platform-backend/ent/skill"
@@ -57,6 +59,10 @@ type Client struct {
 	Membership *MembershipClient
 	// Permission is the client for interacting with the Permission builders.
 	Permission *PermissionClient
+	// RateLimitPolicy is the client for interacting with the RateLimitPolicy builders.
+	RateLimitPolicy *RateLimitPolicyClient
+	// RequestLog is the client for interacting with the RequestLog builders.
+	RequestLog *RequestLogClient
 	// ResourcePool is the client for interacting with the ResourcePool builders.
 	ResourcePool *ResourcePoolClient
 	// Role is the client for interacting with the Role builders.
@@ -91,6 +97,8 @@ func (c *Client) init() {
 	c.Image = NewImageClient(c.config)
 	c.Membership = NewMembershipClient(c.config)
 	c.Permission = NewPermissionClient(c.config)
+	c.RateLimitPolicy = NewRateLimitPolicyClient(c.config)
+	c.RequestLog = NewRequestLogClient(c.config)
 	c.ResourcePool = NewResourcePoolClient(c.config)
 	c.Role = NewRoleClient(c.config)
 	c.Skill = NewSkillClient(c.config)
@@ -188,24 +196,26 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:           ctx,
-		config:        cfg,
-		Agent:         NewAgentClient(cfg),
-		AgentConfig:   NewAgentConfigClient(cfg),
-		AgentTemplate: NewAgentTemplateClient(cfg),
-		Artifact:      NewArtifactClient(cfg),
-		AuditLog:      NewAuditLogClient(cfg),
-		Department:    NewDepartmentClient(cfg),
-		Image:         NewImageClient(cfg),
-		Membership:    NewMembershipClient(cfg),
-		Permission:    NewPermissionClient(cfg),
-		ResourcePool:  NewResourcePoolClient(cfg),
-		Role:          NewRoleClient(cfg),
-		Skill:         NewSkillClient(cfg),
-		Tenant:        NewTenantClient(cfg),
-		TokenUsage:    NewTokenUsageClient(cfg),
-		User:          NewUserClient(cfg),
-		VirtualKey:    NewVirtualKeyClient(cfg),
+		ctx:             ctx,
+		config:          cfg,
+		Agent:           NewAgentClient(cfg),
+		AgentConfig:     NewAgentConfigClient(cfg),
+		AgentTemplate:   NewAgentTemplateClient(cfg),
+		Artifact:        NewArtifactClient(cfg),
+		AuditLog:        NewAuditLogClient(cfg),
+		Department:      NewDepartmentClient(cfg),
+		Image:           NewImageClient(cfg),
+		Membership:      NewMembershipClient(cfg),
+		Permission:      NewPermissionClient(cfg),
+		RateLimitPolicy: NewRateLimitPolicyClient(cfg),
+		RequestLog:      NewRequestLogClient(cfg),
+		ResourcePool:    NewResourcePoolClient(cfg),
+		Role:            NewRoleClient(cfg),
+		Skill:           NewSkillClient(cfg),
+		Tenant:          NewTenantClient(cfg),
+		TokenUsage:      NewTokenUsageClient(cfg),
+		User:            NewUserClient(cfg),
+		VirtualKey:      NewVirtualKeyClient(cfg),
 	}, nil
 }
 
@@ -223,24 +233,26 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:           ctx,
-		config:        cfg,
-		Agent:         NewAgentClient(cfg),
-		AgentConfig:   NewAgentConfigClient(cfg),
-		AgentTemplate: NewAgentTemplateClient(cfg),
-		Artifact:      NewArtifactClient(cfg),
-		AuditLog:      NewAuditLogClient(cfg),
-		Department:    NewDepartmentClient(cfg),
-		Image:         NewImageClient(cfg),
-		Membership:    NewMembershipClient(cfg),
-		Permission:    NewPermissionClient(cfg),
-		ResourcePool:  NewResourcePoolClient(cfg),
-		Role:          NewRoleClient(cfg),
-		Skill:         NewSkillClient(cfg),
-		Tenant:        NewTenantClient(cfg),
-		TokenUsage:    NewTokenUsageClient(cfg),
-		User:          NewUserClient(cfg),
-		VirtualKey:    NewVirtualKeyClient(cfg),
+		ctx:             ctx,
+		config:          cfg,
+		Agent:           NewAgentClient(cfg),
+		AgentConfig:     NewAgentConfigClient(cfg),
+		AgentTemplate:   NewAgentTemplateClient(cfg),
+		Artifact:        NewArtifactClient(cfg),
+		AuditLog:        NewAuditLogClient(cfg),
+		Department:      NewDepartmentClient(cfg),
+		Image:           NewImageClient(cfg),
+		Membership:      NewMembershipClient(cfg),
+		Permission:      NewPermissionClient(cfg),
+		RateLimitPolicy: NewRateLimitPolicyClient(cfg),
+		RequestLog:      NewRequestLogClient(cfg),
+		ResourcePool:    NewResourcePoolClient(cfg),
+		Role:            NewRoleClient(cfg),
+		Skill:           NewSkillClient(cfg),
+		Tenant:          NewTenantClient(cfg),
+		TokenUsage:      NewTokenUsageClient(cfg),
+		User:            NewUserClient(cfg),
+		VirtualKey:      NewVirtualKeyClient(cfg),
 	}, nil
 }
 
@@ -271,8 +283,8 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Agent, c.AgentConfig, c.AgentTemplate, c.Artifact, c.AuditLog, c.Department,
-		c.Image, c.Membership, c.Permission, c.ResourcePool, c.Role, c.Skill, c.Tenant,
-		c.TokenUsage, c.User, c.VirtualKey,
+		c.Image, c.Membership, c.Permission, c.RateLimitPolicy, c.RequestLog,
+		c.ResourcePool, c.Role, c.Skill, c.Tenant, c.TokenUsage, c.User, c.VirtualKey,
 	} {
 		n.Use(hooks...)
 	}
@@ -283,8 +295,8 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Agent, c.AgentConfig, c.AgentTemplate, c.Artifact, c.AuditLog, c.Department,
-		c.Image, c.Membership, c.Permission, c.ResourcePool, c.Role, c.Skill, c.Tenant,
-		c.TokenUsage, c.User, c.VirtualKey,
+		c.Image, c.Membership, c.Permission, c.RateLimitPolicy, c.RequestLog,
+		c.ResourcePool, c.Role, c.Skill, c.Tenant, c.TokenUsage, c.User, c.VirtualKey,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -311,6 +323,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Membership.mutate(ctx, m)
 	case *PermissionMutation:
 		return c.Permission.mutate(ctx, m)
+	case *RateLimitPolicyMutation:
+		return c.RateLimitPolicy.mutate(ctx, m)
+	case *RequestLogMutation:
+		return c.RequestLog.mutate(ctx, m)
 	case *ResourcePoolMutation:
 		return c.ResourcePool.mutate(ctx, m)
 	case *RoleMutation:
@@ -1623,6 +1639,272 @@ func (c *PermissionClient) mutate(ctx context.Context, m *PermissionMutation) (V
 	}
 }
 
+// RateLimitPolicyClient is a client for the RateLimitPolicy schema.
+type RateLimitPolicyClient struct {
+	config
+}
+
+// NewRateLimitPolicyClient returns a client for the RateLimitPolicy from the given config.
+func NewRateLimitPolicyClient(c config) *RateLimitPolicyClient {
+	return &RateLimitPolicyClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `ratelimitpolicy.Hooks(f(g(h())))`.
+func (c *RateLimitPolicyClient) Use(hooks ...Hook) {
+	c.hooks.RateLimitPolicy = append(c.hooks.RateLimitPolicy, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `ratelimitpolicy.Intercept(f(g(h())))`.
+func (c *RateLimitPolicyClient) Intercept(interceptors ...Interceptor) {
+	c.inters.RateLimitPolicy = append(c.inters.RateLimitPolicy, interceptors...)
+}
+
+// Create returns a builder for creating a RateLimitPolicy entity.
+func (c *RateLimitPolicyClient) Create() *RateLimitPolicyCreate {
+	mutation := newRateLimitPolicyMutation(c.config, OpCreate)
+	return &RateLimitPolicyCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of RateLimitPolicy entities.
+func (c *RateLimitPolicyClient) CreateBulk(builders ...*RateLimitPolicyCreate) *RateLimitPolicyCreateBulk {
+	return &RateLimitPolicyCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *RateLimitPolicyClient) MapCreateBulk(slice any, setFunc func(*RateLimitPolicyCreate, int)) *RateLimitPolicyCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &RateLimitPolicyCreateBulk{err: fmt.Errorf("calling to RateLimitPolicyClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*RateLimitPolicyCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &RateLimitPolicyCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for RateLimitPolicy.
+func (c *RateLimitPolicyClient) Update() *RateLimitPolicyUpdate {
+	mutation := newRateLimitPolicyMutation(c.config, OpUpdate)
+	return &RateLimitPolicyUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *RateLimitPolicyClient) UpdateOne(_m *RateLimitPolicy) *RateLimitPolicyUpdateOne {
+	mutation := newRateLimitPolicyMutation(c.config, OpUpdateOne, withRateLimitPolicy(_m))
+	return &RateLimitPolicyUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *RateLimitPolicyClient) UpdateOneID(id uuid.UUID) *RateLimitPolicyUpdateOne {
+	mutation := newRateLimitPolicyMutation(c.config, OpUpdateOne, withRateLimitPolicyID(id))
+	return &RateLimitPolicyUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for RateLimitPolicy.
+func (c *RateLimitPolicyClient) Delete() *RateLimitPolicyDelete {
+	mutation := newRateLimitPolicyMutation(c.config, OpDelete)
+	return &RateLimitPolicyDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *RateLimitPolicyClient) DeleteOne(_m *RateLimitPolicy) *RateLimitPolicyDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *RateLimitPolicyClient) DeleteOneID(id uuid.UUID) *RateLimitPolicyDeleteOne {
+	builder := c.Delete().Where(ratelimitpolicy.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &RateLimitPolicyDeleteOne{builder}
+}
+
+// Query returns a query builder for RateLimitPolicy.
+func (c *RateLimitPolicyClient) Query() *RateLimitPolicyQuery {
+	return &RateLimitPolicyQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeRateLimitPolicy},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a RateLimitPolicy entity by its id.
+func (c *RateLimitPolicyClient) Get(ctx context.Context, id uuid.UUID) (*RateLimitPolicy, error) {
+	return c.Query().Where(ratelimitpolicy.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *RateLimitPolicyClient) GetX(ctx context.Context, id uuid.UUID) *RateLimitPolicy {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *RateLimitPolicyClient) Hooks() []Hook {
+	return c.hooks.RateLimitPolicy
+}
+
+// Interceptors returns the client interceptors.
+func (c *RateLimitPolicyClient) Interceptors() []Interceptor {
+	return c.inters.RateLimitPolicy
+}
+
+func (c *RateLimitPolicyClient) mutate(ctx context.Context, m *RateLimitPolicyMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&RateLimitPolicyCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&RateLimitPolicyUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&RateLimitPolicyUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&RateLimitPolicyDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown RateLimitPolicy mutation op: %q", m.Op())
+	}
+}
+
+// RequestLogClient is a client for the RequestLog schema.
+type RequestLogClient struct {
+	config
+}
+
+// NewRequestLogClient returns a client for the RequestLog from the given config.
+func NewRequestLogClient(c config) *RequestLogClient {
+	return &RequestLogClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `requestlog.Hooks(f(g(h())))`.
+func (c *RequestLogClient) Use(hooks ...Hook) {
+	c.hooks.RequestLog = append(c.hooks.RequestLog, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `requestlog.Intercept(f(g(h())))`.
+func (c *RequestLogClient) Intercept(interceptors ...Interceptor) {
+	c.inters.RequestLog = append(c.inters.RequestLog, interceptors...)
+}
+
+// Create returns a builder for creating a RequestLog entity.
+func (c *RequestLogClient) Create() *RequestLogCreate {
+	mutation := newRequestLogMutation(c.config, OpCreate)
+	return &RequestLogCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of RequestLog entities.
+func (c *RequestLogClient) CreateBulk(builders ...*RequestLogCreate) *RequestLogCreateBulk {
+	return &RequestLogCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *RequestLogClient) MapCreateBulk(slice any, setFunc func(*RequestLogCreate, int)) *RequestLogCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &RequestLogCreateBulk{err: fmt.Errorf("calling to RequestLogClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*RequestLogCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &RequestLogCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for RequestLog.
+func (c *RequestLogClient) Update() *RequestLogUpdate {
+	mutation := newRequestLogMutation(c.config, OpUpdate)
+	return &RequestLogUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *RequestLogClient) UpdateOne(_m *RequestLog) *RequestLogUpdateOne {
+	mutation := newRequestLogMutation(c.config, OpUpdateOne, withRequestLog(_m))
+	return &RequestLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *RequestLogClient) UpdateOneID(id uuid.UUID) *RequestLogUpdateOne {
+	mutation := newRequestLogMutation(c.config, OpUpdateOne, withRequestLogID(id))
+	return &RequestLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for RequestLog.
+func (c *RequestLogClient) Delete() *RequestLogDelete {
+	mutation := newRequestLogMutation(c.config, OpDelete)
+	return &RequestLogDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *RequestLogClient) DeleteOne(_m *RequestLog) *RequestLogDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *RequestLogClient) DeleteOneID(id uuid.UUID) *RequestLogDeleteOne {
+	builder := c.Delete().Where(requestlog.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &RequestLogDeleteOne{builder}
+}
+
+// Query returns a query builder for RequestLog.
+func (c *RequestLogClient) Query() *RequestLogQuery {
+	return &RequestLogQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeRequestLog},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a RequestLog entity by its id.
+func (c *RequestLogClient) Get(ctx context.Context, id uuid.UUID) (*RequestLog, error) {
+	return c.Query().Where(requestlog.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *RequestLogClient) GetX(ctx context.Context, id uuid.UUID) *RequestLog {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *RequestLogClient) Hooks() []Hook {
+	return c.hooks.RequestLog
+}
+
+// Interceptors returns the client interceptors.
+func (c *RequestLogClient) Interceptors() []Interceptor {
+	return c.inters.RequestLog
+}
+
+func (c *RequestLogClient) mutate(ctx context.Context, m *RequestLogMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&RequestLogCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&RequestLogUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&RequestLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&RequestLogDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown RequestLog mutation op: %q", m.Op())
+	}
+}
+
 // ResourcePoolClient is a client for the ResourcePool schema.
 type ResourcePoolClient struct {
 	config
@@ -2654,12 +2936,12 @@ func (c *VirtualKeyClient) mutate(ctx context.Context, m *VirtualKeyMutation) (V
 type (
 	hooks struct {
 		Agent, AgentConfig, AgentTemplate, Artifact, AuditLog, Department, Image,
-		Membership, Permission, ResourcePool, Role, Skill, Tenant, TokenUsage, User,
-		VirtualKey []ent.Hook
+		Membership, Permission, RateLimitPolicy, RequestLog, ResourcePool, Role, Skill,
+		Tenant, TokenUsage, User, VirtualKey []ent.Hook
 	}
 	inters struct {
 		Agent, AgentConfig, AgentTemplate, Artifact, AuditLog, Department, Image,
-		Membership, Permission, ResourcePool, Role, Skill, Tenant, TokenUsage, User,
-		VirtualKey []ent.Interceptor
+		Membership, Permission, RateLimitPolicy, RequestLog, ResourcePool, Role, Skill,
+		Tenant, TokenUsage, User, VirtualKey []ent.Interceptor
 	}
 )

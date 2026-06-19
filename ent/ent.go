@@ -21,6 +21,8 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/image"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/permission"
+	"github.com/VMware-AI/agent-platform-backend/ent/ratelimitpolicy"
+	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/ent/role"
 	"github.com/VMware-AI/agent-platform-backend/ent/skill"
@@ -88,22 +90,24 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			agent.Table:         agent.ValidColumn,
-			agentconfig.Table:   agentconfig.ValidColumn,
-			agenttemplate.Table: agenttemplate.ValidColumn,
-			artifact.Table:      artifact.ValidColumn,
-			auditlog.Table:      auditlog.ValidColumn,
-			department.Table:    department.ValidColumn,
-			image.Table:         image.ValidColumn,
-			membership.Table:    membership.ValidColumn,
-			permission.Table:    permission.ValidColumn,
-			resourcepool.Table:  resourcepool.ValidColumn,
-			role.Table:          role.ValidColumn,
-			skill.Table:         skill.ValidColumn,
-			tenant.Table:        tenant.ValidColumn,
-			tokenusage.Table:    tokenusage.ValidColumn,
-			user.Table:          user.ValidColumn,
-			virtualkey.Table:    virtualkey.ValidColumn,
+			agent.Table:           agent.ValidColumn,
+			agentconfig.Table:     agentconfig.ValidColumn,
+			agenttemplate.Table:   agenttemplate.ValidColumn,
+			artifact.Table:        artifact.ValidColumn,
+			auditlog.Table:        auditlog.ValidColumn,
+			department.Table:      department.ValidColumn,
+			image.Table:           image.ValidColumn,
+			membership.Table:      membership.ValidColumn,
+			permission.Table:      permission.ValidColumn,
+			ratelimitpolicy.Table: ratelimitpolicy.ValidColumn,
+			requestlog.Table:      requestlog.ValidColumn,
+			resourcepool.Table:    resourcepool.ValidColumn,
+			role.Table:            role.ValidColumn,
+			skill.Table:           skill.ValidColumn,
+			tenant.Table:          tenant.ValidColumn,
+			tokenusage.Table:      tokenusage.ValidColumn,
+			user.Table:            user.ValidColumn,
+			virtualkey.Table:      virtualkey.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)
