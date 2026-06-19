@@ -114,6 +114,90 @@ func (r *mutationResolver) SetAgentStatus(ctx context.Context, id string, status
 	return toModelAgent(a), nil
 }
 
+// CreateAgentConfig creates a named config for an agent type.
+func (r *mutationResolver) CreateAgentConfig(ctx context.Context, input model.CreateAgentConfigInput) (*model.AgentConfig, error) {
+	c := r.Ent.AgentConfig.Create().SetName(input.Name).SetAgentType(input.AgentType)
+	isDefault := input.IsDefault != nil && *input.IsDefault
+	c.SetIsDefault(isDefault)
+	if input.ArtifactID != nil {
+		if aid, err := uuid.Parse(*input.ArtifactID); err == nil {
+			c.SetArtifactID(aid)
+		}
+	}
+	cfg, err := c.Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if isDefault {
+		if _, err := r.Ent.AgentConfig.Update().
+			Where(agentconfig.AgentType(cfg.AgentType), agentconfig.IDNEQ(cfg.ID)).
+			SetIsDefault(false).Save(ctx); err != nil {
+			return nil, err
+		}
+	}
+	r.audit(ctx, "agent_config.create", "agent_config", cfg.ID.String(), true, actorID(auth.FromContext(ctx)))
+	return toModelAgentConfig(cfg), nil
+}
+
+// UpdateAgentConfig edits a config's name/artifact.
+func (r *mutationResolver) UpdateAgentConfig(ctx context.Context, id string, input model.UpdateAgentConfigInput) (*model.AgentConfig, error) {
+	cid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid id")
+	}
+	u := r.Ent.AgentConfig.UpdateOneID(cid)
+	if input.Name != nil {
+		u.SetName(*input.Name)
+	}
+	if input.ArtifactID != nil {
+		if aid, err := uuid.Parse(*input.ArtifactID); err == nil {
+			u.SetArtifactID(aid)
+		}
+	}
+	cfg, err := u.Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	r.audit(ctx, "agent_config.update", "agent_config", id, true, actorID(auth.FromContext(ctx)))
+	return toModelAgentConfig(cfg), nil
+}
+
+// DeleteAgentConfig removes a config.
+func (r *mutationResolver) DeleteAgentConfig(ctx context.Context, id string) (bool, error) {
+	cid, err := uuid.Parse(id)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid id")
+	}
+	if err := r.Ent.AgentConfig.DeleteOneID(cid).Exec(ctx); err != nil {
+		return false, err
+	}
+	r.audit(ctx, "agent_config.delete", "agent_config", id, true, actorID(auth.FromContext(ctx)))
+	return true, nil
+}
+
+// SetDefaultAgentConfig marks one config default for its type (unsets others).
+func (r *mutationResolver) SetDefaultAgentConfig(ctx context.Context, id string) (*model.AgentConfig, error) {
+	cid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid id")
+	}
+	cfg, err := r.Ent.AgentConfig.Get(ctx, cid)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := r.Ent.AgentConfig.Update().
+		Where(agentconfig.AgentType(cfg.AgentType), agentconfig.IDNEQ(cid)).
+		SetIsDefault(false).Save(ctx); err != nil {
+		return nil, err
+	}
+	cfg, err = r.Ent.AgentConfig.UpdateOne(cfg).SetIsDefault(true).Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	r.audit(ctx, "agent_config.set_default", "agent_config", id, true, actorID(auth.FromContext(ctx)))
+	return toModelAgentConfig(cfg), nil
+}
+
 // AgentTemplates lists the catalog.
 func (r *queryResolver) AgentTemplates(ctx context.Context) ([]model.AgentTemplate, error) {
 	ts, err := r.Ent.AgentTemplate.Query().All(ctx)

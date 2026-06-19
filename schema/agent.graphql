@@ -66,6 +66,17 @@ input CreateAgentInput {
   resourcePoolId: ID
 }
 
+input CreateAgentConfigInput {
+  name: String!
+  agentType: String!
+  isDefault: Boolean
+  artifactId: ID
+}
+input UpdateAgentConfigInput {
+  name: String
+  artifactId: ID
+}
+
 extend type Query {
   # Catalog and configs are browsable by any authenticated user.
   agentTemplates: [AgentTemplate!]!
@@ -80,4 +91,11 @@ extend type Mutation {
   # Self-service: any authenticated user creates their own agent (owner = caller).
   createAgent(input: CreateAgentInput!): Agent!
   setAgentStatus(id: ID!, status: AgentStatus!): Agent!
+
+  # Agent config management (智能体配置).
+  createAgentConfig(input: CreateAgentConfigInput!): AgentConfig! @hasRole(any: [admin])
+  updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig! @hasRole(any: [admin])
+  deleteAgentConfig(id: ID!): Boolean! @hasRole(any: [admin])
+  # Mark this config the default for its agent type (unsets others of that type).
+  setDefaultAgentConfig(id: ID!): AgentConfig! @hasRole(any: [admin])
 }

@@ -85,6 +85,13 @@ type AuthPayload struct {
 	MustChangePassword bool  `json:"mustChangePassword"`
 }
 
+type CreateAgentConfigInput struct {
+	Name       string  `json:"name"`
+	AgentType  string  `json:"agentType"`
+	IsDefault  *bool   `json:"isDefault,omitempty"`
+	ArtifactID *string `json:"artifactId,omitempty"`
+}
+
 type CreateAgentInput struct {
 	Name           string  `json:"name"`
 	AgentType      string  `json:"agentType"`
@@ -299,6 +306,11 @@ type TokenUsage struct {
 	OutputTokens int       `json:"outputTokens"`
 	Cost         float64   `json:"cost"`
 	CreatedAt    time.Time `json:"createdAt"`
+}
+
+type UpdateAgentConfigInput struct {
+	Name       *string `json:"name,omitempty"`
+	ArtifactID *string `json:"artifactId,omitempty"`
 }
 
 type UpdateResourcePoolInput struct {
