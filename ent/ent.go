@@ -12,6 +12,9 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/VMware-AI/agent-platform-backend/ent/agent"
+	"github.com/VMware-AI/agent-platform-backend/ent/agentconfig"
+	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
 	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/department"
@@ -84,18 +87,21 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			artifact.Table:     artifact.ValidColumn,
-			auditlog.Table:     auditlog.ValidColumn,
-			department.Table:   department.ValidColumn,
-			image.Table:        image.ValidColumn,
-			membership.Table:   membership.ValidColumn,
-			permission.Table:   permission.ValidColumn,
-			resourcepool.Table: resourcepool.ValidColumn,
-			role.Table:         role.ValidColumn,
-			skill.Table:        skill.ValidColumn,
-			tenant.Table:       tenant.ValidColumn,
-			user.Table:         user.ValidColumn,
-			virtualkey.Table:   virtualkey.ValidColumn,
+			agent.Table:         agent.ValidColumn,
+			agentconfig.Table:   agentconfig.ValidColumn,
+			agenttemplate.Table: agenttemplate.ValidColumn,
+			artifact.Table:      artifact.ValidColumn,
+			auditlog.Table:      auditlog.ValidColumn,
+			department.Table:    department.ValidColumn,
+			image.Table:         image.ValidColumn,
+			membership.Table:    membership.ValidColumn,
+			permission.Table:    permission.ValidColumn,
+			resourcepool.Table:  resourcepool.ValidColumn,
+			role.Table:          role.ValidColumn,
+			skill.Table:         skill.ValidColumn,
+			tenant.Table:        tenant.ValidColumn,
+			user.Table:          user.ValidColumn,
+			virtualkey.Table:    virtualkey.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

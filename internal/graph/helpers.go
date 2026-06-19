@@ -107,6 +107,56 @@ func toModelVirtualKey(k *ent.VirtualKey) *model.VirtualKey {
 	return m
 }
 
+func toModelAgentTemplate(t *ent.AgentTemplate) *model.AgentTemplate {
+	m := &model.AgentTemplate{
+		ID:            t.ID.String(),
+		Kind:          t.Kind,
+		Display:       t.Display,
+		InstallMethod: model.InstallMethod(string(t.InstallMethod)),
+		Status:        model.AgentTemplateStatus(string(t.Status)),
+		CreatedAt:     t.CreatedAt,
+	}
+	if t.Description != "" {
+		d := t.Description
+		m.Description = &d
+	}
+	if t.InstallCommand != "" {
+		c := t.InstallCommand
+		m.InstallCommand = &c
+	}
+	if t.Version != "" {
+		v := t.Version
+		m.Version = &v
+	}
+	return m
+}
+
+func toModelAgentConfig(c *ent.AgentConfig) *model.AgentConfig {
+	return &model.AgentConfig{
+		ID:        c.ID.String(),
+		Name:      c.Name,
+		AgentType: c.AgentType,
+		IsDefault: c.IsDefault,
+		CreatedAt: c.CreatedAt,
+	}
+}
+
+func toModelAgent(a *ent.Agent) *model.Agent {
+	m := &model.Agent{
+		ID:          a.ID.String(),
+		Name:        a.Name,
+		AgentType:   a.AgentType,
+		Status:      model.AgentStatus(string(a.Status)),
+		OwnerUserID: a.OwnerUserID.String(),
+		CreatedAt:   a.CreatedAt,
+	}
+	if a.VMRef != "" {
+		v := a.VMRef
+		m.VMRef = &v
+	}
+	return m
+}
+
 // clientIP extracts the remote address from the request in context.
 func clientIP(ctx context.Context) string {
 	if r := httpx.Request(ctx); r != nil {

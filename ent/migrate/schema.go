@@ -8,6 +8,75 @@ import (
 )
 
 var (
+	// AgentsColumns holds the columns for the "agents" table.
+	AgentsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "name", Type: field.TypeString},
+		{Name: "agent_type", Type: field.TypeString},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"provisioning", "running", "stopped", "exception"}, Default: "provisioning"},
+		{Name: "owner_user_id", Type: field.TypeUUID},
+		{Name: "vm_ref", Type: field.TypeString, Nullable: true},
+		{Name: "config_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "virtual_key_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "resource_pool_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
+	}
+	// AgentsTable holds the schema information for the "agents" table.
+	AgentsTable = &schema.Table{
+		Name:       "agents",
+		Columns:    AgentsColumns,
+		PrimaryKey: []*schema.Column{AgentsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "agent_owner_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{AgentsColumns[6]},
+			},
+			{
+				Name:    "agent_status",
+				Unique:  false,
+				Columns: []*schema.Column{AgentsColumns[5]},
+			},
+		},
+	}
+	// AgentConfigsColumns holds the columns for the "agent_configs" table.
+	AgentConfigsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "name", Type: field.TypeString},
+		{Name: "agent_type", Type: field.TypeString},
+		{Name: "is_default", Type: field.TypeBool, Default: false},
+		{Name: "artifact_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
+	}
+	// AgentConfigsTable holds the schema information for the "agent_configs" table.
+	AgentConfigsTable = &schema.Table{
+		Name:       "agent_configs",
+		Columns:    AgentConfigsColumns,
+		PrimaryKey: []*schema.Column{AgentConfigsColumns[0]},
+	}
+	// AgentTemplatesColumns holds the columns for the "agent_templates" table.
+	AgentTemplatesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "kind", Type: field.TypeString, Unique: true},
+		{Name: "display", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+		{Name: "install_method", Type: field.TypeEnum, Enums: []string{"offline_tar", "curl", "unset"}, Default: "unset"},
+		{Name: "install_command", Type: field.TypeString, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "deferred"}, Default: "deferred"},
+		{Name: "version", Type: field.TypeString, Nullable: true},
+	}
+	// AgentTemplatesTable holds the schema information for the "agent_templates" table.
+	AgentTemplatesTable = &schema.Table{
+		Name:       "agent_templates",
+		Columns:    AgentTemplatesColumns,
+		PrimaryKey: []*schema.Column{AgentTemplatesColumns[0]},
+	}
 	// ArtifactsColumns holds the columns for the "artifacts" table.
 	ArtifactsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -320,6 +389,9 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AgentsTable,
+		AgentConfigsTable,
+		AgentTemplatesTable,
 		ArtifactsTable,
 		AuditLogsTable,
 		DepartmentsTable,

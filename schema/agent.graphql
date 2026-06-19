@@ -1,0 +1,83 @@
+# Agent center (智能体中心): catalog/market, configs, and deployed instances.
+# See doc 42 (E line) concept + 0619 mockups.
+
+enum InstallMethod {
+  offline_tar
+  curl
+  unset
+}
+
+enum AgentTemplateStatus {
+  active
+  deferred
+}
+
+enum AgentStatus {
+  provisioning
+  running
+  stopped
+  exception
+}
+
+type AgentTemplate {
+  id: ID!
+  kind: String!
+  display: String!
+  description: String
+  installMethod: InstallMethod!
+  installCommand: String
+  status: AgentTemplateStatus!
+  version: String
+  createdAt: Time!
+}
+
+type AgentConfig {
+  id: ID!
+  name: String!
+  agentType: String!
+  isDefault: Boolean!
+  createdAt: Time!
+}
+
+type Agent {
+  id: ID!
+  name: String!
+  agentType: String!
+  status: AgentStatus!
+  ownerUserId: ID!
+  vmRef: String
+  createdAt: Time!
+}
+
+input UpsertAgentTemplateInput {
+  kind: String!
+  display: String!
+  description: String
+  installMethod: InstallMethod!
+  installCommand: String
+  status: AgentTemplateStatus!
+  version: String
+}
+
+input CreateAgentInput {
+  name: String!
+  agentType: String!
+  configId: ID
+  resourcePoolId: ID
+}
+
+extend type Query {
+  # Catalog and configs are browsable by any authenticated user.
+  agentTemplates: [AgentTemplate!]!
+  agentConfigs(agentType: String): [AgentConfig!]!
+  # Admin sees all agents; a regular user sees only their own (owner scope).
+  agents: [Agent!]!
+}
+
+extend type Mutation {
+  # Catalog management is admin-only.
+  upsertAgentTemplate(input: UpsertAgentTemplateInput!): AgentTemplate! @hasRole(any: [admin])
+  # Self-service: any authenticated user creates their own agent (owner = caller).
+  createAgent(input: CreateAgentInput!): Agent!
+  setAgentStatus(id: ID!, status: AgentStatus!): Agent!
+}

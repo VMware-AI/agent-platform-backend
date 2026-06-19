@@ -5,6 +5,9 @@ package ent
 import (
 	"time"
 
+	"github.com/VMware-AI/agent-platform-backend/ent/agent"
+	"github.com/VMware-AI/agent-platform-backend/ent/agentconfig"
+	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
 	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/department"
@@ -25,6 +28,91 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	agentMixin := schema.Agent{}.Mixin()
+	agentMixinFields0 := agentMixin[0].Fields()
+	_ = agentMixinFields0
+	agentFields := schema.Agent{}.Fields()
+	_ = agentFields
+	// agentDescCreatedAt is the schema descriptor for created_at field.
+	agentDescCreatedAt := agentMixinFields0[0].Descriptor()
+	// agent.DefaultCreatedAt holds the default value on creation for the created_at field.
+	agent.DefaultCreatedAt = agentDescCreatedAt.Default.(func() time.Time)
+	// agentDescUpdatedAt is the schema descriptor for updated_at field.
+	agentDescUpdatedAt := agentMixinFields0[1].Descriptor()
+	// agent.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	agent.DefaultUpdatedAt = agentDescUpdatedAt.Default.(func() time.Time)
+	// agent.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	agent.UpdateDefaultUpdatedAt = agentDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// agentDescName is the schema descriptor for name field.
+	agentDescName := agentFields[1].Descriptor()
+	// agent.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	agent.NameValidator = agentDescName.Validators[0].(func(string) error)
+	// agentDescAgentType is the schema descriptor for agent_type field.
+	agentDescAgentType := agentFields[2].Descriptor()
+	// agent.AgentTypeValidator is a validator for the "agent_type" field. It is called by the builders before save.
+	agent.AgentTypeValidator = agentDescAgentType.Validators[0].(func(string) error)
+	// agentDescID is the schema descriptor for id field.
+	agentDescID := agentFields[0].Descriptor()
+	// agent.DefaultID holds the default value on creation for the id field.
+	agent.DefaultID = agentDescID.Default.(func() uuid.UUID)
+	agentconfigMixin := schema.AgentConfig{}.Mixin()
+	agentconfigMixinFields0 := agentconfigMixin[0].Fields()
+	_ = agentconfigMixinFields0
+	agentconfigFields := schema.AgentConfig{}.Fields()
+	_ = agentconfigFields
+	// agentconfigDescCreatedAt is the schema descriptor for created_at field.
+	agentconfigDescCreatedAt := agentconfigMixinFields0[0].Descriptor()
+	// agentconfig.DefaultCreatedAt holds the default value on creation for the created_at field.
+	agentconfig.DefaultCreatedAt = agentconfigDescCreatedAt.Default.(func() time.Time)
+	// agentconfigDescUpdatedAt is the schema descriptor for updated_at field.
+	agentconfigDescUpdatedAt := agentconfigMixinFields0[1].Descriptor()
+	// agentconfig.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	agentconfig.DefaultUpdatedAt = agentconfigDescUpdatedAt.Default.(func() time.Time)
+	// agentconfig.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	agentconfig.UpdateDefaultUpdatedAt = agentconfigDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// agentconfigDescName is the schema descriptor for name field.
+	agentconfigDescName := agentconfigFields[1].Descriptor()
+	// agentconfig.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	agentconfig.NameValidator = agentconfigDescName.Validators[0].(func(string) error)
+	// agentconfigDescAgentType is the schema descriptor for agent_type field.
+	agentconfigDescAgentType := agentconfigFields[2].Descriptor()
+	// agentconfig.AgentTypeValidator is a validator for the "agent_type" field. It is called by the builders before save.
+	agentconfig.AgentTypeValidator = agentconfigDescAgentType.Validators[0].(func(string) error)
+	// agentconfigDescIsDefault is the schema descriptor for is_default field.
+	agentconfigDescIsDefault := agentconfigFields[3].Descriptor()
+	// agentconfig.DefaultIsDefault holds the default value on creation for the is_default field.
+	agentconfig.DefaultIsDefault = agentconfigDescIsDefault.Default.(bool)
+	// agentconfigDescID is the schema descriptor for id field.
+	agentconfigDescID := agentconfigFields[0].Descriptor()
+	// agentconfig.DefaultID holds the default value on creation for the id field.
+	agentconfig.DefaultID = agentconfigDescID.Default.(func() uuid.UUID)
+	agenttemplateMixin := schema.AgentTemplate{}.Mixin()
+	agenttemplateMixinFields0 := agenttemplateMixin[0].Fields()
+	_ = agenttemplateMixinFields0
+	agenttemplateFields := schema.AgentTemplate{}.Fields()
+	_ = agenttemplateFields
+	// agenttemplateDescCreatedAt is the schema descriptor for created_at field.
+	agenttemplateDescCreatedAt := agenttemplateMixinFields0[0].Descriptor()
+	// agenttemplate.DefaultCreatedAt holds the default value on creation for the created_at field.
+	agenttemplate.DefaultCreatedAt = agenttemplateDescCreatedAt.Default.(func() time.Time)
+	// agenttemplateDescUpdatedAt is the schema descriptor for updated_at field.
+	agenttemplateDescUpdatedAt := agenttemplateMixinFields0[1].Descriptor()
+	// agenttemplate.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	agenttemplate.DefaultUpdatedAt = agenttemplateDescUpdatedAt.Default.(func() time.Time)
+	// agenttemplate.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	agenttemplate.UpdateDefaultUpdatedAt = agenttemplateDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// agenttemplateDescKind is the schema descriptor for kind field.
+	agenttemplateDescKind := agenttemplateFields[1].Descriptor()
+	// agenttemplate.KindValidator is a validator for the "kind" field. It is called by the builders before save.
+	agenttemplate.KindValidator = agenttemplateDescKind.Validators[0].(func(string) error)
+	// agenttemplateDescDisplay is the schema descriptor for display field.
+	agenttemplateDescDisplay := agenttemplateFields[2].Descriptor()
+	// agenttemplate.DisplayValidator is a validator for the "display" field. It is called by the builders before save.
+	agenttemplate.DisplayValidator = agenttemplateDescDisplay.Validators[0].(func(string) error)
+	// agenttemplateDescID is the schema descriptor for id field.
+	agenttemplateDescID := agenttemplateFields[0].Descriptor()
+	// agenttemplate.DefaultID holds the default value on creation for the id field.
+	agenttemplate.DefaultID = agenttemplateDescID.Default.(func() uuid.UUID)
 	artifactMixin := schema.Artifact{}.Mixin()
 	artifactMixinFields0 := artifactMixin[0].Fields()
 	_ = artifactMixinFields0

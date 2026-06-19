@@ -10,6 +10,36 @@ import (
 	"time"
 )
 
+type Agent struct {
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
+	AgentType   string      `json:"agentType"`
+	Status      AgentStatus `json:"status"`
+	OwnerUserID string      `json:"ownerUserId"`
+	VMRef       *string     `json:"vmRef,omitempty"`
+	CreatedAt   time.Time   `json:"createdAt"`
+}
+
+type AgentConfig struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	AgentType string    `json:"agentType"`
+	IsDefault bool      `json:"isDefault"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type AgentTemplate struct {
+	ID             string              `json:"id"`
+	Kind           string              `json:"kind"`
+	Display        string              `json:"display"`
+	Description    *string             `json:"description,omitempty"`
+	InstallMethod  InstallMethod       `json:"installMethod"`
+	InstallCommand *string             `json:"installCommand,omitempty"`
+	Status         AgentTemplateStatus `json:"status"`
+	Version        *string             `json:"version,omitempty"`
+	CreatedAt      time.Time           `json:"createdAt"`
+}
+
 type AuditConnection struct {
 	Items []AuditLog `json:"items"`
 	Total int        `json:"total"`
@@ -29,6 +59,13 @@ type AuditLog struct {
 type AuthPayload struct {
 	User               *User `json:"user"`
 	MustChangePassword bool  `json:"mustChangePassword"`
+}
+
+type CreateAgentInput struct {
+	Name           string  `json:"name"`
+	AgentType      string  `json:"agentType"`
+	ConfigID       *string `json:"configId,omitempty"`
+	ResourcePoolID *string `json:"resourcePoolId,omitempty"`
 }
 
 type CreateUserInput struct {
@@ -90,6 +127,16 @@ type UpdateUserInput struct {
 	Role  *Role   `json:"role,omitempty"`
 }
 
+type UpsertAgentTemplateInput struct {
+	Kind           string              `json:"kind"`
+	Display        string              `json:"display"`
+	Description    *string             `json:"description,omitempty"`
+	InstallMethod  InstallMethod       `json:"installMethod"`
+	InstallCommand *string             `json:"installCommand,omitempty"`
+	Status         AgentTemplateStatus `json:"status"`
+	Version        *string             `json:"version,omitempty"`
+}
+
 type User struct {
 	ID                 string     `json:"id"`
 	Username           string     `json:"username"`
@@ -117,6 +164,177 @@ type VirtualKey struct {
 	Status    VirtualKeyStatus `json:"status"`
 	ExpiresAt *time.Time       `json:"expiresAt,omitempty"`
 	CreatedAt time.Time        `json:"createdAt"`
+}
+
+type AgentStatus string
+
+const (
+	AgentStatusProvisioning AgentStatus = "provisioning"
+	AgentStatusRunning      AgentStatus = "running"
+	AgentStatusStopped      AgentStatus = "stopped"
+	AgentStatusException    AgentStatus = "exception"
+)
+
+var AllAgentStatus = []AgentStatus{
+	AgentStatusProvisioning,
+	AgentStatusRunning,
+	AgentStatusStopped,
+	AgentStatusException,
+}
+
+func (e AgentStatus) IsValid() bool {
+	switch e {
+	case AgentStatusProvisioning, AgentStatusRunning, AgentStatusStopped, AgentStatusException:
+		return true
+	}
+	return false
+}
+
+func (e AgentStatus) String() string {
+	return string(e)
+}
+
+func (e *AgentStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = AgentStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid AgentStatus", str)
+	}
+	return nil
+}
+
+func (e AgentStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *AgentStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e AgentStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type AgentTemplateStatus string
+
+const (
+	AgentTemplateStatusActive   AgentTemplateStatus = "active"
+	AgentTemplateStatusDeferred AgentTemplateStatus = "deferred"
+)
+
+var AllAgentTemplateStatus = []AgentTemplateStatus{
+	AgentTemplateStatusActive,
+	AgentTemplateStatusDeferred,
+}
+
+func (e AgentTemplateStatus) IsValid() bool {
+	switch e {
+	case AgentTemplateStatusActive, AgentTemplateStatusDeferred:
+		return true
+	}
+	return false
+}
+
+func (e AgentTemplateStatus) String() string {
+	return string(e)
+}
+
+func (e *AgentTemplateStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = AgentTemplateStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid AgentTemplateStatus", str)
+	}
+	return nil
+}
+
+func (e AgentTemplateStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *AgentTemplateStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e AgentTemplateStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type InstallMethod string
+
+const (
+	InstallMethodOfflineTar InstallMethod = "offline_tar"
+	InstallMethodCurl       InstallMethod = "curl"
+	InstallMethodUnset      InstallMethod = "unset"
+)
+
+var AllInstallMethod = []InstallMethod{
+	InstallMethodOfflineTar,
+	InstallMethodCurl,
+	InstallMethodUnset,
+}
+
+func (e InstallMethod) IsValid() bool {
+	switch e {
+	case InstallMethodOfflineTar, InstallMethodCurl, InstallMethodUnset:
+		return true
+	}
+	return false
+}
+
+func (e InstallMethod) String() string {
+	return string(e)
+}
+
+func (e *InstallMethod) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = InstallMethod(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid InstallMethod", str)
+	}
+	return nil
+}
+
+func (e InstallMethod) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *InstallMethod) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e InstallMethod) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }
 
 type ResourcePoolStatus string

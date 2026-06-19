@@ -9,6 +9,42 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent"
 )
 
+// The AgentFunc type is an adapter to allow the use of ordinary
+// function as Agent mutator.
+type AgentFunc func(context.Context, *ent.AgentMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AgentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AgentMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AgentMutation", m)
+}
+
+// The AgentConfigFunc type is an adapter to allow the use of ordinary
+// function as AgentConfig mutator.
+type AgentConfigFunc func(context.Context, *ent.AgentConfigMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AgentConfigFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AgentConfigMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AgentConfigMutation", m)
+}
+
+// The AgentTemplateFunc type is an adapter to allow the use of ordinary
+// function as AgentTemplate mutator.
+type AgentTemplateFunc func(context.Context, *ent.AgentTemplateMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AgentTemplateFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AgentTemplateMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AgentTemplateMutation", m)
+}
+
 // The ArtifactFunc type is an adapter to allow the use of ordinary
 // function as Artifact mutator.
 type ArtifactFunc func(context.Context, *ent.ArtifactMutation) (ent.Value, error)

@@ -6,6 +6,15 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// Agent is the predicate function for agent builders.
+type Agent func(*sql.Selector)
+
+// AgentConfig is the predicate function for agentconfig builders.
+type AgentConfig func(*sql.Selector)
+
+// AgentTemplate is the predicate function for agenttemplate builders.
+type AgentTemplate func(*sql.Selector)
+
 // Artifact is the predicate function for artifact builders.
 type Artifact func(*sql.Selector)
 
