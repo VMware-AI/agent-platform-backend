@@ -1,0 +1,18 @@
+# Binaries
+/bin/
+*.exe
+agent-platform-backend
+
+# Env / secrets (never commit)
+.env
+*.local
+
+# Go
+*.test
+*.out
+vendor/
+
+# Editor
+.idea/
+.vscode/
+.DS_Store

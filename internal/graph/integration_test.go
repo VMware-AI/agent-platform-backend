@@ -1,0 +1,159 @@
+package graph
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/VMware-AI/agent-platform-backend/internal/auth"
+	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
+	"github.com/VMware-AI/agent-platform-backend/internal/session"
+	"github.com/VMware-AI/agent-platform-backend/internal/store"
+)
+
+func newTestResolver(t *testing.T) (*Resolver, func()) {
+	t.Helper()
+	client, err := store.Open(context.Background(), "") // in-memory sqlite
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	r := &Resolver{Ent: client, Sessions: session.NewMemoryStore(), SessionTTL: time.Hour}
+	return r, func() { _ = client.Close() }
+}
+
+func TestCreateUserAndLogin(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := context.Background()
+	mr := &mutationResolver{r}
+
+	u, err := mr.CreateUser(ctx, model.CreateUserInput{
+		Username: "alice", Email: "alice@x.io", Password: "AlicePass123", Role: model.RoleUser,
+	})
+	if err != nil {
+		t.Fatalf("CreateUser: %v", err)
+	}
+	if u.Username != "alice" || !u.MustChangePassword {
+		t.Fatalf("unexpected user: %+v", u)
+	}
+
+	if _, err := mr.Login(ctx, "alice", "WrongPassword9"); err == nil {
+		t.Fatal("login with wrong password should fail")
+	}
+	ap, err := mr.Login(ctx, "alice", "AlicePass123")
+	if err != nil {
+		t.Fatalf("Login: %v", err)
+	}
+	if ap.User.Username != "alice" || !ap.MustChangePassword {
+		t.Fatalf("unexpected auth payload: %+v", ap)
+	}
+
+	// login + create should have produced audit rows
+	conn, err := (&queryResolver{r}).AuditLogs(ctx, nil)
+	if err != nil {
+		t.Fatalf("AuditLogs: %v", err)
+	}
+	if conn.Total < 2 {
+		t.Fatalf("expected >=2 audit entries, got %d", conn.Total)
+	}
+}
+
+func TestDuplicateUsernameRejected(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := context.Background()
+	mr := &mutationResolver{r}
+	in := model.CreateUserInput{Username: "dup", Email: "dup@x.io", Password: "DupPass12345", Role: model.RoleUser}
+	if _, err := mr.CreateUser(ctx, in); err != nil {
+		t.Fatalf("first create: %v", err)
+	}
+	in.Email = "dup2@x.io"
+	if _, err := mr.CreateUser(ctx, in); err == nil {
+		t.Fatal("duplicate username should be rejected")
+	}
+}
+
+func TestChangePasswordFlow(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := context.Background()
+	mr := &mutationResolver{r}
+	u, err := mr.CreateUser(ctx, model.CreateUserInput{
+		Username: "bob", Email: "bob@x.io", Password: "BobPass12345", Role: model.RoleUser,
+	})
+	if err != nil {
+		t.Fatalf("CreateUser: %v", err)
+	}
+
+	bobCtx := auth.WithCurrentUser(ctx, &auth.CurrentUser{ID: u.ID, Role: auth.RoleUser})
+	ok, err := mr.ChangePassword(bobCtx, "BobPass12345", "NewBobPass678")
+	if err != nil || !ok {
+		t.Fatalf("ChangePassword: ok=%v err=%v", ok, err)
+	}
+	if _, err := mr.Login(ctx, "bob", "BobPass12345"); err == nil {
+		t.Fatal("old password should no longer work")
+	}
+	ap, err := mr.Login(ctx, "bob", "NewBobPass678")
+	if err != nil {
+		t.Fatalf("Login with new password: %v", err)
+	}
+	if ap.MustChangePassword {
+		t.Fatal("must_change_password should be false after change")
+	}
+}
+
+func TestHasRoleDirective(t *testing.T) {
+	next := func(context.Context) (any, error) { return "ok", nil }
+
+	adminCtx := auth.WithCurrentUser(context.Background(), &auth.CurrentUser{Role: auth.RoleAdmin})
+	if res, err := HasRole(adminCtx, nil, next, []model.Role{model.RoleAdmin}); err != nil || res != "ok" {
+		t.Fatalf("admin should pass: res=%v err=%v", res, err)
+	}
+
+	userCtx := auth.WithCurrentUser(context.Background(), &auth.CurrentUser{Role: auth.RoleUser})
+	if _, err := HasRole(userCtx, nil, next, []model.Role{model.RoleAdmin}); err == nil {
+		t.Fatal("user should be denied admin-only field")
+	}
+
+	if _, err := HasRole(context.Background(), nil, next, []model.Role{model.RoleAdmin}); err == nil {
+		t.Fatal("unauthenticated should be denied")
+	}
+
+	// tenant_admin (GraphQL) must map to tenant-admin (storage) and pass.
+	taCtx := auth.WithCurrentUser(context.Background(), &auth.CurrentUser{Role: auth.RoleTenantAdmin})
+	if _, err := HasRole(taCtx, nil, next, []model.Role{model.RoleTenantAdmin}); err != nil {
+		t.Fatalf("tenant-admin should pass: %v", err)
+	}
+}
+
+func TestHasPermissionDirective(t *testing.T) {
+	next := func(context.Context) (any, error) { return "ok", nil }
+	obsCtx := auth.WithCurrentUser(context.Background(), &auth.CurrentUser{Role: auth.RoleObservability})
+	if _, err := HasPermission(obsCtx, nil, next, auth.PermAuditView); err != nil {
+		t.Fatalf("observability should have audit:view: %v", err)
+	}
+	if _, err := HasPermission(obsCtx, nil, next, auth.PermUserManage); err == nil {
+		t.Fatal("observability must not have user:manage")
+	}
+}
+
+func TestResetPassword(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := context.Background()
+	mr := &mutationResolver{r}
+	u, _ := mr.CreateUser(ctx, model.CreateUserInput{
+		Username: "carol", Email: "carol@x.io", Password: "CarolPass123", Role: model.RoleUser,
+	})
+	payload, err := mr.ResetPassword(ctx, u.ID)
+	if err != nil {
+		t.Fatalf("ResetPassword: %v", err)
+	}
+	if payload.TempPassword == "" {
+		t.Fatal("temp password must be returned")
+	}
+	// the temp password should log the user in
+	if _, err := mr.Login(ctx, "carol", payload.TempPassword); err != nil {
+		t.Fatalf("login with temp password: %v", err)
+	}
+}

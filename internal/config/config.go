@@ -1,0 +1,48 @@
+// Package config loads and validates runtime configuration at startup (fail-fast).
+package config
+
+import (
+	"fmt"
+	"os"
+	"strconv"
+)
+
+// Config holds backend runtime settings. All values come from the environment
+// (12-factor); secrets must never be hardcoded.
+type Config struct {
+	HTTPAddr    string // e.g. ":8080"
+	DatabaseURL string // postgres://...  (empty => sqlite in-memory for dev/test)
+	RedisURL    string // redis://...     (empty => in-memory session store)
+	SessionTTL  int    // seconds
+	Env         string // dev | prod
+}
+
+// Load reads config from the environment and validates it. Fails fast on a
+// malformed value rather than starting in a broken state.
+func Load() (*Config, error) {
+	c := &Config{
+		HTTPAddr:    getenv("HTTP_ADDR", ":8080"),
+		DatabaseURL: os.Getenv("DATABASE_URL"),
+		RedisURL:    os.Getenv("REDIS_URL"),
+		Env:         getenv("APP_ENV", "dev"),
+	}
+	ttl, err := strconv.Atoi(getenv("SESSION_TTL_SECONDS", "28800")) // 8h
+	if err != nil {
+		return nil, fmt.Errorf("SESSION_TTL_SECONDS must be an integer: %w", err)
+	}
+	if ttl <= 0 {
+		return nil, fmt.Errorf("SESSION_TTL_SECONDS must be positive, got %d", ttl)
+	}
+	c.SessionTTL = ttl
+	if c.Env != "dev" && c.Env != "prod" {
+		return nil, fmt.Errorf("APP_ENV must be dev|prod, got %q", c.Env)
+	}
+	return c, nil
+}
+
+func getenv(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
