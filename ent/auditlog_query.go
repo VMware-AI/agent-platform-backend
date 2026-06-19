@@ -13,7 +13,6 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
-	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/google/uuid"
 )
 
@@ -24,7 +23,6 @@ type AuditLogQuery struct {
 	order      []auditlog.OrderOption
 	inters     []Interceptor
 	predicates []predicate.AuditLog
-	withActor  *UserQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -59,28 +57,6 @@ func (_q *AuditLogQuery) Unique(unique bool) *AuditLogQuery {
 func (_q *AuditLogQuery) Order(o ...auditlog.OrderOption) *AuditLogQuery {
 	_q.order = append(_q.order, o...)
 	return _q
-}
-
-// QueryActor chains the current query on the "actor" edge.
-func (_q *AuditLogQuery) QueryActor() *UserQuery {
-	query := (&UserClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(auditlog.Table, auditlog.FieldID, selector),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, auditlog.ActorTable, auditlog.ActorColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
 }
 
 // First returns the first AuditLog entity from the query.
@@ -275,22 +251,10 @@ func (_q *AuditLogQuery) Clone() *AuditLogQuery {
 		order:      append([]auditlog.OrderOption{}, _q.order...),
 		inters:     append([]Interceptor{}, _q.inters...),
 		predicates: append([]predicate.AuditLog{}, _q.predicates...),
-		withActor:  _q.withActor.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
-}
-
-// WithActor tells the query-builder to eager-load the nodes that are connected to
-// the "actor" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *AuditLogQuery) WithActor(opts ...func(*UserQuery)) *AuditLogQuery {
-	query := (&UserClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withActor = query
-	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -369,11 +333,8 @@ func (_q *AuditLogQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *AuditLogQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*AuditLog, error) {
 	var (
-		nodes       = []*AuditLog{}
-		_spec       = _q.querySpec()
-		loadedTypes = [1]bool{
-			_q.withActor != nil,
-		}
+		nodes = []*AuditLog{}
+		_spec = _q.querySpec()
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*AuditLog).scanValues(nil, columns)
@@ -381,7 +342,6 @@ func (_q *AuditLogQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Aud
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &AuditLog{config: _q.config}
 		nodes = append(nodes, node)
-		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -393,46 +353,7 @@ func (_q *AuditLogQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Aud
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := _q.withActor; query != nil {
-		if err := _q.loadActor(ctx, query, nodes, nil,
-			func(n *AuditLog, e *User) { n.Edges.Actor = e }); err != nil {
-			return nil, err
-		}
-	}
 	return nodes, nil
-}
-
-func (_q *AuditLogQuery) loadActor(ctx context.Context, query *UserQuery, nodes []*AuditLog, init func(*AuditLog), assign func(*AuditLog, *User)) error {
-	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*AuditLog)
-	for i := range nodes {
-		if nodes[i].ActorUserID == nil {
-			continue
-		}
-		fk := *nodes[i].ActorUserID
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
-	}
-	if len(ids) == 0 {
-		return nil
-	}
-	query.Where(user.IDIn(ids...))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "actor_user_id" returned %v`, n.ID)
-		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
-	}
-	return nil
 }
 
 func (_q *AuditLogQuery) sqlCount(ctx context.Context) (int, error) {
@@ -459,9 +380,6 @@ func (_q *AuditLogQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != auditlog.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
-		}
-		if _q.withActor != nil {
-			_spec.Node.AddColumnOnce(auditlog.FieldActorUserID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

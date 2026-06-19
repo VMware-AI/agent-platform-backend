@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"entgo.io/ent"
-	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -29,11 +28,8 @@ func (AuditLog) Fields() []ent.Field {
 	}
 }
 
-func (AuditLog) Edges() []ent.Edge {
-	return []ent.Edge{
-		edge.From("actor", User.Type).Ref("audit_logs").Field("actor_user_id").Unique(),
-	}
-}
+// actor_user_id is a soft reference (no FK): audit is append-only and must
+// survive user deletion; a write must never fail because the actor is unknown.
 
 func (AuditLog) Indexes() []ent.Index {
 	return []ent.Index{

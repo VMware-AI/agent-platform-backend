@@ -1020,22 +1020,6 @@ func (c *AuditLogClient) GetX(ctx context.Context, id uuid.UUID) *AuditLog {
 	return obj
 }
 
-// QueryActor queries the actor edge of a AuditLog.
-func (c *AuditLogClient) QueryActor(_m *AuditLog) *UserQuery {
-	query := (&UserClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(auditlog.Table, auditlog.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, auditlog.ActorTable, auditlog.ActorColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // Hooks returns the client hooks.
 func (c *AuditLogClient) Hooks() []Hook {
 	return c.hooks.AuditLog
@@ -3317,22 +3301,6 @@ func (c *UserClient) QueryMemberships(_m *User) *MembershipQuery {
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(membership.Table, membership.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.MembershipsTable, user.MembershipsColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryAuditLogs queries the audit_logs edge of a User.
-func (c *UserClient) QueryAuditLogs(_m *User) *AuditLogQuery {
-	query := (&AuditLogClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(auditlog.Table, auditlog.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.AuditLogsTable, user.AuditLogsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

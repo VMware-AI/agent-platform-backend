@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -32,17 +31,8 @@ const (
 	FieldDetail = "detail"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
-	// EdgeActor holds the string denoting the actor edge name in mutations.
-	EdgeActor = "actor"
 	// Table holds the table name of the auditlog in the database.
 	Table = "audit_logs"
-	// ActorTable is the table that holds the actor relation/edge.
-	ActorTable = "audit_logs"
-	// ActorInverseTable is the table name for the User entity.
-	// It exists in this package in order to avoid circular dependency with the "user" package.
-	ActorInverseTable = "users"
-	// ActorColumn is the table column denoting the actor relation/edge.
-	ActorColumn = "actor_user_id"
 )
 
 // Columns holds all SQL columns for auditlog fields.
@@ -144,18 +134,4 @@ func ByResult(opts ...sql.OrderTermOption) OrderOption {
 // ByCreatedAt orders the results by the created_at field.
 func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
-}
-
-// ByActorField orders the results by actor field.
-func ByActorField(field string, opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newActorStep(), sql.OrderByField(field, opts...))
-	}
-}
-func newActorStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ActorInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, ActorTable, ActorColumn),
-	)
 }

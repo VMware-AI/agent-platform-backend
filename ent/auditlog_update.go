@@ -12,7 +12,6 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
-	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/google/uuid"
 )
 
@@ -149,34 +148,9 @@ func (_u *AuditLogUpdate) ClearDetail() *AuditLogUpdate {
 	return _u
 }
 
-// SetActorID sets the "actor" edge to the User entity by ID.
-func (_u *AuditLogUpdate) SetActorID(id uuid.UUID) *AuditLogUpdate {
-	_u.mutation.SetActorID(id)
-	return _u
-}
-
-// SetNillableActorID sets the "actor" edge to the User entity by ID if the given value is not nil.
-func (_u *AuditLogUpdate) SetNillableActorID(id *uuid.UUID) *AuditLogUpdate {
-	if id != nil {
-		_u = _u.SetActorID(*id)
-	}
-	return _u
-}
-
-// SetActor sets the "actor" edge to the User entity.
-func (_u *AuditLogUpdate) SetActor(v *User) *AuditLogUpdate {
-	return _u.SetActorID(v.ID)
-}
-
 // Mutation returns the AuditLogMutation object of the builder.
 func (_u *AuditLogUpdate) Mutation() *AuditLogMutation {
 	return _u.mutation
-}
-
-// ClearActor clears the "actor" edge to the User entity.
-func (_u *AuditLogUpdate) ClearActor() *AuditLogUpdate {
-	_u.mutation.ClearActor()
-	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -233,6 +207,12 @@ func (_u *AuditLogUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			}
 		}
 	}
+	if value, ok := _u.mutation.ActorUserID(); ok {
+		_spec.SetField(auditlog.FieldActorUserID, field.TypeUUID, value)
+	}
+	if _u.mutation.ActorUserIDCleared() {
+		_spec.ClearField(auditlog.FieldActorUserID, field.TypeUUID)
+	}
 	if value, ok := _u.mutation.Action(); ok {
 		_spec.SetField(auditlog.FieldAction, field.TypeString, value)
 	}
@@ -262,35 +242,6 @@ func (_u *AuditLogUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.DetailCleared() {
 		_spec.ClearField(auditlog.FieldDetail, field.TypeJSON)
-	}
-	if _u.mutation.ActorCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   auditlog.ActorTable,
-			Columns: []string{auditlog.ActorColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.ActorIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   auditlog.ActorTable,
-			Columns: []string{auditlog.ActorColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -432,34 +383,9 @@ func (_u *AuditLogUpdateOne) ClearDetail() *AuditLogUpdateOne {
 	return _u
 }
 
-// SetActorID sets the "actor" edge to the User entity by ID.
-func (_u *AuditLogUpdateOne) SetActorID(id uuid.UUID) *AuditLogUpdateOne {
-	_u.mutation.SetActorID(id)
-	return _u
-}
-
-// SetNillableActorID sets the "actor" edge to the User entity by ID if the given value is not nil.
-func (_u *AuditLogUpdateOne) SetNillableActorID(id *uuid.UUID) *AuditLogUpdateOne {
-	if id != nil {
-		_u = _u.SetActorID(*id)
-	}
-	return _u
-}
-
-// SetActor sets the "actor" edge to the User entity.
-func (_u *AuditLogUpdateOne) SetActor(v *User) *AuditLogUpdateOne {
-	return _u.SetActorID(v.ID)
-}
-
 // Mutation returns the AuditLogMutation object of the builder.
 func (_u *AuditLogUpdateOne) Mutation() *AuditLogMutation {
 	return _u.mutation
-}
-
-// ClearActor clears the "actor" edge to the User entity.
-func (_u *AuditLogUpdateOne) ClearActor() *AuditLogUpdateOne {
-	_u.mutation.ClearActor()
-	return _u
 }
 
 // Where appends a list predicates to the AuditLogUpdate builder.
@@ -546,6 +472,12 @@ func (_u *AuditLogUpdateOne) sqlSave(ctx context.Context) (_node *AuditLog, err 
 			}
 		}
 	}
+	if value, ok := _u.mutation.ActorUserID(); ok {
+		_spec.SetField(auditlog.FieldActorUserID, field.TypeUUID, value)
+	}
+	if _u.mutation.ActorUserIDCleared() {
+		_spec.ClearField(auditlog.FieldActorUserID, field.TypeUUID)
+	}
 	if value, ok := _u.mutation.Action(); ok {
 		_spec.SetField(auditlog.FieldAction, field.TypeString, value)
 	}
@@ -575,35 +507,6 @@ func (_u *AuditLogUpdateOne) sqlSave(ctx context.Context) (_node *AuditLog, err 
 	}
 	if _u.mutation.DetailCleared() {
 		_spec.ClearField(auditlog.FieldDetail, field.TypeJSON)
-	}
-	if _u.mutation.ActorCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   auditlog.ActorTable,
-			Columns: []string{auditlog.ActorColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.ActorIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   auditlog.ActorTable,
-			Columns: []string{auditlog.ActorColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &AuditLog{config: _u.config}
 	_spec.Assign = _node.assignValues

@@ -11,7 +11,6 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
-	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/google/uuid"
 )
 
@@ -35,31 +34,8 @@ type AuditLog struct {
 	// Detail holds the value of the "detail" field.
 	Detail map[string]interface{} `json:"detail,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt time.Time `json:"created_at,omitempty"`
-	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the AuditLogQuery when eager-loading is set.
-	Edges        AuditLogEdges `json:"edges"`
+	CreatedAt    time.Time `json:"created_at,omitempty"`
 	selectValues sql.SelectValues
-}
-
-// AuditLogEdges holds the relations/edges for other nodes in the graph.
-type AuditLogEdges struct {
-	// Actor holds the value of the actor edge.
-	Actor *User `json:"actor,omitempty"`
-	// loadedTypes holds the information for reporting if a
-	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
-}
-
-// ActorOrErr returns the Actor value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e AuditLogEdges) ActorOrErr() (*User, error) {
-	if e.Actor != nil {
-		return e.Actor, nil
-	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: user.Label}
-	}
-	return nil, &NotLoadedError{edge: "actor"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -160,11 +136,6 @@ func (_m *AuditLog) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *AuditLog) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
-}
-
-// QueryActor queries the "actor" edge of the AuditLog entity.
-func (_m *AuditLog) QueryActor() *UserQuery {
-	return NewAuditLogClient(_m.config).QueryActor(_m)
 }
 
 // Update returns a builder for updating this AuditLog.

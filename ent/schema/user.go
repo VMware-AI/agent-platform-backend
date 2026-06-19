@@ -38,7 +38,6 @@ func (User) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("roles", Role.Type),
 		edge.To("memberships", Membership.Type),
-		edge.To("audit_logs", AuditLog.Type),
 	}
 }
 

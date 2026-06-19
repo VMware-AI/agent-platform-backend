@@ -12,7 +12,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
 	"github.com/VMware-AI/agent-platform-backend/ent/role"
@@ -29,7 +28,6 @@ type UserQuery struct {
 	predicates      []predicate.User
 	withRoles       *RoleQuery
 	withMemberships *MembershipQuery
-	withAuditLogs   *AuditLogQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -103,28 +101,6 @@ func (_q *UserQuery) QueryMemberships() *MembershipQuery {
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(membership.Table, membership.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.MembershipsTable, user.MembershipsColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryAuditLogs chains the current query on the "audit_logs" edge.
-func (_q *UserQuery) QueryAuditLogs() *AuditLogQuery {
-	query := (&AuditLogClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, selector),
-			sqlgraph.To(auditlog.Table, auditlog.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.AuditLogsTable, user.AuditLogsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -326,7 +302,6 @@ func (_q *UserQuery) Clone() *UserQuery {
 		predicates:      append([]predicate.User{}, _q.predicates...),
 		withRoles:       _q.withRoles.Clone(),
 		withMemberships: _q.withMemberships.Clone(),
-		withAuditLogs:   _q.withAuditLogs.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -352,17 +327,6 @@ func (_q *UserQuery) WithMemberships(opts ...func(*MembershipQuery)) *UserQuery 
 		opt(query)
 	}
 	_q.withMemberships = query
-	return _q
-}
-
-// WithAuditLogs tells the query-builder to eager-load the nodes that are connected to
-// the "audit_logs" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *UserQuery) WithAuditLogs(opts ...func(*AuditLogQuery)) *UserQuery {
-	query := (&AuditLogClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withAuditLogs = query
 	return _q
 }
 
@@ -444,10 +408,9 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [2]bool{
 			_q.withRoles != nil,
 			_q.withMemberships != nil,
-			_q.withAuditLogs != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -479,13 +442,6 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		if err := _q.loadMemberships(ctx, query, nodes,
 			func(n *User) { n.Edges.Memberships = []*Membership{} },
 			func(n *User, e *Membership) { n.Edges.Memberships = append(n.Edges.Memberships, e) }); err != nil {
-			return nil, err
-		}
-	}
-	if query := _q.withAuditLogs; query != nil {
-		if err := _q.loadAuditLogs(ctx, query, nodes,
-			func(n *User) { n.Edges.AuditLogs = []*AuditLog{} },
-			func(n *User, e *AuditLog) { n.Edges.AuditLogs = append(n.Edges.AuditLogs, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -579,39 +535,6 @@ func (_q *UserQuery) loadMemberships(ctx context.Context, query *MembershipQuery
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "user_memberships" returned %v for node %v`, *fk, n.ID)
-		}
-		assign(node, n)
-	}
-	return nil
-}
-func (_q *UserQuery) loadAuditLogs(ctx context.Context, query *AuditLogQuery, nodes []*User, init func(*User), assign func(*User, *AuditLog)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*User)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
-	}
-	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(auditlog.FieldActorUserID)
-	}
-	query.Where(predicate.AuditLog(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(user.AuditLogsColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.ActorUserID
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "actor_user_id" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
-		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "actor_user_id" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

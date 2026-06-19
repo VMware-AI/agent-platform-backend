@@ -3391,6 +3391,7 @@ type AuditLogMutation struct {
 	op            Op
 	typ           string
 	id            *uuid.UUID
+	actor_user_id *uuid.UUID
 	action        *string
 	resource_type *string
 	resource_id   *string
@@ -3399,8 +3400,6 @@ type AuditLogMutation struct {
 	detail        *map[string]interface{}
 	created_at    *time.Time
 	clearedFields map[string]struct{}
-	actor         *uuid.UUID
-	clearedactor  bool
 	done          bool
 	oldValue      func(context.Context) (*AuditLog, error)
 	predicates    []predicate.AuditLog
@@ -3512,12 +3511,12 @@ func (m *AuditLogMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 
 // SetActorUserID sets the "actor_user_id" field.
 func (m *AuditLogMutation) SetActorUserID(u uuid.UUID) {
-	m.actor = &u
+	m.actor_user_id = &u
 }
 
 // ActorUserID returns the value of the "actor_user_id" field in the mutation.
 func (m *AuditLogMutation) ActorUserID() (r uuid.UUID, exists bool) {
-	v := m.actor
+	v := m.actor_user_id
 	if v == nil {
 		return
 	}
@@ -3543,7 +3542,7 @@ func (m *AuditLogMutation) OldActorUserID(ctx context.Context) (v *uuid.UUID, er
 
 // ClearActorUserID clears the value of the "actor_user_id" field.
 func (m *AuditLogMutation) ClearActorUserID() {
-	m.actor = nil
+	m.actor_user_id = nil
 	m.clearedFields[auditlog.FieldActorUserID] = struct{}{}
 }
 
@@ -3555,7 +3554,7 @@ func (m *AuditLogMutation) ActorUserIDCleared() bool {
 
 // ResetActorUserID resets all changes to the "actor_user_id" field.
 func (m *AuditLogMutation) ResetActorUserID() {
-	m.actor = nil
+	m.actor_user_id = nil
 	delete(m.clearedFields, auditlog.FieldActorUserID)
 }
 
@@ -3863,46 +3862,6 @@ func (m *AuditLogMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
-// SetActorID sets the "actor" edge to the User entity by id.
-func (m *AuditLogMutation) SetActorID(id uuid.UUID) {
-	m.actor = &id
-}
-
-// ClearActor clears the "actor" edge to the User entity.
-func (m *AuditLogMutation) ClearActor() {
-	m.clearedactor = true
-	m.clearedFields[auditlog.FieldActorUserID] = struct{}{}
-}
-
-// ActorCleared reports if the "actor" edge to the User entity was cleared.
-func (m *AuditLogMutation) ActorCleared() bool {
-	return m.ActorUserIDCleared() || m.clearedactor
-}
-
-// ActorID returns the "actor" edge ID in the mutation.
-func (m *AuditLogMutation) ActorID() (id uuid.UUID, exists bool) {
-	if m.actor != nil {
-		return *m.actor, true
-	}
-	return
-}
-
-// ActorIDs returns the "actor" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ActorID instead. It exists only for internal usage by the builders.
-func (m *AuditLogMutation) ActorIDs() (ids []uuid.UUID) {
-	if id := m.actor; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetActor resets all changes to the "actor" edge.
-func (m *AuditLogMutation) ResetActor() {
-	m.actor = nil
-	m.clearedactor = false
-}
-
 // Where appends a list predicates to the AuditLogMutation builder.
 func (m *AuditLogMutation) Where(ps ...predicate.AuditLog) {
 	m.predicates = append(m.predicates, ps...)
@@ -3938,7 +3897,7 @@ func (m *AuditLogMutation) Type() string {
 // AddedFields().
 func (m *AuditLogMutation) Fields() []string {
 	fields := make([]string, 0, 8)
-	if m.actor != nil {
+	if m.actor_user_id != nil {
 		fields = append(fields, auditlog.FieldActorUserID)
 	}
 	if m.action != nil {
@@ -4188,28 +4147,19 @@ func (m *AuditLogMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *AuditLogMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.actor != nil {
-		edges = append(edges, auditlog.EdgeActor)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *AuditLogMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case auditlog.EdgeActor:
-		if id := m.actor; id != nil {
-			return []ent.Value{*id}
-		}
-	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *AuditLogMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 0)
 	return edges
 }
 
@@ -4221,42 +4171,25 @@ func (m *AuditLogMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *AuditLogMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.clearedactor {
-		edges = append(edges, auditlog.EdgeActor)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *AuditLogMutation) EdgeCleared(name string) bool {
-	switch name {
-	case auditlog.EdgeActor:
-		return m.clearedactor
-	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *AuditLogMutation) ClearEdge(name string) error {
-	switch name {
-	case auditlog.EdgeActor:
-		m.ClearActor()
-		return nil
-	}
 	return fmt.Errorf("unknown AuditLog unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *AuditLogMutation) ResetEdge(name string) error {
-	switch name {
-	case auditlog.EdgeActor:
-		m.ResetActor()
-		return nil
-	}
 	return fmt.Errorf("unknown AuditLog edge %s", name)
 }
 
@@ -14860,9 +14793,6 @@ type UserMutation struct {
 	memberships          map[int]struct{}
 	removedmemberships   map[int]struct{}
 	clearedmemberships   bool
-	audit_logs           map[uuid.UUID]struct{}
-	removedaudit_logs    map[uuid.UUID]struct{}
-	clearedaudit_logs    bool
 	done                 bool
 	oldValue             func(context.Context) (*User, error)
 	predicates           []predicate.User
@@ -15466,60 +15396,6 @@ func (m *UserMutation) ResetMemberships() {
 	m.removedmemberships = nil
 }
 
-// AddAuditLogIDs adds the "audit_logs" edge to the AuditLog entity by ids.
-func (m *UserMutation) AddAuditLogIDs(ids ...uuid.UUID) {
-	if m.audit_logs == nil {
-		m.audit_logs = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.audit_logs[ids[i]] = struct{}{}
-	}
-}
-
-// ClearAuditLogs clears the "audit_logs" edge to the AuditLog entity.
-func (m *UserMutation) ClearAuditLogs() {
-	m.clearedaudit_logs = true
-}
-
-// AuditLogsCleared reports if the "audit_logs" edge to the AuditLog entity was cleared.
-func (m *UserMutation) AuditLogsCleared() bool {
-	return m.clearedaudit_logs
-}
-
-// RemoveAuditLogIDs removes the "audit_logs" edge to the AuditLog entity by IDs.
-func (m *UserMutation) RemoveAuditLogIDs(ids ...uuid.UUID) {
-	if m.removedaudit_logs == nil {
-		m.removedaudit_logs = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m.audit_logs, ids[i])
-		m.removedaudit_logs[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedAuditLogs returns the removed IDs of the "audit_logs" edge to the AuditLog entity.
-func (m *UserMutation) RemovedAuditLogsIDs() (ids []uuid.UUID) {
-	for id := range m.removedaudit_logs {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// AuditLogsIDs returns the "audit_logs" edge IDs in the mutation.
-func (m *UserMutation) AuditLogsIDs() (ids []uuid.UUID) {
-	for id := range m.audit_logs {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetAuditLogs resets all changes to the "audit_logs" edge.
-func (m *UserMutation) ResetAuditLogs() {
-	m.audit_logs = nil
-	m.clearedaudit_logs = false
-	m.removedaudit_logs = nil
-}
-
 // Where appends a list predicates to the UserMutation builder.
 func (m *UserMutation) Where(ps ...predicate.User) {
 	m.predicates = append(m.predicates, ps...)
@@ -15821,15 +15697,12 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 2)
 	if m.roles != nil {
 		edges = append(edges, user.EdgeRoles)
 	}
 	if m.memberships != nil {
 		edges = append(edges, user.EdgeMemberships)
-	}
-	if m.audit_logs != nil {
-		edges = append(edges, user.EdgeAuditLogs)
 	}
 	return edges
 }
@@ -15850,27 +15723,18 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case user.EdgeAuditLogs:
-		ids := make([]ent.Value, 0, len(m.audit_logs))
-		for id := range m.audit_logs {
-			ids = append(ids, id)
-		}
-		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 2)
 	if m.removedroles != nil {
 		edges = append(edges, user.EdgeRoles)
 	}
 	if m.removedmemberships != nil {
 		edges = append(edges, user.EdgeMemberships)
-	}
-	if m.removedaudit_logs != nil {
-		edges = append(edges, user.EdgeAuditLogs)
 	}
 	return edges
 }
@@ -15891,27 +15755,18 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case user.EdgeAuditLogs:
-		ids := make([]ent.Value, 0, len(m.removedaudit_logs))
-		for id := range m.removedaudit_logs {
-			ids = append(ids, id)
-		}
-		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 2)
 	if m.clearedroles {
 		edges = append(edges, user.EdgeRoles)
 	}
 	if m.clearedmemberships {
 		edges = append(edges, user.EdgeMemberships)
-	}
-	if m.clearedaudit_logs {
-		edges = append(edges, user.EdgeAuditLogs)
 	}
 	return edges
 }
@@ -15924,8 +15779,6 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 		return m.clearedroles
 	case user.EdgeMemberships:
 		return m.clearedmemberships
-	case user.EdgeAuditLogs:
-		return m.clearedaudit_logs
 	}
 	return false
 }
@@ -15947,9 +15800,6 @@ func (m *UserMutation) ResetEdge(name string) error {
 		return nil
 	case user.EdgeMemberships:
 		m.ResetMemberships()
-		return nil
-	case user.EdgeAuditLogs:
-		m.ResetAuditLogs()
 		return nil
 	}
 	return fmt.Errorf("unknown User edge %s", name)

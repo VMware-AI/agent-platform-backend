@@ -11,7 +11,6 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
-	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/google/uuid"
 )
 
@@ -132,25 +131,6 @@ func (_c *AuditLogCreate) SetNillableID(v *uuid.UUID) *AuditLogCreate {
 	return _c
 }
 
-// SetActorID sets the "actor" edge to the User entity by ID.
-func (_c *AuditLogCreate) SetActorID(id uuid.UUID) *AuditLogCreate {
-	_c.mutation.SetActorID(id)
-	return _c
-}
-
-// SetNillableActorID sets the "actor" edge to the User entity by ID if the given value is not nil.
-func (_c *AuditLogCreate) SetNillableActorID(id *uuid.UUID) *AuditLogCreate {
-	if id != nil {
-		_c = _c.SetActorID(*id)
-	}
-	return _c
-}
-
-// SetActor sets the "actor" edge to the User entity.
-func (_c *AuditLogCreate) SetActor(v *User) *AuditLogCreate {
-	return _c.SetActorID(v.ID)
-}
-
 // Mutation returns the AuditLogMutation object of the builder.
 func (_c *AuditLogCreate) Mutation() *AuditLogMutation {
 	return _c.mutation
@@ -256,6 +236,10 @@ func (_c *AuditLogCreate) createSpec() (*AuditLog, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
+	if value, ok := _c.mutation.ActorUserID(); ok {
+		_spec.SetField(auditlog.FieldActorUserID, field.TypeUUID, value)
+		_node.ActorUserID = &value
+	}
 	if value, ok := _c.mutation.Action(); ok {
 		_spec.SetField(auditlog.FieldAction, field.TypeString, value)
 		_node.Action = value
@@ -283,23 +267,6 @@ func (_c *AuditLogCreate) createSpec() (*AuditLog, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(auditlog.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
-	}
-	if nodes := _c.mutation.ActorIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   auditlog.ActorTable,
-			Columns: []string{auditlog.ActorColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.ActorUserID = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
 	"github.com/google/uuid"
 )
@@ -104,6 +103,26 @@ func ActorUserIDIn(vs ...uuid.UUID) predicate.AuditLog {
 // ActorUserIDNotIn applies the NotIn predicate on the "actor_user_id" field.
 func ActorUserIDNotIn(vs ...uuid.UUID) predicate.AuditLog {
 	return predicate.AuditLog(sql.FieldNotIn(FieldActorUserID, vs...))
+}
+
+// ActorUserIDGT applies the GT predicate on the "actor_user_id" field.
+func ActorUserIDGT(v uuid.UUID) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldGT(FieldActorUserID, v))
+}
+
+// ActorUserIDGTE applies the GTE predicate on the "actor_user_id" field.
+func ActorUserIDGTE(v uuid.UUID) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldGTE(FieldActorUserID, v))
+}
+
+// ActorUserIDLT applies the LT predicate on the "actor_user_id" field.
+func ActorUserIDLT(v uuid.UUID) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldLT(FieldActorUserID, v))
+}
+
+// ActorUserIDLTE applies the LTE predicate on the "actor_user_id" field.
+func ActorUserIDLTE(v uuid.UUID) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldLTE(FieldActorUserID, v))
 }
 
 // ActorUserIDIsNil applies the IsNil predicate on the "actor_user_id" field.
@@ -474,29 +493,6 @@ func CreatedAtLT(v time.Time) predicate.AuditLog {
 // CreatedAtLTE applies the LTE predicate on the "created_at" field.
 func CreatedAtLTE(v time.Time) predicate.AuditLog {
 	return predicate.AuditLog(sql.FieldLTE(FieldCreatedAt, v))
-}
-
-// HasActor applies the HasEdge predicate on the "actor" edge.
-func HasActor() predicate.AuditLog {
-	return predicate.AuditLog(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, ActorTable, ActorColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasActorWith applies the HasEdge predicate on the "actor" edge with a given conditions (other predicates).
-func HasActorWith(preds ...predicate.User) predicate.AuditLog {
-	return predicate.AuditLog(func(s *sql.Selector) {
-		step := newActorStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
 }
 
 // And groups predicates with the AND operator between them.

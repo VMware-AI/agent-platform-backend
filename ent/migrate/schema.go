@@ -106,6 +106,7 @@ var (
 	// AuditLogsColumns holds the columns for the "audit_logs" table.
 	AuditLogsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
+		{Name: "actor_user_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "action", Type: field.TypeString},
 		{Name: "resource_type", Type: field.TypeString, Nullable: true},
 		{Name: "resource_id", Type: field.TypeString, Nullable: true},
@@ -113,31 +114,22 @@ var (
 		{Name: "result", Type: field.TypeEnum, Enums: []string{"success", "fail"}, Default: "success"},
 		{Name: "detail", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
-		{Name: "actor_user_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// AuditLogsTable holds the schema information for the "audit_logs" table.
 	AuditLogsTable = &schema.Table{
 		Name:       "audit_logs",
 		Columns:    AuditLogsColumns,
 		PrimaryKey: []*schema.Column{AuditLogsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "audit_logs_users_audit_logs",
-				Columns:    []*schema.Column{AuditLogsColumns[8]},
-				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "auditlog_action",
 				Unique:  false,
-				Columns: []*schema.Column{AuditLogsColumns[1]},
+				Columns: []*schema.Column{AuditLogsColumns[2]},
 			},
 			{
 				Name:    "auditlog_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{AuditLogsColumns[7]},
+				Columns: []*schema.Column{AuditLogsColumns[8]},
 			},
 		},
 	}
@@ -584,7 +576,6 @@ var (
 )
 
 func init() {
-	AuditLogsTable.ForeignKeys[0].RefTable = UsersTable
 	DepartmentsTable.ForeignKeys[0].RefTable = TenantsTable
 	MembershipsTable.ForeignKeys[0].RefTable = DepartmentsTable
 	MembershipsTable.ForeignKeys[1].RefTable = UsersTable
