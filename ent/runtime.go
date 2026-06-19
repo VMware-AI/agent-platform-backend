@@ -11,17 +11,21 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/department"
+	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
 	"github.com/VMware-AI/agent-platform-backend/ent/image"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
+	"github.com/VMware-AI/agent-platform-backend/ent/modelroute"
 	"github.com/VMware-AI/agent-platform-backend/ent/permission"
 	"github.com/VMware-AI/agent-platform-backend/ent/ratelimitpolicy"
 	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/ent/role"
+	"github.com/VMware-AI/agent-platform-backend/ent/routertier"
 	"github.com/VMware-AI/agent-platform-backend/ent/schema"
 	"github.com/VMware-AI/agent-platform-backend/ent/skill"
 	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
 	"github.com/VMware-AI/agent-platform-backend/ent/tokenusage"
+	"github.com/VMware-AI/agent-platform-backend/ent/upstream"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/google/uuid"
@@ -184,6 +188,33 @@ func init() {
 	departmentDescID := departmentFields[0].Descriptor()
 	// department.DefaultID holds the default value on creation for the id field.
 	department.DefaultID = departmentDescID.Default.(func() uuid.UUID)
+	gatewayconnectionMixin := schema.GatewayConnection{}.Mixin()
+	gatewayconnectionMixinFields0 := gatewayconnectionMixin[0].Fields()
+	_ = gatewayconnectionMixinFields0
+	gatewayconnectionFields := schema.GatewayConnection{}.Fields()
+	_ = gatewayconnectionFields
+	// gatewayconnectionDescCreatedAt is the schema descriptor for created_at field.
+	gatewayconnectionDescCreatedAt := gatewayconnectionMixinFields0[0].Descriptor()
+	// gatewayconnection.DefaultCreatedAt holds the default value on creation for the created_at field.
+	gatewayconnection.DefaultCreatedAt = gatewayconnectionDescCreatedAt.Default.(func() time.Time)
+	// gatewayconnectionDescUpdatedAt is the schema descriptor for updated_at field.
+	gatewayconnectionDescUpdatedAt := gatewayconnectionMixinFields0[1].Descriptor()
+	// gatewayconnection.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	gatewayconnection.DefaultUpdatedAt = gatewayconnectionDescUpdatedAt.Default.(func() time.Time)
+	// gatewayconnection.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	gatewayconnection.UpdateDefaultUpdatedAt = gatewayconnectionDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// gatewayconnectionDescName is the schema descriptor for name field.
+	gatewayconnectionDescName := gatewayconnectionFields[1].Descriptor()
+	// gatewayconnection.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	gatewayconnection.NameValidator = gatewayconnectionDescName.Validators[0].(func(string) error)
+	// gatewayconnectionDescEndpoint is the schema descriptor for endpoint field.
+	gatewayconnectionDescEndpoint := gatewayconnectionFields[2].Descriptor()
+	// gatewayconnection.EndpointValidator is a validator for the "endpoint" field. It is called by the builders before save.
+	gatewayconnection.EndpointValidator = gatewayconnectionDescEndpoint.Validators[0].(func(string) error)
+	// gatewayconnectionDescID is the schema descriptor for id field.
+	gatewayconnectionDescID := gatewayconnectionFields[0].Descriptor()
+	// gatewayconnection.DefaultID holds the default value on creation for the id field.
+	gatewayconnection.DefaultID = gatewayconnectionDescID.Default.(func() uuid.UUID)
 	imageMixin := schema.Image{}.Mixin()
 	imageMixinFields0 := imageMixin[0].Fields()
 	_ = imageMixinFields0
@@ -230,6 +261,37 @@ func init() {
 	membership.DefaultUpdatedAt = membershipDescUpdatedAt.Default.(func() time.Time)
 	// membership.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	membership.UpdateDefaultUpdatedAt = membershipDescUpdatedAt.UpdateDefault.(func() time.Time)
+	modelrouteMixin := schema.ModelRoute{}.Mixin()
+	modelrouteMixinFields0 := modelrouteMixin[0].Fields()
+	_ = modelrouteMixinFields0
+	modelrouteFields := schema.ModelRoute{}.Fields()
+	_ = modelrouteFields
+	// modelrouteDescCreatedAt is the schema descriptor for created_at field.
+	modelrouteDescCreatedAt := modelrouteMixinFields0[0].Descriptor()
+	// modelroute.DefaultCreatedAt holds the default value on creation for the created_at field.
+	modelroute.DefaultCreatedAt = modelrouteDescCreatedAt.Default.(func() time.Time)
+	// modelrouteDescUpdatedAt is the schema descriptor for updated_at field.
+	modelrouteDescUpdatedAt := modelrouteMixinFields0[1].Descriptor()
+	// modelroute.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	modelroute.DefaultUpdatedAt = modelrouteDescUpdatedAt.Default.(func() time.Time)
+	// modelroute.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	modelroute.UpdateDefaultUpdatedAt = modelrouteDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// modelrouteDescName is the schema descriptor for name field.
+	modelrouteDescName := modelrouteFields[1].Descriptor()
+	// modelroute.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	modelroute.NameValidator = modelrouteDescName.Validators[0].(func(string) error)
+	// modelrouteDescModelAlias is the schema descriptor for model_alias field.
+	modelrouteDescModelAlias := modelrouteFields[2].Descriptor()
+	// modelroute.ModelAliasValidator is a validator for the "model_alias" field. It is called by the builders before save.
+	modelroute.ModelAliasValidator = modelrouteDescModelAlias.Validators[0].(func(string) error)
+	// modelrouteDescEnabled is the schema descriptor for enabled field.
+	modelrouteDescEnabled := modelrouteFields[5].Descriptor()
+	// modelroute.DefaultEnabled holds the default value on creation for the enabled field.
+	modelroute.DefaultEnabled = modelrouteDescEnabled.Default.(bool)
+	// modelrouteDescID is the schema descriptor for id field.
+	modelrouteDescID := modelrouteFields[0].Descriptor()
+	// modelroute.DefaultID holds the default value on creation for the id field.
+	modelroute.DefaultID = modelrouteDescID.Default.(func() uuid.UUID)
 	permissionFields := schema.Permission{}.Fields()
 	_ = permissionFields
 	// permissionDescKey is the schema descriptor for key field.
@@ -357,6 +419,29 @@ func init() {
 	roleDescID := roleFields[0].Descriptor()
 	// role.DefaultID holds the default value on creation for the id field.
 	role.DefaultID = roleDescID.Default.(func() uuid.UUID)
+	routertierMixin := schema.RouterTier{}.Mixin()
+	routertierMixinFields0 := routertierMixin[0].Fields()
+	_ = routertierMixinFields0
+	routertierFields := schema.RouterTier{}.Fields()
+	_ = routertierFields
+	// routertierDescCreatedAt is the schema descriptor for created_at field.
+	routertierDescCreatedAt := routertierMixinFields0[0].Descriptor()
+	// routertier.DefaultCreatedAt holds the default value on creation for the created_at field.
+	routertier.DefaultCreatedAt = routertierDescCreatedAt.Default.(func() time.Time)
+	// routertierDescUpdatedAt is the schema descriptor for updated_at field.
+	routertierDescUpdatedAt := routertierMixinFields0[1].Descriptor()
+	// routertier.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	routertier.DefaultUpdatedAt = routertierDescUpdatedAt.Default.(func() time.Time)
+	// routertier.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	routertier.UpdateDefaultUpdatedAt = routertierDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// routertierDescModelAlias is the schema descriptor for model_alias field.
+	routertierDescModelAlias := routertierFields[2].Descriptor()
+	// routertier.ModelAliasValidator is a validator for the "model_alias" field. It is called by the builders before save.
+	routertier.ModelAliasValidator = routertierDescModelAlias.Validators[0].(func(string) error)
+	// routertierDescID is the schema descriptor for id field.
+	routertierDescID := routertierFields[0].Descriptor()
+	// routertier.DefaultID holds the default value on creation for the id field.
+	routertier.DefaultID = routertierDescID.Default.(func() uuid.UUID)
 	skillMixin := schema.Skill{}.Mixin()
 	skillMixinFields0 := skillMixin[0].Fields()
 	_ = skillMixinFields0
@@ -441,6 +526,37 @@ func init() {
 	tokenusageDescID := tokenusageFields[0].Descriptor()
 	// tokenusage.DefaultID holds the default value on creation for the id field.
 	tokenusage.DefaultID = tokenusageDescID.Default.(func() uuid.UUID)
+	upstreamMixin := schema.Upstream{}.Mixin()
+	upstreamMixinFields0 := upstreamMixin[0].Fields()
+	_ = upstreamMixinFields0
+	upstreamFields := schema.Upstream{}.Fields()
+	_ = upstreamFields
+	// upstreamDescCreatedAt is the schema descriptor for created_at field.
+	upstreamDescCreatedAt := upstreamMixinFields0[0].Descriptor()
+	// upstream.DefaultCreatedAt holds the default value on creation for the created_at field.
+	upstream.DefaultCreatedAt = upstreamDescCreatedAt.Default.(func() time.Time)
+	// upstreamDescUpdatedAt is the schema descriptor for updated_at field.
+	upstreamDescUpdatedAt := upstreamMixinFields0[1].Descriptor()
+	// upstream.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	upstream.DefaultUpdatedAt = upstreamDescUpdatedAt.Default.(func() time.Time)
+	// upstream.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	upstream.UpdateDefaultUpdatedAt = upstreamDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// upstreamDescName is the schema descriptor for name field.
+	upstreamDescName := upstreamFields[1].Descriptor()
+	// upstream.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	upstream.NameValidator = upstreamDescName.Validators[0].(func(string) error)
+	// upstreamDescModel is the schema descriptor for model field.
+	upstreamDescModel := upstreamFields[5].Descriptor()
+	// upstream.ModelValidator is a validator for the "model" field. It is called by the builders before save.
+	upstream.ModelValidator = upstreamDescModel.Validators[0].(func(string) error)
+	// upstreamDescEnabled is the schema descriptor for enabled field.
+	upstreamDescEnabled := upstreamFields[6].Descriptor()
+	// upstream.DefaultEnabled holds the default value on creation for the enabled field.
+	upstream.DefaultEnabled = upstreamDescEnabled.Default.(bool)
+	// upstreamDescID is the schema descriptor for id field.
+	upstreamDescID := upstreamFields[0].Descriptor()
+	// upstream.DefaultID holds the default value on creation for the id field.
+	upstream.DefaultID = upstreamDescID.Default.(func() uuid.UUID)
 	userMixin := schema.User{}.Mixin()
 	userMixinFields0 := userMixin[0].Fields()
 	_ = userMixinFields0

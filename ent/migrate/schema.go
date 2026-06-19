@@ -164,6 +164,23 @@ var (
 			},
 		},
 	}
+	// GatewayConnectionsColumns holds the columns for the "gateway_connections" table.
+	GatewayConnectionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "name", Type: field.TypeString, Unique: true},
+		{Name: "endpoint", Type: field.TypeString},
+		{Name: "master_key_ref", Type: field.TypeString, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"connected", "disconnected", "error"}, Default: "disconnected"},
+		{Name: "load_balance_strategy", Type: field.TypeEnum, Enums: []string{"simple_shuffle", "latency", "usage_v2", "least_busy", "cost"}, Default: "simple_shuffle"},
+	}
+	// GatewayConnectionsTable holds the schema information for the "gateway_connections" table.
+	GatewayConnectionsTable = &schema.Table{
+		Name:       "gateway_connections",
+		Columns:    GatewayConnectionsColumns,
+		PrimaryKey: []*schema.Column{GatewayConnectionsColumns[0]},
+	}
 	// ImagesColumns holds the columns for the "images" table.
 	ImagesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -208,6 +225,23 @@ var (
 				OnDelete:   schema.NoAction,
 			},
 		},
+	}
+	// ModelRoutesColumns holds the columns for the "model_routes" table.
+	ModelRoutesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "name", Type: field.TypeString, Unique: true},
+		{Name: "model_alias", Type: field.TypeString},
+		{Name: "upstreams", Type: field.TypeJSON, Nullable: true},
+		{Name: "strategy", Type: field.TypeEnum, Enums: []string{"simple_shuffle", "latency", "usage_v2", "least_busy", "cost"}, Default: "simple_shuffle"},
+		{Name: "enabled", Type: field.TypeBool, Default: true},
+	}
+	// ModelRoutesTable holds the schema information for the "model_routes" table.
+	ModelRoutesTable = &schema.Table{
+		Name:       "model_routes",
+		Columns:    ModelRoutesColumns,
+		PrimaryKey: []*schema.Column{ModelRoutesColumns[0]},
 	}
 	// PermissionsColumns holds the columns for the "permissions" table.
 	PermissionsColumns = []*schema.Column{
@@ -307,6 +341,27 @@ var (
 		Columns:    RolesColumns,
 		PrimaryKey: []*schema.Column{RolesColumns[0]},
 	}
+	// RouterTiersColumns holds the columns for the "router_tiers" table.
+	RouterTiersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "tier", Type: field.TypeEnum, Enums: []string{"SIMPLE", "MEDIUM", "COMPLEX", "REASONING"}},
+		{Name: "model_alias", Type: field.TypeString},
+	}
+	// RouterTiersTable holds the schema information for the "router_tiers" table.
+	RouterTiersTable = &schema.Table{
+		Name:       "router_tiers",
+		Columns:    RouterTiersColumns,
+		PrimaryKey: []*schema.Column{RouterTiersColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "routertier_tier",
+				Unique:  true,
+				Columns: []*schema.Column{RouterTiersColumns[3]},
+			},
+		},
+	}
 	// SkillsColumns holds the columns for the "skills" table.
 	SkillsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -372,6 +427,24 @@ var (
 				Columns: []*schema.Column{TokenUsagesColumns[10]},
 			},
 		},
+	}
+	// UpstreamsColumns holds the columns for the "upstreams" table.
+	UpstreamsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "name", Type: field.TypeString, Unique: true},
+		{Name: "provider", Type: field.TypeEnum, Enums: []string{"vllm", "openai", "anthropic", "minimax", "codex"}},
+		{Name: "api_base", Type: field.TypeString, Nullable: true},
+		{Name: "api_key_ref", Type: field.TypeString, Nullable: true},
+		{Name: "model", Type: field.TypeString},
+		{Name: "enabled", Type: field.TypeBool, Default: true},
+	}
+	// UpstreamsTable holds the schema information for the "upstreams" table.
+	UpstreamsTable = &schema.Table{
+		Name:       "upstreams",
+		Columns:    UpstreamsColumns,
+		PrimaryKey: []*schema.Column{UpstreamsColumns[0]},
 	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
@@ -485,16 +558,20 @@ var (
 		ArtifactsTable,
 		AuditLogsTable,
 		DepartmentsTable,
+		GatewayConnectionsTable,
 		ImagesTable,
 		MembershipsTable,
+		ModelRoutesTable,
 		PermissionsTable,
 		RateLimitPoliciesTable,
 		RequestLogsTable,
 		ResourcePoolsTable,
 		RolesTable,
+		RouterTiersTable,
 		SkillsTable,
 		TenantsTable,
 		TokenUsagesTable,
+		UpstreamsTable,
 		UsersTable,
 		VirtualKeysTable,
 		RolePermissionsTable,

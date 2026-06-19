@@ -81,6 +81,18 @@ func (f DepartmentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DepartmentMutation", m)
 }
 
+// The GatewayConnectionFunc type is an adapter to allow the use of ordinary
+// function as GatewayConnection mutator.
+type GatewayConnectionFunc func(context.Context, *ent.GatewayConnectionMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f GatewayConnectionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.GatewayConnectionMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.GatewayConnectionMutation", m)
+}
+
 // The ImageFunc type is an adapter to allow the use of ordinary
 // function as Image mutator.
 type ImageFunc func(context.Context, *ent.ImageMutation) (ent.Value, error)
@@ -103,6 +115,18 @@ func (f MembershipFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MembershipMutation", m)
+}
+
+// The ModelRouteFunc type is an adapter to allow the use of ordinary
+// function as ModelRoute mutator.
+type ModelRouteFunc func(context.Context, *ent.ModelRouteMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ModelRouteFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ModelRouteMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ModelRouteMutation", m)
 }
 
 // The PermissionFunc type is an adapter to allow the use of ordinary
@@ -165,6 +189,18 @@ func (f RoleFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error)
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RoleMutation", m)
 }
 
+// The RouterTierFunc type is an adapter to allow the use of ordinary
+// function as RouterTier mutator.
+type RouterTierFunc func(context.Context, *ent.RouterTierMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f RouterTierFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.RouterTierMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RouterTierMutation", m)
+}
+
 // The SkillFunc type is an adapter to allow the use of ordinary
 // function as Skill mutator.
 type SkillFunc func(context.Context, *ent.SkillMutation) (ent.Value, error)
@@ -199,6 +235,18 @@ func (f TokenUsageFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TokenUsageMutation", m)
+}
+
+// The UpstreamFunc type is an adapter to allow the use of ordinary
+// function as Upstream mutator.
+type UpstreamFunc func(context.Context, *ent.UpstreamMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f UpstreamFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.UpstreamMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UpstreamMutation", m)
 }
 
 // The UserFunc type is an adapter to allow the use of ordinary

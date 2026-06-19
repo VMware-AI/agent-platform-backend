@@ -17,17 +17,21 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/department"
+	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
 	"github.com/VMware-AI/agent-platform-backend/ent/image"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
+	"github.com/VMware-AI/agent-platform-backend/ent/modelroute"
 	"github.com/VMware-AI/agent-platform-backend/ent/permission"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
 	"github.com/VMware-AI/agent-platform-backend/ent/ratelimitpolicy"
 	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/ent/role"
+	"github.com/VMware-AI/agent-platform-backend/ent/routertier"
 	"github.com/VMware-AI/agent-platform-backend/ent/skill"
 	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
 	"github.com/VMware-AI/agent-platform-backend/ent/tokenusage"
+	"github.com/VMware-AI/agent-platform-backend/ent/upstream"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/google/uuid"
@@ -42,24 +46,28 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeAgent           = "Agent"
-	TypeAgentConfig     = "AgentConfig"
-	TypeAgentTemplate   = "AgentTemplate"
-	TypeArtifact        = "Artifact"
-	TypeAuditLog        = "AuditLog"
-	TypeDepartment      = "Department"
-	TypeImage           = "Image"
-	TypeMembership      = "Membership"
-	TypePermission      = "Permission"
-	TypeRateLimitPolicy = "RateLimitPolicy"
-	TypeRequestLog      = "RequestLog"
-	TypeResourcePool    = "ResourcePool"
-	TypeRole            = "Role"
-	TypeSkill           = "Skill"
-	TypeTenant          = "Tenant"
-	TypeTokenUsage      = "TokenUsage"
-	TypeUser            = "User"
-	TypeVirtualKey      = "VirtualKey"
+	TypeAgent             = "Agent"
+	TypeAgentConfig       = "AgentConfig"
+	TypeAgentTemplate     = "AgentTemplate"
+	TypeArtifact          = "Artifact"
+	TypeAuditLog          = "AuditLog"
+	TypeDepartment        = "Department"
+	TypeGatewayConnection = "GatewayConnection"
+	TypeImage             = "Image"
+	TypeMembership        = "Membership"
+	TypeModelRoute        = "ModelRoute"
+	TypePermission        = "Permission"
+	TypeRateLimitPolicy   = "RateLimitPolicy"
+	TypeRequestLog        = "RequestLog"
+	TypeResourcePool      = "ResourcePool"
+	TypeRole              = "Role"
+	TypeRouterTier        = "RouterTier"
+	TypeSkill             = "Skill"
+	TypeTenant            = "Tenant"
+	TypeTokenUsage        = "TokenUsage"
+	TypeUpstream          = "Upstream"
+	TypeUser              = "User"
+	TypeVirtualKey        = "VirtualKey"
 )
 
 // AgentMutation represents an operation that mutates the Agent nodes in the graph.
@@ -4961,6 +4969,684 @@ func (m *DepartmentMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Department edge %s", name)
 }
 
+// GatewayConnectionMutation represents an operation that mutates the GatewayConnection nodes in the graph.
+type GatewayConnectionMutation struct {
+	config
+	op                    Op
+	typ                   string
+	id                    *uuid.UUID
+	created_at            *time.Time
+	updated_at            *time.Time
+	name                  *string
+	endpoint              *string
+	master_key_ref        *string
+	status                *gatewayconnection.Status
+	load_balance_strategy *gatewayconnection.LoadBalanceStrategy
+	clearedFields         map[string]struct{}
+	done                  bool
+	oldValue              func(context.Context) (*GatewayConnection, error)
+	predicates            []predicate.GatewayConnection
+}
+
+var _ ent.Mutation = (*GatewayConnectionMutation)(nil)
+
+// gatewayconnectionOption allows management of the mutation configuration using functional options.
+type gatewayconnectionOption func(*GatewayConnectionMutation)
+
+// newGatewayConnectionMutation creates new mutation for the GatewayConnection entity.
+func newGatewayConnectionMutation(c config, op Op, opts ...gatewayconnectionOption) *GatewayConnectionMutation {
+	m := &GatewayConnectionMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeGatewayConnection,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withGatewayConnectionID sets the ID field of the mutation.
+func withGatewayConnectionID(id uuid.UUID) gatewayconnectionOption {
+	return func(m *GatewayConnectionMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *GatewayConnection
+		)
+		m.oldValue = func(ctx context.Context) (*GatewayConnection, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().GatewayConnection.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withGatewayConnection sets the old GatewayConnection of the mutation.
+func withGatewayConnection(node *GatewayConnection) gatewayconnectionOption {
+	return func(m *GatewayConnectionMutation) {
+		m.oldValue = func(context.Context) (*GatewayConnection, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m GatewayConnectionMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m GatewayConnectionMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of GatewayConnection entities.
+func (m *GatewayConnectionMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *GatewayConnectionMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *GatewayConnectionMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().GatewayConnection.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *GatewayConnectionMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *GatewayConnectionMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the GatewayConnection entity.
+// If the GatewayConnection object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GatewayConnectionMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *GatewayConnectionMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *GatewayConnectionMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *GatewayConnectionMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the GatewayConnection entity.
+// If the GatewayConnection object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GatewayConnectionMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *GatewayConnectionMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetName sets the "name" field.
+func (m *GatewayConnectionMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *GatewayConnectionMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the GatewayConnection entity.
+// If the GatewayConnection object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GatewayConnectionMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *GatewayConnectionMutation) ResetName() {
+	m.name = nil
+}
+
+// SetEndpoint sets the "endpoint" field.
+func (m *GatewayConnectionMutation) SetEndpoint(s string) {
+	m.endpoint = &s
+}
+
+// Endpoint returns the value of the "endpoint" field in the mutation.
+func (m *GatewayConnectionMutation) Endpoint() (r string, exists bool) {
+	v := m.endpoint
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEndpoint returns the old "endpoint" field's value of the GatewayConnection entity.
+// If the GatewayConnection object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GatewayConnectionMutation) OldEndpoint(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEndpoint is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEndpoint requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEndpoint: %w", err)
+	}
+	return oldValue.Endpoint, nil
+}
+
+// ResetEndpoint resets all changes to the "endpoint" field.
+func (m *GatewayConnectionMutation) ResetEndpoint() {
+	m.endpoint = nil
+}
+
+// SetMasterKeyRef sets the "master_key_ref" field.
+func (m *GatewayConnectionMutation) SetMasterKeyRef(s string) {
+	m.master_key_ref = &s
+}
+
+// MasterKeyRef returns the value of the "master_key_ref" field in the mutation.
+func (m *GatewayConnectionMutation) MasterKeyRef() (r string, exists bool) {
+	v := m.master_key_ref
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMasterKeyRef returns the old "master_key_ref" field's value of the GatewayConnection entity.
+// If the GatewayConnection object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GatewayConnectionMutation) OldMasterKeyRef(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMasterKeyRef is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMasterKeyRef requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMasterKeyRef: %w", err)
+	}
+	return oldValue.MasterKeyRef, nil
+}
+
+// ClearMasterKeyRef clears the value of the "master_key_ref" field.
+func (m *GatewayConnectionMutation) ClearMasterKeyRef() {
+	m.master_key_ref = nil
+	m.clearedFields[gatewayconnection.FieldMasterKeyRef] = struct{}{}
+}
+
+// MasterKeyRefCleared returns if the "master_key_ref" field was cleared in this mutation.
+func (m *GatewayConnectionMutation) MasterKeyRefCleared() bool {
+	_, ok := m.clearedFields[gatewayconnection.FieldMasterKeyRef]
+	return ok
+}
+
+// ResetMasterKeyRef resets all changes to the "master_key_ref" field.
+func (m *GatewayConnectionMutation) ResetMasterKeyRef() {
+	m.master_key_ref = nil
+	delete(m.clearedFields, gatewayconnection.FieldMasterKeyRef)
+}
+
+// SetStatus sets the "status" field.
+func (m *GatewayConnectionMutation) SetStatus(ga gatewayconnection.Status) {
+	m.status = &ga
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *GatewayConnectionMutation) Status() (r gatewayconnection.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the GatewayConnection entity.
+// If the GatewayConnection object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GatewayConnectionMutation) OldStatus(ctx context.Context) (v gatewayconnection.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *GatewayConnectionMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetLoadBalanceStrategy sets the "load_balance_strategy" field.
+func (m *GatewayConnectionMutation) SetLoadBalanceStrategy(gbs gatewayconnection.LoadBalanceStrategy) {
+	m.load_balance_strategy = &gbs
+}
+
+// LoadBalanceStrategy returns the value of the "load_balance_strategy" field in the mutation.
+func (m *GatewayConnectionMutation) LoadBalanceStrategy() (r gatewayconnection.LoadBalanceStrategy, exists bool) {
+	v := m.load_balance_strategy
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLoadBalanceStrategy returns the old "load_balance_strategy" field's value of the GatewayConnection entity.
+// If the GatewayConnection object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GatewayConnectionMutation) OldLoadBalanceStrategy(ctx context.Context) (v gatewayconnection.LoadBalanceStrategy, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLoadBalanceStrategy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLoadBalanceStrategy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLoadBalanceStrategy: %w", err)
+	}
+	return oldValue.LoadBalanceStrategy, nil
+}
+
+// ResetLoadBalanceStrategy resets all changes to the "load_balance_strategy" field.
+func (m *GatewayConnectionMutation) ResetLoadBalanceStrategy() {
+	m.load_balance_strategy = nil
+}
+
+// Where appends a list predicates to the GatewayConnectionMutation builder.
+func (m *GatewayConnectionMutation) Where(ps ...predicate.GatewayConnection) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the GatewayConnectionMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *GatewayConnectionMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.GatewayConnection, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *GatewayConnectionMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *GatewayConnectionMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (GatewayConnection).
+func (m *GatewayConnectionMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *GatewayConnectionMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.created_at != nil {
+		fields = append(fields, gatewayconnection.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, gatewayconnection.FieldUpdatedAt)
+	}
+	if m.name != nil {
+		fields = append(fields, gatewayconnection.FieldName)
+	}
+	if m.endpoint != nil {
+		fields = append(fields, gatewayconnection.FieldEndpoint)
+	}
+	if m.master_key_ref != nil {
+		fields = append(fields, gatewayconnection.FieldMasterKeyRef)
+	}
+	if m.status != nil {
+		fields = append(fields, gatewayconnection.FieldStatus)
+	}
+	if m.load_balance_strategy != nil {
+		fields = append(fields, gatewayconnection.FieldLoadBalanceStrategy)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *GatewayConnectionMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case gatewayconnection.FieldCreatedAt:
+		return m.CreatedAt()
+	case gatewayconnection.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case gatewayconnection.FieldName:
+		return m.Name()
+	case gatewayconnection.FieldEndpoint:
+		return m.Endpoint()
+	case gatewayconnection.FieldMasterKeyRef:
+		return m.MasterKeyRef()
+	case gatewayconnection.FieldStatus:
+		return m.Status()
+	case gatewayconnection.FieldLoadBalanceStrategy:
+		return m.LoadBalanceStrategy()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *GatewayConnectionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case gatewayconnection.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case gatewayconnection.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case gatewayconnection.FieldName:
+		return m.OldName(ctx)
+	case gatewayconnection.FieldEndpoint:
+		return m.OldEndpoint(ctx)
+	case gatewayconnection.FieldMasterKeyRef:
+		return m.OldMasterKeyRef(ctx)
+	case gatewayconnection.FieldStatus:
+		return m.OldStatus(ctx)
+	case gatewayconnection.FieldLoadBalanceStrategy:
+		return m.OldLoadBalanceStrategy(ctx)
+	}
+	return nil, fmt.Errorf("unknown GatewayConnection field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *GatewayConnectionMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case gatewayconnection.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case gatewayconnection.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case gatewayconnection.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case gatewayconnection.FieldEndpoint:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEndpoint(v)
+		return nil
+	case gatewayconnection.FieldMasterKeyRef:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMasterKeyRef(v)
+		return nil
+	case gatewayconnection.FieldStatus:
+		v, ok := value.(gatewayconnection.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case gatewayconnection.FieldLoadBalanceStrategy:
+		v, ok := value.(gatewayconnection.LoadBalanceStrategy)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLoadBalanceStrategy(v)
+		return nil
+	}
+	return fmt.Errorf("unknown GatewayConnection field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *GatewayConnectionMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *GatewayConnectionMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *GatewayConnectionMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown GatewayConnection numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *GatewayConnectionMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(gatewayconnection.FieldMasterKeyRef) {
+		fields = append(fields, gatewayconnection.FieldMasterKeyRef)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *GatewayConnectionMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *GatewayConnectionMutation) ClearField(name string) error {
+	switch name {
+	case gatewayconnection.FieldMasterKeyRef:
+		m.ClearMasterKeyRef()
+		return nil
+	}
+	return fmt.Errorf("unknown GatewayConnection nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *GatewayConnectionMutation) ResetField(name string) error {
+	switch name {
+	case gatewayconnection.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case gatewayconnection.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case gatewayconnection.FieldName:
+		m.ResetName()
+		return nil
+	case gatewayconnection.FieldEndpoint:
+		m.ResetEndpoint()
+		return nil
+	case gatewayconnection.FieldMasterKeyRef:
+		m.ResetMasterKeyRef()
+		return nil
+	case gatewayconnection.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case gatewayconnection.FieldLoadBalanceStrategy:
+		m.ResetLoadBalanceStrategy()
+		return nil
+	}
+	return fmt.Errorf("unknown GatewayConnection field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *GatewayConnectionMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *GatewayConnectionMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *GatewayConnectionMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *GatewayConnectionMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *GatewayConnectionMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *GatewayConnectionMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *GatewayConnectionMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown GatewayConnection unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *GatewayConnectionMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown GatewayConnection edge %s", name)
+}
+
 // ImageMutation represents an operation that mutates the Image nodes in the graph.
 type ImageMutation struct {
 	config
@@ -6143,6 +6829,701 @@ func (m *MembershipMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown Membership edge %s", name)
+}
+
+// ModelRouteMutation represents an operation that mutates the ModelRoute nodes in the graph.
+type ModelRouteMutation struct {
+	config
+	op              Op
+	typ             string
+	id              *uuid.UUID
+	created_at      *time.Time
+	updated_at      *time.Time
+	name            *string
+	model_alias     *string
+	upstreams       *[]string
+	appendupstreams []string
+	strategy        *modelroute.Strategy
+	enabled         *bool
+	clearedFields   map[string]struct{}
+	done            bool
+	oldValue        func(context.Context) (*ModelRoute, error)
+	predicates      []predicate.ModelRoute
+}
+
+var _ ent.Mutation = (*ModelRouteMutation)(nil)
+
+// modelrouteOption allows management of the mutation configuration using functional options.
+type modelrouteOption func(*ModelRouteMutation)
+
+// newModelRouteMutation creates new mutation for the ModelRoute entity.
+func newModelRouteMutation(c config, op Op, opts ...modelrouteOption) *ModelRouteMutation {
+	m := &ModelRouteMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeModelRoute,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withModelRouteID sets the ID field of the mutation.
+func withModelRouteID(id uuid.UUID) modelrouteOption {
+	return func(m *ModelRouteMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ModelRoute
+		)
+		m.oldValue = func(ctx context.Context) (*ModelRoute, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ModelRoute.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withModelRoute sets the old ModelRoute of the mutation.
+func withModelRoute(node *ModelRoute) modelrouteOption {
+	return func(m *ModelRouteMutation) {
+		m.oldValue = func(context.Context) (*ModelRoute, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ModelRouteMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ModelRouteMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ModelRoute entities.
+func (m *ModelRouteMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ModelRouteMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ModelRouteMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ModelRoute.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ModelRouteMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ModelRouteMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ModelRoute entity.
+// If the ModelRoute object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ModelRouteMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ModelRouteMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *ModelRouteMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *ModelRouteMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the ModelRoute entity.
+// If the ModelRoute object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ModelRouteMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *ModelRouteMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetName sets the "name" field.
+func (m *ModelRouteMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *ModelRouteMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the ModelRoute entity.
+// If the ModelRoute object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ModelRouteMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *ModelRouteMutation) ResetName() {
+	m.name = nil
+}
+
+// SetModelAlias sets the "model_alias" field.
+func (m *ModelRouteMutation) SetModelAlias(s string) {
+	m.model_alias = &s
+}
+
+// ModelAlias returns the value of the "model_alias" field in the mutation.
+func (m *ModelRouteMutation) ModelAlias() (r string, exists bool) {
+	v := m.model_alias
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldModelAlias returns the old "model_alias" field's value of the ModelRoute entity.
+// If the ModelRoute object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ModelRouteMutation) OldModelAlias(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldModelAlias is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldModelAlias requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldModelAlias: %w", err)
+	}
+	return oldValue.ModelAlias, nil
+}
+
+// ResetModelAlias resets all changes to the "model_alias" field.
+func (m *ModelRouteMutation) ResetModelAlias() {
+	m.model_alias = nil
+}
+
+// SetUpstreams sets the "upstreams" field.
+func (m *ModelRouteMutation) SetUpstreams(s []string) {
+	m.upstreams = &s
+	m.appendupstreams = nil
+}
+
+// Upstreams returns the value of the "upstreams" field in the mutation.
+func (m *ModelRouteMutation) Upstreams() (r []string, exists bool) {
+	v := m.upstreams
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpstreams returns the old "upstreams" field's value of the ModelRoute entity.
+// If the ModelRoute object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ModelRouteMutation) OldUpstreams(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpstreams is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpstreams requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpstreams: %w", err)
+	}
+	return oldValue.Upstreams, nil
+}
+
+// AppendUpstreams adds s to the "upstreams" field.
+func (m *ModelRouteMutation) AppendUpstreams(s []string) {
+	m.appendupstreams = append(m.appendupstreams, s...)
+}
+
+// AppendedUpstreams returns the list of values that were appended to the "upstreams" field in this mutation.
+func (m *ModelRouteMutation) AppendedUpstreams() ([]string, bool) {
+	if len(m.appendupstreams) == 0 {
+		return nil, false
+	}
+	return m.appendupstreams, true
+}
+
+// ClearUpstreams clears the value of the "upstreams" field.
+func (m *ModelRouteMutation) ClearUpstreams() {
+	m.upstreams = nil
+	m.appendupstreams = nil
+	m.clearedFields[modelroute.FieldUpstreams] = struct{}{}
+}
+
+// UpstreamsCleared returns if the "upstreams" field was cleared in this mutation.
+func (m *ModelRouteMutation) UpstreamsCleared() bool {
+	_, ok := m.clearedFields[modelroute.FieldUpstreams]
+	return ok
+}
+
+// ResetUpstreams resets all changes to the "upstreams" field.
+func (m *ModelRouteMutation) ResetUpstreams() {
+	m.upstreams = nil
+	m.appendupstreams = nil
+	delete(m.clearedFields, modelroute.FieldUpstreams)
+}
+
+// SetStrategy sets the "strategy" field.
+func (m *ModelRouteMutation) SetStrategy(value modelroute.Strategy) {
+	m.strategy = &value
+}
+
+// Strategy returns the value of the "strategy" field in the mutation.
+func (m *ModelRouteMutation) Strategy() (r modelroute.Strategy, exists bool) {
+	v := m.strategy
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStrategy returns the old "strategy" field's value of the ModelRoute entity.
+// If the ModelRoute object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ModelRouteMutation) OldStrategy(ctx context.Context) (v modelroute.Strategy, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStrategy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStrategy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStrategy: %w", err)
+	}
+	return oldValue.Strategy, nil
+}
+
+// ResetStrategy resets all changes to the "strategy" field.
+func (m *ModelRouteMutation) ResetStrategy() {
+	m.strategy = nil
+}
+
+// SetEnabled sets the "enabled" field.
+func (m *ModelRouteMutation) SetEnabled(b bool) {
+	m.enabled = &b
+}
+
+// Enabled returns the value of the "enabled" field in the mutation.
+func (m *ModelRouteMutation) Enabled() (r bool, exists bool) {
+	v := m.enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEnabled returns the old "enabled" field's value of the ModelRoute entity.
+// If the ModelRoute object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ModelRouteMutation) OldEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEnabled: %w", err)
+	}
+	return oldValue.Enabled, nil
+}
+
+// ResetEnabled resets all changes to the "enabled" field.
+func (m *ModelRouteMutation) ResetEnabled() {
+	m.enabled = nil
+}
+
+// Where appends a list predicates to the ModelRouteMutation builder.
+func (m *ModelRouteMutation) Where(ps ...predicate.ModelRoute) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ModelRouteMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ModelRouteMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ModelRoute, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ModelRouteMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ModelRouteMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ModelRoute).
+func (m *ModelRouteMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ModelRouteMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.created_at != nil {
+		fields = append(fields, modelroute.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, modelroute.FieldUpdatedAt)
+	}
+	if m.name != nil {
+		fields = append(fields, modelroute.FieldName)
+	}
+	if m.model_alias != nil {
+		fields = append(fields, modelroute.FieldModelAlias)
+	}
+	if m.upstreams != nil {
+		fields = append(fields, modelroute.FieldUpstreams)
+	}
+	if m.strategy != nil {
+		fields = append(fields, modelroute.FieldStrategy)
+	}
+	if m.enabled != nil {
+		fields = append(fields, modelroute.FieldEnabled)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ModelRouteMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case modelroute.FieldCreatedAt:
+		return m.CreatedAt()
+	case modelroute.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case modelroute.FieldName:
+		return m.Name()
+	case modelroute.FieldModelAlias:
+		return m.ModelAlias()
+	case modelroute.FieldUpstreams:
+		return m.Upstreams()
+	case modelroute.FieldStrategy:
+		return m.Strategy()
+	case modelroute.FieldEnabled:
+		return m.Enabled()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ModelRouteMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case modelroute.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case modelroute.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case modelroute.FieldName:
+		return m.OldName(ctx)
+	case modelroute.FieldModelAlias:
+		return m.OldModelAlias(ctx)
+	case modelroute.FieldUpstreams:
+		return m.OldUpstreams(ctx)
+	case modelroute.FieldStrategy:
+		return m.OldStrategy(ctx)
+	case modelroute.FieldEnabled:
+		return m.OldEnabled(ctx)
+	}
+	return nil, fmt.Errorf("unknown ModelRoute field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ModelRouteMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case modelroute.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case modelroute.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case modelroute.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case modelroute.FieldModelAlias:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetModelAlias(v)
+		return nil
+	case modelroute.FieldUpstreams:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpstreams(v)
+		return nil
+	case modelroute.FieldStrategy:
+		v, ok := value.(modelroute.Strategy)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStrategy(v)
+		return nil
+	case modelroute.FieldEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEnabled(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ModelRoute field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ModelRouteMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ModelRouteMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ModelRouteMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown ModelRoute numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ModelRouteMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(modelroute.FieldUpstreams) {
+		fields = append(fields, modelroute.FieldUpstreams)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ModelRouteMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ModelRouteMutation) ClearField(name string) error {
+	switch name {
+	case modelroute.FieldUpstreams:
+		m.ClearUpstreams()
+		return nil
+	}
+	return fmt.Errorf("unknown ModelRoute nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ModelRouteMutation) ResetField(name string) error {
+	switch name {
+	case modelroute.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case modelroute.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case modelroute.FieldName:
+		m.ResetName()
+		return nil
+	case modelroute.FieldModelAlias:
+		m.ResetModelAlias()
+		return nil
+	case modelroute.FieldUpstreams:
+		m.ResetUpstreams()
+		return nil
+	case modelroute.FieldStrategy:
+		m.ResetStrategy()
+		return nil
+	case modelroute.FieldEnabled:
+		m.ResetEnabled()
+		return nil
+	}
+	return fmt.Errorf("unknown ModelRoute field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ModelRouteMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ModelRouteMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ModelRouteMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ModelRouteMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ModelRouteMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ModelRouteMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ModelRouteMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown ModelRoute unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ModelRouteMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown ModelRoute edge %s", name)
 }
 
 // PermissionMutation represents an operation that mutates the Permission nodes in the graph.
@@ -9889,6 +11270,500 @@ func (m *RoleMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Role edge %s", name)
 }
 
+// RouterTierMutation represents an operation that mutates the RouterTier nodes in the graph.
+type RouterTierMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *uuid.UUID
+	created_at    *time.Time
+	updated_at    *time.Time
+	tier          *routertier.Tier
+	model_alias   *string
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*RouterTier, error)
+	predicates    []predicate.RouterTier
+}
+
+var _ ent.Mutation = (*RouterTierMutation)(nil)
+
+// routertierOption allows management of the mutation configuration using functional options.
+type routertierOption func(*RouterTierMutation)
+
+// newRouterTierMutation creates new mutation for the RouterTier entity.
+func newRouterTierMutation(c config, op Op, opts ...routertierOption) *RouterTierMutation {
+	m := &RouterTierMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeRouterTier,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withRouterTierID sets the ID field of the mutation.
+func withRouterTierID(id uuid.UUID) routertierOption {
+	return func(m *RouterTierMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *RouterTier
+		)
+		m.oldValue = func(ctx context.Context) (*RouterTier, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().RouterTier.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withRouterTier sets the old RouterTier of the mutation.
+func withRouterTier(node *RouterTier) routertierOption {
+	return func(m *RouterTierMutation) {
+		m.oldValue = func(context.Context) (*RouterTier, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m RouterTierMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m RouterTierMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of RouterTier entities.
+func (m *RouterTierMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *RouterTierMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *RouterTierMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().RouterTier.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *RouterTierMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *RouterTierMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the RouterTier entity.
+// If the RouterTier object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RouterTierMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *RouterTierMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *RouterTierMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *RouterTierMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the RouterTier entity.
+// If the RouterTier object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RouterTierMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *RouterTierMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetTier sets the "tier" field.
+func (m *RouterTierMutation) SetTier(r routertier.Tier) {
+	m.tier = &r
+}
+
+// Tier returns the value of the "tier" field in the mutation.
+func (m *RouterTierMutation) Tier() (r routertier.Tier, exists bool) {
+	v := m.tier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTier returns the old "tier" field's value of the RouterTier entity.
+// If the RouterTier object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RouterTierMutation) OldTier(ctx context.Context) (v routertier.Tier, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTier is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTier requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTier: %w", err)
+	}
+	return oldValue.Tier, nil
+}
+
+// ResetTier resets all changes to the "tier" field.
+func (m *RouterTierMutation) ResetTier() {
+	m.tier = nil
+}
+
+// SetModelAlias sets the "model_alias" field.
+func (m *RouterTierMutation) SetModelAlias(s string) {
+	m.model_alias = &s
+}
+
+// ModelAlias returns the value of the "model_alias" field in the mutation.
+func (m *RouterTierMutation) ModelAlias() (r string, exists bool) {
+	v := m.model_alias
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldModelAlias returns the old "model_alias" field's value of the RouterTier entity.
+// If the RouterTier object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RouterTierMutation) OldModelAlias(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldModelAlias is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldModelAlias requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldModelAlias: %w", err)
+	}
+	return oldValue.ModelAlias, nil
+}
+
+// ResetModelAlias resets all changes to the "model_alias" field.
+func (m *RouterTierMutation) ResetModelAlias() {
+	m.model_alias = nil
+}
+
+// Where appends a list predicates to the RouterTierMutation builder.
+func (m *RouterTierMutation) Where(ps ...predicate.RouterTier) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the RouterTierMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *RouterTierMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.RouterTier, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *RouterTierMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *RouterTierMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (RouterTier).
+func (m *RouterTierMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *RouterTierMutation) Fields() []string {
+	fields := make([]string, 0, 4)
+	if m.created_at != nil {
+		fields = append(fields, routertier.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, routertier.FieldUpdatedAt)
+	}
+	if m.tier != nil {
+		fields = append(fields, routertier.FieldTier)
+	}
+	if m.model_alias != nil {
+		fields = append(fields, routertier.FieldModelAlias)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *RouterTierMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case routertier.FieldCreatedAt:
+		return m.CreatedAt()
+	case routertier.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case routertier.FieldTier:
+		return m.Tier()
+	case routertier.FieldModelAlias:
+		return m.ModelAlias()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *RouterTierMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case routertier.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case routertier.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case routertier.FieldTier:
+		return m.OldTier(ctx)
+	case routertier.FieldModelAlias:
+		return m.OldModelAlias(ctx)
+	}
+	return nil, fmt.Errorf("unknown RouterTier field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *RouterTierMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case routertier.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case routertier.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case routertier.FieldTier:
+		v, ok := value.(routertier.Tier)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTier(v)
+		return nil
+	case routertier.FieldModelAlias:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetModelAlias(v)
+		return nil
+	}
+	return fmt.Errorf("unknown RouterTier field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *RouterTierMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *RouterTierMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *RouterTierMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown RouterTier numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *RouterTierMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *RouterTierMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *RouterTierMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown RouterTier nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *RouterTierMutation) ResetField(name string) error {
+	switch name {
+	case routertier.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case routertier.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case routertier.FieldTier:
+		m.ResetTier()
+		return nil
+	case routertier.FieldModelAlias:
+		m.ResetModelAlias()
+		return nil
+	}
+	return fmt.Errorf("unknown RouterTier field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *RouterTierMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *RouterTierMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *RouterTierMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *RouterTierMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *RouterTierMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *RouterTierMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *RouterTierMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown RouterTier unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *RouterTierMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown RouterTier edge %s", name)
+}
+
 // SkillMutation represents an operation that mutates the Skill nodes in the graph.
 type SkillMutation struct {
 	config
@@ -12063,6 +13938,757 @@ func (m *TokenUsageMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *TokenUsageMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown TokenUsage edge %s", name)
+}
+
+// UpstreamMutation represents an operation that mutates the Upstream nodes in the graph.
+type UpstreamMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *uuid.UUID
+	created_at    *time.Time
+	updated_at    *time.Time
+	name          *string
+	provider      *upstream.Provider
+	api_base      *string
+	api_key_ref   *string
+	model         *string
+	enabled       *bool
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*Upstream, error)
+	predicates    []predicate.Upstream
+}
+
+var _ ent.Mutation = (*UpstreamMutation)(nil)
+
+// upstreamOption allows management of the mutation configuration using functional options.
+type upstreamOption func(*UpstreamMutation)
+
+// newUpstreamMutation creates new mutation for the Upstream entity.
+func newUpstreamMutation(c config, op Op, opts ...upstreamOption) *UpstreamMutation {
+	m := &UpstreamMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeUpstream,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withUpstreamID sets the ID field of the mutation.
+func withUpstreamID(id uuid.UUID) upstreamOption {
+	return func(m *UpstreamMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Upstream
+		)
+		m.oldValue = func(ctx context.Context) (*Upstream, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Upstream.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withUpstream sets the old Upstream of the mutation.
+func withUpstream(node *Upstream) upstreamOption {
+	return func(m *UpstreamMutation) {
+		m.oldValue = func(context.Context) (*Upstream, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m UpstreamMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m UpstreamMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Upstream entities.
+func (m *UpstreamMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *UpstreamMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *UpstreamMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Upstream.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *UpstreamMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *UpstreamMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the Upstream entity.
+// If the Upstream object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *UpstreamMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *UpstreamMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *UpstreamMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the Upstream entity.
+// If the Upstream object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *UpstreamMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetName sets the "name" field.
+func (m *UpstreamMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *UpstreamMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the Upstream entity.
+// If the Upstream object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *UpstreamMutation) ResetName() {
+	m.name = nil
+}
+
+// SetProvider sets the "provider" field.
+func (m *UpstreamMutation) SetProvider(u upstream.Provider) {
+	m.provider = &u
+}
+
+// Provider returns the value of the "provider" field in the mutation.
+func (m *UpstreamMutation) Provider() (r upstream.Provider, exists bool) {
+	v := m.provider
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProvider returns the old "provider" field's value of the Upstream entity.
+// If the Upstream object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamMutation) OldProvider(ctx context.Context) (v upstream.Provider, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProvider is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProvider requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProvider: %w", err)
+	}
+	return oldValue.Provider, nil
+}
+
+// ResetProvider resets all changes to the "provider" field.
+func (m *UpstreamMutation) ResetProvider() {
+	m.provider = nil
+}
+
+// SetAPIBase sets the "api_base" field.
+func (m *UpstreamMutation) SetAPIBase(s string) {
+	m.api_base = &s
+}
+
+// APIBase returns the value of the "api_base" field in the mutation.
+func (m *UpstreamMutation) APIBase() (r string, exists bool) {
+	v := m.api_base
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAPIBase returns the old "api_base" field's value of the Upstream entity.
+// If the Upstream object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamMutation) OldAPIBase(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAPIBase is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAPIBase requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAPIBase: %w", err)
+	}
+	return oldValue.APIBase, nil
+}
+
+// ClearAPIBase clears the value of the "api_base" field.
+func (m *UpstreamMutation) ClearAPIBase() {
+	m.api_base = nil
+	m.clearedFields[upstream.FieldAPIBase] = struct{}{}
+}
+
+// APIBaseCleared returns if the "api_base" field was cleared in this mutation.
+func (m *UpstreamMutation) APIBaseCleared() bool {
+	_, ok := m.clearedFields[upstream.FieldAPIBase]
+	return ok
+}
+
+// ResetAPIBase resets all changes to the "api_base" field.
+func (m *UpstreamMutation) ResetAPIBase() {
+	m.api_base = nil
+	delete(m.clearedFields, upstream.FieldAPIBase)
+}
+
+// SetAPIKeyRef sets the "api_key_ref" field.
+func (m *UpstreamMutation) SetAPIKeyRef(s string) {
+	m.api_key_ref = &s
+}
+
+// APIKeyRef returns the value of the "api_key_ref" field in the mutation.
+func (m *UpstreamMutation) APIKeyRef() (r string, exists bool) {
+	v := m.api_key_ref
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAPIKeyRef returns the old "api_key_ref" field's value of the Upstream entity.
+// If the Upstream object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamMutation) OldAPIKeyRef(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAPIKeyRef is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAPIKeyRef requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAPIKeyRef: %w", err)
+	}
+	return oldValue.APIKeyRef, nil
+}
+
+// ClearAPIKeyRef clears the value of the "api_key_ref" field.
+func (m *UpstreamMutation) ClearAPIKeyRef() {
+	m.api_key_ref = nil
+	m.clearedFields[upstream.FieldAPIKeyRef] = struct{}{}
+}
+
+// APIKeyRefCleared returns if the "api_key_ref" field was cleared in this mutation.
+func (m *UpstreamMutation) APIKeyRefCleared() bool {
+	_, ok := m.clearedFields[upstream.FieldAPIKeyRef]
+	return ok
+}
+
+// ResetAPIKeyRef resets all changes to the "api_key_ref" field.
+func (m *UpstreamMutation) ResetAPIKeyRef() {
+	m.api_key_ref = nil
+	delete(m.clearedFields, upstream.FieldAPIKeyRef)
+}
+
+// SetModel sets the "model" field.
+func (m *UpstreamMutation) SetModel(s string) {
+	m.model = &s
+}
+
+// Model returns the value of the "model" field in the mutation.
+func (m *UpstreamMutation) Model() (r string, exists bool) {
+	v := m.model
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldModel returns the old "model" field's value of the Upstream entity.
+// If the Upstream object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamMutation) OldModel(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldModel is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldModel requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldModel: %w", err)
+	}
+	return oldValue.Model, nil
+}
+
+// ResetModel resets all changes to the "model" field.
+func (m *UpstreamMutation) ResetModel() {
+	m.model = nil
+}
+
+// SetEnabled sets the "enabled" field.
+func (m *UpstreamMutation) SetEnabled(b bool) {
+	m.enabled = &b
+}
+
+// Enabled returns the value of the "enabled" field in the mutation.
+func (m *UpstreamMutation) Enabled() (r bool, exists bool) {
+	v := m.enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEnabled returns the old "enabled" field's value of the Upstream entity.
+// If the Upstream object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamMutation) OldEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEnabled: %w", err)
+	}
+	return oldValue.Enabled, nil
+}
+
+// ResetEnabled resets all changes to the "enabled" field.
+func (m *UpstreamMutation) ResetEnabled() {
+	m.enabled = nil
+}
+
+// Where appends a list predicates to the UpstreamMutation builder.
+func (m *UpstreamMutation) Where(ps ...predicate.Upstream) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the UpstreamMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *UpstreamMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Upstream, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *UpstreamMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *UpstreamMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (Upstream).
+func (m *UpstreamMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *UpstreamMutation) Fields() []string {
+	fields := make([]string, 0, 8)
+	if m.created_at != nil {
+		fields = append(fields, upstream.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, upstream.FieldUpdatedAt)
+	}
+	if m.name != nil {
+		fields = append(fields, upstream.FieldName)
+	}
+	if m.provider != nil {
+		fields = append(fields, upstream.FieldProvider)
+	}
+	if m.api_base != nil {
+		fields = append(fields, upstream.FieldAPIBase)
+	}
+	if m.api_key_ref != nil {
+		fields = append(fields, upstream.FieldAPIKeyRef)
+	}
+	if m.model != nil {
+		fields = append(fields, upstream.FieldModel)
+	}
+	if m.enabled != nil {
+		fields = append(fields, upstream.FieldEnabled)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *UpstreamMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case upstream.FieldCreatedAt:
+		return m.CreatedAt()
+	case upstream.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case upstream.FieldName:
+		return m.Name()
+	case upstream.FieldProvider:
+		return m.Provider()
+	case upstream.FieldAPIBase:
+		return m.APIBase()
+	case upstream.FieldAPIKeyRef:
+		return m.APIKeyRef()
+	case upstream.FieldModel:
+		return m.Model()
+	case upstream.FieldEnabled:
+		return m.Enabled()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *UpstreamMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case upstream.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case upstream.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case upstream.FieldName:
+		return m.OldName(ctx)
+	case upstream.FieldProvider:
+		return m.OldProvider(ctx)
+	case upstream.FieldAPIBase:
+		return m.OldAPIBase(ctx)
+	case upstream.FieldAPIKeyRef:
+		return m.OldAPIKeyRef(ctx)
+	case upstream.FieldModel:
+		return m.OldModel(ctx)
+	case upstream.FieldEnabled:
+		return m.OldEnabled(ctx)
+	}
+	return nil, fmt.Errorf("unknown Upstream field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *UpstreamMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case upstream.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case upstream.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case upstream.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case upstream.FieldProvider:
+		v, ok := value.(upstream.Provider)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProvider(v)
+		return nil
+	case upstream.FieldAPIBase:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAPIBase(v)
+		return nil
+	case upstream.FieldAPIKeyRef:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAPIKeyRef(v)
+		return nil
+	case upstream.FieldModel:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetModel(v)
+		return nil
+	case upstream.FieldEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEnabled(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Upstream field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *UpstreamMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *UpstreamMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *UpstreamMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown Upstream numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *UpstreamMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(upstream.FieldAPIBase) {
+		fields = append(fields, upstream.FieldAPIBase)
+	}
+	if m.FieldCleared(upstream.FieldAPIKeyRef) {
+		fields = append(fields, upstream.FieldAPIKeyRef)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *UpstreamMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *UpstreamMutation) ClearField(name string) error {
+	switch name {
+	case upstream.FieldAPIBase:
+		m.ClearAPIBase()
+		return nil
+	case upstream.FieldAPIKeyRef:
+		m.ClearAPIKeyRef()
+		return nil
+	}
+	return fmt.Errorf("unknown Upstream nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *UpstreamMutation) ResetField(name string) error {
+	switch name {
+	case upstream.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case upstream.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case upstream.FieldName:
+		m.ResetName()
+		return nil
+	case upstream.FieldProvider:
+		m.ResetProvider()
+		return nil
+	case upstream.FieldAPIBase:
+		m.ResetAPIBase()
+		return nil
+	case upstream.FieldAPIKeyRef:
+		m.ResetAPIKeyRef()
+		return nil
+	case upstream.FieldModel:
+		m.ResetModel()
+		return nil
+	case upstream.FieldEnabled:
+		m.ResetEnabled()
+		return nil
+	}
+	return fmt.Errorf("unknown Upstream field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *UpstreamMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *UpstreamMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *UpstreamMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *UpstreamMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *UpstreamMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *UpstreamMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *UpstreamMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown Upstream unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *UpstreamMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown Upstream edge %s", name)
 }
 
 // UserMutation represents an operation that mutates the User nodes in the graph.

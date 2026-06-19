@@ -22,16 +22,20 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/department"
+	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
 	"github.com/VMware-AI/agent-platform-backend/ent/image"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
+	"github.com/VMware-AI/agent-platform-backend/ent/modelroute"
 	"github.com/VMware-AI/agent-platform-backend/ent/permission"
 	"github.com/VMware-AI/agent-platform-backend/ent/ratelimitpolicy"
 	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/ent/role"
+	"github.com/VMware-AI/agent-platform-backend/ent/routertier"
 	"github.com/VMware-AI/agent-platform-backend/ent/skill"
 	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
 	"github.com/VMware-AI/agent-platform-backend/ent/tokenusage"
+	"github.com/VMware-AI/agent-platform-backend/ent/upstream"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 )
@@ -53,10 +57,14 @@ type Client struct {
 	AuditLog *AuditLogClient
 	// Department is the client for interacting with the Department builders.
 	Department *DepartmentClient
+	// GatewayConnection is the client for interacting with the GatewayConnection builders.
+	GatewayConnection *GatewayConnectionClient
 	// Image is the client for interacting with the Image builders.
 	Image *ImageClient
 	// Membership is the client for interacting with the Membership builders.
 	Membership *MembershipClient
+	// ModelRoute is the client for interacting with the ModelRoute builders.
+	ModelRoute *ModelRouteClient
 	// Permission is the client for interacting with the Permission builders.
 	Permission *PermissionClient
 	// RateLimitPolicy is the client for interacting with the RateLimitPolicy builders.
@@ -67,12 +75,16 @@ type Client struct {
 	ResourcePool *ResourcePoolClient
 	// Role is the client for interacting with the Role builders.
 	Role *RoleClient
+	// RouterTier is the client for interacting with the RouterTier builders.
+	RouterTier *RouterTierClient
 	// Skill is the client for interacting with the Skill builders.
 	Skill *SkillClient
 	// Tenant is the client for interacting with the Tenant builders.
 	Tenant *TenantClient
 	// TokenUsage is the client for interacting with the TokenUsage builders.
 	TokenUsage *TokenUsageClient
+	// Upstream is the client for interacting with the Upstream builders.
+	Upstream *UpstreamClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 	// VirtualKey is the client for interacting with the VirtualKey builders.
@@ -94,16 +106,20 @@ func (c *Client) init() {
 	c.Artifact = NewArtifactClient(c.config)
 	c.AuditLog = NewAuditLogClient(c.config)
 	c.Department = NewDepartmentClient(c.config)
+	c.GatewayConnection = NewGatewayConnectionClient(c.config)
 	c.Image = NewImageClient(c.config)
 	c.Membership = NewMembershipClient(c.config)
+	c.ModelRoute = NewModelRouteClient(c.config)
 	c.Permission = NewPermissionClient(c.config)
 	c.RateLimitPolicy = NewRateLimitPolicyClient(c.config)
 	c.RequestLog = NewRequestLogClient(c.config)
 	c.ResourcePool = NewResourcePoolClient(c.config)
 	c.Role = NewRoleClient(c.config)
+	c.RouterTier = NewRouterTierClient(c.config)
 	c.Skill = NewSkillClient(c.config)
 	c.Tenant = NewTenantClient(c.config)
 	c.TokenUsage = NewTokenUsageClient(c.config)
+	c.Upstream = NewUpstreamClient(c.config)
 	c.User = NewUserClient(c.config)
 	c.VirtualKey = NewVirtualKeyClient(c.config)
 }
@@ -196,26 +212,30 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:             ctx,
-		config:          cfg,
-		Agent:           NewAgentClient(cfg),
-		AgentConfig:     NewAgentConfigClient(cfg),
-		AgentTemplate:   NewAgentTemplateClient(cfg),
-		Artifact:        NewArtifactClient(cfg),
-		AuditLog:        NewAuditLogClient(cfg),
-		Department:      NewDepartmentClient(cfg),
-		Image:           NewImageClient(cfg),
-		Membership:      NewMembershipClient(cfg),
-		Permission:      NewPermissionClient(cfg),
-		RateLimitPolicy: NewRateLimitPolicyClient(cfg),
-		RequestLog:      NewRequestLogClient(cfg),
-		ResourcePool:    NewResourcePoolClient(cfg),
-		Role:            NewRoleClient(cfg),
-		Skill:           NewSkillClient(cfg),
-		Tenant:          NewTenantClient(cfg),
-		TokenUsage:      NewTokenUsageClient(cfg),
-		User:            NewUserClient(cfg),
-		VirtualKey:      NewVirtualKeyClient(cfg),
+		ctx:               ctx,
+		config:            cfg,
+		Agent:             NewAgentClient(cfg),
+		AgentConfig:       NewAgentConfigClient(cfg),
+		AgentTemplate:     NewAgentTemplateClient(cfg),
+		Artifact:          NewArtifactClient(cfg),
+		AuditLog:          NewAuditLogClient(cfg),
+		Department:        NewDepartmentClient(cfg),
+		GatewayConnection: NewGatewayConnectionClient(cfg),
+		Image:             NewImageClient(cfg),
+		Membership:        NewMembershipClient(cfg),
+		ModelRoute:        NewModelRouteClient(cfg),
+		Permission:        NewPermissionClient(cfg),
+		RateLimitPolicy:   NewRateLimitPolicyClient(cfg),
+		RequestLog:        NewRequestLogClient(cfg),
+		ResourcePool:      NewResourcePoolClient(cfg),
+		Role:              NewRoleClient(cfg),
+		RouterTier:        NewRouterTierClient(cfg),
+		Skill:             NewSkillClient(cfg),
+		Tenant:            NewTenantClient(cfg),
+		TokenUsage:        NewTokenUsageClient(cfg),
+		Upstream:          NewUpstreamClient(cfg),
+		User:              NewUserClient(cfg),
+		VirtualKey:        NewVirtualKeyClient(cfg),
 	}, nil
 }
 
@@ -233,26 +253,30 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:             ctx,
-		config:          cfg,
-		Agent:           NewAgentClient(cfg),
-		AgentConfig:     NewAgentConfigClient(cfg),
-		AgentTemplate:   NewAgentTemplateClient(cfg),
-		Artifact:        NewArtifactClient(cfg),
-		AuditLog:        NewAuditLogClient(cfg),
-		Department:      NewDepartmentClient(cfg),
-		Image:           NewImageClient(cfg),
-		Membership:      NewMembershipClient(cfg),
-		Permission:      NewPermissionClient(cfg),
-		RateLimitPolicy: NewRateLimitPolicyClient(cfg),
-		RequestLog:      NewRequestLogClient(cfg),
-		ResourcePool:    NewResourcePoolClient(cfg),
-		Role:            NewRoleClient(cfg),
-		Skill:           NewSkillClient(cfg),
-		Tenant:          NewTenantClient(cfg),
-		TokenUsage:      NewTokenUsageClient(cfg),
-		User:            NewUserClient(cfg),
-		VirtualKey:      NewVirtualKeyClient(cfg),
+		ctx:               ctx,
+		config:            cfg,
+		Agent:             NewAgentClient(cfg),
+		AgentConfig:       NewAgentConfigClient(cfg),
+		AgentTemplate:     NewAgentTemplateClient(cfg),
+		Artifact:          NewArtifactClient(cfg),
+		AuditLog:          NewAuditLogClient(cfg),
+		Department:        NewDepartmentClient(cfg),
+		GatewayConnection: NewGatewayConnectionClient(cfg),
+		Image:             NewImageClient(cfg),
+		Membership:        NewMembershipClient(cfg),
+		ModelRoute:        NewModelRouteClient(cfg),
+		Permission:        NewPermissionClient(cfg),
+		RateLimitPolicy:   NewRateLimitPolicyClient(cfg),
+		RequestLog:        NewRequestLogClient(cfg),
+		ResourcePool:      NewResourcePoolClient(cfg),
+		Role:              NewRoleClient(cfg),
+		RouterTier:        NewRouterTierClient(cfg),
+		Skill:             NewSkillClient(cfg),
+		Tenant:            NewTenantClient(cfg),
+		TokenUsage:        NewTokenUsageClient(cfg),
+		Upstream:          NewUpstreamClient(cfg),
+		User:              NewUserClient(cfg),
+		VirtualKey:        NewVirtualKeyClient(cfg),
 	}, nil
 }
 
@@ -283,8 +307,9 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Agent, c.AgentConfig, c.AgentTemplate, c.Artifact, c.AuditLog, c.Department,
-		c.Image, c.Membership, c.Permission, c.RateLimitPolicy, c.RequestLog,
-		c.ResourcePool, c.Role, c.Skill, c.Tenant, c.TokenUsage, c.User, c.VirtualKey,
+		c.GatewayConnection, c.Image, c.Membership, c.ModelRoute, c.Permission,
+		c.RateLimitPolicy, c.RequestLog, c.ResourcePool, c.Role, c.RouterTier, c.Skill,
+		c.Tenant, c.TokenUsage, c.Upstream, c.User, c.VirtualKey,
 	} {
 		n.Use(hooks...)
 	}
@@ -295,8 +320,9 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Agent, c.AgentConfig, c.AgentTemplate, c.Artifact, c.AuditLog, c.Department,
-		c.Image, c.Membership, c.Permission, c.RateLimitPolicy, c.RequestLog,
-		c.ResourcePool, c.Role, c.Skill, c.Tenant, c.TokenUsage, c.User, c.VirtualKey,
+		c.GatewayConnection, c.Image, c.Membership, c.ModelRoute, c.Permission,
+		c.RateLimitPolicy, c.RequestLog, c.ResourcePool, c.Role, c.RouterTier, c.Skill,
+		c.Tenant, c.TokenUsage, c.Upstream, c.User, c.VirtualKey,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -317,10 +343,14 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.AuditLog.mutate(ctx, m)
 	case *DepartmentMutation:
 		return c.Department.mutate(ctx, m)
+	case *GatewayConnectionMutation:
+		return c.GatewayConnection.mutate(ctx, m)
 	case *ImageMutation:
 		return c.Image.mutate(ctx, m)
 	case *MembershipMutation:
 		return c.Membership.mutate(ctx, m)
+	case *ModelRouteMutation:
+		return c.ModelRoute.mutate(ctx, m)
 	case *PermissionMutation:
 		return c.Permission.mutate(ctx, m)
 	case *RateLimitPolicyMutation:
@@ -331,12 +361,16 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ResourcePool.mutate(ctx, m)
 	case *RoleMutation:
 		return c.Role.mutate(ctx, m)
+	case *RouterTierMutation:
+		return c.RouterTier.mutate(ctx, m)
 	case *SkillMutation:
 		return c.Skill.mutate(ctx, m)
 	case *TenantMutation:
 		return c.Tenant.mutate(ctx, m)
 	case *TokenUsageMutation:
 		return c.TokenUsage.mutate(ctx, m)
+	case *UpstreamMutation:
+		return c.Upstream.mutate(ctx, m)
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
 	case *VirtualKeyMutation:
@@ -1192,6 +1226,139 @@ func (c *DepartmentClient) mutate(ctx context.Context, m *DepartmentMutation) (V
 	}
 }
 
+// GatewayConnectionClient is a client for the GatewayConnection schema.
+type GatewayConnectionClient struct {
+	config
+}
+
+// NewGatewayConnectionClient returns a client for the GatewayConnection from the given config.
+func NewGatewayConnectionClient(c config) *GatewayConnectionClient {
+	return &GatewayConnectionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `gatewayconnection.Hooks(f(g(h())))`.
+func (c *GatewayConnectionClient) Use(hooks ...Hook) {
+	c.hooks.GatewayConnection = append(c.hooks.GatewayConnection, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `gatewayconnection.Intercept(f(g(h())))`.
+func (c *GatewayConnectionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.GatewayConnection = append(c.inters.GatewayConnection, interceptors...)
+}
+
+// Create returns a builder for creating a GatewayConnection entity.
+func (c *GatewayConnectionClient) Create() *GatewayConnectionCreate {
+	mutation := newGatewayConnectionMutation(c.config, OpCreate)
+	return &GatewayConnectionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of GatewayConnection entities.
+func (c *GatewayConnectionClient) CreateBulk(builders ...*GatewayConnectionCreate) *GatewayConnectionCreateBulk {
+	return &GatewayConnectionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *GatewayConnectionClient) MapCreateBulk(slice any, setFunc func(*GatewayConnectionCreate, int)) *GatewayConnectionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &GatewayConnectionCreateBulk{err: fmt.Errorf("calling to GatewayConnectionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*GatewayConnectionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &GatewayConnectionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for GatewayConnection.
+func (c *GatewayConnectionClient) Update() *GatewayConnectionUpdate {
+	mutation := newGatewayConnectionMutation(c.config, OpUpdate)
+	return &GatewayConnectionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *GatewayConnectionClient) UpdateOne(_m *GatewayConnection) *GatewayConnectionUpdateOne {
+	mutation := newGatewayConnectionMutation(c.config, OpUpdateOne, withGatewayConnection(_m))
+	return &GatewayConnectionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *GatewayConnectionClient) UpdateOneID(id uuid.UUID) *GatewayConnectionUpdateOne {
+	mutation := newGatewayConnectionMutation(c.config, OpUpdateOne, withGatewayConnectionID(id))
+	return &GatewayConnectionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for GatewayConnection.
+func (c *GatewayConnectionClient) Delete() *GatewayConnectionDelete {
+	mutation := newGatewayConnectionMutation(c.config, OpDelete)
+	return &GatewayConnectionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *GatewayConnectionClient) DeleteOne(_m *GatewayConnection) *GatewayConnectionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *GatewayConnectionClient) DeleteOneID(id uuid.UUID) *GatewayConnectionDeleteOne {
+	builder := c.Delete().Where(gatewayconnection.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &GatewayConnectionDeleteOne{builder}
+}
+
+// Query returns a query builder for GatewayConnection.
+func (c *GatewayConnectionClient) Query() *GatewayConnectionQuery {
+	return &GatewayConnectionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeGatewayConnection},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a GatewayConnection entity by its id.
+func (c *GatewayConnectionClient) Get(ctx context.Context, id uuid.UUID) (*GatewayConnection, error) {
+	return c.Query().Where(gatewayconnection.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *GatewayConnectionClient) GetX(ctx context.Context, id uuid.UUID) *GatewayConnection {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *GatewayConnectionClient) Hooks() []Hook {
+	return c.hooks.GatewayConnection
+}
+
+// Interceptors returns the client interceptors.
+func (c *GatewayConnectionClient) Interceptors() []Interceptor {
+	return c.inters.GatewayConnection
+}
+
+func (c *GatewayConnectionClient) mutate(ctx context.Context, m *GatewayConnectionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&GatewayConnectionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&GatewayConnectionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&GatewayConnectionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&GatewayConnectionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown GatewayConnection mutation op: %q", m.Op())
+	}
+}
+
 // ImageClient is a client for the Image schema.
 type ImageClient struct {
 	config
@@ -1487,6 +1654,139 @@ func (c *MembershipClient) mutate(ctx context.Context, m *MembershipMutation) (V
 		return (&MembershipDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Membership mutation op: %q", m.Op())
+	}
+}
+
+// ModelRouteClient is a client for the ModelRoute schema.
+type ModelRouteClient struct {
+	config
+}
+
+// NewModelRouteClient returns a client for the ModelRoute from the given config.
+func NewModelRouteClient(c config) *ModelRouteClient {
+	return &ModelRouteClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `modelroute.Hooks(f(g(h())))`.
+func (c *ModelRouteClient) Use(hooks ...Hook) {
+	c.hooks.ModelRoute = append(c.hooks.ModelRoute, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `modelroute.Intercept(f(g(h())))`.
+func (c *ModelRouteClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ModelRoute = append(c.inters.ModelRoute, interceptors...)
+}
+
+// Create returns a builder for creating a ModelRoute entity.
+func (c *ModelRouteClient) Create() *ModelRouteCreate {
+	mutation := newModelRouteMutation(c.config, OpCreate)
+	return &ModelRouteCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ModelRoute entities.
+func (c *ModelRouteClient) CreateBulk(builders ...*ModelRouteCreate) *ModelRouteCreateBulk {
+	return &ModelRouteCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ModelRouteClient) MapCreateBulk(slice any, setFunc func(*ModelRouteCreate, int)) *ModelRouteCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ModelRouteCreateBulk{err: fmt.Errorf("calling to ModelRouteClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ModelRouteCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ModelRouteCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ModelRoute.
+func (c *ModelRouteClient) Update() *ModelRouteUpdate {
+	mutation := newModelRouteMutation(c.config, OpUpdate)
+	return &ModelRouteUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ModelRouteClient) UpdateOne(_m *ModelRoute) *ModelRouteUpdateOne {
+	mutation := newModelRouteMutation(c.config, OpUpdateOne, withModelRoute(_m))
+	return &ModelRouteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ModelRouteClient) UpdateOneID(id uuid.UUID) *ModelRouteUpdateOne {
+	mutation := newModelRouteMutation(c.config, OpUpdateOne, withModelRouteID(id))
+	return &ModelRouteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ModelRoute.
+func (c *ModelRouteClient) Delete() *ModelRouteDelete {
+	mutation := newModelRouteMutation(c.config, OpDelete)
+	return &ModelRouteDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ModelRouteClient) DeleteOne(_m *ModelRoute) *ModelRouteDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ModelRouteClient) DeleteOneID(id uuid.UUID) *ModelRouteDeleteOne {
+	builder := c.Delete().Where(modelroute.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ModelRouteDeleteOne{builder}
+}
+
+// Query returns a query builder for ModelRoute.
+func (c *ModelRouteClient) Query() *ModelRouteQuery {
+	return &ModelRouteQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeModelRoute},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ModelRoute entity by its id.
+func (c *ModelRouteClient) Get(ctx context.Context, id uuid.UUID) (*ModelRoute, error) {
+	return c.Query().Where(modelroute.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ModelRouteClient) GetX(ctx context.Context, id uuid.UUID) *ModelRoute {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ModelRouteClient) Hooks() []Hook {
+	return c.hooks.ModelRoute
+}
+
+// Interceptors returns the client interceptors.
+func (c *ModelRouteClient) Interceptors() []Interceptor {
+	return c.inters.ModelRoute
+}
+
+func (c *ModelRouteClient) mutate(ctx context.Context, m *ModelRouteMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ModelRouteCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ModelRouteUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ModelRouteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ModelRouteDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ModelRoute mutation op: %q", m.Op())
 	}
 }
 
@@ -2203,6 +2503,139 @@ func (c *RoleClient) mutate(ctx context.Context, m *RoleMutation) (Value, error)
 	}
 }
 
+// RouterTierClient is a client for the RouterTier schema.
+type RouterTierClient struct {
+	config
+}
+
+// NewRouterTierClient returns a client for the RouterTier from the given config.
+func NewRouterTierClient(c config) *RouterTierClient {
+	return &RouterTierClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `routertier.Hooks(f(g(h())))`.
+func (c *RouterTierClient) Use(hooks ...Hook) {
+	c.hooks.RouterTier = append(c.hooks.RouterTier, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `routertier.Intercept(f(g(h())))`.
+func (c *RouterTierClient) Intercept(interceptors ...Interceptor) {
+	c.inters.RouterTier = append(c.inters.RouterTier, interceptors...)
+}
+
+// Create returns a builder for creating a RouterTier entity.
+func (c *RouterTierClient) Create() *RouterTierCreate {
+	mutation := newRouterTierMutation(c.config, OpCreate)
+	return &RouterTierCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of RouterTier entities.
+func (c *RouterTierClient) CreateBulk(builders ...*RouterTierCreate) *RouterTierCreateBulk {
+	return &RouterTierCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *RouterTierClient) MapCreateBulk(slice any, setFunc func(*RouterTierCreate, int)) *RouterTierCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &RouterTierCreateBulk{err: fmt.Errorf("calling to RouterTierClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*RouterTierCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &RouterTierCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for RouterTier.
+func (c *RouterTierClient) Update() *RouterTierUpdate {
+	mutation := newRouterTierMutation(c.config, OpUpdate)
+	return &RouterTierUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *RouterTierClient) UpdateOne(_m *RouterTier) *RouterTierUpdateOne {
+	mutation := newRouterTierMutation(c.config, OpUpdateOne, withRouterTier(_m))
+	return &RouterTierUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *RouterTierClient) UpdateOneID(id uuid.UUID) *RouterTierUpdateOne {
+	mutation := newRouterTierMutation(c.config, OpUpdateOne, withRouterTierID(id))
+	return &RouterTierUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for RouterTier.
+func (c *RouterTierClient) Delete() *RouterTierDelete {
+	mutation := newRouterTierMutation(c.config, OpDelete)
+	return &RouterTierDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *RouterTierClient) DeleteOne(_m *RouterTier) *RouterTierDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *RouterTierClient) DeleteOneID(id uuid.UUID) *RouterTierDeleteOne {
+	builder := c.Delete().Where(routertier.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &RouterTierDeleteOne{builder}
+}
+
+// Query returns a query builder for RouterTier.
+func (c *RouterTierClient) Query() *RouterTierQuery {
+	return &RouterTierQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeRouterTier},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a RouterTier entity by its id.
+func (c *RouterTierClient) Get(ctx context.Context, id uuid.UUID) (*RouterTier, error) {
+	return c.Query().Where(routertier.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *RouterTierClient) GetX(ctx context.Context, id uuid.UUID) *RouterTier {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *RouterTierClient) Hooks() []Hook {
+	return c.hooks.RouterTier
+}
+
+// Interceptors returns the client interceptors.
+func (c *RouterTierClient) Interceptors() []Interceptor {
+	return c.inters.RouterTier
+}
+
+func (c *RouterTierClient) mutate(ctx context.Context, m *RouterTierMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&RouterTierCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&RouterTierUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&RouterTierUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&RouterTierDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown RouterTier mutation op: %q", m.Op())
+	}
+}
+
 // SkillClient is a client for the Skill schema.
 type SkillClient struct {
 	config
@@ -2618,6 +3051,139 @@ func (c *TokenUsageClient) mutate(ctx context.Context, m *TokenUsageMutation) (V
 	}
 }
 
+// UpstreamClient is a client for the Upstream schema.
+type UpstreamClient struct {
+	config
+}
+
+// NewUpstreamClient returns a client for the Upstream from the given config.
+func NewUpstreamClient(c config) *UpstreamClient {
+	return &UpstreamClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `upstream.Hooks(f(g(h())))`.
+func (c *UpstreamClient) Use(hooks ...Hook) {
+	c.hooks.Upstream = append(c.hooks.Upstream, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `upstream.Intercept(f(g(h())))`.
+func (c *UpstreamClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Upstream = append(c.inters.Upstream, interceptors...)
+}
+
+// Create returns a builder for creating a Upstream entity.
+func (c *UpstreamClient) Create() *UpstreamCreate {
+	mutation := newUpstreamMutation(c.config, OpCreate)
+	return &UpstreamCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Upstream entities.
+func (c *UpstreamClient) CreateBulk(builders ...*UpstreamCreate) *UpstreamCreateBulk {
+	return &UpstreamCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *UpstreamClient) MapCreateBulk(slice any, setFunc func(*UpstreamCreate, int)) *UpstreamCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &UpstreamCreateBulk{err: fmt.Errorf("calling to UpstreamClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*UpstreamCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &UpstreamCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Upstream.
+func (c *UpstreamClient) Update() *UpstreamUpdate {
+	mutation := newUpstreamMutation(c.config, OpUpdate)
+	return &UpstreamUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *UpstreamClient) UpdateOne(_m *Upstream) *UpstreamUpdateOne {
+	mutation := newUpstreamMutation(c.config, OpUpdateOne, withUpstream(_m))
+	return &UpstreamUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *UpstreamClient) UpdateOneID(id uuid.UUID) *UpstreamUpdateOne {
+	mutation := newUpstreamMutation(c.config, OpUpdateOne, withUpstreamID(id))
+	return &UpstreamUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Upstream.
+func (c *UpstreamClient) Delete() *UpstreamDelete {
+	mutation := newUpstreamMutation(c.config, OpDelete)
+	return &UpstreamDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *UpstreamClient) DeleteOne(_m *Upstream) *UpstreamDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *UpstreamClient) DeleteOneID(id uuid.UUID) *UpstreamDeleteOne {
+	builder := c.Delete().Where(upstream.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &UpstreamDeleteOne{builder}
+}
+
+// Query returns a query builder for Upstream.
+func (c *UpstreamClient) Query() *UpstreamQuery {
+	return &UpstreamQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeUpstream},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Upstream entity by its id.
+func (c *UpstreamClient) Get(ctx context.Context, id uuid.UUID) (*Upstream, error) {
+	return c.Query().Where(upstream.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *UpstreamClient) GetX(ctx context.Context, id uuid.UUID) *Upstream {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *UpstreamClient) Hooks() []Hook {
+	return c.hooks.Upstream
+}
+
+// Interceptors returns the client interceptors.
+func (c *UpstreamClient) Interceptors() []Interceptor {
+	return c.inters.Upstream
+}
+
+func (c *UpstreamClient) mutate(ctx context.Context, m *UpstreamMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&UpstreamCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&UpstreamUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&UpstreamUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&UpstreamDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Upstream mutation op: %q", m.Op())
+	}
+}
+
 // UserClient is a client for the User schema.
 type UserClient struct {
 	config
@@ -2935,13 +3501,15 @@ func (c *VirtualKeyClient) mutate(ctx context.Context, m *VirtualKeyMutation) (V
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Agent, AgentConfig, AgentTemplate, Artifact, AuditLog, Department, Image,
-		Membership, Permission, RateLimitPolicy, RequestLog, ResourcePool, Role, Skill,
-		Tenant, TokenUsage, User, VirtualKey []ent.Hook
+		Agent, AgentConfig, AgentTemplate, Artifact, AuditLog, Department,
+		GatewayConnection, Image, Membership, ModelRoute, Permission, RateLimitPolicy,
+		RequestLog, ResourcePool, Role, RouterTier, Skill, Tenant, TokenUsage,
+		Upstream, User, VirtualKey []ent.Hook
 	}
 	inters struct {
-		Agent, AgentConfig, AgentTemplate, Artifact, AuditLog, Department, Image,
-		Membership, Permission, RateLimitPolicy, RequestLog, ResourcePool, Role, Skill,
-		Tenant, TokenUsage, User, VirtualKey []ent.Interceptor
+		Agent, AgentConfig, AgentTemplate, Artifact, AuditLog, Department,
+		GatewayConnection, Image, Membership, ModelRoute, Permission, RateLimitPolicy,
+		RequestLog, ResourcePool, Role, RouterTier, Skill, Tenant, TokenUsage,
+		Upstream, User, VirtualKey []ent.Interceptor
 	}
 )

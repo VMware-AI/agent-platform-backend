@@ -24,11 +24,17 @@ type AuditLog func(*sql.Selector)
 // Department is the predicate function for department builders.
 type Department func(*sql.Selector)
 
+// GatewayConnection is the predicate function for gatewayconnection builders.
+type GatewayConnection func(*sql.Selector)
+
 // Image is the predicate function for image builders.
 type Image func(*sql.Selector)
 
 // Membership is the predicate function for membership builders.
 type Membership func(*sql.Selector)
+
+// ModelRoute is the predicate function for modelroute builders.
+type ModelRoute func(*sql.Selector)
 
 // Permission is the predicate function for permission builders.
 type Permission func(*sql.Selector)
@@ -45,6 +51,9 @@ type ResourcePool func(*sql.Selector)
 // Role is the predicate function for role builders.
 type Role func(*sql.Selector)
 
+// RouterTier is the predicate function for routertier builders.
+type RouterTier func(*sql.Selector)
+
 // Skill is the predicate function for skill builders.
 type Skill func(*sql.Selector)
 
@@ -53,6 +62,9 @@ type Tenant func(*sql.Selector)
 
 // TokenUsage is the predicate function for tokenusage builders.
 type TokenUsage func(*sql.Selector)
+
+// Upstream is the predicate function for upstream builders.
+type Upstream func(*sql.Selector)
 
 // User is the predicate function for user builders.
 type User func(*sql.Selector)

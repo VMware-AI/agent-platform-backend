@@ -24,10 +24,14 @@ type Tx struct {
 	AuditLog *AuditLogClient
 	// Department is the client for interacting with the Department builders.
 	Department *DepartmentClient
+	// GatewayConnection is the client for interacting with the GatewayConnection builders.
+	GatewayConnection *GatewayConnectionClient
 	// Image is the client for interacting with the Image builders.
 	Image *ImageClient
 	// Membership is the client for interacting with the Membership builders.
 	Membership *MembershipClient
+	// ModelRoute is the client for interacting with the ModelRoute builders.
+	ModelRoute *ModelRouteClient
 	// Permission is the client for interacting with the Permission builders.
 	Permission *PermissionClient
 	// RateLimitPolicy is the client for interacting with the RateLimitPolicy builders.
@@ -38,12 +42,16 @@ type Tx struct {
 	ResourcePool *ResourcePoolClient
 	// Role is the client for interacting with the Role builders.
 	Role *RoleClient
+	// RouterTier is the client for interacting with the RouterTier builders.
+	RouterTier *RouterTierClient
 	// Skill is the client for interacting with the Skill builders.
 	Skill *SkillClient
 	// Tenant is the client for interacting with the Tenant builders.
 	Tenant *TenantClient
 	// TokenUsage is the client for interacting with the TokenUsage builders.
 	TokenUsage *TokenUsageClient
+	// Upstream is the client for interacting with the Upstream builders.
+	Upstream *UpstreamClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 	// VirtualKey is the client for interacting with the VirtualKey builders.
@@ -185,16 +193,20 @@ func (tx *Tx) init() {
 	tx.Artifact = NewArtifactClient(tx.config)
 	tx.AuditLog = NewAuditLogClient(tx.config)
 	tx.Department = NewDepartmentClient(tx.config)
+	tx.GatewayConnection = NewGatewayConnectionClient(tx.config)
 	tx.Image = NewImageClient(tx.config)
 	tx.Membership = NewMembershipClient(tx.config)
+	tx.ModelRoute = NewModelRouteClient(tx.config)
 	tx.Permission = NewPermissionClient(tx.config)
 	tx.RateLimitPolicy = NewRateLimitPolicyClient(tx.config)
 	tx.RequestLog = NewRequestLogClient(tx.config)
 	tx.ResourcePool = NewResourcePoolClient(tx.config)
 	tx.Role = NewRoleClient(tx.config)
+	tx.RouterTier = NewRouterTierClient(tx.config)
 	tx.Skill = NewSkillClient(tx.config)
 	tx.Tenant = NewTenantClient(tx.config)
 	tx.TokenUsage = NewTokenUsageClient(tx.config)
+	tx.Upstream = NewUpstreamClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 	tx.VirtualKey = NewVirtualKeyClient(tx.config)
 }
