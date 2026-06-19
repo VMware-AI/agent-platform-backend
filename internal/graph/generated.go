@@ -90,6 +90,11 @@ type ComplexityRoot struct {
 		User               func(childComplexity int) int
 	}
 
+	DeployedAgent struct {
+		Agent            func(childComplexity int) int
+		VirtualKeySecret func(childComplexity int) int
+	}
+
 	IssuedVirtualKey struct {
 		Secret     func(childComplexity int) int
 		VirtualKey func(childComplexity int) int
@@ -115,6 +120,7 @@ type ComplexityRoot struct {
 		CreateUser                func(childComplexity int, input model.CreateUserInput) int
 		DeleteResourcePool        func(childComplexity int, id string) int
 		DeleteUser                func(childComplexity int, id string) int
+		DeployAgent               func(childComplexity int, input model.DeployAgentInput) int
 		IssueVirtualKey           func(childComplexity int, input model.IssueVirtualKeyInput) int
 		Login                     func(childComplexity int, username string, password string) int
 		Logout                    func(childComplexity int) int
@@ -239,6 +245,7 @@ type MutationResolver interface {
 	UpsertAgentTemplate(ctx context.Context, input model.UpsertAgentTemplateInput) (*model.AgentTemplate, error)
 	CreateAgent(ctx context.Context, input model.CreateAgentInput) (*model.Agent, error)
 	SetAgentStatus(ctx context.Context, id string, status model.AgentStatus) (*model.Agent, error)
+	DeployAgent(ctx context.Context, input model.DeployAgentInput) (*model.DeployedAgent, error)
 	RecordTokenUsage(ctx context.Context, input model.RecordTokenUsageInput) (*model.TokenUsage, error)
 	RecordRequestLog(ctx context.Context, input model.RecordRequestLogInput) (*model.RequestLog, error)
 	UpsertRateLimitPolicy(ctx context.Context, input model.UpsertRateLimitPolicyInput) (*model.RateLimitPolicy, error)
@@ -485,6 +492,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.AuthPayload.User(childComplexity), true
 
+	case "DeployedAgent.agent":
+		if e.ComplexityRoot.DeployedAgent.Agent == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DeployedAgent.Agent(childComplexity), true
+	case "DeployedAgent.virtualKeySecret":
+		if e.ComplexityRoot.DeployedAgent.VirtualKeySecret == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DeployedAgent.VirtualKeySecret(childComplexity), true
+
 	case "IssuedVirtualKey.secret":
 		if e.ComplexityRoot.IssuedVirtualKey.Secret == nil {
 			break
@@ -603,6 +623,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.DeleteUser(childComplexity, args["id"].(string)), true
+	case "Mutation.deployAgent":
+		if e.ComplexityRoot.Mutation.DeployAgent == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deployAgent_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.DeployAgent(childComplexity, args["input"].(model.DeployAgentInput)), true
 	case "Mutation.issueVirtualKey":
 		if e.ComplexityRoot.Mutation.IssueVirtualKey == nil {
 			break
@@ -1192,6 +1223,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputCreateAgentInput,
 		ec.unmarshalInputCreateUserInput,
+		ec.unmarshalInputDeployAgentInput,
 		ec.unmarshalInputIssueVirtualKeyInput,
 		ec.unmarshalInputPageInput,
 		ec.unmarshalInputRecordRequestLogInput,
@@ -1357,6 +1389,29 @@ extend type Mutation {
   # Self-service: any authenticated user creates their own agent (owner = caller).
   createAgent(input: CreateAgentInput!): Agent!
   setAgentStatus(id: ID!, status: AgentStatus!): Agent!
+}
+`, BuiltIn: false},
+	{Name: "../../schema/deploy.graphql", Input: `# Agent deployment: provision the VM (gateway key + cloud-init + guestinfo).
+# See LLD-05 §3 + internal/deploy.
+
+type DeployedAgent {
+  agent: Agent!
+  # The issued virtual-key secret — returned ONCE.
+  virtualKeySecret: String!
+}
+
+input DeployAgentInput {
+  agentId: ID!
+  vmName: String!
+  resourcePoolId: ID!
+  hostname: String
+  maxBudget: Float
+}
+
+extend type Mutation {
+  # Owner or admin (checked in resolver). Issues a key, injects cloud-init,
+  # and marks the agent running. On failure the key is revoked (no orphans).
+  deployAgent(input: DeployAgentInput!): DeployedAgent!
 }
 `, BuiltIn: false},
 	{Name: "../../schema/metering.graphql", Input: `# Metering center (计量中心, 0619 可观测性). Token usage + aggregation.
@@ -1738,6 +1793,16 @@ func (ec *executionContext) childFields_AuthPayload(ctx context.Context, field g
 		return ec.fieldContext_AuthPayload_mustChangePassword(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type AuthPayload", field.Name)
+}
+
+func (ec *executionContext) childFields_DeployedAgent(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "agent":
+		return ec.fieldContext_DeployedAgent_agent(ctx, field)
+	case "virtualKeySecret":
+		return ec.fieldContext_DeployedAgent_virtualKeySecret(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type DeployedAgent", field.Name)
 }
 
 func (ec *executionContext) childFields_IssuedVirtualKey(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -2149,6 +2214,20 @@ func (ec *executionContext) field_Mutation_deleteUser_args(ctx context.Context, 
 		return nil, err
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deployAgent_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.DeployAgentInput, error) {
+			return ec.unmarshalNDeployAgentInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDeployAgentInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -3339,6 +3418,61 @@ func (ec *executionContext) fieldContext_AuthPayload_mustChangePassword(_ contex
 	return graphql.NewScalarFieldContext("AuthPayload", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
+func (ec *executionContext) _DeployedAgent_agent(ctx context.Context, field graphql.CollectedField, obj *model.DeployedAgent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DeployedAgent_agent(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Agent, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Agent) graphql.Marshaler {
+			return ec.marshalNAgent2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgent(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DeployedAgent_agent(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeployedAgent",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Agent(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeployedAgent_virtualKeySecret(ctx context.Context, field graphql.CollectedField, obj *model.DeployedAgent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DeployedAgent_virtualKeySecret(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.VirtualKeySecret, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DeployedAgent_virtualKeySecret(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DeployedAgent", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _IssuedVirtualKey_virtualKey(ctx context.Context, field graphql.CollectedField, obj *model.IssuedVirtualKey) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -4152,6 +4286,50 @@ func (ec *executionContext) fieldContext_Mutation_setAgentStatus(ctx context.Con
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_setAgentStatus_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deployAgent(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_deployAgent(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().DeployAgent(ctx, fc.Args["input"].(model.DeployAgentInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.DeployedAgent) graphql.Marshaler {
+			return ec.marshalNDeployedAgent2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDeployedAgent(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_deployAgent(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_DeployedAgent(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deployAgent_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -7715,6 +7893,64 @@ func (ec *executionContext) unmarshalInputCreateUserInput(ctx context.Context, o
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, obj any) (model.DeployAgentInput, error) {
+	var it model.DeployAgentInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"agentId", "vmName", "resourcePoolId", "hostname", "maxBudget"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "agentId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("agentId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.AgentID = data
+		case "vmName":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("vmName"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.VMName = data
+		case "resourcePoolId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourcePoolId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourcePoolID = data
+		case "hostname":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hostname"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Hostname = data
+		case "maxBudget":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("maxBudget"))
+			data, err := ec.unmarshalOFloat2ᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.MaxBudget = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Context, obj any) (model.IssueVirtualKeyInput, error) {
 	var it model.IssueVirtualKeyInput
 	if obj == nil {
@@ -8556,6 +8792,50 @@ func (ec *executionContext) _AuthPayload(ctx context.Context, sel ast.SelectionS
 	return out
 }
 
+var deployedAgentImplementors = []string{"DeployedAgent"}
+
+func (ec *executionContext) _DeployedAgent(ctx context.Context, sel ast.SelectionSet, obj *model.DeployedAgent) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, deployedAgentImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DeployedAgent")
+		case "agent":
+			out.Values[i] = ec._DeployedAgent_agent(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "virtualKeySecret":
+			out.Values[i] = ec._DeployedAgent_virtualKeySecret(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var issuedVirtualKeyImplementors = []string{"IssuedVirtualKey"}
 
 func (ec *executionContext) _IssuedVirtualKey(ctx context.Context, sel ast.SelectionSet, obj *model.IssuedVirtualKey) graphql.Marshaler {
@@ -8800,6 +9080,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "setAgentStatus":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_setAgentStatus(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deployAgent":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deployAgent(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -10305,6 +10592,25 @@ func (ec *executionContext) unmarshalNCreateAgentInput2githubᚗcomᚋVMwareᚑA
 func (ec *executionContext) unmarshalNCreateUserInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCreateUserInput(ctx context.Context, v any) (model.CreateUserInput, error) {
 	res, err := ec.unmarshalInputCreateUserInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNDeployAgentInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDeployAgentInput(ctx context.Context, v any) (model.DeployAgentInput, error) {
+	res, err := ec.unmarshalInputDeployAgentInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNDeployedAgent2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDeployedAgent(ctx context.Context, sel ast.SelectionSet, v model.DeployedAgent) graphql.Marshaler {
+	return ec._DeployedAgent(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNDeployedAgent2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDeployedAgent(ctx context.Context, sel ast.SelectionSet, v *model.DeployedAgent) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._DeployedAgent(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNFloat2float64(ctx context.Context, v any) (float64, error) {

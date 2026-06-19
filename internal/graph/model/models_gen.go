@@ -76,6 +76,19 @@ type CreateUserInput struct {
 	TenantID *string `json:"tenantId,omitempty"`
 }
 
+type DeployAgentInput struct {
+	AgentID        string   `json:"agentId"`
+	VMName         string   `json:"vmName"`
+	ResourcePoolID string   `json:"resourcePoolId"`
+	Hostname       *string  `json:"hostname,omitempty"`
+	MaxBudget      *float64 `json:"maxBudget,omitempty"`
+}
+
+type DeployedAgent struct {
+	Agent            *Agent `json:"agent"`
+	VirtualKeySecret string `json:"virtualKeySecret"`
+}
+
 type IssueVirtualKeyInput struct {
 	UserID    string   `json:"userId"`
 	TeamID    *string  `json:"teamId,omitempty"`

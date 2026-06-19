@@ -1,0 +1,22 @@
+# Agent deployment: provision the VM (gateway key + cloud-init + guestinfo).
+# See LLD-05 §3 + internal/deploy.
+
+type DeployedAgent {
+  agent: Agent!
+  # The issued virtual-key secret — returned ONCE.
+  virtualKeySecret: String!
+}
+
+input DeployAgentInput {
+  agentId: ID!
+  vmName: String!
+  resourcePoolId: ID!
+  hostname: String
+  maxBudget: Float
+}
+
+extend type Mutation {
+  # Owner or admin (checked in resolver). Issues a key, injects cloud-init,
+  # and marks the agent running. On failure the key is revoked (no orphans).
+  deployAgent(input: DeployAgentInput!): DeployedAgent!
+}

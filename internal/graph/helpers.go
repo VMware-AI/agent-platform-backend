@@ -223,6 +223,22 @@ func toModelRateLimitPolicy(p *ent.RateLimitPolicy) *model.RateLimitPolicy {
 	}
 }
 
+// intOrZero dereferences an optional int, defaulting to 0.
+func intOrZero(p *int) int {
+	if p != nil {
+		return *p
+	}
+	return 0
+}
+
+// derefString dereferences an optional string, defaulting to "".
+func derefString(p *string) string {
+	if p != nil {
+		return *p
+	}
+	return ""
+}
+
 // clientIP extracts the remote address from the request in context.
 func clientIP(ctx context.Context) string {
 	if r := httpx.Request(ctx); r != nil {

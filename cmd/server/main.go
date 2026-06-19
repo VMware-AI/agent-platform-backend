@@ -18,10 +18,13 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/config"
+	"github.com/VMware-AI/agent-platform-backend/internal/deploy"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph"
+	"github.com/VMware-AI/agent-platform-backend/internal/secrets"
 	"github.com/VMware-AI/agent-platform-backend/internal/session"
 	"github.com/VMware-AI/agent-platform-backend/internal/store"
+	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 )
 
 func main() {
@@ -63,12 +66,27 @@ func main() {
 		log.Printf("model gateway: not configured (set LITELLM_BASE_URL)")
 	}
 
+	var sec secrets.Resolver
+	if vw := os.Getenv("VAULTWARDEN_URL"); vw != "" {
+		sec = secrets.NewVaultwardenResolver(vw)
+		log.Printf("secrets: vaultwarden (%s)", vw)
+	} else {
+		sec = secrets.EnvResolver{}
+		log.Printf("secrets: env:// resolver (dev)")
+	}
+	vcConnect := func(ctx context.Context, endpoint, user, pass string, insecure bool) (deploy.GuestinfoSetter, error) {
+		return vcenter.Connect(ctx, endpoint, user, pass, insecure)
+	}
+
 	resolver := &graph.Resolver{
-		Ent:           client,
-		Sessions:      sessions,
-		SessionTTL:    ttl,
-		SecureCookies: cfg.Env == "prod",
-		Gateway:       gw,
+		Ent:            client,
+		Sessions:       sessions,
+		SessionTTL:     ttl,
+		SecureCookies:  cfg.Env == "prod",
+		Gateway:        gw,
+		Secrets:        sec,
+		GatewayURL:     os.Getenv("GATEWAY_PUBLIC_URL"),
+		VCenterConnect: vcConnect,
 	}
 
 	es := graph.NewExecutableSchema(graph.Config{
