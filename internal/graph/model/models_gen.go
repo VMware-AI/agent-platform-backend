@@ -50,6 +50,21 @@ type PageInput struct {
 type Query struct {
 }
 
+type RegisterResourcePoolInput struct {
+	Name      string  `json:"name"`
+	Endpoint  string  `json:"endpoint"`
+	SecretRef *string `json:"secretRef,omitempty"`
+}
+
+type ResourcePool struct {
+	ID        string             `json:"id"`
+	Name      string             `json:"name"`
+	Kind      string             `json:"kind"`
+	Endpoint  string             `json:"endpoint"`
+	Status    ResourcePoolStatus `json:"status"`
+	CreatedAt time.Time          `json:"createdAt"`
+}
+
 type TempPasswordPayload struct {
 	UserID       string `json:"userId"`
 	TempPassword string `json:"tempPassword"`
@@ -75,6 +90,63 @@ type User struct {
 type UserConnection struct {
 	Items []User `json:"items"`
 	Total int    `json:"total"`
+}
+
+type ResourcePoolStatus string
+
+const (
+	ResourcePoolStatusConnected    ResourcePoolStatus = "connected"
+	ResourcePoolStatusDisconnected ResourcePoolStatus = "disconnected"
+	ResourcePoolStatusError        ResourcePoolStatus = "error"
+)
+
+var AllResourcePoolStatus = []ResourcePoolStatus{
+	ResourcePoolStatusConnected,
+	ResourcePoolStatusDisconnected,
+	ResourcePoolStatusError,
+}
+
+func (e ResourcePoolStatus) IsValid() bool {
+	switch e {
+	case ResourcePoolStatusConnected, ResourcePoolStatusDisconnected, ResourcePoolStatusError:
+		return true
+	}
+	return false
+}
+
+func (e ResourcePoolStatus) String() string {
+	return string(e)
+}
+
+func (e *ResourcePoolStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ResourcePoolStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ResourcePoolStatus", str)
+	}
+	return nil
+}
+
+func (e ResourcePoolStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *ResourcePoolStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e ResourcePoolStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }
 
 type Role string

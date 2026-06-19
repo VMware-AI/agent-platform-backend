@@ -1,0 +1,32 @@
+# Resource pool (vCenter) registration. See LLD-03 / LLD-06.
+
+enum ResourcePoolStatus {
+  connected
+  disconnected
+  error
+}
+
+type ResourcePool {
+  id: ID!
+  name: String!
+  kind: String!
+  endpoint: String!
+  status: ResourcePoolStatus!
+  createdAt: Time!
+}
+
+input RegisterResourcePoolInput {
+  name: String!
+  endpoint: String!
+  # Reference into the secret store (Vaultwarden); never a plaintext credential.
+  secretRef: String
+}
+
+extend type Query {
+  resourcePools: [ResourcePool!]! @hasRole(any: [admin])
+}
+
+extend type Mutation {
+  registerResourcePool(input: RegisterResourcePoolInput!): ResourcePool! @hasRole(any: [admin])
+  deleteResourcePool(id: ID!): Boolean! @hasRole(any: [admin])
+}

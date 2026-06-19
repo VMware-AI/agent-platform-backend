@@ -21,6 +21,26 @@ func actorID(cu *auth.CurrentUser) string {
 	return ""
 }
 
+// pageBounds normalizes a PageInput into a safe limit/offset.
+func pageBounds(page *model.PageInput) (limit, offset int) {
+	limit, offset = 50, 0
+	if page != nil {
+		if page.Limit != nil {
+			limit = *page.Limit
+		}
+		if page.Offset != nil {
+			offset = *page.Offset
+		}
+	}
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	return limit, offset
+}
+
 // toModelUser maps an ent.User to the GraphQL model (omits password_hash).
 func toModelUser(u *ent.User) *model.User {
 	m := &model.User{
@@ -41,6 +61,19 @@ func toModelUser(u *ent.User) *model.User {
 		m.LastLoginAt = &t
 	}
 	return m
+}
+
+// toModelResourcePool maps an ent.ResourcePool to the GraphQL model
+// (secret_ref is intentionally not exposed).
+func toModelResourcePool(p *ent.ResourcePool) *model.ResourcePool {
+	return &model.ResourcePool{
+		ID:        p.ID.String(),
+		Name:      p.Name,
+		Kind:      string(p.Kind),
+		Endpoint:  p.Endpoint,
+		Status:    model.ResourcePoolStatus(string(p.Status)),
+		CreatedAt: p.CreatedAt,
+	}
 }
 
 // clientIP extracts the remote address from the request in context.

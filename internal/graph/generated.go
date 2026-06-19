@@ -61,20 +61,32 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		ChangePassword func(childComplexity int, oldPassword string, newPassword string) int
-		CreateUser     func(childComplexity int, input model.CreateUserInput) int
-		DeleteUser     func(childComplexity int, id string) int
-		Login          func(childComplexity int, username string, password string) int
-		Logout         func(childComplexity int) int
-		ResetPassword  func(childComplexity int, userID string) int
-		SetUserActive  func(childComplexity int, id string, active bool) int
-		UpdateUser     func(childComplexity int, id string, input model.UpdateUserInput) int
+		ChangePassword       func(childComplexity int, oldPassword string, newPassword string) int
+		CreateUser           func(childComplexity int, input model.CreateUserInput) int
+		DeleteResourcePool   func(childComplexity int, id string) int
+		DeleteUser           func(childComplexity int, id string) int
+		Login                func(childComplexity int, username string, password string) int
+		Logout               func(childComplexity int) int
+		RegisterResourcePool func(childComplexity int, input model.RegisterResourcePoolInput) int
+		ResetPassword        func(childComplexity int, userID string) int
+		SetUserActive        func(childComplexity int, id string, active bool) int
+		UpdateUser           func(childComplexity int, id string, input model.UpdateUserInput) int
 	}
 
 	Query struct {
-		AuditLogs func(childComplexity int, page *model.PageInput) int
-		Me        func(childComplexity int) int
-		Users     func(childComplexity int, page *model.PageInput) int
+		AuditLogs     func(childComplexity int, page *model.PageInput) int
+		Me            func(childComplexity int) int
+		ResourcePools func(childComplexity int) int
+		Users         func(childComplexity int, page *model.PageInput) int
+	}
+
+	ResourcePool struct {
+		CreatedAt func(childComplexity int) int
+		Endpoint  func(childComplexity int) int
+		ID        func(childComplexity int) int
+		Kind      func(childComplexity int) int
+		Name      func(childComplexity int) int
+		Status    func(childComplexity int) int
 	}
 
 	TempPasswordPayload struct {
@@ -113,11 +125,14 @@ type MutationResolver interface {
 	SetUserActive(ctx context.Context, id string, active bool) (*model.User, error)
 	ResetPassword(ctx context.Context, userID string) (*model.TempPasswordPayload, error)
 	DeleteUser(ctx context.Context, id string) (bool, error)
+	RegisterResourcePool(ctx context.Context, input model.RegisterResourcePoolInput) (*model.ResourcePool, error)
+	DeleteResourcePool(ctx context.Context, id string) (bool, error)
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
 	Users(ctx context.Context, page *model.PageInput) (*model.UserConnection, error)
 	AuditLogs(ctx context.Context, page *model.PageInput) (*model.AuditConnection, error)
+	ResourcePools(ctx context.Context) ([]model.ResourcePool, error)
 }
 
 // endregion ************************** generated!.gotpl **************************
@@ -235,6 +250,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.CreateUser(childComplexity, args["input"].(model.CreateUserInput)), true
+	case "Mutation.deleteResourcePool":
+		if e.ComplexityRoot.Mutation.DeleteResourcePool == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteResourcePool_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.DeleteResourcePool(childComplexity, args["id"].(string)), true
 	case "Mutation.deleteUser":
 		if e.ComplexityRoot.Mutation.DeleteUser == nil {
 			break
@@ -263,6 +289,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.Logout(childComplexity), true
+	case "Mutation.registerResourcePool":
+		if e.ComplexityRoot.Mutation.RegisterResourcePool == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_registerResourcePool_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.RegisterResourcePool(childComplexity, args["input"].(model.RegisterResourcePoolInput)), true
 	case "Mutation.resetPassword":
 		if e.ComplexityRoot.Mutation.ResetPassword == nil {
 			break
@@ -315,6 +352,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Me(childComplexity), true
+	case "Query.resourcePools":
+		if e.ComplexityRoot.Query.ResourcePools == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.ResourcePools(childComplexity), true
 	case "Query.users":
 		if e.ComplexityRoot.Query.Users == nil {
 			break
@@ -326,6 +369,43 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Users(childComplexity, args["page"].(*model.PageInput)), true
+
+	case "ResourcePool.createdAt":
+		if e.ComplexityRoot.ResourcePool.CreatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ResourcePool.CreatedAt(childComplexity), true
+	case "ResourcePool.endpoint":
+		if e.ComplexityRoot.ResourcePool.Endpoint == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ResourcePool.Endpoint(childComplexity), true
+	case "ResourcePool.id":
+		if e.ComplexityRoot.ResourcePool.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ResourcePool.ID(childComplexity), true
+	case "ResourcePool.kind":
+		if e.ComplexityRoot.ResourcePool.Kind == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ResourcePool.Kind(childComplexity), true
+	case "ResourcePool.name":
+		if e.ComplexityRoot.ResourcePool.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ResourcePool.Name(childComplexity), true
+	case "ResourcePool.status":
+		if e.ComplexityRoot.ResourcePool.Status == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ResourcePool.Status(childComplexity), true
 
 	case "TempPasswordPayload.tempPassword":
 		if e.ComplexityRoot.TempPasswordPayload.TempPassword == nil {
@@ -418,6 +498,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputCreateUserInput,
 		ec.unmarshalInputPageInput,
+		ec.unmarshalInputRegisterResourcePoolInput,
 		ec.unmarshalInputUpdateUserInput,
 	)
 	first := true
@@ -494,6 +575,39 @@ func newExecutionContext(
 }
 
 var sources = []*ast.Source{
+	{Name: "../../schema/resourcepool.graphql", Input: `# Resource pool (vCenter) registration. See LLD-03 / LLD-06.
+
+enum ResourcePoolStatus {
+  connected
+  disconnected
+  error
+}
+
+type ResourcePool {
+  id: ID!
+  name: String!
+  kind: String!
+  endpoint: String!
+  status: ResourcePoolStatus!
+  createdAt: Time!
+}
+
+input RegisterResourcePoolInput {
+  name: String!
+  endpoint: String!
+  # Reference into the secret store (Vaultwarden); never a plaintext credential.
+  secretRef: String
+}
+
+extend type Query {
+  resourcePools: [ResourcePool!]! @hasRole(any: [admin])
+}
+
+extend type Mutation {
+  registerResourcePool(input: RegisterResourcePoolInput!): ResourcePool! @hasRole(any: [admin])
+  deleteResourcePool(id: ID!): Boolean! @hasRole(any: [admin])
+}
+`, BuiltIn: false},
 	{Name: "../../schema/schema.graphql", Input: `# Agent Platform — GraphQL contract (single source of truth).
 # Consumed by the frontend (agent-platform-web) via codegen. See LLD-01 §5.
 
@@ -635,6 +749,24 @@ func (ec *executionContext) childFields_AuthPayload(ctx context.Context, field g
 		return ec.fieldContext_AuthPayload_mustChangePassword(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type AuthPayload", field.Name)
+}
+
+func (ec *executionContext) childFields_ResourcePool(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_ResourcePool_id(ctx, field)
+	case "name":
+		return ec.fieldContext_ResourcePool_name(ctx, field)
+	case "kind":
+		return ec.fieldContext_ResourcePool_kind(ctx, field)
+	case "endpoint":
+		return ec.fieldContext_ResourcePool_endpoint(ctx, field)
+	case "status":
+		return ec.fieldContext_ResourcePool_status(ctx, field)
+	case "createdAt":
+		return ec.fieldContext_ResourcePool_createdAt(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type ResourcePool", field.Name)
 }
 
 func (ec *executionContext) childFields_TempPasswordPayload(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -861,6 +993,20 @@ func (ec *executionContext) field_Mutation_createUser_args(ctx context.Context, 
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_deleteResourcePool_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_deleteUser_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -894,6 +1040,20 @@ func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawAr
 		return nil, err
 	}
 	args["password"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_registerResourcePool_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.RegisterResourcePoolInput, error) {
+			return ec.unmarshalNRegisterResourcePoolInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRegisterResourcePoolInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -1772,6 +1932,130 @@ func (ec *executionContext) fieldContext_Mutation_deleteUser(ctx context.Context
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_registerResourcePool(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_registerResourcePool(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().RegisterResourcePool(ctx, fc.Args["input"].(model.RegisterResourcePoolInput))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.ResourcePool
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.ResourcePool
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ResourcePool) graphql.Marshaler {
+			return ec.marshalNResourcePool2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_registerResourcePool(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ResourcePool(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_registerResourcePool_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteResourcePool(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_deleteResourcePool(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().DeleteResourcePool(ctx, fc.Args["id"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal bool
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal bool
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_deleteResourcePool(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteResourcePool_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_me(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -1928,6 +2212,56 @@ func (ec *executionContext) fieldContext_Query_auditLogs(ctx context.Context, fi
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_resourcePools(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_resourcePools(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().ResourcePools(ctx)
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal []model.ResourcePool
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal []model.ResourcePool
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v []model.ResourcePool) graphql.Marshaler {
+			return ec.marshalNResourcePool2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_resourcePools(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ResourcePool(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -2002,6 +2336,144 @@ func (ec *executionContext) fieldContext_Query___schema(_ context.Context, field
 		},
 	}
 	return fc, nil
+}
+
+func (ec *executionContext) _ResourcePool_id(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ResourcePool_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ResourcePool_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _ResourcePool_name(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ResourcePool_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ResourcePool_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ResourcePool_kind(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ResourcePool_kind(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Kind, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ResourcePool_kind(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ResourcePool_endpoint(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ResourcePool_endpoint(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Endpoint, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ResourcePool_endpoint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ResourcePool_status(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ResourcePool_status(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Status, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.ResourcePoolStatus) graphql.Marshaler {
+			return ec.marshalNResourcePoolStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolStatus(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ResourcePool_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type ResourcePoolStatus does not have child fields"))
+}
+
+func (ec *executionContext) _ResourcePool_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ResourcePool_createdAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ResourcePool_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
 func (ec *executionContext) _TempPasswordPayload_userId(ctx context.Context, field graphql.CollectedField, obj *model.TempPasswordPayload) (ret graphql.Marshaler) {
@@ -3473,6 +3945,50 @@ func (ec *executionContext) unmarshalInputPageInput(ctx context.Context, obj any
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputRegisterResourcePoolInput(ctx context.Context, obj any) (model.RegisterResourcePoolInput, error) {
+	var it model.RegisterResourcePoolInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name", "endpoint", "secretRef"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "endpoint":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("endpoint"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Endpoint = data
+		case "secretRef":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretRef"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretRef = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputUpdateUserInput(ctx context.Context, obj any) (model.UpdateUserInput, error) {
 	var it model.UpdateUserInput
 	if obj == nil {
@@ -3755,6 +4271,20 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "registerResourcePool":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_registerResourcePool(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deleteResourcePool":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteResourcePool(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3863,6 +4393,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "resourcePools":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_resourcePools(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "__type":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Query___type(ctx, field)
@@ -3876,6 +4428,70 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			})
 			if out.Values[i] == graphql.RequiredNull {
 				atomic.AddUint32(&out.Invalids, 1)
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var resourcePoolImplementors = []string{"ResourcePool"}
+
+func (ec *executionContext) _ResourcePool(ctx context.Context, sel ast.SelectionSet, obj *model.ResourcePool) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, resourcePoolImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ResourcePool")
+		case "id":
+			out.Values[i] = ec._ResourcePool_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._ResourcePool_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "kind":
+			out.Values[i] = ec._ResourcePool_kind(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "endpoint":
+			out.Values[i] = ec._ResourcePool_endpoint(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "status":
+			out.Values[i] = ec._ResourcePool_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createdAt":
+			out.Values[i] = ec._ResourcePool_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -4564,6 +5180,51 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNRegisterResourcePoolInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRegisterResourcePoolInput(ctx context.Context, v any) (model.RegisterResourcePoolInput, error) {
+	res, err := ec.unmarshalInputRegisterResourcePoolInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNResourcePool2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePool(ctx context.Context, sel ast.SelectionSet, v model.ResourcePool) graphql.Marshaler {
+	return ec._ResourcePool(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNResourcePool2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolᚄ(ctx context.Context, sel ast.SelectionSet, v []model.ResourcePool) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNResourcePool2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePool(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNResourcePool2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePool(ctx context.Context, sel ast.SelectionSet, v *model.ResourcePool) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ResourcePool(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNResourcePoolStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolStatus(ctx context.Context, v any) (model.ResourcePoolStatus, error) {
+	var res model.ResourcePoolStatus
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNResourcePoolStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolStatus(ctx context.Context, sel ast.SelectionSet, v model.ResourcePoolStatus) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) unmarshalNRole2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRole(ctx context.Context, v any) (model.Role, error) {

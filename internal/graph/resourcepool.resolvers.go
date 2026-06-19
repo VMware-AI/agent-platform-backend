@@ -1,0 +1,56 @@
+package graph
+
+// This file will be automatically regenerated based on the schema, any resolver
+// implementations will be copied through when generating.
+
+import (
+	"context"
+
+	"github.com/google/uuid"
+	"github.com/vektah/gqlparser/v2/gqlerror"
+
+	"github.com/VMware-AI/agent-platform-backend/internal/auth"
+	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
+)
+
+// RegisterResourcePool is the resolver for the registerResourcePool field.
+func (r *mutationResolver) RegisterResourcePool(ctx context.Context, input model.RegisterResourcePoolInput) (*model.ResourcePool, error) {
+	create := r.Ent.ResourcePool.Create().
+		SetName(input.Name).
+		SetEndpoint(input.Endpoint)
+	if input.SecretRef != nil {
+		create.SetSecretRef(*input.SecretRef)
+	}
+	p, err := create.Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	r.audit(ctx, "resource_pool.register", "resource_pool", p.ID.String(), true, actorID(auth.FromContext(ctx)))
+	return toModelResourcePool(p), nil
+}
+
+// DeleteResourcePool is the resolver for the deleteResourcePool field.
+func (r *mutationResolver) DeleteResourcePool(ctx context.Context, id string) (bool, error) {
+	pid, err := uuid.Parse(id)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid id")
+	}
+	if err := r.Ent.ResourcePool.DeleteOneID(pid).Exec(ctx); err != nil {
+		return false, err
+	}
+	r.audit(ctx, "resource_pool.delete", "resource_pool", id, true, actorID(auth.FromContext(ctx)))
+	return true, nil
+}
+
+// ResourcePools is the resolver for the resourcePools field.
+func (r *queryResolver) ResourcePools(ctx context.Context) ([]model.ResourcePool, error) {
+	pools, err := r.Ent.ResourcePool.Query().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.ResourcePool, 0, len(pools))
+	for _, p := range pools {
+		out = append(out, *toModelResourcePool(p))
+	}
+	return out, nil
+}
