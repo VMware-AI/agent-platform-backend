@@ -73,9 +73,13 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 		gi["metadata"] = buildMetadata(req.Hostname)
 	}
 	if err := s.VCenter.SetGuestinfo(ctx, req.VMName, gi); err != nil {
-		// NOTE: on failure the issued key should be revoked to avoid orphans
-		// (parallel to the orphan-VM remediation). Wired in the GraphQL layer.
-		return nil, fmt.Errorf("deploy: inject guestinfo: %w", err)
+		// Orphan prevention: the key was issued at the gateway but the VM was
+		// never configured — revoke it so it does not linger (parallel to the
+		// orphan-VM remediation).
+		if delErr := s.Gateway.DeleteKey(ctx, key.Key); delErr != nil {
+			return nil, fmt.Errorf("deploy: inject guestinfo: %w (key revoke also failed: %v)", err, delErr)
+		}
+		return nil, fmt.Errorf("deploy: inject guestinfo failed, issued key revoked: %w", err)
 	}
 	return &Result{VirtualKey: key.Key, Userdata: userdata}, nil
 }
