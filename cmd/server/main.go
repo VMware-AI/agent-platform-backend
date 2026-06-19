@@ -12,6 +12,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
@@ -39,13 +40,24 @@ func main() {
 		log.Fatalf("seed admin: %v", err)
 	}
 
-	// TODO: swap to a redis-backed store when cfg.RedisURL is set (HLD §5.2).
-	sessions := session.NewMemoryStore()
+	var sessions session.Store
+	ttl := time.Duration(cfg.SessionTTL) * time.Second
+	if cfg.RedisURL != "" {
+		opt, err := redis.ParseURL(cfg.RedisURL)
+		if err != nil {
+			log.Fatalf("redis url: %v", err)
+		}
+		sessions = session.NewRedisStore(redis.NewClient(opt), ttl)
+		log.Printf("session store: redis")
+	} else {
+		sessions = session.NewMemoryStore()
+		log.Printf("session store: in-memory (dev)")
+	}
 
 	resolver := &graph.Resolver{
 		Ent:           client,
 		Sessions:      sessions,
-		SessionTTL:    time.Duration(cfg.SessionTTL) * time.Second,
+		SessionTTL:    ttl,
 		SecureCookies: cfg.Env == "prod",
 	}
 
