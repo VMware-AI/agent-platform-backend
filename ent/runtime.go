@@ -358,7 +358,7 @@ func init() {
 	// requestlog.DefaultStatusCode holds the default value on creation for the status_code field.
 	requestlog.DefaultStatusCode = requestlogDescStatusCode.Default.(int)
 	// requestlogDescCreatedAt is the schema descriptor for created_at field.
-	requestlogDescCreatedAt := requestlogFields[9].Descriptor()
+	requestlogDescCreatedAt := requestlogFields[10].Descriptor()
 	// requestlog.DefaultCreatedAt holds the default value on creation for the created_at field.
 	requestlog.DefaultCreatedAt = requestlogDescCreatedAt.Default.(func() time.Time)
 	// requestlogDescID is the schema descriptor for id field.

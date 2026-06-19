@@ -38,6 +38,9 @@ func (r *mutationResolver) RecordRequestLog(ctx context.Context, input model.Rec
 			c.SetAgentID(aid)
 		}
 	}
+	if input.Detail != nil {
+		c.SetDetail(*input.Detail)
+	}
 	l, err := c.Save(ctx)
 	if err != nil {
 		return nil, err
@@ -100,11 +103,24 @@ func (r *mutationResolver) SetRateLimitPolicyEnabled(ctx context.Context, id str
 	return toModelRateLimitPolicy(p), nil
 }
 
-// RequestLogs lists gateway request logs (optionally by status code).
-func (r *queryResolver) RequestLogs(ctx context.Context, statusCode *int, page *model.PageInput) ([]model.RequestLog, error) {
+// RequestLogs lists gateway request logs with optional filters (0619 第11页).
+func (r *queryResolver) RequestLogs(ctx context.Context, filter *model.RequestLogFilter, page *model.PageInput) ([]model.RequestLog, error) {
 	q := r.Ent.RequestLog.Query()
-	if statusCode != nil {
-		q = q.Where(requestlog.StatusCode(*statusCode))
+	if filter != nil {
+		if filter.StatusCode != nil {
+			q = q.Where(requestlog.StatusCode(*filter.StatusCode))
+		}
+		if filter.Model != nil {
+			q = q.Where(requestlog.Model(*filter.Model))
+		}
+		if filter.RequestID != nil {
+			q = q.Where(requestlog.RequestID(*filter.RequestID))
+		}
+		if filter.AgentID != nil {
+			if aid, err := uuid.Parse(*filter.AgentID); err == nil {
+				q = q.Where(requestlog.AgentID(aid))
+			}
+		}
 	}
 	limit, offset := pageBounds(page)
 	rows, err := q.Limit(limit).Offset(offset).All(ctx)

@@ -192,7 +192,7 @@ type ComplexityRoot struct {
 		MeteringSummary    func(childComplexity int, userID *string) int
 		ModelRoutes        func(childComplexity int) int
 		RateLimitPolicies  func(childComplexity int) int
-		RequestLogs        func(childComplexity int, statusCode *int, page *model.PageInput) int
+		RequestLogs        func(childComplexity int, filter *model.RequestLogFilter, page *model.PageInput) int
 		ResourcePools      func(childComplexity int) int
 		RouterTiers        func(childComplexity int) int
 		TokenUsage         func(childComplexity int, userID *string, page *model.PageInput) int
@@ -213,6 +213,7 @@ type ComplexityRoot struct {
 	RequestLog struct {
 		AgentID      func(childComplexity int) int
 		CreatedAt    func(childComplexity int) int
+		Detail       func(childComplexity int) int
 		ID           func(childComplexity int) int
 		InputTokens  func(childComplexity int) int
 		LatencyMs    func(childComplexity int) int
@@ -344,7 +345,7 @@ type QueryResolver interface {
 	RouterTiers(ctx context.Context) ([]model.RouterTier, error)
 	TokenUsage(ctx context.Context, userID *string, page *model.PageInput) ([]model.TokenUsage, error)
 	MeteringSummary(ctx context.Context, userID *string) (*model.MeteringSummary, error)
-	RequestLogs(ctx context.Context, statusCode *int, page *model.PageInput) ([]model.RequestLog, error)
+	RequestLogs(ctx context.Context, filter *model.RequestLogFilter, page *model.PageInput) ([]model.RequestLog, error)
 	RateLimitPolicies(ctx context.Context) ([]model.RateLimitPolicy, error)
 	ResourcePools(ctx context.Context) ([]model.ResourcePool, error)
 	VirtualKeys(ctx context.Context, userID *string) ([]model.VirtualKey, error)
@@ -1191,7 +1192,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Query.RequestLogs(childComplexity, args["statusCode"].(*int), args["page"].(*model.PageInput)), true
+		return e.ComplexityRoot.Query.RequestLogs(childComplexity, args["filter"].(*model.RequestLogFilter), args["page"].(*model.PageInput)), true
 	case "Query.resourcePools":
 		if e.ComplexityRoot.Query.ResourcePools == nil {
 			break
@@ -1293,6 +1294,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.RequestLog.CreatedAt(childComplexity), true
+	case "RequestLog.detail":
+		if e.ComplexityRoot.RequestLog.Detail == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestLog.Detail(childComplexity), true
 	case "RequestLog.id":
 		if e.ComplexityRoot.RequestLog.ID == nil {
 			break
@@ -1655,6 +1662,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputRecordTokenUsageInput,
 		ec.unmarshalInputRegisterGatewayConnectionInput,
 		ec.unmarshalInputRegisterResourcePoolInput,
+		ec.unmarshalInputRequestLogFilter,
 		ec.unmarshalInputUpdateUserInput,
 		ec.unmarshalInputUpsertAgentTemplateInput,
 		ec.unmarshalInputUpsertModelRouteInput,
@@ -2027,6 +2035,7 @@ type RequestLog {
   outputTokens: Int!
   latencyMs: Int!
   statusCode: Int!
+  detail: String
   createdAt: Time!
 }
 
@@ -2039,6 +2048,14 @@ input RecordRequestLogInput {
   outputTokens: Int
   latencyMs: Int
   statusCode: Int!
+  detail: String
+}
+
+input RequestLogFilter {
+  statusCode: Int
+  agentId: ID
+  model: String
+  requestId: String
 }
 
 type RateLimitPolicy {
@@ -2058,7 +2075,7 @@ input UpsertRateLimitPolicyInput {
 }
 
 extend type Query {
-  requestLogs(statusCode: Int, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
+  requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
   rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin])
 }
 
@@ -2514,6 +2531,8 @@ func (ec *executionContext) childFields_RequestLog(ctx context.Context, field gr
 		return ec.fieldContext_RequestLog_latencyMs(ctx, field)
 	case "statusCode":
 		return ec.fieldContext_RequestLog_statusCode(ctx, field)
+	case "detail":
+		return ec.fieldContext_RequestLog_detail(ctx, field)
 	case "createdAt":
 		return ec.fieldContext_RequestLog_createdAt(ctx, field)
 	}
@@ -3331,14 +3350,14 @@ func (ec *executionContext) field_Query_meteringSummary_args(ctx context.Context
 func (ec *executionContext) field_Query_requestLogs_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "statusCode",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
+		func(ctx context.Context, v any) (*model.RequestLogFilter, error) {
+			return ec.unmarshalORequestLogFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestLogFilter(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["statusCode"] = arg0
+	args["filter"] = arg0
 	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "page",
 		func(ctx context.Context, v any) (*model.PageInput, error) {
 			return ec.unmarshalOPageInput2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPageInput(ctx, v)
@@ -7377,7 +7396,7 @@ func (ec *executionContext) _Query_requestLogs(ctx context.Context, field graphq
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().RequestLogs(ctx, fc.Args["statusCode"].(*int), fc.Args["page"].(*model.PageInput))
+			return ec.Resolvers.Query().RequestLogs(ctx, fc.Args["filter"].(*model.RequestLogFilter), fc.Args["page"].(*model.PageInput))
 		},
 		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
 			directive0 := next
@@ -8010,6 +8029,29 @@ func (ec *executionContext) _RequestLog_statusCode(ctx context.Context, field gr
 }
 func (ec *executionContext) fieldContext_RequestLog_statusCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("RequestLog", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RequestLog_detail(ctx context.Context, field graphql.CollectedField, obj *model.RequestLog) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestLog_detail(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Detail, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_RequestLog_detail(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestLog", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _RequestLog_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.RequestLog) (ret graphql.Marshaler) {
@@ -10515,7 +10557,7 @@ func (ec *executionContext) unmarshalInputRecordRequestLogInput(ctx context.Cont
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"requestId", "userId", "agentId", "model", "inputTokens", "outputTokens", "latencyMs", "statusCode"}
+	fieldsInOrder := [...]string{"requestId", "userId", "agentId", "model", "inputTokens", "outputTokens", "latencyMs", "statusCode", "detail"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -10578,6 +10620,13 @@ func (ec *executionContext) unmarshalInputRecordRequestLogInput(ctx context.Cont
 				return it, err
 			}
 			it.StatusCode = data
+		case "detail":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("detail"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Detail = data
 		}
 	}
 	return it, nil
@@ -10738,6 +10787,57 @@ func (ec *executionContext) unmarshalInputRegisterResourcePoolInput(ctx context.
 				return it, err
 			}
 			it.SecretRef = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputRequestLogFilter(ctx context.Context, obj any) (model.RequestLogFilter, error) {
+	var it model.RequestLogFilter
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"statusCode", "agentId", "model", "requestId"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "statusCode":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("statusCode"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.StatusCode = data
+		case "agentId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("agentId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.AgentID = data
+		case "model":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("model"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Model = data
+		case "requestId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("requestId"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RequestID = data
 		}
 	}
 	return it, nil
@@ -12633,6 +12733,11 @@ func (ec *executionContext) _RequestLog(ctx context.Context, sel ast.SelectionSe
 		case "statusCode":
 			out.Values[i] = ec._RequestLog_statusCode(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "detail":
+			out.Values[i] = ec._RequestLog_detail(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
 		case "createdAt":
@@ -14698,6 +14803,14 @@ func (ec *executionContext) unmarshalOPageInput2ᚖgithubᚗcomᚋVMwareᚑAIᚋ
 		return nil, nil
 	}
 	res, err := ec.unmarshalInputPageInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalORequestLogFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestLogFilter(ctx context.Context, v any) (*model.RequestLogFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputRequestLogFilter(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 

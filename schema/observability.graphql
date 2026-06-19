@@ -10,6 +10,7 @@ type RequestLog {
   outputTokens: Int!
   latencyMs: Int!
   statusCode: Int!
+  detail: String
   createdAt: Time!
 }
 
@@ -22,6 +23,14 @@ input RecordRequestLogInput {
   outputTokens: Int
   latencyMs: Int
   statusCode: Int!
+  detail: String
+}
+
+input RequestLogFilter {
+  statusCode: Int
+  agentId: ID
+  model: String
+  requestId: String
 }
 
 type RateLimitPolicy {
@@ -41,7 +50,7 @@ input UpsertRateLimitPolicyInput {
 }
 
 extend type Query {
-  requestLogs(statusCode: Int, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
+  requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
   rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin])
 }
 

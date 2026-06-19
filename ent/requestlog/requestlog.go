@@ -30,6 +30,8 @@ const (
 	FieldLatencyMs = "latency_ms"
 	// FieldStatusCode holds the string denoting the status_code field in the database.
 	FieldStatusCode = "status_code"
+	// FieldDetail holds the string denoting the detail field in the database.
+	FieldDetail = "detail"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// Table holds the table name of the requestlog in the database.
@@ -47,6 +49,7 @@ var Columns = []string{
 	FieldOutputTokens,
 	FieldLatencyMs,
 	FieldStatusCode,
+	FieldDetail,
 	FieldCreatedAt,
 }
 
@@ -129,6 +132,11 @@ func ByLatencyMs(opts ...sql.OrderTermOption) OrderOption {
 // ByStatusCode orders the results by the status_code field.
 func ByStatusCode(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatusCode, opts...).ToFunc()
+}
+
+// ByDetail orders the results by the detail field.
+func ByDetail(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDetail, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

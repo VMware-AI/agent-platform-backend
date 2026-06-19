@@ -125,6 +125,20 @@ func (_c *RequestLogCreate) SetNillableStatusCode(v *int) *RequestLogCreate {
 	return _c
 }
 
+// SetDetail sets the "detail" field.
+func (_c *RequestLogCreate) SetDetail(v string) *RequestLogCreate {
+	_c.mutation.SetDetail(v)
+	return _c
+}
+
+// SetNillableDetail sets the "detail" field if the given value is not nil.
+func (_c *RequestLogCreate) SetNillableDetail(v *string) *RequestLogCreate {
+	if v != nil {
+		_c.SetDetail(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *RequestLogCreate) SetCreatedAt(v time.Time) *RequestLogCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -320,6 +334,10 @@ func (_c *RequestLogCreate) createSpec() (*RequestLog, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.StatusCode(); ok {
 		_spec.SetField(requestlog.FieldStatusCode, field.TypeInt, value)
 		_node.StatusCode = value
+	}
+	if value, ok := _c.mutation.Detail(); ok {
+		_spec.SetField(requestlog.FieldDetail, field.TypeString, value)
+		_node.Detail = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(requestlog.FieldCreatedAt, field.TypeTime, value)

@@ -186,6 +186,26 @@ func (_u *RequestLogUpdate) AddStatusCode(v int) *RequestLogUpdate {
 	return _u
 }
 
+// SetDetail sets the "detail" field.
+func (_u *RequestLogUpdate) SetDetail(v string) *RequestLogUpdate {
+	_u.mutation.SetDetail(v)
+	return _u
+}
+
+// SetNillableDetail sets the "detail" field if the given value is not nil.
+func (_u *RequestLogUpdate) SetNillableDetail(v *string) *RequestLogUpdate {
+	if v != nil {
+		_u.SetDetail(*v)
+	}
+	return _u
+}
+
+// ClearDetail clears the value of the "detail" field.
+func (_u *RequestLogUpdate) ClearDetail() *RequestLogUpdate {
+	_u.mutation.ClearDetail()
+	return _u
+}
+
 // Mutation returns the RequestLogMutation object of the builder.
 func (_u *RequestLogUpdate) Mutation() *RequestLogMutation {
 	return _u.mutation
@@ -299,6 +319,12 @@ func (_u *RequestLogUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if value, ok := _u.mutation.AddedStatusCode(); ok {
 		_spec.AddField(requestlog.FieldStatusCode, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.Detail(); ok {
+		_spec.SetField(requestlog.FieldDetail, field.TypeString, value)
+	}
+	if _u.mutation.DetailCleared() {
+		_spec.ClearField(requestlog.FieldDetail, field.TypeString)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -478,6 +504,26 @@ func (_u *RequestLogUpdateOne) AddStatusCode(v int) *RequestLogUpdateOne {
 	return _u
 }
 
+// SetDetail sets the "detail" field.
+func (_u *RequestLogUpdateOne) SetDetail(v string) *RequestLogUpdateOne {
+	_u.mutation.SetDetail(v)
+	return _u
+}
+
+// SetNillableDetail sets the "detail" field if the given value is not nil.
+func (_u *RequestLogUpdateOne) SetNillableDetail(v *string) *RequestLogUpdateOne {
+	if v != nil {
+		_u.SetDetail(*v)
+	}
+	return _u
+}
+
+// ClearDetail clears the value of the "detail" field.
+func (_u *RequestLogUpdateOne) ClearDetail() *RequestLogUpdateOne {
+	_u.mutation.ClearDetail()
+	return _u
+}
+
 // Mutation returns the RequestLogMutation object of the builder.
 func (_u *RequestLogUpdateOne) Mutation() *RequestLogMutation {
 	return _u.mutation
@@ -621,6 +667,12 @@ func (_u *RequestLogUpdateOne) sqlSave(ctx context.Context) (_node *RequestLog, 
 	}
 	if value, ok := _u.mutation.AddedStatusCode(); ok {
 		_spec.AddField(requestlog.FieldStatusCode, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.Detail(); ok {
+		_spec.SetField(requestlog.FieldDetail, field.TypeString, value)
+	}
+	if _u.mutation.DetailCleared() {
+		_spec.ClearField(requestlog.FieldDetail, field.TypeString)
 	}
 	_node = &RequestLog{config: _u.config}
 	_spec.Assign = _node.assignValues

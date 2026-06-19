@@ -95,6 +95,11 @@ func StatusCode(v int) predicate.RequestLog {
 	return predicate.RequestLog(sql.FieldEQ(FieldStatusCode, v))
 }
 
+// Detail applies equality check predicate on the "detail" field. It's identical to DetailEQ.
+func Detail(v string) predicate.RequestLog {
+	return predicate.RequestLog(sql.FieldEQ(FieldDetail, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.RequestLog {
 	return predicate.RequestLog(sql.FieldEQ(FieldCreatedAt, v))
@@ -498,6 +503,81 @@ func StatusCodeLT(v int) predicate.RequestLog {
 // StatusCodeLTE applies the LTE predicate on the "status_code" field.
 func StatusCodeLTE(v int) predicate.RequestLog {
 	return predicate.RequestLog(sql.FieldLTE(FieldStatusCode, v))
+}
+
+// DetailEQ applies the EQ predicate on the "detail" field.
+func DetailEQ(v string) predicate.RequestLog {
+	return predicate.RequestLog(sql.FieldEQ(FieldDetail, v))
+}
+
+// DetailNEQ applies the NEQ predicate on the "detail" field.
+func DetailNEQ(v string) predicate.RequestLog {
+	return predicate.RequestLog(sql.FieldNEQ(FieldDetail, v))
+}
+
+// DetailIn applies the In predicate on the "detail" field.
+func DetailIn(vs ...string) predicate.RequestLog {
+	return predicate.RequestLog(sql.FieldIn(FieldDetail, vs...))
+}
+
+// DetailNotIn applies the NotIn predicate on the "detail" field.
+func DetailNotIn(vs ...string) predicate.RequestLog {
+	return predicate.RequestLog(sql.FieldNotIn(FieldDetail, vs...))
+}
+
+// DetailGT applies the GT predicate on the "detail" field.
+func DetailGT(v string) predicate.RequestLog {
+	return predicate.RequestLog(sql.FieldGT(FieldDetail, v))
+}
+
+// DetailGTE applies the GTE predicate on the "detail" field.
+func DetailGTE(v string) predicate.RequestLog {
+	return predicate.RequestLog(sql.FieldGTE(FieldDetail, v))
+}
+
+// DetailLT applies the LT predicate on the "detail" field.
+func DetailLT(v string) predicate.RequestLog {
+	return predicate.RequestLog(sql.FieldLT(FieldDetail, v))
+}
+
+// DetailLTE applies the LTE predicate on the "detail" field.
+func DetailLTE(v string) predicate.RequestLog {
+	return predicate.RequestLog(sql.FieldLTE(FieldDetail, v))
+}
+
+// DetailContains applies the Contains predicate on the "detail" field.
+func DetailContains(v string) predicate.RequestLog {
+	return predicate.RequestLog(sql.FieldContains(FieldDetail, v))
+}
+
+// DetailHasPrefix applies the HasPrefix predicate on the "detail" field.
+func DetailHasPrefix(v string) predicate.RequestLog {
+	return predicate.RequestLog(sql.FieldHasPrefix(FieldDetail, v))
+}
+
+// DetailHasSuffix applies the HasSuffix predicate on the "detail" field.
+func DetailHasSuffix(v string) predicate.RequestLog {
+	return predicate.RequestLog(sql.FieldHasSuffix(FieldDetail, v))
+}
+
+// DetailIsNil applies the IsNil predicate on the "detail" field.
+func DetailIsNil() predicate.RequestLog {
+	return predicate.RequestLog(sql.FieldIsNull(FieldDetail))
+}
+
+// DetailNotNil applies the NotNil predicate on the "detail" field.
+func DetailNotNil() predicate.RequestLog {
+	return predicate.RequestLog(sql.FieldNotNull(FieldDetail))
+}
+
+// DetailEqualFold applies the EqualFold predicate on the "detail" field.
+func DetailEqualFold(v string) predicate.RequestLog {
+	return predicate.RequestLog(sql.FieldEqualFold(FieldDetail, v))
+}
+
+// DetailContainsFold applies the ContainsFold predicate on the "detail" field.
+func DetailContainsFold(v string) predicate.RequestLog {
+	return predicate.RequestLog(sql.FieldContainsFold(FieldDetail, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

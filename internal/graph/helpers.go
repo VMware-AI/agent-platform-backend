@@ -217,6 +217,10 @@ func toModelRequestLog(l *ent.RequestLog) *model.RequestLog {
 		mod := l.Model
 		m.Model = &mod
 	}
+	if l.Detail != "" {
+		d := l.Detail
+		m.Detail = &d
+	}
 	return m
 }
 

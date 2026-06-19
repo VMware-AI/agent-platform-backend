@@ -34,6 +34,8 @@ type RequestLog struct {
 	LatencyMs int `json:"latency_ms,omitempty"`
 	// StatusCode holds the value of the "status_code" field.
 	StatusCode int `json:"status_code,omitempty"`
+	// Detail holds the value of the "detail" field.
+	Detail string `json:"detail,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt    time.Time `json:"created_at,omitempty"`
 	selectValues sql.SelectValues
@@ -48,7 +50,7 @@ func (*RequestLog) scanValues(columns []string) ([]any, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case requestlog.FieldInputTokens, requestlog.FieldOutputTokens, requestlog.FieldLatencyMs, requestlog.FieldStatusCode:
 			values[i] = new(sql.NullInt64)
-		case requestlog.FieldRequestID, requestlog.FieldModel:
+		case requestlog.FieldRequestID, requestlog.FieldModel, requestlog.FieldDetail:
 			values[i] = new(sql.NullString)
 		case requestlog.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -125,6 +127,12 @@ func (_m *RequestLog) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.StatusCode = int(value.Int64)
 			}
+		case requestlog.FieldDetail:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field detail", values[i])
+			} else if value.Valid {
+				_m.Detail = value.String
+			}
 		case requestlog.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -194,6 +202,9 @@ func (_m *RequestLog) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("status_code=")
 	builder.WriteString(fmt.Sprintf("%v", _m.StatusCode))
+	builder.WriteString(", ")
+	builder.WriteString("detail=")
+	builder.WriteString(_m.Detail)
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

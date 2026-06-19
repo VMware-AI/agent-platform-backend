@@ -185,6 +185,7 @@ type RecordRequestLogInput struct {
 	OutputTokens *int    `json:"outputTokens,omitempty"`
 	LatencyMs    *int    `json:"latencyMs,omitempty"`
 	StatusCode   int     `json:"statusCode"`
+	Detail       *string `json:"detail,omitempty"`
 }
 
 type RecordTokenUsageInput struct {
@@ -219,7 +220,15 @@ type RequestLog struct {
 	OutputTokens int       `json:"outputTokens"`
 	LatencyMs    int       `json:"latencyMs"`
 	StatusCode   int       `json:"statusCode"`
+	Detail       *string   `json:"detail,omitempty"`
 	CreatedAt    time.Time `json:"createdAt"`
+}
+
+type RequestLogFilter struct {
+	StatusCode *int    `json:"statusCode,omitempty"`
+	AgentID    *string `json:"agentId,omitempty"`
+	Model      *string `json:"model,omitempty"`
+	RequestID  *string `json:"requestId,omitempty"`
 }
 
 type ResourcePool struct {

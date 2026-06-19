@@ -284,6 +284,7 @@ var (
 		{Name: "output_tokens", Type: field.TypeInt, Default: 0},
 		{Name: "latency_ms", Type: field.TypeInt, Default: 0},
 		{Name: "status_code", Type: field.TypeInt, Default: 200},
+		{Name: "detail", Type: field.TypeString, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 	}
 	// RequestLogsTable holds the schema information for the "request_logs" table.
@@ -305,7 +306,7 @@ var (
 			{
 				Name:    "requestlog_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{RequestLogsColumns[9]},
+				Columns: []*schema.Column{RequestLogsColumns[10]},
 			},
 		},
 	}

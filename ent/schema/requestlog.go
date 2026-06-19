@@ -26,6 +26,7 @@ func (RequestLog) Fields() []ent.Field {
 		field.Int("output_tokens").NonNegative().Default(0),
 		field.Int("latency_ms").NonNegative().Default(0),
 		field.Int("status_code").Default(200),
+		field.String("detail").Optional(), // request/response JSON detail (0619 第11页展开)
 		field.Time("created_at").Immutable().Default(time.Now),
 	}
 }

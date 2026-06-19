@@ -8905,6 +8905,7 @@ type RequestLogMutation struct {
 	addlatency_ms    *int
 	status_code      *int
 	addstatus_code   *int
+	detail           *string
 	created_at       *time.Time
 	clearedFields    map[string]struct{}
 	done             bool
@@ -9423,6 +9424,55 @@ func (m *RequestLogMutation) ResetStatusCode() {
 	m.addstatus_code = nil
 }
 
+// SetDetail sets the "detail" field.
+func (m *RequestLogMutation) SetDetail(s string) {
+	m.detail = &s
+}
+
+// Detail returns the value of the "detail" field in the mutation.
+func (m *RequestLogMutation) Detail() (r string, exists bool) {
+	v := m.detail
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDetail returns the old "detail" field's value of the RequestLog entity.
+// If the RequestLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestLogMutation) OldDetail(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDetail is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDetail requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDetail: %w", err)
+	}
+	return oldValue.Detail, nil
+}
+
+// ClearDetail clears the value of the "detail" field.
+func (m *RequestLogMutation) ClearDetail() {
+	m.detail = nil
+	m.clearedFields[requestlog.FieldDetail] = struct{}{}
+}
+
+// DetailCleared returns if the "detail" field was cleared in this mutation.
+func (m *RequestLogMutation) DetailCleared() bool {
+	_, ok := m.clearedFields[requestlog.FieldDetail]
+	return ok
+}
+
+// ResetDetail resets all changes to the "detail" field.
+func (m *RequestLogMutation) ResetDetail() {
+	m.detail = nil
+	delete(m.clearedFields, requestlog.FieldDetail)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *RequestLogMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -9493,7 +9543,7 @@ func (m *RequestLogMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RequestLogMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.request_id != nil {
 		fields = append(fields, requestlog.FieldRequestID)
 	}
@@ -9517,6 +9567,9 @@ func (m *RequestLogMutation) Fields() []string {
 	}
 	if m.status_code != nil {
 		fields = append(fields, requestlog.FieldStatusCode)
+	}
+	if m.detail != nil {
+		fields = append(fields, requestlog.FieldDetail)
 	}
 	if m.created_at != nil {
 		fields = append(fields, requestlog.FieldCreatedAt)
@@ -9545,6 +9598,8 @@ func (m *RequestLogMutation) Field(name string) (ent.Value, bool) {
 		return m.LatencyMs()
 	case requestlog.FieldStatusCode:
 		return m.StatusCode()
+	case requestlog.FieldDetail:
+		return m.Detail()
 	case requestlog.FieldCreatedAt:
 		return m.CreatedAt()
 	}
@@ -9572,6 +9627,8 @@ func (m *RequestLogMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldLatencyMs(ctx)
 	case requestlog.FieldStatusCode:
 		return m.OldStatusCode(ctx)
+	case requestlog.FieldDetail:
+		return m.OldDetail(ctx)
 	case requestlog.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	}
@@ -9638,6 +9695,13 @@ func (m *RequestLogMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetStatusCode(v)
+		return nil
+	case requestlog.FieldDetail:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDetail(v)
 		return nil
 	case requestlog.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -9736,6 +9800,9 @@ func (m *RequestLogMutation) ClearedFields() []string {
 	if m.FieldCleared(requestlog.FieldModel) {
 		fields = append(fields, requestlog.FieldModel)
 	}
+	if m.FieldCleared(requestlog.FieldDetail) {
+		fields = append(fields, requestlog.FieldDetail)
+	}
 	return fields
 }
 
@@ -9758,6 +9825,9 @@ func (m *RequestLogMutation) ClearField(name string) error {
 		return nil
 	case requestlog.FieldModel:
 		m.ClearModel()
+		return nil
+	case requestlog.FieldDetail:
+		m.ClearDetail()
 		return nil
 	}
 	return fmt.Errorf("unknown RequestLog nullable field %s", name)
@@ -9790,6 +9860,9 @@ func (m *RequestLogMutation) ResetField(name string) error {
 		return nil
 	case requestlog.FieldStatusCode:
 		m.ResetStatusCode()
+		return nil
+	case requestlog.FieldDetail:
+		m.ResetDetail()
 		return nil
 	case requestlog.FieldCreatedAt:
 		m.ResetCreatedAt()
