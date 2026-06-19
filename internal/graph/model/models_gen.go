@@ -99,13 +99,15 @@ type GatewayConnection struct {
 }
 
 type IssueVirtualKeyInput struct {
-	UserID    string   `json:"userId"`
-	TeamID    *string  `json:"teamId,omitempty"`
-	Models    []string `json:"models,omitempty"`
-	MaxBudget *float64 `json:"maxBudget,omitempty"`
-	RpmLimit  *int     `json:"rpmLimit,omitempty"`
-	TpmLimit  *int     `json:"tpmLimit,omitempty"`
-	Alias     *string  `json:"alias,omitempty"`
+	UserID            string   `json:"userId"`
+	AgentID           *string  `json:"agentId,omitempty"`
+	RateLimitPolicyID *string  `json:"rateLimitPolicyId,omitempty"`
+	TeamID            *string  `json:"teamId,omitempty"`
+	Models            []string `json:"models,omitempty"`
+	MaxBudget         *float64 `json:"maxBudget,omitempty"`
+	RpmLimit          *int     `json:"rpmLimit,omitempty"`
+	TpmLimit          *int     `json:"tpmLimit,omitempty"`
+	Alias             *string  `json:"alias,omitempty"`
 }
 
 type IssuedVirtualKey struct {
@@ -301,15 +303,17 @@ type UserConnection struct {
 }
 
 type VirtualKey struct {
-	ID        string           `json:"id"`
-	Alias     *string          `json:"alias,omitempty"`
-	UserID    string           `json:"userId"`
-	TeamID    *string          `json:"teamId,omitempty"`
-	Models    []string         `json:"models"`
-	MaxBudget *float64         `json:"maxBudget,omitempty"`
-	Status    VirtualKeyStatus `json:"status"`
-	ExpiresAt *time.Time       `json:"expiresAt,omitempty"`
-	CreatedAt time.Time        `json:"createdAt"`
+	ID                string           `json:"id"`
+	Alias             *string          `json:"alias,omitempty"`
+	UserID            string           `json:"userId"`
+	AgentID           *string          `json:"agentId,omitempty"`
+	RateLimitPolicyID *string          `json:"rateLimitPolicyId,omitempty"`
+	TeamID            *string          `json:"teamId,omitempty"`
+	Models            []string         `json:"models"`
+	MaxBudget         *float64         `json:"maxBudget,omitempty"`
+	Status            VirtualKeyStatus `json:"status"`
+	ExpiresAt         *time.Time       `json:"expiresAt,omitempty"`
+	CreatedAt         time.Time        `json:"createdAt"`
 }
 
 type AgentStatus string
@@ -840,18 +844,20 @@ func (e UpstreamProvider) MarshalJSON() ([]byte, error) {
 type VirtualKeyStatus string
 
 const (
-	VirtualKeyStatusActive  VirtualKeyStatus = "active"
-	VirtualKeyStatusRevoked VirtualKeyStatus = "revoked"
+	VirtualKeyStatusActive   VirtualKeyStatus = "active"
+	VirtualKeyStatusDisabled VirtualKeyStatus = "disabled"
+	VirtualKeyStatusRevoked  VirtualKeyStatus = "revoked"
 )
 
 var AllVirtualKeyStatus = []VirtualKeyStatus{
 	VirtualKeyStatusActive,
+	VirtualKeyStatusDisabled,
 	VirtualKeyStatusRevoked,
 }
 
 func (e VirtualKeyStatus) IsValid() bool {
 	switch e {
-	case VirtualKeyStatusActive, VirtualKeyStatusRevoked:
+	case VirtualKeyStatusActive, VirtualKeyStatusDisabled, VirtualKeyStatusRevoked:
 		return true
 	}
 	return false

@@ -80,6 +80,16 @@ func UserID(v uuid.UUID) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldEQ(FieldUserID, v))
 }
 
+// AgentID applies equality check predicate on the "agent_id" field. It's identical to AgentIDEQ.
+func AgentID(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldAgentID, v))
+}
+
+// RateLimitPolicyID applies equality check predicate on the "rate_limit_policy_id" field. It's identical to RateLimitPolicyIDEQ.
+func RateLimitPolicyID(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldRateLimitPolicyID, v))
+}
+
 // TeamID applies equality check predicate on the "team_id" field. It's identical to TeamIDEQ.
 func TeamID(v string) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldEQ(FieldTeamID, v))
@@ -353,6 +363,106 @@ func UserIDLT(v uuid.UUID) predicate.VirtualKey {
 // UserIDLTE applies the LTE predicate on the "user_id" field.
 func UserIDLTE(v uuid.UUID) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldLTE(FieldUserID, v))
+}
+
+// AgentIDEQ applies the EQ predicate on the "agent_id" field.
+func AgentIDEQ(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldAgentID, v))
+}
+
+// AgentIDNEQ applies the NEQ predicate on the "agent_id" field.
+func AgentIDNEQ(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldAgentID, v))
+}
+
+// AgentIDIn applies the In predicate on the "agent_id" field.
+func AgentIDIn(vs ...uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIn(FieldAgentID, vs...))
+}
+
+// AgentIDNotIn applies the NotIn predicate on the "agent_id" field.
+func AgentIDNotIn(vs ...uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotIn(FieldAgentID, vs...))
+}
+
+// AgentIDGT applies the GT predicate on the "agent_id" field.
+func AgentIDGT(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGT(FieldAgentID, v))
+}
+
+// AgentIDGTE applies the GTE predicate on the "agent_id" field.
+func AgentIDGTE(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGTE(FieldAgentID, v))
+}
+
+// AgentIDLT applies the LT predicate on the "agent_id" field.
+func AgentIDLT(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLT(FieldAgentID, v))
+}
+
+// AgentIDLTE applies the LTE predicate on the "agent_id" field.
+func AgentIDLTE(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLTE(FieldAgentID, v))
+}
+
+// AgentIDIsNil applies the IsNil predicate on the "agent_id" field.
+func AgentIDIsNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIsNull(FieldAgentID))
+}
+
+// AgentIDNotNil applies the NotNil predicate on the "agent_id" field.
+func AgentIDNotNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotNull(FieldAgentID))
+}
+
+// RateLimitPolicyIDEQ applies the EQ predicate on the "rate_limit_policy_id" field.
+func RateLimitPolicyIDEQ(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldRateLimitPolicyID, v))
+}
+
+// RateLimitPolicyIDNEQ applies the NEQ predicate on the "rate_limit_policy_id" field.
+func RateLimitPolicyIDNEQ(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldRateLimitPolicyID, v))
+}
+
+// RateLimitPolicyIDIn applies the In predicate on the "rate_limit_policy_id" field.
+func RateLimitPolicyIDIn(vs ...uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIn(FieldRateLimitPolicyID, vs...))
+}
+
+// RateLimitPolicyIDNotIn applies the NotIn predicate on the "rate_limit_policy_id" field.
+func RateLimitPolicyIDNotIn(vs ...uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotIn(FieldRateLimitPolicyID, vs...))
+}
+
+// RateLimitPolicyIDGT applies the GT predicate on the "rate_limit_policy_id" field.
+func RateLimitPolicyIDGT(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGT(FieldRateLimitPolicyID, v))
+}
+
+// RateLimitPolicyIDGTE applies the GTE predicate on the "rate_limit_policy_id" field.
+func RateLimitPolicyIDGTE(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGTE(FieldRateLimitPolicyID, v))
+}
+
+// RateLimitPolicyIDLT applies the LT predicate on the "rate_limit_policy_id" field.
+func RateLimitPolicyIDLT(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLT(FieldRateLimitPolicyID, v))
+}
+
+// RateLimitPolicyIDLTE applies the LTE predicate on the "rate_limit_policy_id" field.
+func RateLimitPolicyIDLTE(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLTE(FieldRateLimitPolicyID, v))
+}
+
+// RateLimitPolicyIDIsNil applies the IsNil predicate on the "rate_limit_policy_id" field.
+func RateLimitPolicyIDIsNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIsNull(FieldRateLimitPolicyID))
+}
+
+// RateLimitPolicyIDNotNil applies the NotNil predicate on the "rate_limit_policy_id" field.
+func RateLimitPolicyIDNotNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotNull(FieldRateLimitPolicyID))
 }
 
 // TeamIDEQ applies the EQ predicate on the "team_id" field.

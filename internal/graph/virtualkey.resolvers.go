@@ -37,6 +37,28 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 	if input.TeamID != nil {
 		req.TeamID = *input.TeamID
 	}
+
+	// Apply an associated rate-limit policy: its rpm/tpm become the key's
+	// request-time limits at the gateway (0619 第8页「应用至」, G-5 真生效).
+	var policyID *uuid.UUID
+	if input.RateLimitPolicyID != nil {
+		pid, err := uuid.Parse(*input.RateLimitPolicyID)
+		if err != nil {
+			return nil, gqlerror.Errorf("invalid rateLimitPolicyId")
+		}
+		pol, err := r.Ent.RateLimitPolicy.Get(ctx, pid)
+		if err != nil {
+			return nil, gqlerror.Errorf("rate-limit policy not found")
+		}
+		if pol.Rpm != nil {
+			req.RPMLimit = pol.Rpm
+		}
+		if pol.Tpm != nil {
+			req.TPMLimit = pol.Tpm
+		}
+		policyID = &pid
+	}
+
 	resp, err := r.Gateway.GenerateKey(ctx, req)
 	if err != nil {
 		r.audit(ctx, "key.issue", "virtual_key", input.UserID, false, actorID(auth.FromContext(ctx)))
@@ -55,6 +77,14 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 	}
 	if input.Alias != nil {
 		create.SetAlias(*input.Alias)
+	}
+	if input.AgentID != nil {
+		if aid, err := uuid.Parse(*input.AgentID); err == nil {
+			create.SetAgentID(aid)
+		}
+	}
+	if policyID != nil {
+		create.SetRateLimitPolicyID(*policyID)
 	}
 	vk, err := create.Save(ctx)
 	if err != nil {
@@ -87,6 +117,31 @@ func (r *mutationResolver) RevokeVirtualKey(ctx context.Context, id string) (boo
 	}
 	r.audit(ctx, "key.revoke", "virtual_key", id, true, actorID(auth.FromContext(ctx)))
 	return true, nil
+}
+
+// SetVirtualKeyEnabled toggles a key active/disabled (distinct from revoke).
+func (r *mutationResolver) SetVirtualKeyEnabled(ctx context.Context, id string, enabled bool) (*model.VirtualKey, error) {
+	kid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid id")
+	}
+	vk, err := r.Ent.VirtualKey.Get(ctx, kid)
+	if err != nil {
+		return nil, err
+	}
+	if vk.Status == virtualkey.StatusRevoked {
+		return nil, gqlerror.Errorf("key is revoked and cannot be re-enabled")
+	}
+	status := virtualkey.StatusDisabled
+	if enabled {
+		status = virtualkey.StatusActive
+	}
+	vk, err = r.Ent.VirtualKey.UpdateOne(vk).SetStatus(status).Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	r.audit(ctx, "key.set_enabled", "virtual_key", id, true, actorID(auth.FromContext(ctx)))
+	return toModelVirtualKey(vk), nil
 }
 
 // VirtualKeys lists keys, optionally filtered by user (secrets never returned).

@@ -15812,25 +15812,27 @@ func (m *UserMutation) ResetEdge(name string) error {
 // VirtualKeyMutation represents an operation that mutates the VirtualKey nodes in the graph.
 type VirtualKeyMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	created_at    *time.Time
-	updated_at    *time.Time
-	litellm_key   *string
-	alias         *string
-	user_id       *uuid.UUID
-	team_id       *string
-	models        *[]string
-	appendmodels  []string
-	max_budget    *float64
-	addmax_budget *float64
-	status        *virtualkey.Status
-	expires_at    *time.Time
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*VirtualKey, error)
-	predicates    []predicate.VirtualKey
+	op                   Op
+	typ                  string
+	id                   *uuid.UUID
+	created_at           *time.Time
+	updated_at           *time.Time
+	litellm_key          *string
+	alias                *string
+	user_id              *uuid.UUID
+	agent_id             *uuid.UUID
+	rate_limit_policy_id *uuid.UUID
+	team_id              *string
+	models               *[]string
+	appendmodels         []string
+	max_budget           *float64
+	addmax_budget        *float64
+	status               *virtualkey.Status
+	expires_at           *time.Time
+	clearedFields        map[string]struct{}
+	done                 bool
+	oldValue             func(context.Context) (*VirtualKey, error)
+	predicates           []predicate.VirtualKey
 }
 
 var _ ent.Mutation = (*VirtualKeyMutation)(nil)
@@ -16128,6 +16130,104 @@ func (m *VirtualKeyMutation) OldUserID(ctx context.Context) (v uuid.UUID, err er
 // ResetUserID resets all changes to the "user_id" field.
 func (m *VirtualKeyMutation) ResetUserID() {
 	m.user_id = nil
+}
+
+// SetAgentID sets the "agent_id" field.
+func (m *VirtualKeyMutation) SetAgentID(u uuid.UUID) {
+	m.agent_id = &u
+}
+
+// AgentID returns the value of the "agent_id" field in the mutation.
+func (m *VirtualKeyMutation) AgentID() (r uuid.UUID, exists bool) {
+	v := m.agent_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAgentID returns the old "agent_id" field's value of the VirtualKey entity.
+// If the VirtualKey object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VirtualKeyMutation) OldAgentID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAgentID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAgentID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAgentID: %w", err)
+	}
+	return oldValue.AgentID, nil
+}
+
+// ClearAgentID clears the value of the "agent_id" field.
+func (m *VirtualKeyMutation) ClearAgentID() {
+	m.agent_id = nil
+	m.clearedFields[virtualkey.FieldAgentID] = struct{}{}
+}
+
+// AgentIDCleared returns if the "agent_id" field was cleared in this mutation.
+func (m *VirtualKeyMutation) AgentIDCleared() bool {
+	_, ok := m.clearedFields[virtualkey.FieldAgentID]
+	return ok
+}
+
+// ResetAgentID resets all changes to the "agent_id" field.
+func (m *VirtualKeyMutation) ResetAgentID() {
+	m.agent_id = nil
+	delete(m.clearedFields, virtualkey.FieldAgentID)
+}
+
+// SetRateLimitPolicyID sets the "rate_limit_policy_id" field.
+func (m *VirtualKeyMutation) SetRateLimitPolicyID(u uuid.UUID) {
+	m.rate_limit_policy_id = &u
+}
+
+// RateLimitPolicyID returns the value of the "rate_limit_policy_id" field in the mutation.
+func (m *VirtualKeyMutation) RateLimitPolicyID() (r uuid.UUID, exists bool) {
+	v := m.rate_limit_policy_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRateLimitPolicyID returns the old "rate_limit_policy_id" field's value of the VirtualKey entity.
+// If the VirtualKey object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VirtualKeyMutation) OldRateLimitPolicyID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRateLimitPolicyID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRateLimitPolicyID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRateLimitPolicyID: %w", err)
+	}
+	return oldValue.RateLimitPolicyID, nil
+}
+
+// ClearRateLimitPolicyID clears the value of the "rate_limit_policy_id" field.
+func (m *VirtualKeyMutation) ClearRateLimitPolicyID() {
+	m.rate_limit_policy_id = nil
+	m.clearedFields[virtualkey.FieldRateLimitPolicyID] = struct{}{}
+}
+
+// RateLimitPolicyIDCleared returns if the "rate_limit_policy_id" field was cleared in this mutation.
+func (m *VirtualKeyMutation) RateLimitPolicyIDCleared() bool {
+	_, ok := m.clearedFields[virtualkey.FieldRateLimitPolicyID]
+	return ok
+}
+
+// ResetRateLimitPolicyID resets all changes to the "rate_limit_policy_id" field.
+func (m *VirtualKeyMutation) ResetRateLimitPolicyID() {
+	m.rate_limit_policy_id = nil
+	delete(m.clearedFields, virtualkey.FieldRateLimitPolicyID)
 }
 
 // SetTeamID sets the "team_id" field.
@@ -16433,7 +16533,7 @@ func (m *VirtualKeyMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *VirtualKeyMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 12)
 	if m.created_at != nil {
 		fields = append(fields, virtualkey.FieldCreatedAt)
 	}
@@ -16448,6 +16548,12 @@ func (m *VirtualKeyMutation) Fields() []string {
 	}
 	if m.user_id != nil {
 		fields = append(fields, virtualkey.FieldUserID)
+	}
+	if m.agent_id != nil {
+		fields = append(fields, virtualkey.FieldAgentID)
+	}
+	if m.rate_limit_policy_id != nil {
+		fields = append(fields, virtualkey.FieldRateLimitPolicyID)
 	}
 	if m.team_id != nil {
 		fields = append(fields, virtualkey.FieldTeamID)
@@ -16482,6 +16588,10 @@ func (m *VirtualKeyMutation) Field(name string) (ent.Value, bool) {
 		return m.Alias()
 	case virtualkey.FieldUserID:
 		return m.UserID()
+	case virtualkey.FieldAgentID:
+		return m.AgentID()
+	case virtualkey.FieldRateLimitPolicyID:
+		return m.RateLimitPolicyID()
 	case virtualkey.FieldTeamID:
 		return m.TeamID()
 	case virtualkey.FieldModels:
@@ -16511,6 +16621,10 @@ func (m *VirtualKeyMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldAlias(ctx)
 	case virtualkey.FieldUserID:
 		return m.OldUserID(ctx)
+	case virtualkey.FieldAgentID:
+		return m.OldAgentID(ctx)
+	case virtualkey.FieldRateLimitPolicyID:
+		return m.OldRateLimitPolicyID(ctx)
 	case virtualkey.FieldTeamID:
 		return m.OldTeamID(ctx)
 	case virtualkey.FieldModels:
@@ -16564,6 +16678,20 @@ func (m *VirtualKeyMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetUserID(v)
+		return nil
+	case virtualkey.FieldAgentID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAgentID(v)
+		return nil
+	case virtualkey.FieldRateLimitPolicyID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRateLimitPolicyID(v)
 		return nil
 	case virtualkey.FieldTeamID:
 		v, ok := value.(string)
@@ -16648,6 +16776,12 @@ func (m *VirtualKeyMutation) ClearedFields() []string {
 	if m.FieldCleared(virtualkey.FieldAlias) {
 		fields = append(fields, virtualkey.FieldAlias)
 	}
+	if m.FieldCleared(virtualkey.FieldAgentID) {
+		fields = append(fields, virtualkey.FieldAgentID)
+	}
+	if m.FieldCleared(virtualkey.FieldRateLimitPolicyID) {
+		fields = append(fields, virtualkey.FieldRateLimitPolicyID)
+	}
 	if m.FieldCleared(virtualkey.FieldTeamID) {
 		fields = append(fields, virtualkey.FieldTeamID)
 	}
@@ -16676,6 +16810,12 @@ func (m *VirtualKeyMutation) ClearField(name string) error {
 	switch name {
 	case virtualkey.FieldAlias:
 		m.ClearAlias()
+		return nil
+	case virtualkey.FieldAgentID:
+		m.ClearAgentID()
+		return nil
+	case virtualkey.FieldRateLimitPolicyID:
+		m.ClearRateLimitPolicyID()
 		return nil
 	case virtualkey.FieldTeamID:
 		m.ClearTeamID()
@@ -16711,6 +16851,12 @@ func (m *VirtualKeyMutation) ResetField(name string) error {
 		return nil
 	case virtualkey.FieldUserID:
 		m.ResetUserID()
+		return nil
+	case virtualkey.FieldAgentID:
+		m.ResetAgentID()
+		return nil
+	case virtualkey.FieldRateLimitPolicyID:
+		m.ResetRateLimitPolicyID()
 		return nil
 	case virtualkey.FieldTeamID:
 		m.ResetTeamID()

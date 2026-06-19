@@ -92,6 +92,14 @@ func toModelVirtualKey(k *ent.VirtualKey) *model.VirtualKey {
 		a := k.Alias
 		m.Alias = &a
 	}
+	if k.AgentID != nil {
+		a := k.AgentID.String()
+		m.AgentID = &a
+	}
+	if k.RateLimitPolicyID != nil {
+		p := k.RateLimitPolicyID.String()
+		m.RateLimitPolicyID = &p
+	}
 	if k.TeamID != "" {
 		tid := k.TeamID
 		m.TeamID = &tid

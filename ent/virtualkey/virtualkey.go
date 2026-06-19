@@ -25,6 +25,10 @@ const (
 	FieldAlias = "alias"
 	// FieldUserID holds the string denoting the user_id field in the database.
 	FieldUserID = "user_id"
+	// FieldAgentID holds the string denoting the agent_id field in the database.
+	FieldAgentID = "agent_id"
+	// FieldRateLimitPolicyID holds the string denoting the rate_limit_policy_id field in the database.
+	FieldRateLimitPolicyID = "rate_limit_policy_id"
 	// FieldTeamID holds the string denoting the team_id field in the database.
 	FieldTeamID = "team_id"
 	// FieldModels holds the string denoting the models field in the database.
@@ -47,6 +51,8 @@ var Columns = []string{
 	FieldLitellmKey,
 	FieldAlias,
 	FieldUserID,
+	FieldAgentID,
+	FieldRateLimitPolicyID,
 	FieldTeamID,
 	FieldModels,
 	FieldMaxBudget,
@@ -85,8 +91,9 @@ const DefaultStatus = StatusActive
 
 // Status values.
 const (
-	StatusActive  Status = "active"
-	StatusRevoked Status = "revoked"
+	StatusActive   Status = "active"
+	StatusDisabled Status = "disabled"
+	StatusRevoked  Status = "revoked"
 )
 
 func (s Status) String() string {
@@ -96,7 +103,7 @@ func (s Status) String() string {
 // StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
 func StatusValidator(s Status) error {
 	switch s {
-	case StatusActive, StatusRevoked:
+	case StatusActive, StatusDisabled, StatusRevoked:
 		return nil
 	default:
 		return fmt.Errorf("virtualkey: invalid enum value for status field: %q", s)
@@ -134,6 +141,16 @@ func ByAlias(opts ...sql.OrderTermOption) OrderOption {
 // ByUserID orders the results by the user_id field.
 func ByUserID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUserID, opts...).ToFunc()
+}
+
+// ByAgentID orders the results by the agent_id field.
+func ByAgentID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAgentID, opts...).ToFunc()
+}
+
+// ByRateLimitPolicyID orders the results by the rate_limit_policy_id field.
+func ByRateLimitPolicyID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRateLimitPolicyID, opts...).ToFunc()
 }
 
 // ByTeamID orders the results by the team_id field.

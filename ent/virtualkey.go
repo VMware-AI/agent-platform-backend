@@ -29,6 +29,10 @@ type VirtualKey struct {
 	Alias string `json:"alias,omitempty"`
 	// UserID holds the value of the "user_id" field.
 	UserID uuid.UUID `json:"user_id,omitempty"`
+	// AgentID holds the value of the "agent_id" field.
+	AgentID *uuid.UUID `json:"agent_id,omitempty"`
+	// RateLimitPolicyID holds the value of the "rate_limit_policy_id" field.
+	RateLimitPolicyID *uuid.UUID `json:"rate_limit_policy_id,omitempty"`
 	// TeamID holds the value of the "team_id" field.
 	TeamID string `json:"team_id,omitempty"`
 	// Models holds the value of the "models" field.
@@ -47,6 +51,8 @@ func (*VirtualKey) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case virtualkey.FieldAgentID, virtualkey.FieldRateLimitPolicyID:
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case virtualkey.FieldModels:
 			values[i] = new([]byte)
 		case virtualkey.FieldMaxBudget:
@@ -107,6 +113,20 @@ func (_m *VirtualKey) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field user_id", values[i])
 			} else if value != nil {
 				_m.UserID = *value
+			}
+		case virtualkey.FieldAgentID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field agent_id", values[i])
+			} else if value.Valid {
+				_m.AgentID = new(uuid.UUID)
+				*_m.AgentID = *value.S.(*uuid.UUID)
+			}
+		case virtualkey.FieldRateLimitPolicyID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field rate_limit_policy_id", values[i])
+			} else if value.Valid {
+				_m.RateLimitPolicyID = new(uuid.UUID)
+				*_m.RateLimitPolicyID = *value.S.(*uuid.UUID)
 			}
 		case virtualkey.FieldTeamID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -190,6 +210,16 @@ func (_m *VirtualKey) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("user_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.UserID))
+	builder.WriteString(", ")
+	if v := _m.AgentID; v != nil {
+		builder.WriteString("agent_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.RateLimitPolicyID; v != nil {
+		builder.WriteString("rate_limit_policy_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("team_id=")
 	builder.WriteString(_m.TeamID)

@@ -1,7 +1,8 @@
-# Per-user LiteLLM virtual keys. See LLD-04. The secret is returned ONCE on issue.
+# Per-user LiteLLM virtual keys. See LLD-04 / LLD-07 §8. Secret returned ONCE on issue.
 
 enum VirtualKeyStatus {
   active
+  disabled
   revoked
 }
 
@@ -9,6 +10,8 @@ type VirtualKey {
   id: ID!
   alias: String
   userId: ID!
+  agentId: ID
+  rateLimitPolicyId: ID
   teamId: String
   models: [String!]!
   maxBudget: Float
@@ -25,6 +28,9 @@ type IssuedVirtualKey {
 
 input IssueVirtualKeyInput {
   userId: ID!
+  agentId: ID
+  # Associated rate-limit policy; its rpm/tpm are applied to the litellm key.
+  rateLimitPolicyId: ID
   teamId: String
   models: [String!]
   maxBudget: Float
@@ -40,4 +46,6 @@ extend type Query {
 extend type Mutation {
   issueVirtualKey(input: IssueVirtualKeyInput!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
   revokeVirtualKey(id: ID!): Boolean! @hasPermission(perm: "key:manage")
+  # Toggle enabled/disabled (distinct from revoke, which is terminal).
+  setVirtualKeyEnabled(id: ID!, enabled: Boolean!): VirtualKey! @hasPermission(perm: "key:manage")
 }

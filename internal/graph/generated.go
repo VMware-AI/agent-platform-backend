@@ -156,6 +156,7 @@ type ComplexityRoot struct {
 		SetRateLimitPolicyEnabled func(childComplexity int, id string, enabled bool) int
 		SetRouterTier             func(childComplexity int, tier model.RouterTierLevel, modelAlias string) int
 		SetUserActive             func(childComplexity int, id string, active bool) int
+		SetVirtualKeyEnabled      func(childComplexity int, id string, enabled bool) int
 		TestGatewayConnection     func(childComplexity int, id string) int
 		UpdateUser                func(childComplexity int, id string, input model.UpdateUserInput) int
 		UpsertAgentTemplate       func(childComplexity int, input model.UpsertAgentTemplateInput) int
@@ -264,15 +265,17 @@ type ComplexityRoot struct {
 	}
 
 	VirtualKey struct {
-		Alias     func(childComplexity int) int
-		CreatedAt func(childComplexity int) int
-		ExpiresAt func(childComplexity int) int
-		ID        func(childComplexity int) int
-		MaxBudget func(childComplexity int) int
-		Models    func(childComplexity int) int
-		Status    func(childComplexity int) int
-		TeamID    func(childComplexity int) int
-		UserID    func(childComplexity int) int
+		AgentID           func(childComplexity int) int
+		Alias             func(childComplexity int) int
+		CreatedAt         func(childComplexity int) int
+		ExpiresAt         func(childComplexity int) int
+		ID                func(childComplexity int) int
+		MaxBudget         func(childComplexity int) int
+		Models            func(childComplexity int) int
+		RateLimitPolicyID func(childComplexity int) int
+		Status            func(childComplexity int) int
+		TeamID            func(childComplexity int) int
+		UserID            func(childComplexity int) int
 	}
 }
 
@@ -309,6 +312,7 @@ type MutationResolver interface {
 	DeleteResourcePool(ctx context.Context, id string) (bool, error)
 	IssueVirtualKey(ctx context.Context, input model.IssueVirtualKeyInput) (*model.IssuedVirtualKey, error)
 	RevokeVirtualKey(ctx context.Context, id string) (bool, error)
+	SetVirtualKeyEnabled(ctx context.Context, id string, enabled bool) (*model.VirtualKey, error)
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
@@ -944,6 +948,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.SetUserActive(childComplexity, args["id"].(string), args["active"].(bool)), true
+	case "Mutation.setVirtualKeyEnabled":
+		if e.ComplexityRoot.Mutation.SetVirtualKeyEnabled == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setVirtualKeyEnabled_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.SetVirtualKeyEnabled(childComplexity, args["id"].(string), args["enabled"].(bool)), true
 	case "Mutation.testGatewayConnection":
 		if e.ComplexityRoot.Mutation.TestGatewayConnection == nil {
 			break
@@ -1471,6 +1486,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.UserConnection.Total(childComplexity), true
 
+	case "VirtualKey.agentId":
+		if e.ComplexityRoot.VirtualKey.AgentID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VirtualKey.AgentID(childComplexity), true
 	case "VirtualKey.alias":
 		if e.ComplexityRoot.VirtualKey.Alias == nil {
 			break
@@ -1507,6 +1528,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.VirtualKey.Models(childComplexity), true
+	case "VirtualKey.rateLimitPolicyId":
+		if e.ComplexityRoot.VirtualKey.RateLimitPolicyID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VirtualKey.RateLimitPolicyID(childComplexity), true
 	case "VirtualKey.status":
 		if e.ComplexityRoot.VirtualKey.Status == nil {
 			break
@@ -2065,10 +2092,11 @@ type Mutation {
 directive @hasRole(any: [Role!]!) on FIELD_DEFINITION
 directive @hasPermission(perm: String!) on FIELD_DEFINITION
 `, BuiltIn: false},
-	{Name: "../../schema/virtualkey.graphql", Input: `# Per-user LiteLLM virtual keys. See LLD-04. The secret is returned ONCE on issue.
+	{Name: "../../schema/virtualkey.graphql", Input: `# Per-user LiteLLM virtual keys. See LLD-04 / LLD-07 §8. Secret returned ONCE on issue.
 
 enum VirtualKeyStatus {
   active
+  disabled
   revoked
 }
 
@@ -2076,6 +2104,8 @@ type VirtualKey {
   id: ID!
   alias: String
   userId: ID!
+  agentId: ID
+  rateLimitPolicyId: ID
   teamId: String
   models: [String!]!
   maxBudget: Float
@@ -2092,6 +2122,9 @@ type IssuedVirtualKey {
 
 input IssueVirtualKeyInput {
   userId: ID!
+  agentId: ID
+  # Associated rate-limit policy; its rpm/tpm are applied to the litellm key.
+  rateLimitPolicyId: ID
   teamId: String
   models: [String!]
   maxBudget: Float
@@ -2107,6 +2140,8 @@ extend type Query {
 extend type Mutation {
   issueVirtualKey(input: IssueVirtualKeyInput!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
   revokeVirtualKey(id: ID!): Boolean! @hasPermission(perm: "key:manage")
+  # Toggle enabled/disabled (distinct from revoke, which is terminal).
+  setVirtualKeyEnabled(id: ID!, enabled: Boolean!): VirtualKey! @hasPermission(perm: "key:manage")
 }
 `, BuiltIn: false},
 }
@@ -2472,6 +2507,10 @@ func (ec *executionContext) childFields_VirtualKey(ctx context.Context, field gr
 		return ec.fieldContext_VirtualKey_alias(ctx, field)
 	case "userId":
 		return ec.fieldContext_VirtualKey_userId(ctx, field)
+	case "agentId":
+		return ec.fieldContext_VirtualKey_agentId(ctx, field)
+	case "rateLimitPolicyId":
+		return ec.fieldContext_VirtualKey_rateLimitPolicyId(ctx, field)
 	case "teamId":
 		return ec.fieldContext_VirtualKey_teamId(ctx, field)
 	case "models":
@@ -2979,6 +3018,28 @@ func (ec *executionContext) field_Mutation_setUserActive_args(ctx context.Contex
 		return nil, err
 	}
 	args["active"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_setVirtualKeyEnabled_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "enabled",
+		func(ctx context.Context, v any) (bool, error) {
+			return ec.unmarshalNBoolean2bool(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["enabled"] = arg1
 	return args, nil
 }
 
@@ -6248,6 +6309,68 @@ func (ec *executionContext) fieldContext_Mutation_revokeVirtualKey(ctx context.C
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_setVirtualKeyEnabled(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_setVirtualKeyEnabled(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().SetVirtualKeyEnabled(ctx, fc.Args["id"].(string), fc.Args["enabled"].(bool))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				perm, err := ec.unmarshalNString2string(ctx, "key:manage")
+				if err != nil {
+					var zeroVal *model.VirtualKey
+					return zeroVal, err
+				}
+				if ec.Directives.HasPermission == nil {
+					var zeroVal *model.VirtualKey
+					return zeroVal, errors.New("directive hasPermission is not implemented")
+				}
+				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.VirtualKey) graphql.Marshaler {
+			return ec.marshalNVirtualKey2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKey(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_setVirtualKeyEnabled(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_VirtualKey(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_setVirtualKeyEnabled_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_me(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -8433,6 +8556,52 @@ func (ec *executionContext) fieldContext_VirtualKey_userId(_ context.Context, fi
 	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type ID does not have child fields"))
 }
 
+func (ec *executionContext) _VirtualKey_agentId(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VirtualKey_agentId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.AgentID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOID2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_VirtualKey_agentId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _VirtualKey_rateLimitPolicyId(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VirtualKey_rateLimitPolicyId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RateLimitPolicyID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOID2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_VirtualKey_rateLimitPolicyId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
 func (ec *executionContext) _VirtualKey_teamId(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -9808,7 +9977,7 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"userId", "teamId", "models", "maxBudget", "rpmLimit", "tpmLimit", "alias"}
+	fieldsInOrder := [...]string{"userId", "agentId", "rateLimitPolicyId", "teamId", "models", "maxBudget", "rpmLimit", "tpmLimit", "alias"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -9822,6 +9991,20 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 				return it, err
 			}
 			it.UserID = data
+		case "agentId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("agentId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.AgentID = data
+		case "rateLimitPolicyId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("rateLimitPolicyId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RateLimitPolicyID = data
 		case "teamId":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -11356,6 +11539,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "setVirtualKeyEnabled":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_setVirtualKeyEnabled(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -12382,6 +12572,16 @@ func (ec *executionContext) _VirtualKey(ctx context.Context, sel ast.SelectionSe
 		case "userId":
 			out.Values[i] = ec._VirtualKey_userId(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "agentId":
+			out.Values[i] = ec._VirtualKey_agentId(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "rateLimitPolicyId":
+			out.Values[i] = ec._VirtualKey_rateLimitPolicyId(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
 		case "teamId":

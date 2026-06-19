@@ -84,6 +84,46 @@ func (_u *VirtualKeyUpdate) SetNillableUserID(v *uuid.UUID) *VirtualKeyUpdate {
 	return _u
 }
 
+// SetAgentID sets the "agent_id" field.
+func (_u *VirtualKeyUpdate) SetAgentID(v uuid.UUID) *VirtualKeyUpdate {
+	_u.mutation.SetAgentID(v)
+	return _u
+}
+
+// SetNillableAgentID sets the "agent_id" field if the given value is not nil.
+func (_u *VirtualKeyUpdate) SetNillableAgentID(v *uuid.UUID) *VirtualKeyUpdate {
+	if v != nil {
+		_u.SetAgentID(*v)
+	}
+	return _u
+}
+
+// ClearAgentID clears the value of the "agent_id" field.
+func (_u *VirtualKeyUpdate) ClearAgentID() *VirtualKeyUpdate {
+	_u.mutation.ClearAgentID()
+	return _u
+}
+
+// SetRateLimitPolicyID sets the "rate_limit_policy_id" field.
+func (_u *VirtualKeyUpdate) SetRateLimitPolicyID(v uuid.UUID) *VirtualKeyUpdate {
+	_u.mutation.SetRateLimitPolicyID(v)
+	return _u
+}
+
+// SetNillableRateLimitPolicyID sets the "rate_limit_policy_id" field if the given value is not nil.
+func (_u *VirtualKeyUpdate) SetNillableRateLimitPolicyID(v *uuid.UUID) *VirtualKeyUpdate {
+	if v != nil {
+		_u.SetRateLimitPolicyID(*v)
+	}
+	return _u
+}
+
+// ClearRateLimitPolicyID clears the value of the "rate_limit_policy_id" field.
+func (_u *VirtualKeyUpdate) ClearRateLimitPolicyID() *VirtualKeyUpdate {
+	_u.mutation.ClearRateLimitPolicyID()
+	return _u
+}
+
 // SetTeamID sets the "team_id" field.
 func (_u *VirtualKeyUpdate) SetTeamID(v string) *VirtualKeyUpdate {
 	_u.mutation.SetTeamID(v)
@@ -266,6 +306,18 @@ func (_u *VirtualKeyUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.UserID(); ok {
 		_spec.SetField(virtualkey.FieldUserID, field.TypeUUID, value)
 	}
+	if value, ok := _u.mutation.AgentID(); ok {
+		_spec.SetField(virtualkey.FieldAgentID, field.TypeUUID, value)
+	}
+	if _u.mutation.AgentIDCleared() {
+		_spec.ClearField(virtualkey.FieldAgentID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.RateLimitPolicyID(); ok {
+		_spec.SetField(virtualkey.FieldRateLimitPolicyID, field.TypeUUID, value)
+	}
+	if _u.mutation.RateLimitPolicyIDCleared() {
+		_spec.ClearField(virtualkey.FieldRateLimitPolicyID, field.TypeUUID)
+	}
 	if value, ok := _u.mutation.TeamID(); ok {
 		_spec.SetField(virtualkey.FieldTeamID, field.TypeString, value)
 	}
@@ -372,6 +424,46 @@ func (_u *VirtualKeyUpdateOne) SetNillableUserID(v *uuid.UUID) *VirtualKeyUpdate
 	if v != nil {
 		_u.SetUserID(*v)
 	}
+	return _u
+}
+
+// SetAgentID sets the "agent_id" field.
+func (_u *VirtualKeyUpdateOne) SetAgentID(v uuid.UUID) *VirtualKeyUpdateOne {
+	_u.mutation.SetAgentID(v)
+	return _u
+}
+
+// SetNillableAgentID sets the "agent_id" field if the given value is not nil.
+func (_u *VirtualKeyUpdateOne) SetNillableAgentID(v *uuid.UUID) *VirtualKeyUpdateOne {
+	if v != nil {
+		_u.SetAgentID(*v)
+	}
+	return _u
+}
+
+// ClearAgentID clears the value of the "agent_id" field.
+func (_u *VirtualKeyUpdateOne) ClearAgentID() *VirtualKeyUpdateOne {
+	_u.mutation.ClearAgentID()
+	return _u
+}
+
+// SetRateLimitPolicyID sets the "rate_limit_policy_id" field.
+func (_u *VirtualKeyUpdateOne) SetRateLimitPolicyID(v uuid.UUID) *VirtualKeyUpdateOne {
+	_u.mutation.SetRateLimitPolicyID(v)
+	return _u
+}
+
+// SetNillableRateLimitPolicyID sets the "rate_limit_policy_id" field if the given value is not nil.
+func (_u *VirtualKeyUpdateOne) SetNillableRateLimitPolicyID(v *uuid.UUID) *VirtualKeyUpdateOne {
+	if v != nil {
+		_u.SetRateLimitPolicyID(*v)
+	}
+	return _u
+}
+
+// ClearRateLimitPolicyID clears the value of the "rate_limit_policy_id" field.
+func (_u *VirtualKeyUpdateOne) ClearRateLimitPolicyID() *VirtualKeyUpdateOne {
+	_u.mutation.ClearRateLimitPolicyID()
 	return _u
 }
 
@@ -586,6 +678,18 @@ func (_u *VirtualKeyUpdateOne) sqlSave(ctx context.Context) (_node *VirtualKey, 
 	}
 	if value, ok := _u.mutation.UserID(); ok {
 		_spec.SetField(virtualkey.FieldUserID, field.TypeUUID, value)
+	}
+	if value, ok := _u.mutation.AgentID(); ok {
+		_spec.SetField(virtualkey.FieldAgentID, field.TypeUUID, value)
+	}
+	if _u.mutation.AgentIDCleared() {
+		_spec.ClearField(virtualkey.FieldAgentID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.RateLimitPolicyID(); ok {
+		_spec.SetField(virtualkey.FieldRateLimitPolicyID, field.TypeUUID, value)
+	}
+	if _u.mutation.RateLimitPolicyIDCleared() {
+		_spec.ClearField(virtualkey.FieldRateLimitPolicyID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.TeamID(); ok {
 		_spec.SetField(virtualkey.FieldTeamID, field.TypeString, value)

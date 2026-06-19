@@ -23,10 +23,13 @@ func (VirtualKey) Fields() []ent.Field {
 		field.String("litellm_key").Sensitive().NotEmpty(),
 		field.String("alias").Optional(), // display label, e.g. "alice / coding"
 		field.UUID("user_id", uuid.UUID{}),
-		field.String("team_id").Optional(), // = department / litellm team
+		field.UUID("agent_id", uuid.UUID{}).Optional().Nillable(),             // 绑定的智能体ID (0619 第7页)
+		field.UUID("rate_limit_policy_id", uuid.UUID{}).Optional().Nillable(), // 关联策略
+		field.String("team_id").Optional(),                                    // = department / litellm team
 		field.Strings("models").Optional(),
 		field.Float("max_budget").Optional(),
-		field.Enum("status").Values("active", "revoked").Default("active"),
+		// active=启用, disabled=禁用(可切回), revoked=已撤销(终态)
+		field.Enum("status").Values("active", "disabled", "revoked").Default("active"),
 		field.Time("expires_at").Optional().Nillable(),
 	}
 }
