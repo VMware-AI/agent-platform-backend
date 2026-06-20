@@ -13,7 +13,7 @@ import (
 
 func newTestResolver(t *testing.T) (*Resolver, func()) {
 	t.Helper()
-	client, err := store.Open(context.Background(), "") // in-memory sqlite
+	client, err := store.Open(context.Background(), "", true) // in-memory sqlite
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}

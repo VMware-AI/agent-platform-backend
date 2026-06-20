@@ -10,7 +10,7 @@ import (
 
 func TestNewEntities_CRUD(t *testing.T) {
 	ctx := context.Background()
-	client, err := store.Open(ctx, "") // in-memory sqlite, migrated
+	client, err := store.Open(ctx, "", true) // in-memory sqlite, migrated
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestNewEntities_CRUD(t *testing.T) {
 
 func TestArtifact_UniqueNameVersion(t *testing.T) {
 	ctx := context.Background()
-	client, _ := store.Open(ctx, "")
+	client, _ := store.Open(ctx, "", true)
 	defer client.Close()
 	mk := func() error {
 		_, err := client.Artifact.Create().

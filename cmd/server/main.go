@@ -36,7 +36,7 @@ func main() {
 	}
 	ctx := context.Background()
 
-	client, err := store.Open(ctx, cfg.DatabaseURL)
+	client, err := store.Open(ctx, cfg.DatabaseURL, cfg.DBAutoMigrate)
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}

@@ -18,6 +18,10 @@ type Config struct {
 	// VCenterInsecure skips vCenter TLS verification. Default false (verify on);
 	// opt in only for air-gapped vCenters with a pinned/self-signed internal CA.
 	VCenterInsecure bool
+	// DBAutoMigrate runs ent auto-migration on startup. Default on for dev, OFF
+	// for prod — prod must use reviewed versioned migrations, never auto-alter
+	// the live schema on boot.
+	DBAutoMigrate bool
 }
 
 // Load reads config from the environment and validates it. Fails fast on a
@@ -41,6 +45,11 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("APP_ENV must be dev|prod, got %q", c.Env)
 	}
 	c.VCenterInsecure = getenv("VCENTER_INSECURE", "false") == "true"
+	defAutoMigrate := "false"
+	if c.Env == "dev" {
+		defAutoMigrate = "true"
+	}
+	c.DBAutoMigrate = getenv("DB_AUTO_MIGRATE", defAutoMigrate) == "true"
 	return c, nil
 }
 

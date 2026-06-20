@@ -38,6 +38,19 @@ docker compose -f deploy/docker-compose.yml up   # 本地 pg + redis
 make run
 ```
 
+## 数据库迁移
+
+dev/test（sqlite 内存）开机自动迁移。**生产 postgres 不自动改表**（`DB_AUTO_MIGRATE`
+默认 dev=on / prod=off），用 [Atlas](https://atlasgo.io) 版本化迁移显式应用：
+
+```bash
+ATLAS_DEV_URL=postgres://localhost:5432/atlas_dev make migrate-diff name=add_x  # 生成
+DATABASE_URL=postgres://… make migrate-apply                                    # 应用
+DATABASE_URL=postgres://… make migrate-status                                   # 状态/漂移
+```
+
+配置见 `atlas.hcl`，迁移文件在 `ent/migrate/migrations/`（baseline `init` 待用真 pg 生成）。
+
 ## 状态（M1，70 测试全绿）
 
 **0619 四大 nav 全覆盖**：

@@ -29,7 +29,7 @@ type e2eEnv struct {
 
 func setupE2E(t *testing.T) *e2eEnv {
 	t.Helper()
-	c, err := store.Open(context.Background(), "")
+	c, err := store.Open(context.Background(), "", true)
 	if err != nil {
 		t.Fatalf("store: %v", err)
 	}
