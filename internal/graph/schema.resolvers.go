@@ -248,11 +248,21 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 // Users is the resolver for the users field.
 func (r *queryResolver) Users(ctx context.Context, page *model.PageInput) (*model.UserConnection, error) {
 	limit, offset := pageBounds(page)
-	total, err := r.Ent.User.Query().Count(ctx)
+	// Tenant isolation (C1): a tenant-admin sees only their tenant's users; both
+	// the count and the page must use the same scope or totals/pages disagree.
+	base := r.Ent.User.Query()
+	if d := tenantScopeFor(ctx); d.apply {
+		if d.nilOnly {
+			base = base.Where(user.TenantIDIsNil())
+		} else {
+			base = base.Where(user.TenantID(d.tenant))
+		}
+	}
+	total, err := base.Clone().Count(ctx)
 	if err != nil {
 		return nil, err
 	}
-	us, err := r.Ent.User.Query().Order(orderNewest).Limit(limit).Offset(offset).All(ctx)
+	us, err := base.Clone().Order(orderNewest).Limit(limit).Offset(offset).All(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -45,6 +45,44 @@ func TestLogin_RateLimited(t *testing.T) {
 	}
 }
 
+// Tenant isolation (C1): the paginated users query confines a tenant-admin to
+// their own tenant (count AND page), while a platform admin sees everyone.
+func TestUsers_TenantScoped(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	mr := &mutationResolver{r}
+	qr := &queryResolver{r}
+	admin := adminCtx()
+
+	t1 := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+	t2 := "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+	if _, err := mr.CreateUser(admin, model.CreateUserInput{
+		Username: "u1", Email: "u1@x.io", Password: "U1Password123", Role: model.RoleUser, TenantID: &t1,
+	}); err != nil {
+		t.Fatalf("create u1: %v", err)
+	}
+	if _, err := mr.CreateUser(admin, model.CreateUserInput{
+		Username: "u2", Email: "u2@x.io", Password: "U2Password123", Role: model.RoleUser, TenantID: &t2,
+	}); err != nil {
+		t.Fatalf("create u2: %v", err)
+	}
+
+	// platform admin sees both
+	all, err := qr.Users(admin, nil)
+	if err != nil || all.Total != 2 || len(all.Items) != 2 {
+		t.Fatalf("admin should see all users: total=%d items=%d err=%v", all.Total, len(all.Items), err)
+	}
+
+	// tenant-admin of t1 sees only u1 (both total and items scoped)
+	scoped, err := qr.Users(tenantAdminCtx("11111111-1111-1111-1111-111111111111", t1), nil)
+	if err != nil {
+		t.Fatalf("t1 admin users: %v", err)
+	}
+	if scoped.Total != 1 || len(scoped.Items) != 1 || scoped.Items[0].Username != "u1" {
+		t.Fatalf("tenant-admin must see only their tenant's users: total=%d items=%+v", scoped.Total, scoped.Items)
+	}
+}
+
 func TestCreateUserAndLogin(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()

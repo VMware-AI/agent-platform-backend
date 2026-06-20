@@ -162,14 +162,13 @@ func (r *mutationResolver) RemoveMembership(ctx context.Context, userID string, 
 // Departments is the resolver for the departments field.
 func (r *queryResolver) Departments(ctx context.Context) ([]model.Department, error) {
 	q := r.Ent.Department.Query()
-	// Tenant isolation (C1): platform admins see every tenant's departments; a
-	// tenant-admin is confined to their own tenant. A tenant-admin with no tenant
-	// set is misconfigured — fail closed to the untenanted set rather than leak.
-	if cu := auth.FromContext(ctx); cu != nil && cu.Role == auth.RoleTenantAdmin {
-		if tid, err := uuid.Parse(cu.TenantID); err == nil {
-			q = q.Where(department.TenantID(tid))
-		} else {
+	// Tenant isolation (C1): platform admins see all; a tenant-admin is confined
+	// to their own tenant (shared decision in tenantScopeFor).
+	if d := tenantScopeFor(ctx); d.apply {
+		if d.nilOnly {
 			q = q.Where(department.TenantIDIsNil())
+		} else {
+			q = q.Where(department.TenantID(d.tenant))
 		}
 	}
 	ds, err := q.Order(orderNewest).All(ctx)
