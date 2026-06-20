@@ -162,11 +162,12 @@ func (r *mutationResolver) RegenerateVirtualKey(ctx context.Context, id string) 
 	// this persist fails the row keeps the now-rotated-away secret; the key
 	// reconciler flags the mismatch (old key absent at gateway). Use a detached
 	// context so a canceled request can't drop the just-rotated secret.
-	upd := r.Ent.VirtualKey.UpdateOne(vk).SetLitellmKey(resp.Key)
-	if resp.Token != "" {
-		upd.SetLitellmToken(resp.Token) // token rotates with the key
-	}
-	vk, err = upd.Save(context.WithoutCancel(ctx))
+	// Overwrite the token unconditionally: it rotates with the key, so the old
+	// token must never linger (a stale token would phantom-match an old listing).
+	vk, err = r.Ent.VirtualKey.UpdateOne(vk).
+		SetLitellmKey(resp.Key).
+		SetLitellmToken(resp.Token).
+		Save(context.WithoutCancel(ctx))
 	if err != nil {
 		r.audit(ctx, "key.regenerate", "virtual_key", id, false, actor)
 		return nil, fmt.Errorf("persist regenerated key failed: %w", err)

@@ -264,6 +264,36 @@ func TestReconcileKeys_MatchesByToken(t *testing.T) {
 	}
 }
 
+// Backward compat: a mixed fleet — a legacy row matched by raw key (token empty)
+// AND a new row matched by token — both reconcile cleanly when the gateway lists
+// the raw key for the legacy one and the token for the new one.
+func TestReconcileKeys_MixedFleetBackwardCompat(t *testing.T) {
+	db, cleanup := newDB(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	mkKey(t, db, "sk-legacy", virtualkey.StatusActive) // token empty → matched by raw key
+	if _, err := db.VirtualKey.Create().
+		SetLitellmKey("sk-new-raw").SetLitellmToken("tok-new").
+		SetUserID(uuid.New()).SetStatus(virtualkey.StatusActive).Save(ctx); err != nil {
+		t.Fatalf("create new key: %v", err)
+	}
+	// gateway lists the legacy raw key and the new hashed token
+	gw := &fakeKeyGateway{keys: []gateway.KeyInfo{{Key: "sk-legacy"}, {Key: "tok-new"}}}
+	r := &Reconciler{Ent: db, Gateway: gw, Prune: true}
+
+	rep, err := r.ReconcileKeys(ctx)
+	if err != nil {
+		t.Fatalf("ReconcileKeys: %v", err)
+	}
+	if len(rep.GatewayOrphans) != 0 || len(rep.StaleRows) != 0 {
+		t.Fatalf("mixed fleet should fully reconcile: orphans=%v stale=%v", rep.GatewayOrphans, rep.StaleRows)
+	}
+	if rep.Pruned != 0 || rep.Revoked != 0 {
+		t.Errorf("nothing should be deleted: pruned=%d revoked=%d", rep.Pruned, rep.Revoked)
+	}
+}
+
 func mkDept(t *testing.T, c *ent.Client, name, teamID string) *ent.Department {
 	t.Helper()
 	b := c.Department.Create().SetName(name)

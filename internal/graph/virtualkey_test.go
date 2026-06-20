@@ -66,7 +66,7 @@ type fakeGateway struct {
 
 func (f *fakeGateway) GenerateKey(_ context.Context, req gateway.GenerateKeyRequest) (*gateway.KeyResponse, error) {
 	f.generated = append(f.generated, req)
-	return &gateway.KeyResponse{Key: "sk-fake-123", UserID: req.UserID}, nil
+	return &gateway.KeyResponse{Key: "sk-fake-123", Token: "tok-fake-123", UserID: req.UserID}, nil
 }
 func (f *fakeGateway) UpdateKey(context.Context, gateway.UpdateKeyRequest) error { return nil }
 func (f *fakeGateway) DeleteKey(_ context.Context, key string) error {
@@ -75,7 +75,7 @@ func (f *fakeGateway) DeleteKey(_ context.Context, key string) error {
 }
 func (f *fakeGateway) RegenerateKey(_ context.Context, key string) (*gateway.KeyResponse, error) {
 	f.regenerated = append(f.regenerated, key)
-	return &gateway.KeyResponse{Key: "sk-regenerated"}, nil
+	return &gateway.KeyResponse{Key: "sk-regenerated", Token: "tok-regenerated"}, nil
 }
 func (f *fakeGateway) CreateTeam(context.Context, gateway.TeamRequest) (*gateway.TeamResponse, error) {
 	return &gateway.TeamResponse{}, nil
@@ -121,6 +121,11 @@ func TestIssueAndRevokeVirtualKey(t *testing.T) {
 	}
 	if len(fg.generated) != 1 || fg.generated[0].UserID != u.ID {
 		t.Fatalf("gateway not called correctly: %+v", fg.generated)
+	}
+	// The gateway's hashed token is persisted for reconciliation (root-cause fix).
+	ikid := uuid.MustParse(issued.VirtualKey.ID)
+	if tok := r.Ent.VirtualKey.GetX(ctx, ikid).LitellmToken; tok != "tok-fake-123" {
+		t.Fatalf("litellm_token not persisted at issue: %q", tok)
 	}
 
 	// list does not expose the secret (model has no secret field by construction)
@@ -180,10 +185,14 @@ func TestRegenerateVirtualKey(t *testing.T) {
 	if regen.VirtualKey.ID != issued.VirtualKey.ID {
 		t.Errorf("regenerate must reuse the same row: got %s want %s", regen.VirtualKey.ID, issued.VirtualKey.ID)
 	}
-	// The stored secret is now the rotated one.
+	// The stored secret AND its reconciliation token are now the rotated ones.
 	kid, _ := uuid.Parse(issued.VirtualKey.ID)
-	if got := r.Ent.VirtualKey.GetX(ctx, kid).LitellmKey; got != "sk-regenerated" {
-		t.Errorf("DB key not rotated: %q", got)
+	row := r.Ent.VirtualKey.GetX(ctx, kid)
+	if row.LitellmKey != "sk-regenerated" {
+		t.Errorf("DB key not rotated: %q", row.LitellmKey)
+	}
+	if row.LitellmToken != "tok-regenerated" {
+		t.Errorf("DB token not rotated: %q", row.LitellmToken)
 	}
 }
 

@@ -49,8 +49,11 @@ type Request struct {
 // the created VM name.
 type Result struct {
 	VirtualKey string // secret — surface once, never persist in plaintext
-	Userdata   string
-	VMName     string
+	// VirtualKeyToken is the gateway's hashed key identifier (what /key/list
+	// returns); persisted so reconciliation can match the row. Empty if omitted.
+	VirtualKeyToken string
+	Userdata        string
+	VMName          string
 }
 
 // Provision issues a key, clones the agent VM from the OVA template, injects
@@ -109,7 +112,7 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 		return nil, fmt.Errorf("deploy: power on: %w", err)
 	}
 
-	return &Result{VirtualKey: key.Key, Userdata: userdata, VMName: req.VMName}, nil
+	return &Result{VirtualKey: key.Key, VirtualKeyToken: key.Token, Userdata: userdata, VMName: req.VMName}, nil
 }
 
 // rollback tears down a half-provisioned agent: destroy the cloned VM and revoke

@@ -85,12 +85,15 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	// If either write below fails we must compensate (destroy VM + revoke key),
 	// else we leak an orphan VM and an ungoverned key — the same invariant
 	// deploy.Service.rollback enforces for failures *inside* Provision.
-	vk, err := r.Ent.VirtualKey.Create().
+	vkCreate := r.Ent.VirtualKey.Create().
 		SetLitellmKey(res.VirtualKey).
 		SetUserID(ag.OwnerUserID).
 		SetModels([]string{"smart"}).
-		SetAlias(ag.Name).
-		Save(ctx)
+		SetAlias(ag.Name)
+	if res.VirtualKeyToken != "" {
+		vkCreate.SetLitellmToken(res.VirtualKeyToken) // gateway reconciliation id
+	}
+	vk, err := vkCreate.Save(ctx)
 	if err != nil {
 		r.rollbackDeploy(ctx, conn, ag, input.VMName, res.VirtualKey)
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)

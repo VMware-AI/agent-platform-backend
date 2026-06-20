@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/vmware/govmomi/simulator"
 
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
@@ -101,6 +102,12 @@ func TestDeployAgent_EndToEnd(t *testing.T) {
 	keys, _ := (&queryResolver{r}).VirtualKeys(ctx, &owner.ID)
 	if len(keys) != 1 {
 		t.Fatalf("expected 1 virtual key, got %d", len(keys))
+	}
+	// the deploy path persists the gateway's reconciliation token (else the
+	// reconciler would later flag this live key's row as stale).
+	kid := uuid.MustParse(keys[0].ID)
+	if tok := r.Ent.VirtualKey.GetX(ctx, kid).LitellmToken; tok != "tok-fake-123" {
+		t.Fatalf("deploy did not persist litellm_token: %q", tok)
 	}
 }
 
