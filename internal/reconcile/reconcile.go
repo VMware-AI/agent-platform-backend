@@ -148,12 +148,20 @@ func (r *Reconciler) ReconcileTeams(ctx context.Context) (*TeamReport, error) {
 	}
 
 	if r.Prune {
-		for _, teamID := range rep.TeamOrphans {
-			if err := r.Gateway.DeleteTeam(ctx, teamID); err != nil {
-				log.Printf("reconcile: prune gateway team orphan failed: %v", err)
-				continue
+		// Same guard as keys: if EVERY gateway team is unmatched against a non-empty
+		// department set, it's a mismatch or a shared gateway full of foreign teams —
+		// refuse to delete them all.
+		if allUnmatched(len(rep.TeamOrphans), rep.GatewayTeams, rep.DBDepartments) {
+			log.Printf("reconcile: SKIP team prune — all %d gateway teams unmatched against %d departments; likely mismatch or foreign teams, refusing to prune",
+				rep.GatewayTeams, rep.DBDepartments)
+		} else {
+			for _, teamID := range rep.TeamOrphans {
+				if err := r.Gateway.DeleteTeam(ctx, teamID); err != nil {
+					log.Printf("reconcile: prune gateway team orphan failed: %v", err)
+					continue
+				}
+				rep.Pruned++
 			}
-			rep.Pruned++
 		}
 	}
 
@@ -163,14 +171,37 @@ func (r *Reconciler) ReconcileTeams(ctx context.Context) (*TeamReport, error) {
 	return rep, nil
 }
 
-// heal deletes gateway orphans and revokes stale rows, counting successes.
+// allUnmatched reports the catastrophic signature where EVERY gateway item is
+// unmatched against a non-empty DB side. That almost always means an identifier
+// mismatch (e.g. gateway lists hashed tokens, DB stores raw keys) or a
+// partial/garbled listing — NOT that every item is genuinely orphaned. Pruning on
+// it would delete everything, so callers refuse and report instead.
+func allUnmatched(orphans, gatewayTotal, dbTotal int) bool {
+	return gatewayTotal > 0 && orphans == gatewayTotal && dbTotal > 0
+}
+
+// heal deletes gateway orphans and revokes stale rows, counting successes. Two
+// safety guards prevent mass destruction from a bad diff: (1) refuse entirely
+// when every gateway key is unmatched (identifier mismatch); (2) never revoke
+// stale rows when the gateway returned no keys at all (a failed/empty listing
+// must not nuke every governance row).
 func (r *Reconciler) heal(ctx context.Context, rep *Report) {
+	if allUnmatched(len(rep.GatewayOrphans), rep.GatewayKeys, rep.DBKeys) {
+		log.Printf("reconcile: SKIP key heal — all %d gateway keys unmatched against %d DB rows; likely identifier mismatch or partial list, refusing to prune/revoke",
+			rep.GatewayKeys, rep.DBKeys)
+		return
+	}
 	for _, key := range rep.GatewayOrphans {
 		if err := r.Gateway.DeleteKey(ctx, key); err != nil {
 			log.Printf("reconcile: prune gateway orphan failed: %v", err)
 			continue
 		}
 		rep.Pruned++
+	}
+	if rep.GatewayKeys == 0 && len(rep.StaleRows) > 0 {
+		log.Printf("reconcile: SKIP revoking %d stale rows — gateway returned no keys (possible failed/empty list)",
+			len(rep.StaleRows))
+		return
 	}
 	for _, id := range rep.StaleRows {
 		kid, err := uuid.Parse(id)

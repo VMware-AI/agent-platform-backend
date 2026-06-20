@@ -156,6 +156,79 @@ func TestReconcileKeys_ListError(t *testing.T) {
 	}
 }
 
+// Guard: when EVERY gateway key is unmatched against a non-empty DB (the
+// identifier-mismatch signature), Prune must refuse — deleting all keys + revoking
+// all rows would be catastrophic.
+func TestReconcileKeys_Prune_RefusesOnTotalMismatch(t *testing.T) {
+	db, cleanup := newDB(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	active := mkKey(t, db, "sk-A", virtualkey.StatusActive)
+	// gateway lists hashed tokens that match NO DB row (raw-key vs hash mismatch)
+	gw := &fakeKeyGateway{keys: []gateway.KeyInfo{{Key: "hash1"}, {Key: "hash2"}}}
+	r := &Reconciler{Ent: db, Gateway: gw, Prune: true}
+
+	rep, err := r.ReconcileKeys(ctx)
+	if err != nil {
+		t.Fatalf("ReconcileKeys: %v", err)
+	}
+	if rep.Pruned != 0 || len(gw.deleted) != 0 {
+		t.Errorf("must refuse to prune on total mismatch: pruned=%d deleted=%v", rep.Pruned, gw.deleted)
+	}
+	if rep.Revoked != 0 {
+		t.Errorf("must refuse to revoke on total mismatch: revoked=%d", rep.Revoked)
+	}
+	if got := db.VirtualKey.GetX(ctx, active.ID); got.Status != virtualkey.StatusActive {
+		t.Errorf("active key wrongly revoked: %s", got.Status)
+	}
+}
+
+// Guard: an empty gateway listing (possibly a failed/partial call) must not
+// mass-revoke every governance row.
+func TestReconcileKeys_Prune_RefusesRevokeOnEmptyGateway(t *testing.T) {
+	db, cleanup := newDB(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	active := mkKey(t, db, "sk-A", virtualkey.StatusActive)
+	gw := &fakeKeyGateway{keys: []gateway.KeyInfo{}} // empty / failed-looking
+	r := &Reconciler{Ent: db, Gateway: gw, Prune: true}
+
+	rep, err := r.ReconcileKeys(ctx)
+	if err != nil {
+		t.Fatalf("ReconcileKeys: %v", err)
+	}
+	if rep.Revoked != 0 {
+		t.Errorf("must not revoke on empty gateway list: revoked=%d", rep.Revoked)
+	}
+	if got := db.VirtualKey.GetX(ctx, active.ID); got.Status != virtualkey.StatusActive {
+		t.Errorf("active key wrongly revoked on empty list: %s", got.Status)
+	}
+}
+
+// Guard: when every gateway team is unmatched (mismatch / foreign teams on a
+// shared gateway), team Prune must refuse.
+func TestReconcileTeams_Prune_RefusesOnTotalMismatch(t *testing.T) {
+	db, cleanup := newDB(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	mkDept(t, db, "research", "t-A")
+	mkDept(t, db, "sales", "t-B")
+	// gateway has only foreign teams, none backed by a department
+	gw := &fakeKeyGateway{teams: []gateway.TeamInfo{{TeamID: "foreign-1"}, {TeamID: "foreign-2"}}}
+	r := &Reconciler{Ent: db, Gateway: gw, Prune: true}
+
+	rep, err := r.ReconcileTeams(ctx)
+	if err != nil {
+		t.Fatalf("ReconcileTeams: %v", err)
+	}
+	if rep.Pruned != 0 || len(gw.deletedTeams) != 0 {
+		t.Errorf("must refuse to prune foreign/mismatched teams: pruned=%d deleted=%v", rep.Pruned, gw.deletedTeams)
+	}
+}
+
 func mkDept(t *testing.T, c *ent.Client, name, teamID string) *ent.Department {
 	t.Helper()
 	b := c.Department.Create().SetName(name)
