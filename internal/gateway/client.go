@@ -34,9 +34,9 @@ type Client interface {
 }
 
 // KeyInfo identifies a key as the gateway reports it (GET /key/list). Key is the
-// comparable identifier: LiteLLM lists the hashed token, so for reconciliation to
-// match the platform's stored litellm_key the same identifier must be persisted at
-// issue time (real-machine follow-up; matching is reported, not enforced, today).
+// comparable identifier: LiteLLM lists the hashed token, which is persisted at
+// issue time as VirtualKey.litellm_token, so reconciliation matches by it (the raw
+// litellm_key, never returned by /key/list, is matched too for legacy rows).
 type KeyInfo struct {
 	Key    string
 	UserID string
@@ -65,7 +65,11 @@ type GenerateKeyRequest struct {
 
 // KeyResponse is the result of generating/regenerating a key.
 type KeyResponse struct {
-	Key       string   `json:"key"`
+	Key string `json:"key"` // raw secret (sk-...), surfaced once
+	// Token is LiteLLM's hashed key identifier — the value GET /key/list reports.
+	// Persisted so reconciliation can match by it instead of the raw key (which
+	// /key/list never returns). Empty if the gateway version omits it.
+	Token     string   `json:"token"`
 	Expires   string   `json:"expires"`
 	UserID    string   `json:"user_id"`
 	TeamID    string   `json:"team_id"`

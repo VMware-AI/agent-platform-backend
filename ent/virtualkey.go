@@ -25,6 +25,8 @@ type VirtualKey struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// LitellmKey holds the value of the "litellm_key" field.
 	LitellmKey string `json:"-"`
+	// LitellmToken holds the value of the "litellm_token" field.
+	LitellmToken string `json:"litellm_token,omitempty"`
 	// Alias holds the value of the "alias" field.
 	Alias string `json:"alias,omitempty"`
 	// UserID holds the value of the "user_id" field.
@@ -57,7 +59,7 @@ func (*VirtualKey) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case virtualkey.FieldMaxBudget:
 			values[i] = new(sql.NullFloat64)
-		case virtualkey.FieldLitellmKey, virtualkey.FieldAlias, virtualkey.FieldTeamID, virtualkey.FieldStatus:
+		case virtualkey.FieldLitellmKey, virtualkey.FieldLitellmToken, virtualkey.FieldAlias, virtualkey.FieldTeamID, virtualkey.FieldStatus:
 			values[i] = new(sql.NullString)
 		case virtualkey.FieldCreatedAt, virtualkey.FieldUpdatedAt, virtualkey.FieldExpiresAt:
 			values[i] = new(sql.NullTime)
@@ -101,6 +103,12 @@ func (_m *VirtualKey) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field litellm_key", values[i])
 			} else if value.Valid {
 				_m.LitellmKey = value.String
+			}
+		case virtualkey.FieldLitellmToken:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field litellm_token", values[i])
+			} else if value.Valid {
+				_m.LitellmToken = value.String
 			}
 		case virtualkey.FieldAlias:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -204,6 +212,9 @@ func (_m *VirtualKey) String() string {
 	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("litellm_key=<sensitive>")
+	builder.WriteString(", ")
+	builder.WriteString("litellm_token=")
+	builder.WriteString(_m.LitellmToken)
 	builder.WriteString(", ")
 	builder.WriteString("alias=")
 	builder.WriteString(_m.Alias)

@@ -21,6 +21,8 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// FieldLitellmKey holds the string denoting the litellm_key field in the database.
 	FieldLitellmKey = "litellm_key"
+	// FieldLitellmToken holds the string denoting the litellm_token field in the database.
+	FieldLitellmToken = "litellm_token"
 	// FieldAlias holds the string denoting the alias field in the database.
 	FieldAlias = "alias"
 	// FieldUserID holds the string denoting the user_id field in the database.
@@ -49,6 +51,7 @@ var Columns = []string{
 	FieldCreatedAt,
 	FieldUpdatedAt,
 	FieldLitellmKey,
+	FieldLitellmToken,
 	FieldAlias,
 	FieldUserID,
 	FieldAgentID,
@@ -131,6 +134,11 @@ func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByLitellmKey orders the results by the litellm_key field.
 func ByLitellmKey(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLitellmKey, opts...).ToFunc()
+}
+
+// ByLitellmToken orders the results by the litellm_token field.
+func ByLitellmToken(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLitellmToken, opts...).ToFunc()
 }
 
 // ByAlias orders the results by the alias field.

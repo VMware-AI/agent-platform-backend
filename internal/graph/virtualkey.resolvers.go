@@ -70,6 +70,9 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		SetLitellmKey(resp.Key).
 		SetUserID(userID).
 		SetModels(input.Models)
+	if resp.Token != "" {
+		create.SetLitellmToken(resp.Token) // gateway's reconciliation identifier
+	}
 	if input.TeamID != nil {
 		create.SetTeamID(*input.TeamID)
 	}
@@ -159,7 +162,11 @@ func (r *mutationResolver) RegenerateVirtualKey(ctx context.Context, id string) 
 	// this persist fails the row keeps the now-rotated-away secret; the key
 	// reconciler flags the mismatch (old key absent at gateway). Use a detached
 	// context so a canceled request can't drop the just-rotated secret.
-	vk, err = r.Ent.VirtualKey.UpdateOne(vk).SetLitellmKey(resp.Key).Save(context.WithoutCancel(ctx))
+	upd := r.Ent.VirtualKey.UpdateOne(vk).SetLitellmKey(resp.Key)
+	if resp.Token != "" {
+		upd.SetLitellmToken(resp.Token) // token rotates with the key
+	}
+	vk, err = upd.Save(context.WithoutCancel(ctx))
 	if err != nil {
 		r.audit(ctx, "key.regenerate", "virtual_key", id, false, actor)
 		return nil, fmt.Errorf("persist regenerated key failed: %w", err)

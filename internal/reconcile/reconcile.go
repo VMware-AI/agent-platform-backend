@@ -64,9 +64,16 @@ func (r *Reconciler) ReconcileKeys(ctx context.Context) (*Report, error) {
 		return nil, fmt.Errorf("list governance rows: %w", err)
 	}
 
-	dbKeys := make(map[string]struct{}, len(rows))
+	// A row is identified at the gateway by EITHER its raw key or its hashed token
+	// (whichever LiteLLM's /key/list returns). Index both so reconciliation works
+	// regardless of which identifier the gateway reports — and so rows persisted
+	// before litellm_token existed still match by their raw key.
+	dbKeys := make(map[string]struct{}, len(rows)*2)
 	for _, vk := range rows {
 		dbKeys[vk.LitellmKey] = struct{}{}
+		if vk.LitellmToken != "" {
+			dbKeys[vk.LitellmToken] = struct{}{}
+		}
 	}
 	gwKeySet := make(map[string]struct{}, len(gwKeys))
 
@@ -81,7 +88,11 @@ func (r *Reconciler) ReconcileKeys(ctx context.Context) (*Report, error) {
 		if vk.Status == virtualkey.StatusRevoked {
 			continue // already terminal — its key is expected to be gone
 		}
-		if _, present := gwKeySet[vk.LitellmKey]; !present {
+		// Present if the gateway lists either identifier. An empty token never
+		// matches (the gateway set has no empty entries), so it is harmless.
+		_, byKey := gwKeySet[vk.LitellmKey]
+		_, byToken := gwKeySet[vk.LitellmToken]
+		if !byKey && !byToken {
 			rep.StaleRows = append(rep.StaleRows, vk.ID.String())
 		}
 	}

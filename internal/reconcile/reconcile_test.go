@@ -229,6 +229,41 @@ func TestReconcileTeams_Prune_RefusesOnTotalMismatch(t *testing.T) {
 	}
 }
 
+// Root-cause fix: a row's gateway identity is its hashed token. When /key/list
+// reports that token (not the raw key), reconciliation must match by it — no false
+// orphan, no false stale.
+func TestReconcileKeys_MatchesByToken(t *testing.T) {
+	db, cleanup := newDB(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	_, err := db.VirtualKey.Create().
+		SetLitellmKey("sk-raw-secret"). // raw key, never returned by /key/list
+		SetLitellmToken("hash-abc").    // hashed token, what /key/list returns
+		SetUserID(uuid.New()).
+		SetStatus(virtualkey.StatusActive).
+		Save(ctx)
+	if err != nil {
+		t.Fatalf("create key: %v", err)
+	}
+	gw := &fakeKeyGateway{keys: []gateway.KeyInfo{{Key: "hash-abc"}}}
+	r := &Reconciler{Ent: db, Gateway: gw, Prune: true}
+
+	rep, err := r.ReconcileKeys(ctx)
+	if err != nil {
+		t.Fatalf("ReconcileKeys: %v", err)
+	}
+	if len(rep.GatewayOrphans) != 0 {
+		t.Errorf("token-matched gateway key wrongly flagged orphan: %v", rep.GatewayOrphans)
+	}
+	if len(rep.StaleRows) != 0 {
+		t.Errorf("token-matched row wrongly flagged stale: %v", rep.StaleRows)
+	}
+	if rep.Pruned != 0 || rep.Revoked != 0 {
+		t.Errorf("nothing should be pruned/revoked: pruned=%d revoked=%d", rep.Pruned, rep.Revoked)
+	}
+}
+
 func mkDept(t *testing.T, c *ent.Client, name, teamID string) *ent.Department {
 	t.Helper()
 	b := c.Department.Create().SetName(name)

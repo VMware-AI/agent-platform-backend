@@ -70,6 +70,11 @@ func LitellmKey(v string) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldEQ(FieldLitellmKey, v))
 }
 
+// LitellmToken applies equality check predicate on the "litellm_token" field. It's identical to LitellmTokenEQ.
+func LitellmToken(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldLitellmToken, v))
+}
+
 // Alias applies equality check predicate on the "alias" field. It's identical to AliasEQ.
 func Alias(v string) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldEQ(FieldAlias, v))
@@ -248,6 +253,81 @@ func LitellmKeyEqualFold(v string) predicate.VirtualKey {
 // LitellmKeyContainsFold applies the ContainsFold predicate on the "litellm_key" field.
 func LitellmKeyContainsFold(v string) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldContainsFold(FieldLitellmKey, v))
+}
+
+// LitellmTokenEQ applies the EQ predicate on the "litellm_token" field.
+func LitellmTokenEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldLitellmToken, v))
+}
+
+// LitellmTokenNEQ applies the NEQ predicate on the "litellm_token" field.
+func LitellmTokenNEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldLitellmToken, v))
+}
+
+// LitellmTokenIn applies the In predicate on the "litellm_token" field.
+func LitellmTokenIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIn(FieldLitellmToken, vs...))
+}
+
+// LitellmTokenNotIn applies the NotIn predicate on the "litellm_token" field.
+func LitellmTokenNotIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotIn(FieldLitellmToken, vs...))
+}
+
+// LitellmTokenGT applies the GT predicate on the "litellm_token" field.
+func LitellmTokenGT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGT(FieldLitellmToken, v))
+}
+
+// LitellmTokenGTE applies the GTE predicate on the "litellm_token" field.
+func LitellmTokenGTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGTE(FieldLitellmToken, v))
+}
+
+// LitellmTokenLT applies the LT predicate on the "litellm_token" field.
+func LitellmTokenLT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLT(FieldLitellmToken, v))
+}
+
+// LitellmTokenLTE applies the LTE predicate on the "litellm_token" field.
+func LitellmTokenLTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLTE(FieldLitellmToken, v))
+}
+
+// LitellmTokenContains applies the Contains predicate on the "litellm_token" field.
+func LitellmTokenContains(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContains(FieldLitellmToken, v))
+}
+
+// LitellmTokenHasPrefix applies the HasPrefix predicate on the "litellm_token" field.
+func LitellmTokenHasPrefix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasPrefix(FieldLitellmToken, v))
+}
+
+// LitellmTokenHasSuffix applies the HasSuffix predicate on the "litellm_token" field.
+func LitellmTokenHasSuffix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasSuffix(FieldLitellmToken, v))
+}
+
+// LitellmTokenIsNil applies the IsNil predicate on the "litellm_token" field.
+func LitellmTokenIsNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIsNull(FieldLitellmToken))
+}
+
+// LitellmTokenNotNil applies the NotNil predicate on the "litellm_token" field.
+func LitellmTokenNotNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotNull(FieldLitellmToken))
+}
+
+// LitellmTokenEqualFold applies the EqualFold predicate on the "litellm_token" field.
+func LitellmTokenEqualFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEqualFold(FieldLitellmToken, v))
+}
+
+// LitellmTokenContainsFold applies the ContainsFold predicate on the "litellm_token" field.
+func LitellmTokenContainsFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContainsFold(FieldLitellmToken, v))
 }
 
 // AliasEQ applies the EQ predicate on the "alias" field.

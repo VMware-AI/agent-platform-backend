@@ -55,6 +55,20 @@ func (_c *VirtualKeyCreate) SetLitellmKey(v string) *VirtualKeyCreate {
 	return _c
 }
 
+// SetLitellmToken sets the "litellm_token" field.
+func (_c *VirtualKeyCreate) SetLitellmToken(v string) *VirtualKeyCreate {
+	_c.mutation.SetLitellmToken(v)
+	return _c
+}
+
+// SetNillableLitellmToken sets the "litellm_token" field if the given value is not nil.
+func (_c *VirtualKeyCreate) SetNillableLitellmToken(v *string) *VirtualKeyCreate {
+	if v != nil {
+		_c.SetLitellmToken(*v)
+	}
+	return _c
+}
+
 // SetAlias sets the "alias" field.
 func (_c *VirtualKeyCreate) SetAlias(v string) *VirtualKeyCreate {
 	_c.mutation.SetAlias(v)
@@ -305,6 +319,10 @@ func (_c *VirtualKeyCreate) createSpec() (*VirtualKey, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.LitellmKey(); ok {
 		_spec.SetField(virtualkey.FieldLitellmKey, field.TypeString, value)
 		_node.LitellmKey = value
+	}
+	if value, ok := _c.mutation.LitellmToken(); ok {
+		_spec.SetField(virtualkey.FieldLitellmToken, field.TypeString, value)
+		_node.LitellmToken = value
 	}
 	if value, ok := _c.mutation.Alias(); ok {
 		_spec.SetField(virtualkey.FieldAlias, field.TypeString, value)

@@ -21,6 +21,9 @@ func (VirtualKey) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		// The LiteLLM virtual key secret — kept out of all output.
 		field.String("litellm_key").Sensitive().NotEmpty(),
+		// LiteLLM's hashed token (what GET /key/list returns). Stored at issue time
+		// so reconciliation matches by it; empty for keys issued before this field.
+		field.String("litellm_token").Optional(),
 		field.String("alias").Optional(), // display label, e.g. "alice / coding"
 		field.UUID("user_id", uuid.UUID{}),
 		field.UUID("agent_id", uuid.UUID{}).Optional().Nillable(),             // 绑定的智能体ID (0619 第7页)

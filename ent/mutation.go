@@ -15857,6 +15857,7 @@ type VirtualKeyMutation struct {
 	created_at           *time.Time
 	updated_at           *time.Time
 	litellm_key          *string
+	litellm_token        *string
 	alias                *string
 	user_id              *uuid.UUID
 	agent_id             *uuid.UUID
@@ -16084,6 +16085,55 @@ func (m *VirtualKeyMutation) OldLitellmKey(ctx context.Context) (v string, err e
 // ResetLitellmKey resets all changes to the "litellm_key" field.
 func (m *VirtualKeyMutation) ResetLitellmKey() {
 	m.litellm_key = nil
+}
+
+// SetLitellmToken sets the "litellm_token" field.
+func (m *VirtualKeyMutation) SetLitellmToken(s string) {
+	m.litellm_token = &s
+}
+
+// LitellmToken returns the value of the "litellm_token" field in the mutation.
+func (m *VirtualKeyMutation) LitellmToken() (r string, exists bool) {
+	v := m.litellm_token
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLitellmToken returns the old "litellm_token" field's value of the VirtualKey entity.
+// If the VirtualKey object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VirtualKeyMutation) OldLitellmToken(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLitellmToken is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLitellmToken requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLitellmToken: %w", err)
+	}
+	return oldValue.LitellmToken, nil
+}
+
+// ClearLitellmToken clears the value of the "litellm_token" field.
+func (m *VirtualKeyMutation) ClearLitellmToken() {
+	m.litellm_token = nil
+	m.clearedFields[virtualkey.FieldLitellmToken] = struct{}{}
+}
+
+// LitellmTokenCleared returns if the "litellm_token" field was cleared in this mutation.
+func (m *VirtualKeyMutation) LitellmTokenCleared() bool {
+	_, ok := m.clearedFields[virtualkey.FieldLitellmToken]
+	return ok
+}
+
+// ResetLitellmToken resets all changes to the "litellm_token" field.
+func (m *VirtualKeyMutation) ResetLitellmToken() {
+	m.litellm_token = nil
+	delete(m.clearedFields, virtualkey.FieldLitellmToken)
 }
 
 // SetAlias sets the "alias" field.
@@ -16572,7 +16622,7 @@ func (m *VirtualKeyMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *VirtualKeyMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 13)
 	if m.created_at != nil {
 		fields = append(fields, virtualkey.FieldCreatedAt)
 	}
@@ -16581,6 +16631,9 @@ func (m *VirtualKeyMutation) Fields() []string {
 	}
 	if m.litellm_key != nil {
 		fields = append(fields, virtualkey.FieldLitellmKey)
+	}
+	if m.litellm_token != nil {
+		fields = append(fields, virtualkey.FieldLitellmToken)
 	}
 	if m.alias != nil {
 		fields = append(fields, virtualkey.FieldAlias)
@@ -16623,6 +16676,8 @@ func (m *VirtualKeyMutation) Field(name string) (ent.Value, bool) {
 		return m.UpdatedAt()
 	case virtualkey.FieldLitellmKey:
 		return m.LitellmKey()
+	case virtualkey.FieldLitellmToken:
+		return m.LitellmToken()
 	case virtualkey.FieldAlias:
 		return m.Alias()
 	case virtualkey.FieldUserID:
@@ -16656,6 +16711,8 @@ func (m *VirtualKeyMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldUpdatedAt(ctx)
 	case virtualkey.FieldLitellmKey:
 		return m.OldLitellmKey(ctx)
+	case virtualkey.FieldLitellmToken:
+		return m.OldLitellmToken(ctx)
 	case virtualkey.FieldAlias:
 		return m.OldAlias(ctx)
 	case virtualkey.FieldUserID:
@@ -16703,6 +16760,13 @@ func (m *VirtualKeyMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetLitellmKey(v)
+		return nil
+	case virtualkey.FieldLitellmToken:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLitellmToken(v)
 		return nil
 	case virtualkey.FieldAlias:
 		v, ok := value.(string)
@@ -16812,6 +16876,9 @@ func (m *VirtualKeyMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *VirtualKeyMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(virtualkey.FieldLitellmToken) {
+		fields = append(fields, virtualkey.FieldLitellmToken)
+	}
 	if m.FieldCleared(virtualkey.FieldAlias) {
 		fields = append(fields, virtualkey.FieldAlias)
 	}
@@ -16847,6 +16914,9 @@ func (m *VirtualKeyMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *VirtualKeyMutation) ClearField(name string) error {
 	switch name {
+	case virtualkey.FieldLitellmToken:
+		m.ClearLitellmToken()
+		return nil
 	case virtualkey.FieldAlias:
 		m.ClearAlias()
 		return nil
@@ -16884,6 +16954,9 @@ func (m *VirtualKeyMutation) ResetField(name string) error {
 		return nil
 	case virtualkey.FieldLitellmKey:
 		m.ResetLitellmKey()
+		return nil
+	case virtualkey.FieldLitellmToken:
+		m.ResetLitellmToken()
 		return nil
 	case virtualkey.FieldAlias:
 		m.ResetAlias()

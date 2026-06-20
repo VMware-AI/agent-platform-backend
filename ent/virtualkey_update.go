@@ -51,6 +51,26 @@ func (_u *VirtualKeyUpdate) SetNillableLitellmKey(v *string) *VirtualKeyUpdate {
 	return _u
 }
 
+// SetLitellmToken sets the "litellm_token" field.
+func (_u *VirtualKeyUpdate) SetLitellmToken(v string) *VirtualKeyUpdate {
+	_u.mutation.SetLitellmToken(v)
+	return _u
+}
+
+// SetNillableLitellmToken sets the "litellm_token" field if the given value is not nil.
+func (_u *VirtualKeyUpdate) SetNillableLitellmToken(v *string) *VirtualKeyUpdate {
+	if v != nil {
+		_u.SetLitellmToken(*v)
+	}
+	return _u
+}
+
+// ClearLitellmToken clears the value of the "litellm_token" field.
+func (_u *VirtualKeyUpdate) ClearLitellmToken() *VirtualKeyUpdate {
+	_u.mutation.ClearLitellmToken()
+	return _u
+}
+
 // SetAlias sets the "alias" field.
 func (_u *VirtualKeyUpdate) SetAlias(v string) *VirtualKeyUpdate {
 	_u.mutation.SetAlias(v)
@@ -304,6 +324,12 @@ func (_u *VirtualKeyUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.LitellmKey(); ok {
 		_spec.SetField(virtualkey.FieldLitellmKey, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.LitellmToken(); ok {
+		_spec.SetField(virtualkey.FieldLitellmToken, field.TypeString, value)
+	}
+	if _u.mutation.LitellmTokenCleared() {
+		_spec.ClearField(virtualkey.FieldLitellmToken, field.TypeString)
+	}
 	if value, ok := _u.mutation.Alias(); ok {
 		_spec.SetField(virtualkey.FieldAlias, field.TypeString, value)
 	}
@@ -399,6 +425,26 @@ func (_u *VirtualKeyUpdateOne) SetNillableLitellmKey(v *string) *VirtualKeyUpdat
 	if v != nil {
 		_u.SetLitellmKey(*v)
 	}
+	return _u
+}
+
+// SetLitellmToken sets the "litellm_token" field.
+func (_u *VirtualKeyUpdateOne) SetLitellmToken(v string) *VirtualKeyUpdateOne {
+	_u.mutation.SetLitellmToken(v)
+	return _u
+}
+
+// SetNillableLitellmToken sets the "litellm_token" field if the given value is not nil.
+func (_u *VirtualKeyUpdateOne) SetNillableLitellmToken(v *string) *VirtualKeyUpdateOne {
+	if v != nil {
+		_u.SetLitellmToken(*v)
+	}
+	return _u
+}
+
+// ClearLitellmToken clears the value of the "litellm_token" field.
+func (_u *VirtualKeyUpdateOne) ClearLitellmToken() *VirtualKeyUpdateOne {
+	_u.mutation.ClearLitellmToken()
 	return _u
 }
 
@@ -684,6 +730,12 @@ func (_u *VirtualKeyUpdateOne) sqlSave(ctx context.Context) (_node *VirtualKey, 
 	}
 	if value, ok := _u.mutation.LitellmKey(); ok {
 		_spec.SetField(virtualkey.FieldLitellmKey, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.LitellmToken(); ok {
+		_spec.SetField(virtualkey.FieldLitellmToken, field.TypeString, value)
+	}
+	if _u.mutation.LitellmTokenCleared() {
+		_spec.ClearField(virtualkey.FieldLitellmToken, field.TypeString)
 	}
 	if value, ok := _u.mutation.Alias(); ok {
 		_spec.SetField(virtualkey.FieldAlias, field.TypeString, value)

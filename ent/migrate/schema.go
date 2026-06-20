@@ -467,6 +467,7 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "litellm_key", Type: field.TypeString},
+		{Name: "litellm_token", Type: field.TypeString, Nullable: true},
 		{Name: "alias", Type: field.TypeString, Nullable: true},
 		{Name: "user_id", Type: field.TypeUUID},
 		{Name: "agent_id", Type: field.TypeUUID, Nullable: true},
@@ -486,7 +487,7 @@ var (
 			{
 				Name:    "virtualkey_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{VirtualKeysColumns[5]},
+				Columns: []*schema.Column{VirtualKeysColumns[6]},
 			},
 		},
 	}
