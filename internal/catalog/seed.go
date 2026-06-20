@@ -57,13 +57,26 @@ var builtins = []entry{
 // Seed inserts any missing built-in catalog entries. Existing kinds are left
 // untouched so operator edits survive restarts.
 func Seed(ctx context.Context, client *ent.Client) error {
+	// Fetch all existing built-in kinds in ONE query instead of one Exist per
+	// entry (this runs on the startup critical path).
+	kinds := make([]string, 0, len(builtins))
+	for _, e := range builtins {
+		kinds = append(kinds, e.kind)
+	}
+	existingRows, err := client.AgentTemplate.Query().
+		Where(agenttemplate.KindIn(kinds...)).
+		Select(agenttemplate.FieldKind).All(ctx)
+	if err != nil {
+		return fmt.Errorf("load existing catalog kinds: %w", err)
+	}
+	existing := make(map[string]struct{}, len(existingRows))
+	for _, row := range existingRows {
+		existing[row.Kind] = struct{}{}
+	}
+
 	created := 0
 	for _, e := range builtins {
-		exists, err := client.AgentTemplate.Query().Where(agenttemplate.Kind(e.kind)).Exist(ctx)
-		if err != nil {
-			return fmt.Errorf("check catalog kind %q: %w", e.kind, err)
-		}
-		if exists {
+		if _, ok := existing[e.kind]; ok {
 			continue
 		}
 		b := client.AgentTemplate.Create().
