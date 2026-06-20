@@ -74,6 +74,29 @@ func (r *mutationResolver) DeleteDepartment(ctx context.Context, id string) (boo
 	return true, nil
 }
 
+// canManageDepartment reports whether the caller may manage the given department's
+// memberships: platform/tenant admins always, or a dept-admin of THAT department
+// (delegation — LLD-01 §4.1, the @hasRole directive only covers platform/tenant).
+func (r *Resolver) canManageDepartment(ctx context.Context, did uuid.UUID) (bool, error) {
+	cu := auth.FromContext(ctx)
+	if cu == nil {
+		return false, nil
+	}
+	if cu.Role == auth.RoleAdmin || cu.Role == auth.RoleTenantAdmin {
+		return true, nil
+	}
+	uid, err := uuid.Parse(cu.ID)
+	if err != nil {
+		return false, nil
+	}
+	return r.Ent.Membership.Query().
+		Where(
+			membership.UserID(uid),
+			membership.DepartmentID(did),
+			membership.RoleEQ(membership.RoleDeptAdmin),
+		).Exist(ctx)
+}
+
 // AddMembership adds (or updates the role of) a user in a department.
 func (r *mutationResolver) AddMembership(ctx context.Context, userID string, departmentID string, role *model.MembershipRole) (*model.Membership, error) {
 	uid, err := uuid.Parse(userID)
@@ -83,6 +106,11 @@ func (r *mutationResolver) AddMembership(ctx context.Context, userID string, dep
 	did, err := uuid.Parse(departmentID)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid departmentId")
+	}
+	if ok, err := r.canManageDepartment(ctx, did); err != nil {
+		return nil, err
+	} else if !ok {
+		return nil, gqlerror.Errorf("forbidden: not a department admin")
 	}
 	roleStr := "user"
 	if role != nil {
@@ -116,6 +144,11 @@ func (r *mutationResolver) RemoveMembership(ctx context.Context, userID string, 
 	if err != nil {
 		return false, gqlerror.Errorf("invalid departmentId")
 	}
+	if ok, err := r.canManageDepartment(ctx, did); err != nil {
+		return false, err
+	} else if !ok {
+		return false, gqlerror.Errorf("forbidden: not a department admin")
+	}
 	n, err := r.Ent.Membership.Delete().
 		Where(membership.UserID(uid), membership.DepartmentID(did)).Exec(ctx)
 	if err != nil {
@@ -143,6 +176,11 @@ func (r *queryResolver) DepartmentMembers(ctx context.Context, departmentID stri
 	did, err := uuid.Parse(departmentID)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid departmentId")
+	}
+	if ok, err := r.canManageDepartment(ctx, did); err != nil {
+		return nil, err
+	} else if !ok {
+		return nil, gqlerror.Errorf("forbidden: not a department admin")
 	}
 	ms, err := r.Ent.Membership.Query().Where(membership.DepartmentID(did)).Order(orderNewest).All(ctx)
 	if err != nil {

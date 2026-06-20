@@ -2726,15 +2726,19 @@ input CreateDepartmentInput {
 
 extend type Query {
   departments: [Department!]! @hasRole(any: [admin, tenant_admin])
-  departmentMembers(departmentId: ID!): [Membership!]! @hasRole(any: [admin, tenant_admin])
+  # Platform/tenant admins OR the department's own dept-admin (delegation checked
+  # in-resolver — LLD-01 §4.1 三轨判权).
+  departmentMembers(departmentId: ID!): [Membership!]!
 }
 
 extend type Mutation {
   # Creates the department AND its litellm team (no orphan: rolls back on sync failure).
   createDepartment(input: CreateDepartmentInput!): Department! @hasRole(any: [admin])
   deleteDepartment(id: ID!): Boolean! @hasRole(any: [admin])
-  addMembership(userId: ID!, departmentId: ID!, role: MembershipRole): Membership! @hasRole(any: [admin, tenant_admin])
-  removeMembership(userId: ID!, departmentId: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
+  # Membership management is delegated: platform/tenant admins OR the department's
+  # dept-admin (checked in-resolver, since @hasRole only covers platform/tenant level).
+  addMembership(userId: ID!, departmentId: ID!, role: MembershipRole): Membership!
+  removeMembership(userId: ID!, departmentId: ID!): Boolean!
 }
 `, BuiltIn: false},
 	{Name: "../../schema/deploy.graphql", Input: `# Agent deployment: provision the VM (gateway key + cloud-init + guestinfo).
@@ -8749,25 +8753,7 @@ func (ec *executionContext) _Mutation_addMembership(ctx context.Context, field g
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Mutation().AddMembership(ctx, fc.Args["userId"].(string), fc.Args["departmentId"].(string), fc.Args["role"].(*model.MembershipRole))
 		},
-		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
-			directive0 := next
-
-			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
-				if err != nil {
-					var zeroVal *model.Membership
-					return zeroVal, err
-				}
-				if ec.Directives.HasRole == nil {
-					var zeroVal *model.Membership
-					return zeroVal, errors.New("directive hasRole is not implemented")
-				}
-				return ec.Directives.HasRole(ctx, nil, directive0, any)
-			}
-
-			next = directive1
-			return next
-		},
+		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *model.Membership) graphql.Marshaler {
 			return ec.marshalNMembership2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMembership(ctx, selections, v)
 		},
@@ -8811,25 +8797,7 @@ func (ec *executionContext) _Mutation_removeMembership(ctx context.Context, fiel
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Mutation().RemoveMembership(ctx, fc.Args["userId"].(string), fc.Args["departmentId"].(string))
 		},
-		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
-			directive0 := next
-
-			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
-				if err != nil {
-					var zeroVal bool
-					return zeroVal, err
-				}
-				if ec.Directives.HasRole == nil {
-					var zeroVal bool
-					return zeroVal, errors.New("directive hasRole is not implemented")
-				}
-				return ec.Directives.HasRole(ctx, nil, directive0, any)
-			}
-
-			next = directive1
-			return next
-		},
+		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
 			return ec.marshalNBoolean2bool(ctx, selections, v)
 		},
@@ -11158,25 +11126,7 @@ func (ec *executionContext) _Query_departmentMembers(ctx context.Context, field 
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Query().DepartmentMembers(ctx, fc.Args["departmentId"].(string))
 		},
-		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
-			directive0 := next
-
-			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
-				if err != nil {
-					var zeroVal []model.Membership
-					return zeroVal, err
-				}
-				if ec.Directives.HasRole == nil {
-					var zeroVal []model.Membership
-					return zeroVal, errors.New("directive hasRole is not implemented")
-				}
-				return ec.Directives.HasRole(ctx, nil, directive0, any)
-			}
-
-			next = directive1
-			return next
-		},
+		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []model.Membership) graphql.Marshaler {
 			return ec.marshalNMembership2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMembershipᚄ(ctx, selections, v)
 		},
