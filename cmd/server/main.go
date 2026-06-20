@@ -19,6 +19,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
+	"github.com/VMware-AI/agent-platform-backend/internal/catalog"
 	"github.com/VMware-AI/agent-platform-backend/internal/config"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph"
@@ -46,6 +47,9 @@ func main() {
 
 	if err := seedAdmin(ctx, client); err != nil {
 		log.Fatalf("seed admin: %v", err)
+	}
+	if err := catalog.Seed(ctx, client); err != nil {
+		log.Fatalf("seed catalog: %v", err)
 	}
 
 	// Login brute-force throttle: 10 failures per 15 minutes per key.
