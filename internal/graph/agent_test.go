@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
@@ -149,6 +150,38 @@ func TestCreateAgent_RejectsInactiveType(t *testing.T) {
 	seedTemplate(t, r, "goose", agenttemplate.StatusActive)
 	if _, err := mr.CreateAgent(user, model.CreateAgentInput{Name: "g", AgentType: "goose"}); err != nil {
 		t.Fatalf("active agent type should be allowed: %v", err)
+	}
+}
+
+// No existence oracle: a non-owner probing a REAL agent they don't own and a
+// NONEXISTENT agent must get byte-identical errors, so the response can't reveal
+// which ids exist (task_1878902f).
+func TestSetAgentStatus_NoExistenceOracle(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := context.Background()
+	mr := &mutationResolver{r}
+	seedActiveTemplate(t, r, "goose")
+
+	alice := auth.WithCurrentUser(ctx, &auth.CurrentUser{ID: "11111111-1111-1111-1111-111111111111", Role: auth.RoleUser})
+	bob := auth.WithCurrentUser(ctx, &auth.CurrentUser{ID: "22222222-2222-2222-2222-222222222222", Role: auth.RoleUser})
+
+	ag, err := mr.CreateAgent(alice, model.CreateAgentInput{Name: "a", AgentType: "goose"})
+	if err != nil {
+		t.Fatalf("CreateAgent: %v", err)
+	}
+
+	_, errExisting := mr.SetAgentStatus(bob, ag.ID, model.AgentStatusStopped)                                 // exists, not bob's
+	_, errMissing := mr.SetAgentStatus(bob, "99999999-9999-9999-9999-999999999999", model.AgentStatusStopped) // does not exist
+	if errExisting == nil || errMissing == nil {
+		t.Fatalf("both must error: existing=%v missing=%v", errExisting, errMissing)
+	}
+	if errExisting.Error() != errMissing.Error() {
+		t.Fatalf("existence oracle: not-yours=%q vs missing=%q must be identical", errExisting, errMissing)
+	}
+	// and it must NOT be the old revealing "forbidden: not your agent"
+	if got := errExisting.Error(); !strings.Contains(got, "not found") {
+		t.Errorf("owner-scoped denial should read as not-found, got %q", got)
 	}
 }
 

@@ -111,12 +111,9 @@ func (r *mutationResolver) SetAgentStatus(ctx context.Context, id string, status
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid id")
 	}
-	a, err := r.Ent.Agent.Get(ctx, aid)
+	a, err := r.getOwnedAgent(ctx, aid, cu)
 	if err != nil {
 		return nil, err
-	}
-	if a.OwnerUserID.String() != cu.ID && cu.Role != auth.RoleAdmin {
-		return nil, gqlerror.Errorf("forbidden: not your agent")
 	}
 	a, err = r.Ent.Agent.UpdateOne(a).SetStatus(agent.Status(status)).Save(ctx)
 	if err != nil {

@@ -35,12 +35,9 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid agentId")
 	}
-	ag, err := r.Ent.Agent.Get(ctx, agentID)
+	ag, err := r.getOwnedAgent(ctx, agentID, cu)
 	if err != nil {
 		return nil, err
-	}
-	if ag.OwnerUserID.String() != cu.ID && cu.Role != auth.RoleAdmin {
-		return nil, gqlerror.Errorf("forbidden: not your agent")
 	}
 
 	poolID, err := uuid.Parse(input.ResourcePoolID)
@@ -158,12 +155,9 @@ func (r *mutationResolver) RecycleAgent(ctx context.Context, input model.Recycle
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid agentId")
 	}
-	ag, err := r.Ent.Agent.Get(ctx, agentID)
+	ag, err := r.getOwnedAgent(ctx, agentID, cu)
 	if err != nil {
 		return nil, err
-	}
-	if ag.OwnerUserID.String() != cu.ID && cu.Role != auth.RoleAdmin {
-		return nil, gqlerror.Errorf("forbidden: not your agent")
 	}
 	if ag.ResourcePoolID == nil {
 		return nil, gqlerror.Errorf("agent has no resource pool; cannot locate its VM")

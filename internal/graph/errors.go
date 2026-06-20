@@ -68,6 +68,16 @@ func ErrorPresenter(ctx context.Context, e error) *gqlerror.Error {
 	return maskInternal(ctx, "graphql internal error", e.Error())
 }
 
+// notFoundErr is the uniform client error for "absent OR not yours", used by
+// owner-scoped resolvers so the two cases are indistinguishable — a caller must
+// not be able to probe which ids exist by comparing NOT_FOUND vs FORBIDDEN.
+func notFoundErr(resource string) *gqlerror.Error {
+	return &gqlerror.Error{
+		Message:    resource + " not found",
+		Extensions: map[string]interface{}{"code": codeNotFound},
+	}
+}
+
 // RecoverFunc replaces gqlgen's default recover so a panicking resolver yields a
 // masked error (with a logged stack trace) instead of crashing the request or
 // leaking the panic value to the client.

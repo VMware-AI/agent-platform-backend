@@ -52,6 +52,28 @@ func tenantScopeFor(ctx context.Context) tenantScopeDecision {
 	return tenantScopeDecision{apply: true, denyAll: true}
 }
 
+// getOwnedAgent loads an agent the caller is allowed to act on. To avoid an
+// existence oracle, a missing agent and an agent owned by ANOTHER user return the
+// SAME error (notFoundErr) — the caller cannot tell "does not exist" from "not
+// yours". Admins bypass the owner check. Non-NotFound DB errors pass through (and
+// are masked as INTERNAL by the presenter).
+func (r *Resolver) getOwnedAgent(ctx context.Context, id uuid.UUID, cu *auth.CurrentUser) (*ent.Agent, error) {
+	if cu == nil {
+		return nil, notFoundErr("agent")
+	}
+	ag, err := r.Ent.Agent.Get(ctx, id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, notFoundErr("agent")
+		}
+		return nil, err
+	}
+	if cu.Role != auth.RoleAdmin && ag.OwnerUserID.String() != cu.ID {
+		return nil, notFoundErr("agent")
+	}
+	return ag, nil
+}
+
 // actorID returns the current user's id, or "" if unauthenticated.
 func actorID(cu *auth.CurrentUser) string {
 	if cu != nil {
