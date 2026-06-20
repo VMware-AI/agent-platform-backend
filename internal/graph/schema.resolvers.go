@@ -252,8 +252,8 @@ func (r *queryResolver) Users(ctx context.Context, page *model.PageInput) (*mode
 	// the count and the page must use the same scope or totals/pages disagree.
 	base := r.Ent.User.Query()
 	if d := tenantScopeFor(ctx); d.apply {
-		if d.nilOnly {
-			base = base.Where(user.TenantIDIsNil())
+		if d.denyAll {
+			base = base.Where(user.IDEQ(uuid.Nil)) // never matches → fail closed
 		} else {
 			base = base.Where(user.TenantID(d.tenant))
 		}

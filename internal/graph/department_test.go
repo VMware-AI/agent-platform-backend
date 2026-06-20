@@ -148,6 +148,49 @@ func TestDepartments_TenantScoped(t *testing.T) {
 	}
 }
 
+// C1: a tenant-admin may manage departments in their OWN tenant but not another
+// tenant's (canManageDepartment must compare dept.TenantID, not blanket-allow).
+func TestMembership_TenantAdminConfinedToTenant(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	r.Gateway = &fakeGateway{}
+	mr := &mutationResolver{r}
+	qr := &queryResolver{r}
+	admin := adminCtx()
+
+	t1 := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+	t2 := "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+	d1, err := mr.CreateDepartment(admin, model.CreateDepartmentInput{Name: "t1-dept", TenantID: &t1})
+	if err != nil {
+		t.Fatalf("create d1: %v", err)
+	}
+	d2, err := mr.CreateDepartment(admin, model.CreateDepartmentInput{Name: "t2-dept", TenantID: &t2})
+	if err != nil {
+		t.Fatalf("create d2: %v", err)
+	}
+
+	t1Admin := tenantAdminCtx("11111111-1111-1111-1111-111111111111", t1)
+	bob := "22222222-2222-2222-2222-222222222222"
+
+	// tenant-admin of t1 manages t1's department
+	if _, err := mr.AddMembership(t1Admin, bob, d1.ID, nil); err != nil {
+		t.Fatalf("t1 admin should manage own-tenant dept: %v", err)
+	}
+	// ...but NOT t2's department (cross-tenant)
+	if _, err := mr.AddMembership(t1Admin, bob, d2.ID, nil); err == nil {
+		t.Fatal("tenant-admin must NOT manage another tenant's department")
+	}
+	if _, err := qr.DepartmentMembers(t1Admin, d2.ID); err == nil {
+		t.Fatal("tenant-admin must NOT read another tenant's department members")
+	}
+
+	// a tenant-admin with no tenant set manages nothing (fail closed)
+	noTenant := tenantAdminCtx("33333333-3333-3333-3333-333333333333", "")
+	if _, err := mr.AddMembership(noTenant, bob, d1.ID, nil); err == nil {
+		t.Fatal("tenant-admin without a tenant must manage nothing")
+	}
+}
+
 // A dept-admin may manage memberships of their OWN department, but not another's;
 // a plain member/non-member may not (LLD-01 §4.1 部门委派).
 func TestMembership_DeptAdminDelegation(t *testing.T) {

@@ -83,9 +83,23 @@ func (r *Resolver) canManageDepartment(ctx context.Context, did uuid.UUID) (bool
 	if cu == nil {
 		return false, nil
 	}
-	if cu.Role == auth.RoleAdmin || cu.Role == auth.RoleTenantAdmin {
+	// Platform admin: every tenant.
+	if cu.Role == auth.RoleAdmin {
 		return true, nil
 	}
+	// Tenant admin: ONLY departments in their own tenant (C1 — without this a
+	// tenant-admin could manage/read any tenant's departments).
+	if cu.Role == auth.RoleTenantAdmin {
+		dept, err := r.Ent.Department.Get(ctx, did)
+		if err != nil {
+			if ent.IsNotFound(err) {
+				return false, nil
+			}
+			return false, err
+		}
+		return tenantMatches(cu.TenantID, dept.TenantID), nil
+	}
+	// Dept-admin delegation: a dept-admin membership in THIS department.
 	uid, err := uuid.Parse(cu.ID)
 	if err != nil {
 		return false, nil
@@ -96,6 +110,20 @@ func (r *Resolver) canManageDepartment(ctx context.Context, did uuid.UUID) (bool
 			membership.DepartmentID(did),
 			membership.RoleEQ(membership.RoleDeptAdmin),
 		).Exist(ctx)
+}
+
+// tenantMatches reports whether the caller's tenant equals the row's tenant. Both
+// must be present — a tenant-less caller or untenanted row never matches (fail
+// closed), so a misconfigured tenant-admin manages nothing across the boundary.
+func tenantMatches(callerTenant string, rowTenant *uuid.UUID) bool {
+	if callerTenant == "" || rowTenant == nil {
+		return false
+	}
+	tid, err := uuid.Parse(callerTenant)
+	if err != nil {
+		return false
+	}
+	return tid == *rowTenant
 }
 
 // AddMembership adds (or updates the role of) a user in a department.
@@ -165,8 +193,8 @@ func (r *queryResolver) Departments(ctx context.Context) ([]model.Department, er
 	// Tenant isolation (C1): platform admins see all; a tenant-admin is confined
 	// to their own tenant (shared decision in tenantScopeFor).
 	if d := tenantScopeFor(ctx); d.apply {
-		if d.nilOnly {
-			q = q.Where(department.TenantIDIsNil())
+		if d.denyAll {
+			q = q.Where(department.IDEQ(uuid.Nil)) // never matches → fail closed
 		} else {
 			q = q.Where(department.TenantID(d.tenant))
 		}

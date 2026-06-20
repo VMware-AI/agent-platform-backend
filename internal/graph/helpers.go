@@ -28,16 +28,19 @@ var (
 // tenantScopeDecision describes how to confine a list query to the caller's
 // tenant (C1). apply=false means no scoping (platform admin or any non
 // tenant-admin). When apply=true: scope to tenant, or — for a tenant-admin with
-// no tenant set (misconfigured) — to untenanted rows only (fail closed, no leak).
+// no valid tenant set (misconfigured) — denyAll: return nothing (fail closed).
+// denyAll must NOT be implemented as "untenanted rows", which would leak every
+// un-tenanted row (e.g. the platform admin user) to a tenant-less admin.
 type tenantScopeDecision struct {
 	apply   bool
-	nilOnly bool
+	denyAll bool
 	tenant  uuid.UUID
 }
 
 // tenantScopeFor computes the tenant-isolation decision for the caller. Each
 // resolver applies it with its own ent predicate package (ent predicates are
-// per-type, so the decision is shared but its application is not).
+// per-type, so the decision is shared but its application is not). Apply denyAll
+// with a never-matching predicate (e.g. <entity>.IDEQ(uuid.Nil)).
 func tenantScopeFor(ctx context.Context) tenantScopeDecision {
 	cu := auth.FromContext(ctx)
 	if cu == nil || cu.Role != auth.RoleTenantAdmin {
@@ -46,7 +49,7 @@ func tenantScopeFor(ctx context.Context) tenantScopeDecision {
 	if id, err := uuid.Parse(cu.TenantID); err == nil {
 		return tenantScopeDecision{apply: true, tenant: id}
 	}
-	return tenantScopeDecision{apply: true, nilOnly: true}
+	return tenantScopeDecision{apply: true, denyAll: true}
 }
 
 // actorID returns the current user's id, or "" if unauthenticated.
@@ -359,7 +362,13 @@ func toModelArtifact(a *ent.Artifact) *model.Artifact {
 		m.Sha256 = &s
 	}
 	if len(a.Metadata) > 0 {
-		m.Metadata = a.Metadata
+		// Copy, don't alias the ent map — the model and the stored entity must not
+		// share backing storage (immutability rule).
+		md := make(map[string]any, len(a.Metadata))
+		for k, v := range a.Metadata {
+			md[k] = v
+		}
+		m.Metadata = md
 	}
 	return m
 }
