@@ -98,6 +98,41 @@ func TestDeleteTeam_RequiresTeamID(t *testing.T) {
 	}
 }
 
+func TestListKeys(t *testing.T) {
+	var gotPath, gotMethod, gotAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath, gotMethod, gotAuth = r.URL.Path, r.Method, r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"keys":[
+			{"token":"hash1","user_id":"u1","team_id":"t1"},
+			{"key":"sk-raw2","user_id":"u2"}
+		]}`))
+	}))
+	defer srv.Close()
+
+	c := NewHTTPClient(srv.URL, "sk-master")
+	keys, err := c.ListKeys(context.Background())
+	if err != nil {
+		t.Fatalf("ListKeys: %v", err)
+	}
+	if gotMethod != http.MethodGet || gotPath != "/key/list" {
+		t.Errorf("want GET /key/list, got %s %s", gotMethod, gotPath)
+	}
+	if gotAuth != "Bearer sk-master" {
+		t.Errorf("auth header = %q", gotAuth)
+	}
+	if len(keys) != 2 {
+		t.Fatalf("want 2 keys, got %d: %+v", len(keys), keys)
+	}
+	// token is used as the identifier when no raw key is present; raw key wins when given.
+	if keys[0].Key != "hash1" || keys[0].UserID != "u1" || keys[0].TeamID != "t1" {
+		t.Errorf("keys[0] = %+v", keys[0])
+	}
+	if keys[1].Key != "sk-raw2" || keys[1].UserID != "u2" {
+		t.Errorf("keys[1] = %+v", keys[1])
+	}
+}
+
 func TestCreateTeam(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/team/new" {

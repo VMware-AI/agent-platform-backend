@@ -13,6 +13,7 @@ type fakeGateway struct {
 	generated    []gateway.GenerateKeyRequest
 	deleted      []string
 	deletedTeams []string
+	listed       []gateway.KeyInfo
 }
 
 func (f *fakeGateway) GenerateKey(_ context.Context, req gateway.GenerateKeyRequest) (*gateway.KeyResponse, error) {
@@ -30,6 +31,9 @@ func (f *fakeGateway) CreateTeam(context.Context, gateway.TeamRequest) (*gateway
 func (f *fakeGateway) DeleteTeam(_ context.Context, teamID string) error {
 	f.deletedTeams = append(f.deletedTeams, teamID)
 	return nil
+}
+func (f *fakeGateway) ListKeys(context.Context) ([]gateway.KeyInfo, error) {
+	return f.listed, nil
 }
 
 func TestIssueAndRevokeVirtualKey(t *testing.T) {

@@ -24,6 +24,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/graph"
 	"github.com/VMware-AI/agent-platform-backend/internal/httpx"
 	"github.com/VMware-AI/agent-platform-backend/internal/ratelimit"
+	"github.com/VMware-AI/agent-platform-backend/internal/reconcile"
 	"github.com/VMware-AI/agent-platform-backend/internal/secrets"
 	"github.com/VMware-AI/agent-platform-backend/internal/session"
 	"github.com/VMware-AI/agent-platform-backend/internal/store"
@@ -97,6 +98,20 @@ func main() {
 		LoginLimiter:    ratelimit.NewMemory(10, 15*time.Minute),
 	}
 	resolver.EnablePermissionCache(60 * time.Second)
+
+	// Periodically reconcile gateway keys against governance rows (detect/heal
+	// ungoverned orphans + stale rows). Disabled unless an interval is set AND a
+	// gateway is configured. Report-only unless RECONCILE_PRUNE=true.
+	reconcileCtx, stopReconcile := context.WithCancel(context.Background())
+	defer stopReconcile()
+	if cfg.ReconcileInterval > 0 && gw != nil {
+		rec := &reconcile.Reconciler{Ent: client, Gateway: gw, Prune: cfg.ReconcilePrune}
+		interval := time.Duration(cfg.ReconcileInterval) * time.Second
+		log.Printf("gateway-key reconciler: every %s (prune=%v)", interval, cfg.ReconcilePrune)
+		go rec.Run(reconcileCtx, interval)
+	} else if cfg.ReconcileInterval > 0 {
+		log.Printf("gateway-key reconciler: skipped (no gateway configured)")
+	}
 
 	es := graph.NewExecutableSchema(graph.Config{
 		Resolvers: resolver,

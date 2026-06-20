@@ -26,6 +26,12 @@ type Config struct {
 	// AllowedOrigins is the CSRF Origin/Referer allowlist for state-changing
 	// requests (ALLOWED_ORIGINS, comma-separated). Same-origin is always allowed.
 	AllowedOrigins []string
+	// ReconcileInterval is how often (seconds) the gateway-key reconciler runs.
+	// 0 (default) disables it. Requires a configured gateway to have any effect.
+	ReconcileInterval int
+	// ReconcilePrune lets the reconciler heal drift (delete gateway orphans +
+	// revoke stale rows). Default false = report-only ("对账"), the safe default.
+	ReconcilePrune bool
 }
 
 // Load reads config from the environment and validates it. Fails fast on a
@@ -59,6 +65,15 @@ func Load() (*Config, error) {
 			c.AllowedOrigins = append(c.AllowedOrigins, o)
 		}
 	}
+	ri, err := strconv.Atoi(getenv("RECONCILE_INTERVAL_SECONDS", "0"))
+	if err != nil {
+		return nil, fmt.Errorf("RECONCILE_INTERVAL_SECONDS must be an integer: %w", err)
+	}
+	if ri < 0 {
+		return nil, fmt.Errorf("RECONCILE_INTERVAL_SECONDS must be >= 0, got %d", ri)
+	}
+	c.ReconcileInterval = ri
+	c.ReconcilePrune = getenv("RECONCILE_PRUNE", "false") == "true"
 	return c, nil
 }
 

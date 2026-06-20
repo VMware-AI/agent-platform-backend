@@ -29,6 +29,9 @@ func (f *fakeGateway) CreateTeam(context.Context, gateway.TeamRequest) (*gateway
 	return &gateway.TeamResponse{}, nil
 }
 func (f *fakeGateway) DeleteTeam(context.Context, string) error { return nil }
+func (f *fakeGateway) ListKeys(context.Context) ([]gateway.KeyInfo, error) {
+	return nil, nil
+}
 
 // fakeVC is an in-memory VMProvisioner; failAt forces a chosen step to fail.
 type fakeVC struct {

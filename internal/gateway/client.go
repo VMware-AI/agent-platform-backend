@@ -21,6 +21,19 @@ type Client interface {
 	DeleteKey(ctx context.Context, key string) error
 	CreateTeam(ctx context.Context, req TeamRequest) (*TeamResponse, error)
 	DeleteTeam(ctx context.Context, teamID string) error
+	// ListKeys enumerates the keys the gateway currently holds, for
+	// reconciliation against the platform's governance rows (see internal/reconcile).
+	ListKeys(ctx context.Context) ([]KeyInfo, error)
+}
+
+// KeyInfo identifies a key as the gateway reports it (GET /key/list). Key is the
+// comparable identifier: LiteLLM lists the hashed token, so for reconciliation to
+// match the platform's stored litellm_key the same identifier must be persisted at
+// issue time (real-machine follow-up; matching is reported, not enforced, today).
+type KeyInfo struct {
+	Key    string
+	UserID string
+	TeamID string
 }
 
 // GenerateKeyRequest mints a per-user virtual key (LLD-04 §3). Budget/rate
@@ -119,6 +132,61 @@ func (c *HTTPClient) DeleteTeam(ctx context.Context, teamID string) error {
 		return fmt.Errorf("DeleteTeam: teamID is required")
 	}
 	return c.post(ctx, "/team/delete", map[string]any{"team_ids": []string{teamID}}, nil)
+}
+
+// ListKeys enumerates the gateway's keys via GET /key/list. The wire item carries
+// both a hashed token and (when configured) a raw key; the raw key wins as the
+// comparable identifier, falling back to the token.
+func (c *HTTPClient) ListKeys(ctx context.Context) ([]KeyInfo, error) {
+	var out struct {
+		Keys []struct {
+			Token  string `json:"token"`
+			Key    string `json:"key"`
+			UserID string `json:"user_id"`
+			TeamID string `json:"team_id"`
+		} `json:"keys"`
+	}
+	if err := c.get(ctx, "/key/list", &out); err != nil {
+		return nil, err
+	}
+	keys := make([]KeyInfo, 0, len(out.Keys))
+	for _, k := range out.Keys {
+		id := k.Key
+		if id == "" {
+			id = k.Token
+		}
+		if id == "" {
+			continue // unidentifiable entry — skip rather than treat "" as an orphan
+		}
+		keys = append(keys, KeyInfo{Key: id, UserID: k.UserID, TeamID: k.TeamID})
+	}
+	return keys, nil
+}
+
+// get sends an admin GET with Bearer auth and decodes the JSON response.
+func (c *HTTPClient) get(ctx context.Context, path string, out any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.masterKey)
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("gateway %s: %w", path, err)
+	}
+	defer resp.Body.Close()
+
+	data, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("gateway %s: status %d: %s", path, resp.StatusCode, string(data))
+	}
+	if out != nil {
+		if err := json.Unmarshal(data, out); err != nil {
+			return fmt.Errorf("decode %s response: %w", path, err)
+		}
+	}
+	return nil
 }
 
 // post sends an admin POST with Bearer auth and decodes the JSON response.
