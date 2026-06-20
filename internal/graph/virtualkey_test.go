@@ -81,6 +81,9 @@ func (f *fakeGateway) DeleteTeam(_ context.Context, teamID string) error {
 func (f *fakeGateway) ListKeys(context.Context) ([]gateway.KeyInfo, error) {
 	return f.listed, nil
 }
+func (f *fakeGateway) ListTeams(context.Context) ([]gateway.TeamInfo, error) {
+	return nil, nil
+}
 
 func TestIssueAndRevokeVirtualKey(t *testing.T) {
 	r, cleanup := newTestResolver(t)

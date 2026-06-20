@@ -24,6 +24,9 @@ type Client interface {
 	// ListKeys enumerates the keys the gateway currently holds, for
 	// reconciliation against the platform's governance rows (see internal/reconcile).
 	ListKeys(ctx context.Context) ([]KeyInfo, error)
+	// ListTeams enumerates the teams the gateway currently holds, for
+	// reconciliation against department rows (see internal/reconcile).
+	ListTeams(ctx context.Context) ([]TeamInfo, error)
 }
 
 // KeyInfo identifies a key as the gateway reports it (GET /key/list). Key is the
@@ -34,6 +37,13 @@ type KeyInfo struct {
 	Key    string
 	UserID string
 	TeamID string
+}
+
+// TeamInfo identifies a team as the gateway reports it (GET /team/list). TeamID
+// matches a Department.litellm_team_id.
+type TeamInfo struct {
+	TeamID string
+	Alias  string
 }
 
 // GenerateKeyRequest mints a per-user virtual key (LLD-04 §3). Budget/rate
@@ -161,6 +171,26 @@ func (c *HTTPClient) ListKeys(ctx context.Context) ([]KeyInfo, error) {
 		keys = append(keys, KeyInfo{Key: id, UserID: k.UserID, TeamID: k.TeamID})
 	}
 	return keys, nil
+}
+
+// ListTeams enumerates the gateway's teams via GET /team/list. LiteLLM returns a
+// top-level array of team objects.
+func (c *HTTPClient) ListTeams(ctx context.Context) ([]TeamInfo, error) {
+	var raw []struct {
+		TeamID    string `json:"team_id"`
+		TeamAlias string `json:"team_alias"`
+	}
+	if err := c.get(ctx, "/team/list", &raw); err != nil {
+		return nil, err
+	}
+	teams := make([]TeamInfo, 0, len(raw))
+	for _, t := range raw {
+		if t.TeamID == "" {
+			continue // unidentifiable entry — skip rather than treat "" as an orphan
+		}
+		teams = append(teams, TeamInfo{TeamID: t.TeamID, Alias: t.TeamAlias})
+	}
+	return teams, nil
 }
 
 // get sends an admin GET with Bearer auth and decodes the JSON response.

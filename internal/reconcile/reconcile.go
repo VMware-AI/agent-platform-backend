@@ -24,16 +24,18 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 )
 
-// KeyGateway is the slice of the gateway client the reconciler depends on.
-type KeyGateway interface {
+// Gateway is the slice of the gateway client the reconciler depends on.
+type Gateway interface {
 	ListKeys(ctx context.Context) ([]gateway.KeyInfo, error)
 	DeleteKey(ctx context.Context, key string) error
+	ListTeams(ctx context.Context) ([]gateway.TeamInfo, error)
+	DeleteTeam(ctx context.Context, teamID string) error
 }
 
-// Reconciler compares gateway keys against governance rows.
+// Reconciler compares gateway keys/teams against governance rows.
 type Reconciler struct {
 	Ent     *ent.Client
-	Gateway KeyGateway
+	Gateway Gateway
 	// Prune enables healing: delete gateway orphans + revoke stale DB rows. When
 	// false (default) the reconciler only reports.
 	Prune bool
@@ -95,6 +97,72 @@ func (r *Reconciler) ReconcileKeys(ctx context.Context) (*Report, error) {
 	return rep, nil
 }
 
+// TeamReport summarizes one team reconciliation pass.
+type TeamReport struct {
+	GatewayTeams  int      // teams the gateway reported
+	DBDepartments int      // departments with a litellm_team_id
+	TeamOrphans   []string // team ids at gateway with no department (prune candidates)
+	DanglingDepts []string // department ids whose litellm_team_id is absent at gateway
+	Pruned        int      // orphan teams deleted at the gateway (Prune only)
+}
+
+// ReconcileTeams compares gateway teams against department rows. Mirrors
+// ReconcileKeys. Gateway team orphans (no backing department) are pruned under
+// Prune; dangling department references are only reported — re-creating vs
+// clearing the link is a policy decision left to an operator.
+func (r *Reconciler) ReconcileTeams(ctx context.Context) (*TeamReport, error) {
+	gwTeams, err := r.Gateway.ListTeams(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list gateway teams: %w", err)
+	}
+	depts, err := r.Ent.Department.Query().All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list departments: %w", err)
+	}
+
+	dbTeams := make(map[string]struct{})
+	dbCount := 0
+	for _, d := range depts {
+		if d.LitellmTeamID == "" {
+			continue // not linked to a gateway team
+		}
+		dbCount++
+		dbTeams[d.LitellmTeamID] = struct{}{}
+	}
+	gwTeamSet := make(map[string]struct{}, len(gwTeams))
+
+	rep := &TeamReport{GatewayTeams: len(gwTeams), DBDepartments: dbCount}
+	for _, t := range gwTeams {
+		gwTeamSet[t.TeamID] = struct{}{}
+		if _, backed := dbTeams[t.TeamID]; !backed {
+			rep.TeamOrphans = append(rep.TeamOrphans, t.TeamID)
+		}
+	}
+	for _, d := range depts {
+		if d.LitellmTeamID == "" {
+			continue
+		}
+		if _, present := gwTeamSet[d.LitellmTeamID]; !present {
+			rep.DanglingDepts = append(rep.DanglingDepts, d.ID.String())
+		}
+	}
+
+	if r.Prune {
+		for _, teamID := range rep.TeamOrphans {
+			if err := r.Gateway.DeleteTeam(ctx, teamID); err != nil {
+				log.Printf("reconcile: prune gateway team orphan failed: %v", err)
+				continue
+			}
+			rep.Pruned++
+		}
+	}
+
+	log.Printf("reconcile teams: gateway=%d db=%d orphans=%d dangling=%d pruned=%d prune=%v",
+		rep.GatewayTeams, rep.DBDepartments, len(rep.TeamOrphans), len(rep.DanglingDepts),
+		rep.Pruned, r.Prune)
+	return rep, nil
+}
+
 // heal deletes gateway orphans and revokes stale rows, counting successes.
 func (r *Reconciler) heal(ctx context.Context, rep *Report) {
 	for _, key := range rep.GatewayOrphans {
@@ -119,14 +187,17 @@ func (r *Reconciler) heal(ctx context.Context, rep *Report) {
 	}
 }
 
-// Run reconciles immediately, then every interval until ctx is canceled. Cycle
-// errors are logged, not fatal — the loop keeps running.
+// Run reconciles keys and teams immediately, then every interval until ctx is
+// canceled. Cycle errors are logged, not fatal — the loop keeps running.
 func (r *Reconciler) Run(ctx context.Context, interval time.Duration) {
 	t := time.NewTicker(interval)
 	defer t.Stop()
 	for {
 		if _, err := r.ReconcileKeys(ctx); err != nil {
-			log.Printf("reconcile cycle error: %v", err)
+			log.Printf("reconcile keys cycle error: %v", err)
+		}
+		if _, err := r.ReconcileTeams(ctx); err != nil {
+			log.Printf("reconcile teams cycle error: %v", err)
 		}
 		select {
 		case <-ctx.Done():

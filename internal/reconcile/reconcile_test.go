@@ -13,12 +13,15 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/store"
 )
 
-// fakeKeyGateway is an in-memory KeyGateway for reconciler tests.
+// fakeKeyGateway is an in-memory Gateway for reconciler tests.
 type fakeKeyGateway struct {
-	keys    []gateway.KeyInfo
-	listErr error
-	deleted []string
-	delErr  error
+	keys         []gateway.KeyInfo
+	listErr      error
+	deleted      []string
+	delErr       error
+	teams        []gateway.TeamInfo
+	listTeamErr  error
+	deletedTeams []string
 }
 
 func (f *fakeKeyGateway) ListKeys(context.Context) ([]gateway.KeyInfo, error) {
@@ -29,6 +32,13 @@ func (f *fakeKeyGateway) DeleteKey(_ context.Context, key string) error {
 		return f.delErr
 	}
 	f.deleted = append(f.deleted, key)
+	return nil
+}
+func (f *fakeKeyGateway) ListTeams(context.Context) ([]gateway.TeamInfo, error) {
+	return f.teams, f.listTeamErr
+}
+func (f *fakeKeyGateway) DeleteTeam(_ context.Context, teamID string) error {
+	f.deletedTeams = append(f.deletedTeams, teamID)
 	return nil
 }
 
@@ -143,5 +153,87 @@ func TestReconcileKeys_ListError(t *testing.T) {
 	r := &Reconciler{Ent: db, Gateway: gw}
 	if _, err := r.ReconcileKeys(context.Background()); err == nil {
 		t.Fatal("expected error when ListKeys fails")
+	}
+}
+
+func mkDept(t *testing.T, c *ent.Client, name, teamID string) *ent.Department {
+	t.Helper()
+	b := c.Department.Create().SetName(name)
+	if teamID != "" {
+		b.SetLitellmTeamID(teamID)
+	}
+	d, err := b.Save(context.Background())
+	if err != nil {
+		t.Fatalf("create dept %s: %v", name, err)
+	}
+	return d
+}
+
+// Report-only: team orphans + dangling department links are found, nothing mutated.
+func TestReconcileTeams_ReportOnly(t *testing.T) {
+	db, cleanup := newDB(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	mkDept(t, db, "research", "t-A")          // backed by gateway team
+	dangling := mkDept(t, db, "sales", "t-C") // litellm_team_id set, team gone at gateway
+	mkDept(t, db, "no-team", "")              // unlinked — ignored entirely
+
+	gw := &fakeKeyGateway{teams: []gateway.TeamInfo{
+		{TeamID: "t-A"}, // matches a department
+		{TeamID: "t-B"}, // orphan: no department
+	}}
+
+	r := &Reconciler{Ent: db, Gateway: gw, Prune: false}
+	rep, err := r.ReconcileTeams(ctx)
+	if err != nil {
+		t.Fatalf("ReconcileTeams: %v", err)
+	}
+	if rep.DBDepartments != 2 { // only the two linked departments count
+		t.Errorf("DBDepartments = %d, want 2", rep.DBDepartments)
+	}
+	if len(rep.TeamOrphans) != 1 || rep.TeamOrphans[0] != "t-B" {
+		t.Errorf("TeamOrphans = %v, want [t-B]", rep.TeamOrphans)
+	}
+	if len(rep.DanglingDepts) != 1 || rep.DanglingDepts[0] != dangling.ID.String() {
+		t.Errorf("DanglingDepts = %v, want [%s]", rep.DanglingDepts, dangling.ID)
+	}
+	if rep.Pruned != 0 || len(gw.deletedTeams) != 0 {
+		t.Errorf("report-only must not prune: pruned=%d deleted=%v", rep.Pruned, gw.deletedTeams)
+	}
+}
+
+// Prune: orphan gateway teams are deleted; dangling department links are NOT
+// auto-healed (only reported).
+func TestReconcileTeams_Prune(t *testing.T) {
+	db, cleanup := newDB(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	mkDept(t, db, "research", "t-A")
+	mkDept(t, db, "sales", "t-C") // dangling
+
+	gw := &fakeKeyGateway{teams: []gateway.TeamInfo{{TeamID: "t-A"}, {TeamID: "t-B"}}}
+	r := &Reconciler{Ent: db, Gateway: gw, Prune: true}
+
+	rep, err := r.ReconcileTeams(ctx)
+	if err != nil {
+		t.Fatalf("ReconcileTeams: %v", err)
+	}
+	if rep.Pruned != 1 || len(gw.deletedTeams) != 1 || gw.deletedTeams[0] != "t-B" {
+		t.Errorf("want orphan t-B pruned, got pruned=%d deleted=%v", rep.Pruned, gw.deletedTeams)
+	}
+	if len(rep.DanglingDepts) != 1 {
+		t.Errorf("dangling dept should still be reported under prune, got %v", rep.DanglingDepts)
+	}
+}
+
+func TestReconcileTeams_ListError(t *testing.T) {
+	db, cleanup := newDB(t)
+	defer cleanup()
+	gw := &fakeKeyGateway{listTeamErr: errors.New("gateway down")}
+	r := &Reconciler{Ent: db, Gateway: gw}
+	if _, err := r.ReconcileTeams(context.Background()); err == nil {
+		t.Fatal("expected error when ListTeams fails")
 	}
 }

@@ -98,6 +98,38 @@ func TestDeleteTeam_RequiresTeamID(t *testing.T) {
 	}
 }
 
+func TestListTeams(t *testing.T) {
+	var gotPath, gotMethod string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath, gotMethod = r.URL.Path, r.Method
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[
+			{"team_id":"t1","team_alias":"research"},
+			{"team_id":"t2"},
+			{"team_alias":"no-id-skip-me"}
+		]`))
+	}))
+	defer srv.Close()
+
+	c := NewHTTPClient(srv.URL, "sk-master")
+	teams, err := c.ListTeams(context.Background())
+	if err != nil {
+		t.Fatalf("ListTeams: %v", err)
+	}
+	if gotMethod != http.MethodGet || gotPath != "/team/list" {
+		t.Errorf("want GET /team/list, got %s %s", gotMethod, gotPath)
+	}
+	if len(teams) != 2 { // the id-less entry is skipped
+		t.Fatalf("want 2 teams, got %d: %+v", len(teams), teams)
+	}
+	if teams[0].TeamID != "t1" || teams[0].Alias != "research" {
+		t.Errorf("teams[0] = %+v", teams[0])
+	}
+	if teams[1].TeamID != "t2" {
+		t.Errorf("teams[1] = %+v", teams[1])
+	}
+}
+
 func TestListKeys(t *testing.T) {
 	var gotPath, gotMethod, gotAuth string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
