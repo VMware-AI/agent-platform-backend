@@ -44,6 +44,9 @@ type Resolver struct {
 	Secrets secrets.Resolver
 	// GatewayURL is the LLM gateway base URL injected into provisioned VMs.
 	GatewayURL string
+	// InstallVars resolves {{PLACEHOLDER}} tokens in AgentTemplate.install_command
+	// (e.g. AGENT_PKG_BASE_URL, AGENT_USER) when returning catalog entries.
+	InstallVars map[string]string
 	// VCenterConnect dials vCenter; nil disables deploy.
 	VCenterConnect VCenterConnector
 	// VCenterInsecure skips vCenter TLS verification (air-gap self-signed only).

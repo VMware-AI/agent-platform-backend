@@ -99,6 +99,14 @@ func main() {
 		return vcenter.Connect(ctx, endpoint, user, pass, insecure)
 	}
 
+	// Placeholder values for catalog install_command rendering. AGENT_PKG_BASE_URL
+	// is included only when set, so an unconfigured mirror leaves the placeholder
+	// visible rather than blanking the command.
+	installVars := map[string]string{"AGENT_USER": cfg.AgentUser}
+	if cfg.AgentPkgBaseURL != "" {
+		installVars["AGENT_PKG_BASE_URL"] = cfg.AgentPkgBaseURL
+	}
+
 	resolver := &graph.Resolver{
 		Ent:             client,
 		Sessions:        sessions,
@@ -108,6 +116,7 @@ func main() {
 		GatewayModels:   gwModels,
 		Secrets:         sec,
 		GatewayURL:      os.Getenv("GATEWAY_PUBLIC_URL"),
+		InstallVars:     installVars,
 		VCenterConnect:  vcConnect,
 		VCenterInsecure: cfg.VCenterInsecure,
 		LoginLimiter:    loginLimiter,

@@ -41,7 +41,7 @@ func (r *mutationResolver) UpsertAgentTemplate(ctx context.Context, input model.
 			return nil, err
 		}
 		r.audit(ctx, "agent_template.create", "agent_template", t.ID.String(), true, actorID(auth.FromContext(ctx)))
-		return toModelAgentTemplate(t), nil
+		return toModelAgentTemplate(t, r.InstallVars), nil
 	case err != nil:
 		return nil, err
 	default:
@@ -53,7 +53,7 @@ func (r *mutationResolver) UpsertAgentTemplate(ctx context.Context, input model.
 			return nil, err
 		}
 		r.audit(ctx, "agent_template.update", "agent_template", t.ID.String(), true, actorID(auth.FromContext(ctx)))
-		return toModelAgentTemplate(t), nil
+		return toModelAgentTemplate(t, r.InstallVars), nil
 	}
 }
 
@@ -218,7 +218,7 @@ func (r *queryResolver) AgentTemplates(ctx context.Context) ([]model.AgentTempla
 	}
 	out := make([]model.AgentTemplate, 0, len(ts))
 	for _, t := range ts {
-		out = append(out, *toModelAgentTemplate(t))
+		out = append(out, *toModelAgentTemplate(t, r.InstallVars))
 	}
 	return out, nil
 }

@@ -64,6 +64,35 @@ func TestUpsertAgentTemplate(t *testing.T) {
 	}
 }
 
+// AgentTemplates resolves {{PLACEHOLDER}} tokens in install_command against the
+// resolver's InstallVars before returning them (LLD-05 §1).
+func TestAgentTemplates_ResolvesInstallPlaceholders(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	r.InstallVars = map[string]string{"AGENT_PKG_BASE_URL": "http://mirror/agents", "AGENT_USER": "agent"}
+	ctx := context.Background()
+	mr := &mutationResolver{r}
+	qr := &queryResolver{r}
+
+	cmd := "curl {{AGENT_PKG_BASE_URL}}/goose.tar.gz && su {{AGENT_USER}} -c run"
+	if _, err := mr.UpsertAgentTemplate(ctx, model.UpsertAgentTemplateInput{
+		Kind: "goose", Display: "Goose",
+		InstallMethod: model.InstallMethodOfflineTar, InstallCommand: &cmd,
+		Status: model.AgentTemplateStatusActive,
+	}); err != nil {
+		t.Fatalf("upsert: %v", err)
+	}
+
+	list, _ := qr.AgentTemplates(ctx)
+	if len(list) != 1 || list[0].InstallCommand == nil {
+		t.Fatalf("unexpected list: %+v", list)
+	}
+	want := "curl http://mirror/agents/goose.tar.gz && su agent -c run"
+	if *list[0].InstallCommand != want {
+		t.Errorf("install_command not resolved:\n got  %q\n want %q", *list[0].InstallCommand, want)
+	}
+}
+
 func TestCreateAgent_OwnerScoping(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()

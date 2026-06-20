@@ -32,6 +32,13 @@ type Config struct {
 	// ReconcilePrune lets the reconciler heal drift (delete gateway orphans +
 	// revoke stale rows). Default false = report-only ("对账"), the safe default.
 	ReconcilePrune bool
+	// AgentPkgBaseURL is the offline mirror base for agent install packages,
+	// substituted for {{AGENT_PKG_BASE_URL}} in catalog install commands. Empty
+	// leaves the placeholder intact (operator must configure the mirror).
+	AgentPkgBaseURL string
+	// AgentUser is the OS user that runs installed agents, substituted for
+	// {{AGENT_USER}} in catalog install commands. Defaults to "agent".
+	AgentUser string
 }
 
 // Load reads config from the environment and validates it. Fails fast on a
@@ -74,6 +81,8 @@ func Load() (*Config, error) {
 	}
 	c.ReconcileInterval = ri
 	c.ReconcilePrune = getenv("RECONCILE_PRUNE", "false") == "true"
+	c.AgentPkgBaseURL = strings.TrimRight(os.Getenv("AGENT_PKG_BASE_URL"), "/")
+	c.AgentUser = getenv("AGENT_USER", "agent")
 	return c, nil
 }
 

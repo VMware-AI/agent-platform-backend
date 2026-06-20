@@ -10,6 +10,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
+	"github.com/VMware-AI/agent-platform-backend/internal/catalog"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/VMware-AI/agent-platform-backend/internal/httpx"
 )
@@ -130,7 +131,9 @@ func toModelVirtualKey(k *ent.VirtualKey) *model.VirtualKey {
 	return m
 }
 
-func toModelAgentTemplate(t *ent.AgentTemplate) *model.AgentTemplate {
+// toModelAgentTemplate maps a catalog entry to its GraphQL model, resolving the
+// install_command's {{PLACEHOLDER}} tokens against installVars (LLD-05 §1).
+func toModelAgentTemplate(t *ent.AgentTemplate, installVars map[string]string) *model.AgentTemplate {
 	m := &model.AgentTemplate{
 		ID:            t.ID.String(),
 		Kind:          t.Kind,
@@ -144,7 +147,7 @@ func toModelAgentTemplate(t *ent.AgentTemplate) *model.AgentTemplate {
 		m.Description = &d
 	}
 	if t.InstallCommand != "" {
-		c := t.InstallCommand
+		c := catalog.ResolvePlaceholders(t.InstallCommand, installVars)
 		m.InstallCommand = &c
 	}
 	if t.Version != "" {
