@@ -113,6 +113,41 @@ func TestDepartmentAndMembership(t *testing.T) {
 	}
 }
 
+// Tenant isolation (C1): a tenant-admin's departments query is confined to their
+// own tenant; a platform admin sees every tenant's.
+func TestDepartments_TenantScoped(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	r.Gateway = &fakeGateway{}
+	mr := &mutationResolver{r}
+	qr := &queryResolver{r}
+	admin := adminCtx()
+
+	t1 := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+	t2 := "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+	if _, err := mr.CreateDepartment(admin, model.CreateDepartmentInput{Name: "t1-dept", TenantID: &t1}); err != nil {
+		t.Fatalf("create t1 dept: %v", err)
+	}
+	if _, err := mr.CreateDepartment(admin, model.CreateDepartmentInput{Name: "t2-dept", TenantID: &t2}); err != nil {
+		t.Fatalf("create t2 dept: %v", err)
+	}
+
+	// platform admin sees both tenants' departments
+	if all, err := qr.Departments(admin); err != nil || len(all) != 2 {
+		t.Fatalf("platform admin should see all departments: n=%d err=%v", len(all), err)
+	}
+
+	// tenant-admin of t1 sees only t1's
+	t1Admin := tenantAdminCtx("11111111-1111-1111-1111-111111111111", t1)
+	scoped, err := qr.Departments(t1Admin)
+	if err != nil {
+		t.Fatalf("t1 admin departments: %v", err)
+	}
+	if len(scoped) != 1 || scoped[0].Name != "t1-dept" {
+		t.Fatalf("tenant-admin must see only their tenant's departments, got %+v", scoped)
+	}
+}
+
 // A dept-admin may manage memberships of their OWN department, but not another's;
 // a plain member/non-member may not (LLD-01 §4.1 部门委派).
 func TestMembership_DeptAdminDelegation(t *testing.T) {

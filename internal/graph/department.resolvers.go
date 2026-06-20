@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
+	"github.com/VMware-AI/agent-platform-backend/ent/department"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
@@ -160,7 +161,18 @@ func (r *mutationResolver) RemoveMembership(ctx context.Context, userID string, 
 
 // Departments is the resolver for the departments field.
 func (r *queryResolver) Departments(ctx context.Context) ([]model.Department, error) {
-	ds, err := r.Ent.Department.Query().Order(orderNewest).All(ctx)
+	q := r.Ent.Department.Query()
+	// Tenant isolation (C1): platform admins see every tenant's departments; a
+	// tenant-admin is confined to their own tenant. A tenant-admin with no tenant
+	// set is misconfigured — fail closed to the untenanted set rather than leak.
+	if cu := auth.FromContext(ctx); cu != nil && cu.Role == auth.RoleTenantAdmin {
+		if tid, err := uuid.Parse(cu.TenantID); err == nil {
+			q = q.Where(department.TenantID(tid))
+		} else {
+			q = q.Where(department.TenantIDIsNil())
+		}
+	}
+	ds, err := q.Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}

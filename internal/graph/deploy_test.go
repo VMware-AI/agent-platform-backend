@@ -21,6 +21,11 @@ func adminCtx() context.Context {
 		&auth.CurrentUser{ID: "00000000-0000-0000-0000-000000000001", Role: auth.RoleAdmin})
 }
 
+func tenantAdminCtx(id, tenantID string) context.Context {
+	return auth.WithCurrentUser(context.Background(),
+		&auth.CurrentUser{ID: id, Role: auth.RoleTenantAdmin, TenantID: tenantID})
+}
+
 func TestDeployAgent_EndToEnd(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()
