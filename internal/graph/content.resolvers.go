@@ -31,6 +31,9 @@ func (r *mutationResolver) UpsertArtifact(ctx context.Context, input model.Upser
 		if input.Sha256 != nil {
 			c.SetSha256(*input.Sha256)
 		}
+		if input.Metadata != nil {
+			c.SetMetadata(input.Metadata)
+		}
 		a, err = c.Save(ctx)
 	case err != nil:
 		return nil, err
@@ -38,6 +41,9 @@ func (r *mutationResolver) UpsertArtifact(ctx context.Context, input model.Upser
 		u := existing.Update().SetKind(artifact.Kind(input.Kind)).SetURI(input.URI)
 		if input.Sha256 != nil {
 			u.SetSha256(*input.Sha256)
+		}
+		if input.Metadata != nil {
+			u.SetMetadata(input.Metadata)
 		}
 		a, err = u.Save(ctx)
 	}
@@ -150,6 +156,21 @@ func (r *mutationResolver) DeleteImage(ctx context.Context, id string) (bool, er
 // Artifacts is the resolver for the artifacts field.
 func (r *queryResolver) Artifacts(ctx context.Context) ([]model.Artifact, error) {
 	as, err := r.Ent.Artifact.Query().Order(orderNewest).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.Artifact, 0, len(as))
+	for _, a := range as {
+		out = append(out, *toModelArtifact(a))
+	}
+	return out, nil
+}
+
+// ArtifactVersions lists every version of a named artifact, newest first (制品库
+// 版本列表, LLD-06 §3).
+func (r *queryResolver) ArtifactVersions(ctx context.Context, name string) ([]model.Artifact, error) {
+	as, err := r.Ent.Artifact.Query().
+		Where(artifact.Name(name)).Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}

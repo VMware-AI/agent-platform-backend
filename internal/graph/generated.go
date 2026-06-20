@@ -80,6 +80,7 @@ type ComplexityRoot struct {
 		CreatedAt func(childComplexity int) int
 		ID        func(childComplexity int) int
 		Kind      func(childComplexity int) int
+		Metadata  func(childComplexity int) int
 		Name      func(childComplexity int) int
 		Sha256    func(childComplexity int) int
 		URI       func(childComplexity int) int
@@ -260,6 +261,7 @@ type ComplexityRoot struct {
 		AgentConfigs       func(childComplexity int, agentType *string) int
 		AgentTemplates     func(childComplexity int) int
 		Agents             func(childComplexity int) int
+		ArtifactVersions   func(childComplexity int, name string) int
 		Artifacts          func(childComplexity int) int
 		AuditLogs          func(childComplexity int, filter *model.AuditFilter, page *model.PageInput) int
 		CustomRoles        func(childComplexity int) int
@@ -466,6 +468,7 @@ type QueryResolver interface {
 	AgentConfigs(ctx context.Context, agentType *string) ([]model.AgentConfig, error)
 	Agents(ctx context.Context) ([]model.Agent, error)
 	Artifacts(ctx context.Context) ([]model.Artifact, error)
+	ArtifactVersions(ctx context.Context, name string) ([]model.Artifact, error)
 	Skills(ctx context.Context) ([]model.Skill, error)
 	Images(ctx context.Context) ([]model.Image, error)
 	Departments(ctx context.Context) ([]model.Department, error)
@@ -676,6 +679,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Artifact.Kind(childComplexity), true
+	case "Artifact.metadata":
+		if e.ComplexityRoot.Artifact.Metadata == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Artifact.Metadata(childComplexity), true
 	case "Artifact.name":
 		if e.ComplexityRoot.Artifact.Name == nil {
 			break
@@ -1737,6 +1746,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Agents(childComplexity), true
+	case "Query.artifactVersions":
+		if e.ComplexityRoot.Query.ArtifactVersions == nil {
+			break
+		}
+
+		args, err := ec.field_Query_artifactVersions_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.ArtifactVersions(childComplexity, args["name"].(string)), true
 	case "Query.artifacts":
 		if e.ComplexityRoot.Query.Artifacts == nil {
 			break
@@ -2615,6 +2635,7 @@ type Artifact {
   version: String!
   uri: String!
   sha256: String
+  metadata: Map
   createdAt: Time!
 }
 
@@ -2642,6 +2663,7 @@ input UpsertArtifactInput {
   version: String!
   uri: String!
   sha256: String
+  metadata: Map
 }
 input UpsertSkillInput {
   name: String!
@@ -2658,6 +2680,8 @@ input UpsertImageInput {
 
 extend type Query {
   artifacts: [Artifact!]!
+  # All versions of a named artifact, newest first (制品库版本列表, LLD-06 §3).
+  artifactVersions(name: String!): [Artifact!]!
   skills: [Skill!]!
   images: [Image!]!
 }
@@ -3088,6 +3112,8 @@ extend type Mutation {
 # Consumed by the frontend (agent-platform-web) via codegen. See LLD-01 §5.
 
 scalar Time
+# Free-form JSON object (gqlgen built-in) — used for Artifact metadata (LLD-06).
+scalar Map
 
 enum Role {
   admin
@@ -3337,6 +3363,8 @@ func (ec *executionContext) childFields_Artifact(ctx context.Context, field grap
 		return ec.fieldContext_Artifact_uri(ctx, field)
 	case "sha256":
 		return ec.fieldContext_Artifact_sha256(ctx, field)
+	case "metadata":
+		return ec.fieldContext_Artifact_metadata(ctx, field)
 	case "createdAt":
 		return ec.fieldContext_Artifact_createdAt(ctx, field)
 	}
@@ -4853,6 +4881,20 @@ func (ec *executionContext) field_Query_agentConfigs_args(ctx context.Context, r
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_artifactVersions_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "name",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNString2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["name"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_auditLogs_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -5774,6 +5816,29 @@ func (ec *executionContext) _Artifact_sha256(ctx context.Context, field graphql.
 }
 func (ec *executionContext) fieldContext_Artifact_sha256(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Artifact", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Artifact_metadata(ctx context.Context, field graphql.CollectedField, obj *model.Artifact) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Artifact_metadata(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Metadata, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v map[string]any) graphql.Marshaler {
+			return ec.marshalOMap2map(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Artifact_metadata(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Artifact", field, false, false, errors.New("field of type Map does not have child fields"))
 }
 
 func (ec *executionContext) _Artifact_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Artifact) (ret graphql.Marshaler) {
@@ -10923,6 +10988,50 @@ func (ec *executionContext) fieldContext_Query_artifacts(_ context.Context, fiel
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_artifactVersions(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_artifactVersions(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().ArtifactVersions(ctx, fc.Args["name"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.Artifact) graphql.Marshaler {
+			return ec.marshalNArtifact2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐArtifactᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_artifactVersions(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Artifact(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_artifactVersions_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_skills(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -15783,7 +15892,7 @@ func (ec *executionContext) unmarshalInputUpsertArtifactInput(ctx context.Contex
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "kind", "version", "uri", "sha256"}
+	fieldsInOrder := [...]string{"name", "kind", "version", "uri", "sha256", "metadata"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -15825,6 +15934,13 @@ func (ec *executionContext) unmarshalInputUpsertArtifactInput(ctx context.Contex
 				return it, err
 			}
 			it.Sha256 = data
+		case "metadata":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("metadata"))
+			data, err := ec.unmarshalOMap2map(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Metadata = data
 		}
 	}
 	return it, nil
@@ -16420,6 +16536,11 @@ func (ec *executionContext) _Artifact(ctx context.Context, sel ast.SelectionSet,
 			}
 		case "sha256":
 			out.Values[i] = ec._Artifact_sha256(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "metadata":
+			out.Values[i] = ec._Artifact_metadata(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
@@ -17882,6 +18003,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_artifacts(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "artifactVersions":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_artifactVersions(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -20949,6 +21092,24 @@ func (ec *executionContext) marshalOLoadBalanceStrategy2ᚖgithubᚗcomᚋVMware
 		return graphql.Null
 	}
 	return v
+}
+
+func (ec *executionContext) unmarshalOMap2map(ctx context.Context, v any) (map[string]any, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalMap(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOMap2map(ctx context.Context, sel ast.SelectionSet, v map[string]any) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	_ = sel
+	_ = ctx
+	res := graphql.MarshalMap(v)
+	return res
 }
 
 func (ec *executionContext) unmarshalOMembershipRole2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMembershipRole(ctx context.Context, v any) (*model.MembershipRole, error) {

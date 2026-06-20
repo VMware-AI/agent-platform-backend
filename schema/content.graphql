@@ -13,6 +13,7 @@ type Artifact {
   version: String!
   uri: String!
   sha256: String
+  metadata: Map
   createdAt: Time!
 }
 
@@ -40,6 +41,7 @@ input UpsertArtifactInput {
   version: String!
   uri: String!
   sha256: String
+  metadata: Map
 }
 input UpsertSkillInput {
   name: String!
@@ -56,6 +58,8 @@ input UpsertImageInput {
 
 extend type Query {
   artifacts: [Artifact!]!
+  # All versions of a named artifact, newest first (制品库版本列表, LLD-06 §3).
+  artifactVersions(name: String!): [Artifact!]!
   skills: [Skill!]!
   images: [Image!]!
 }

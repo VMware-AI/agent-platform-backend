@@ -2,6 +2,8 @@
 # Consumed by the frontend (agent-platform-web) via codegen. See LLD-01 §5.
 
 scalar Time
+# Free-form JSON object (gqlgen built-in) — used for Artifact metadata (LLD-06).
+scalar Map
 
 enum Role {
   admin

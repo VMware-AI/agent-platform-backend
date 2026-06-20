@@ -48,13 +48,14 @@ type AgentUsage struct {
 }
 
 type Artifact struct {
-	ID        string       `json:"id"`
-	Name      string       `json:"name"`
-	Kind      ArtifactKind `json:"kind"`
-	Version   string       `json:"version"`
-	URI       string       `json:"uri"`
-	Sha256    *string      `json:"sha256,omitempty"`
-	CreatedAt time.Time    `json:"createdAt"`
+	ID        string         `json:"id"`
+	Name      string         `json:"name"`
+	Kind      ArtifactKind   `json:"kind"`
+	Version   string         `json:"version"`
+	URI       string         `json:"uri"`
+	Sha256    *string        `json:"sha256,omitempty"`
+	Metadata  map[string]any `json:"metadata,omitempty"`
+	CreatedAt time.Time      `json:"createdAt"`
 }
 
 type AuditConnection struct {
@@ -381,11 +382,12 @@ type UpsertAgentTemplateInput struct {
 }
 
 type UpsertArtifactInput struct {
-	Name    string       `json:"name"`
-	Kind    ArtifactKind `json:"kind"`
-	Version string       `json:"version"`
-	URI     string       `json:"uri"`
-	Sha256  *string      `json:"sha256,omitempty"`
+	Name     string         `json:"name"`
+	Kind     ArtifactKind   `json:"kind"`
+	Version  string         `json:"version"`
+	URI      string         `json:"uri"`
+	Sha256   *string        `json:"sha256,omitempty"`
+	Metadata map[string]any `json:"metadata,omitempty"`
 }
 
 type UpsertImageInput struct {

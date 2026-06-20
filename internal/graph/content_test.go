@@ -6,6 +6,52 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 )
 
+// Artifact metadata round-trips through GraphQL, and artifactVersions returns all
+// versions of a name newest-first (LLD-06 §1/§3).
+func TestArtifact_MetadataAndVersions(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := adminCtx()
+	mr := &mutationResolver{r}
+	qr := &queryResolver{r}
+
+	meta := map[string]any{"arch": "amd64", "signed": true}
+	a, err := mr.UpsertArtifact(ctx, model.UpsertArtifactInput{
+		Name: "goose", Kind: model.ArtifactKindPackage, Version: "1.0.0", URI: "u1", Metadata: meta,
+	})
+	if err != nil {
+		t.Fatalf("UpsertArtifact: %v", err)
+	}
+	if a.Metadata["arch"] != "amd64" || a.Metadata["signed"] != true {
+		t.Fatalf("metadata not round-tripped: %+v", a.Metadata)
+	}
+
+	// second version of the same name + an unrelated artifact
+	if _, err := mr.UpsertArtifact(ctx, model.UpsertArtifactInput{
+		Name: "goose", Kind: model.ArtifactKindPackage, Version: "1.1.0", URI: "u2",
+	}); err != nil {
+		t.Fatalf("upsert v2: %v", err)
+	}
+	if _, err := mr.UpsertArtifact(ctx, model.UpsertArtifactInput{
+		Name: "other", Kind: model.ArtifactKindConfig, Version: "1.0.0", URI: "u3",
+	}); err != nil {
+		t.Fatalf("upsert other: %v", err)
+	}
+
+	versions, err := qr.ArtifactVersions(ctx, "goose")
+	if err != nil {
+		t.Fatalf("ArtifactVersions: %v", err)
+	}
+	if len(versions) != 2 {
+		t.Fatalf("want 2 goose versions, got %d", len(versions))
+	}
+	for _, v := range versions {
+		if v.Name != "goose" {
+			t.Errorf("artifactVersions leaked a different name: %s", v.Name)
+		}
+	}
+}
+
 func TestContentCRUD(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()

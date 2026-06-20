@@ -334,6 +334,9 @@ func toModelArtifact(a *ent.Artifact) *model.Artifact {
 		s := a.Sha256
 		m.Sha256 = &s
 	}
+	if len(a.Metadata) > 0 {
+		m.Metadata = a.Metadata
+	}
 	return m
 }
 
