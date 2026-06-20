@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 )
 
@@ -95,6 +96,65 @@ func TestDeleteTeam_RequiresTeamID(t *testing.T) {
 	c := NewHTTPClient("http://unused", "sk-master")
 	if err := c.DeleteTeam(context.Background(), ""); err == nil {
 		t.Fatal("DeleteTeam with empty id should error")
+	}
+}
+
+func TestGet_RetriesOnServerError(t *testing.T) {
+	var attempts int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if atomic.AddInt32(&attempts, 1) < 3 {
+			w.WriteHeader(http.StatusServiceUnavailable) // transient 5xx
+			return
+		}
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+
+	c := NewHTTPClient(srv.URL, "sk-master")
+	c.retryBackoff = 0 // keep the test fast
+	if _, err := c.ListTeams(context.Background()); err != nil {
+		t.Fatalf("ListTeams should succeed after retries: %v", err)
+	}
+	if got := atomic.LoadInt32(&attempts); got != 3 {
+		t.Errorf("want 3 attempts (2 retries), got %d", got)
+	}
+}
+
+func TestGet_NoRetryOn4xx(t *testing.T) {
+	var attempts int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&attempts, 1)
+		w.WriteHeader(http.StatusBadRequest) // client error — retrying won't help
+	}))
+	defer srv.Close()
+
+	c := NewHTTPClient(srv.URL, "sk-master")
+	c.retryBackoff = 0
+	if _, err := c.ListTeams(context.Background()); err == nil {
+		t.Fatal("expected error on 400")
+	}
+	if got := atomic.LoadInt32(&attempts); got != 1 {
+		t.Errorf("4xx must not be retried, got %d attempts", got)
+	}
+}
+
+// Mutations must be exactly-once: a 5xx on POST is NOT retried (the server may
+// have already applied it).
+func TestPost_NoRetry(t *testing.T) {
+	var attempts int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&attempts, 1)
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer srv.Close()
+
+	c := NewHTTPClient(srv.URL, "sk-master")
+	c.retryBackoff = 0
+	if _, err := c.GenerateKey(context.Background(), GenerateKeyRequest{UserID: "u1"}); err == nil {
+		t.Fatal("expected error")
+	}
+	if got := atomic.LoadInt32(&attempts); got != 1 {
+		t.Errorf("POST must not be retried, got %d attempts", got)
 	}
 }
 

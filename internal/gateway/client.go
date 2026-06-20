@@ -99,15 +99,21 @@ type HTTPClient struct {
 	baseURL   string
 	masterKey string
 	http      *http.Client
+	// Lightweight retry for IDEMPOTENT reads only (LLD-04 §2). Mutations (post)
+	// are exactly-once and never retried.
+	maxAttempts  int
+	retryBackoff time.Duration
 }
 
 // NewHTTPClient returns a gateway client. baseURL is the proxy base (e.g.
 // http://litellm:4000); masterKey authenticates admin calls.
 func NewHTTPClient(baseURL, masterKey string) *HTTPClient {
 	return &HTTPClient{
-		baseURL:   strings.TrimRight(baseURL, "/"),
-		masterKey: masterKey,
-		http:      &http.Client{Timeout: 15 * time.Second},
+		baseURL:      strings.TrimRight(baseURL, "/"),
+		masterKey:    masterKey,
+		http:         &http.Client{Timeout: 15 * time.Second},
+		maxAttempts:  3,
+		retryBackoff: 200 * time.Millisecond,
 	}
 }
 
@@ -208,30 +214,73 @@ func (c *HTTPClient) ListTeams(ctx context.Context) ([]TeamInfo, error) {
 	return teams, nil
 }
 
-// get sends an admin GET with Bearer auth and decodes the JSON response.
+// get sends an admin GET with Bearer auth and decodes the JSON response. Because
+// GET is idempotent it retries transient failures (transport errors + 5xx) up to
+// maxAttempts with a linear backoff; 4xx (client errors) are returned immediately.
 func (c *HTTPClient) get(ctx context.Context, path string, out any) error {
+	attempts := c.maxAttempts
+	if attempts < 1 {
+		attempts = 1
+	}
+	var lastErr error
+	for attempt := 1; attempt <= attempts; attempt++ {
+		if attempt > 1 {
+			if err := sleepCtx(ctx, c.retryBackoff*time.Duration(attempt-1)); err != nil {
+				return err
+			}
+		}
+		retryable, err := c.getOnce(ctx, path, out)
+		if err == nil {
+			return nil
+		}
+		lastErr = err
+		if !retryable {
+			return err
+		}
+	}
+	return lastErr
+}
+
+// getOnce performs a single GET. retryable reports whether a failure is worth
+// re-trying (transport error or 5xx) vs terminal (4xx, decode error).
+func (c *HTTPClient) getOnce(ctx context.Context, path string, out any) (retryable bool, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
 	if err != nil {
-		return err
+		return false, err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.masterKey)
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return fmt.Errorf("gateway %s: %w", path, err)
+		return true, fmt.Errorf("gateway %s: %w", path, err) // transport error: never reached/completed
 	}
 	defer resp.Body.Close()
 
 	data, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("gateway %s: status %d: %s", path, resp.StatusCode, string(data))
+		return resp.StatusCode >= 500, fmt.Errorf("gateway %s: status %d: %s", path, resp.StatusCode, string(data))
 	}
 	if out != nil {
 		if err := json.Unmarshal(data, out); err != nil {
-			return fmt.Errorf("decode %s response: %w", path, err)
+			return false, fmt.Errorf("decode %s response: %w", path, err)
 		}
 	}
-	return nil
+	return false, nil
+}
+
+// sleepCtx waits for d or until ctx is canceled, whichever comes first.
+func sleepCtx(ctx context.Context, d time.Duration) error {
+	if d <= 0 {
+		return ctx.Err()
+	}
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-t.C:
+		return nil
+	}
 }
 
 // post sends an admin POST with Bearer auth and decodes the JSON response.
