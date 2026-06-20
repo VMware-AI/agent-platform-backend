@@ -7,6 +7,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
@@ -62,7 +63,7 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 	resp, err := r.Gateway.GenerateKey(ctx, req)
 	if err != nil {
 		r.audit(ctx, "key.issue", "virtual_key", input.UserID, false, actorID(auth.FromContext(ctx)))
-		return nil, gqlerror.Errorf("gateway: %s", err.Error())
+		return nil, fmt.Errorf("gateway: %w", err)
 	}
 
 	create := r.Ent.VirtualKey.Create().
@@ -96,10 +97,10 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		actor := actorID(auth.FromContext(ctx))
 		if delErr := r.Gateway.DeleteKey(cctx, resp.Key); delErr != nil {
 			r.audit(cctx, "key.issue", "virtual_key", input.UserID, false, actor)
-			return nil, gqlerror.Errorf("persist virtual key failed: %s (orphan revoke also failed: %s)", err.Error(), delErr.Error())
+			return nil, fmt.Errorf("persist virtual key failed: %v (orphan revoke also failed: %w)", err, delErr)
 		}
 		r.audit(cctx, "key.issue", "virtual_key", input.UserID, false, actor)
-		return nil, gqlerror.Errorf("persist virtual key failed: %s", err.Error())
+		return nil, fmt.Errorf("persist virtual key failed: %w", err)
 	}
 	r.audit(ctx, "key.issue", "virtual_key", vk.ID.String(), true, actorID(auth.FromContext(ctx)))
 	return &model.IssuedVirtualKey{
@@ -120,7 +121,7 @@ func (r *mutationResolver) RevokeVirtualKey(ctx context.Context, id string) (boo
 	}
 	if r.Gateway != nil {
 		if err := r.Gateway.DeleteKey(ctx, vk.LitellmKey); err != nil {
-			return false, gqlerror.Errorf("gateway: %s", err.Error())
+			return false, fmt.Errorf("gateway: %w", err)
 		}
 	}
 	if _, err := r.Ent.VirtualKey.UpdateOne(vk).SetStatus(virtualkey.StatusRevoked).Save(ctx); err != nil {

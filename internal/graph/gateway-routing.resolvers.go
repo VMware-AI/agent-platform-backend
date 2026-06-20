@@ -7,6 +7,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
@@ -124,7 +125,7 @@ func (r *mutationResolver) UpsertUpstream(ctx context.Context, input model.Upser
 		if input.APIKeyRef != nil && r.Secrets != nil {
 			cred, err := r.Secrets.Resolve(ctx, *input.APIKeyRef)
 			if err != nil {
-				return nil, gqlerror.Errorf("resolve upstream api key: %s", err.Error())
+				return nil, fmt.Errorf("resolve upstream api key: %w", err)
 			}
 			apiKey = cred.APIKey
 			if apiKey == "" {
@@ -134,7 +135,7 @@ func (r *mutationResolver) UpsertUpstream(ctx context.Context, input model.Upser
 		if err := r.GatewayModels.NewModel(ctx, gateway.ModelSpec{
 			ModelName: u.Name, Model: u.Model, APIBase: u.APIBase, APIKey: apiKey,
 		}); err != nil {
-			return nil, gqlerror.Errorf("sync upstream to gateway: %s", err.Error())
+			return nil, fmt.Errorf("sync upstream to gateway: %w", err)
 		}
 	}
 	r.audit(ctx, "upstream.upsert", "upstream", u.ID.String(), true, actorID(auth.FromContext(ctx)))
@@ -239,7 +240,7 @@ func (r *mutationResolver) SetRouterTier(ctx context.Context, tier model.RouterT
 		if err := r.GatewayModels.UpsertComplexityRouter(ctx, gateway.RouterSpec{
 			ModelName: "smart", Tiers: tiers, DefaultModel: tiers["MEDIUM"],
 		}); err != nil {
-			return nil, gqlerror.Errorf("sync complexity router: %s", err.Error())
+			return nil, fmt.Errorf("sync complexity router: %w", err)
 		}
 	}
 	r.audit(ctx, "router.set_tier", "router_tier", rt.ID.String(), true, actorID(auth.FromContext(ctx)))

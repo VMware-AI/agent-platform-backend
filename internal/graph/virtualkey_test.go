@@ -2,11 +2,57 @@ package graph
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"testing"
+
+	"github.com/vektah/gqlparser/v2/gqlerror"
 
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 )
+
+// genFailGateway makes GenerateKey fail with a detail-bearing internal error.
+type genFailGateway struct {
+	fakeGateway
+}
+
+func (genFailGateway) GenerateKey(context.Context, gateway.GenerateKeyRequest) (*gateway.KeyResponse, error) {
+	return nil, errors.New("dial litellm:4000: connection refused (master-key=sk-secret)")
+}
+
+// Regression guard: an internal gateway failure must surface as a PLAIN error so
+// the global ErrorPresenter masks it. If a resolver wraps it in gqlerror.Errorf
+// (which the presenter passes through verbatim), the internal detail leaks to the
+// client. See internal/graph/errors.go.
+func TestIssueVirtualKey_InternalErrorIsMaskable(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	r.Gateway = &genFailGateway{}
+	ctx := context.Background()
+	mr := &mutationResolver{r}
+
+	u, err := mr.CreateUser(ctx, model.CreateUserInput{
+		Username: "maskuser", Email: "m@x.io", Password: "MaskUserPass1", Role: model.RoleUser,
+	})
+	if err != nil {
+		t.Fatalf("CreateUser: %v", err)
+	}
+
+	_, err = mr.IssueVirtualKey(ctx, model.IssueVirtualKeyInput{UserID: u.ID, Models: []string{"smart"}})
+	if err == nil {
+		t.Fatal("expected gateway failure")
+	}
+	var g *gqlerror.Error
+	if errors.As(err, &g) {
+		t.Fatalf("internal error must be a plain (maskable) error, not a pass-through gqlerror: %v", err)
+	}
+	// The detail must still be present in the (server-side) error for logging — it
+	// is the presenter, not the resolver, that strips it before the wire.
+	if !strings.Contains(err.Error(), "connection refused") {
+		t.Errorf("wrapped error should retain detail for server logs, got %q", err.Error())
+	}
+}
 
 // fakeGateway is an in-memory gateway.Client for tests.
 type fakeGateway struct {

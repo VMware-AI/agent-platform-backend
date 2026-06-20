@@ -118,7 +118,7 @@ func (r *mutationResolver) ChangePassword(ctx context.Context, oldPassword strin
 	}
 	hash, err := auth.HashPassword(newPassword)
 	if err != nil {
-		return false, gqlerror.Errorf("%s", err.Error())
+		return false, err
 	}
 	if _, err := r.Ent.User.UpdateOne(u).SetPasswordHash(hash).SetMustChangePassword(false).Save(ctx); err != nil {
 		return false, err
@@ -132,7 +132,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.CreateUse
 	actor := actorID(auth.FromContext(ctx))
 	hash, err := auth.HashPassword(input.Password)
 	if err != nil {
-		return nil, gqlerror.Errorf("%s", err.Error())
+		return nil, err
 	}
 	create := r.Ent.User.Create().
 		SetUsername(input.Username).

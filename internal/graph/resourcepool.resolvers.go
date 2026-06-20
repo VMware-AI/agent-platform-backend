@@ -7,6 +7,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
@@ -105,12 +106,12 @@ func (r *mutationResolver) SyncResourcePool(ctx context.Context, id string) (*mo
 	conn, err := r.connectPool(ctx, pool)
 	if err != nil {
 		_, _ = r.Ent.ResourcePool.UpdateOne(pool).SetStatus(resourcepool.StatusError).Save(ctx)
-		return nil, gqlerror.Errorf("connect: %s", err.Error())
+		return nil, fmt.Errorf("connect: %w", err)
 	}
 	defer func() { _ = conn.Logout(ctx) }()
 	inv, err := conn.Inventory(ctx)
 	if err != nil {
-		return nil, gqlerror.Errorf("inventory: %s", err.Error())
+		return nil, fmt.Errorf("inventory: %w", err)
 	}
 	pool, err = r.Ent.ResourcePool.UpdateOne(pool).
 		SetStatus(resourcepool.StatusConnected).
