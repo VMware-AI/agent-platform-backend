@@ -48,18 +48,29 @@ func main() {
 		log.Fatalf("seed admin: %v", err)
 	}
 
+	// Login brute-force throttle: 10 failures per 15 minutes per key.
+	const loginThreshold = 10
+	const loginWindow = 15 * time.Minute
+
 	var sessions session.Store
+	var loginLimiter ratelimit.Limiter
 	ttl := time.Duration(cfg.SessionTTL) * time.Second
 	if cfg.RedisURL != "" {
 		opt, err := redis.ParseURL(cfg.RedisURL)
 		if err != nil {
 			log.Fatalf("redis url: %v", err)
 		}
-		sessions = session.NewRedisStore(redis.NewClient(opt), ttl)
-		log.Printf("session store: redis")
+		// One client shared by the session store and the limiter so both counters
+		// are GLOBAL across replicas (a per-replica limiter would let a load
+		// balancer multiply the brute-force threshold by the replica count).
+		rdb := redis.NewClient(opt)
+		sessions = session.NewRedisStore(rdb, ttl)
+		loginLimiter = ratelimit.NewRedis(rdb, loginThreshold, loginWindow)
+		log.Printf("session store: redis; login limiter: redis (shared across replicas)")
 	} else {
 		sessions = session.NewMemoryStore()
-		log.Printf("session store: in-memory (dev)")
+		loginLimiter = ratelimit.NewMemory(loginThreshold, loginWindow)
+		log.Printf("session store: in-memory (dev); login limiter: in-memory")
 	}
 
 	var gw gateway.Client
@@ -95,7 +106,7 @@ func main() {
 		GatewayURL:      os.Getenv("GATEWAY_PUBLIC_URL"),
 		VCenterConnect:  vcConnect,
 		VCenterInsecure: cfg.VCenterInsecure,
-		LoginLimiter:    ratelimit.NewMemory(10, 15*time.Minute),
+		LoginLimiter:    loginLimiter,
 	}
 	resolver.EnablePermissionCache(60 * time.Second)
 
