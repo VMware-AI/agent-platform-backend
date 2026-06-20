@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/vektah/gqlparser/v2/gqlerror"
+
+	"github.com/VMware-AI/agent-platform-backend/ent"
 )
 
 // A plain (non-gqlerror) error returned by a resolver must NEVER leak its detail
@@ -62,6 +64,24 @@ func TestErrorPresenter_PassesThroughClientErrors(t *testing.T) {
 				t.Fatalf("want code %q, got %v", tc.code, out.Extensions["code"])
 			}
 		})
+	}
+}
+
+// A bare ent NotFound is surfaced as NOT_FOUND (not masked as INTERNAL) so a
+// client can tell a bad id from a server fault — but without leaking the entity.
+func TestErrorPresenter_MapsNotFound(t *testing.T) {
+	notFound := &ent.NotFoundError{}
+	out := ErrorPresenter(context.Background(), notFound)
+	if out.Extensions["code"] != codeNotFound {
+		t.Fatalf("want NOT_FOUND code, got %v", out.Extensions["code"])
+	}
+	if out.Message != msgNotFound {
+		t.Fatalf("want generic %q, got %q", msgNotFound, out.Message)
+	}
+	// wrapped NotFound is still recognized
+	wrapped := fmt.Errorf("load agent: %w", &ent.NotFoundError{})
+	if ErrorPresenter(context.Background(), wrapped).Extensions["code"] != codeNotFound {
+		t.Fatal("wrapped NotFound should map to NOT_FOUND")
 	}
 }
 

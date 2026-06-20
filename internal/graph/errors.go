@@ -10,6 +10,8 @@ import (
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
+
+	"github.com/VMware-AI/agent-platform-backend/ent"
 )
 
 // Generic message and error codes surfaced to GraphQL clients. Internal failures
@@ -18,11 +20,13 @@ import (
 // errorId the client can quote to support.
 const (
 	msgInternal = "internal server error"
+	msgNotFound = "not found"
 
 	codeInternal        = "INTERNAL"
 	codeUnauthenticated = "UNAUTHENTICATED"
 	codeForbidden       = "FORBIDDEN"
 	codeBadRequest      = "BAD_REQUEST"
+	codeNotFound        = "NOT_FOUND"
 )
 
 // ErrorPresenter is the global gqlgen error presenter. It distinguishes two kinds
@@ -50,6 +54,16 @@ func ErrorPresenter(ctx context.Context, e error) *gqlerror.Error {
 			presented.Extensions["code"] = classifyCode(presented.Message)
 		}
 		return presented
+	}
+	// A bare ent "not found" (resolvers commonly `return nil, err` after a Get on a
+	// client-supplied id) is safe to surface to an authorized caller — and far more
+	// useful than masking it as INTERNAL. Use a generic message so the entity name
+	// never leaks.
+	if ent.IsNotFound(e) {
+		return &gqlerror.Error{
+			Message:    msgNotFound,
+			Extensions: map[string]interface{}{"code": codeNotFound},
+		}
 	}
 	return maskInternal(ctx, "graphql internal error", e.Error())
 }
