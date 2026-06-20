@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
@@ -80,6 +81,10 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	}
 
 	// Persist the issued key (secret is Sensitive) and mark the agent running.
+	// Provision already succeeded: the VM is running and a live gateway key exists.
+	// If either write below fails we must compensate (destroy VM + revoke key),
+	// else we leak an orphan VM and an ungoverned key — the same invariant
+	// deploy.Service.rollback enforces for failures *inside* Provision.
 	vk, err := r.Ent.VirtualKey.Create().
 		SetLitellmKey(res.VirtualKey).
 		SetUserID(ag.OwnerUserID).
@@ -87,23 +92,53 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		SetAlias(ag.Name).
 		Save(ctx)
 	if err != nil {
-		return nil, err
+		r.rollbackDeploy(ctx, conn, ag, input.VMName, res.VirtualKey)
+		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
+		return nil, fmt.Errorf("persist virtual key failed: %w", err)
 	}
-	ag, err = r.Ent.Agent.UpdateOne(ag).
+	// NB: assign to a NEW var — `ag, err = Save()` would nil out `ag` on error,
+	// breaking the compensation that needs the original row.
+	updated, err := r.Ent.Agent.UpdateOne(ag).
 		SetStatus(agent.StatusRunning).
 		SetVMRef(input.VMName).
 		SetVirtualKeyID(vk.ID).
 		SetResourcePoolID(poolID).
 		Save(ctx)
 	if err != nil {
-		return nil, err
+		// The vk row persisted but the agent didn't finalize; drop the now-dangling
+		// row (it points at a key we're about to revoke) then compensate.
+		if delErr := r.Ent.VirtualKey.DeleteOne(vk).Exec(context.WithoutCancel(ctx)); delErr != nil {
+			log.Printf("deploy rollback: delete dangling vk row %s failed: %v", vk.ID, delErr)
+		}
+		r.rollbackDeploy(ctx, conn, ag, input.VMName, res.VirtualKey)
+		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
+		return nil, fmt.Errorf("finalize agent failed: %w", err)
 	}
-	r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), true, cu.ID)
+	r.audit(ctx, "agent.deploy", "agent", updated.ID.String(), true, cu.ID)
 
 	return &model.DeployedAgent{
-		Agent:            toModelAgent(ag),
+		Agent:            toModelAgent(updated),
 		VirtualKeySecret: res.VirtualKey,
 	}, nil
+}
+
+// rollbackDeploy tears down a half-deployed agent after Provision succeeded but
+// DB persistence failed: destroy the running VM, revoke the live gateway key, and
+// mark the agent exception. Uses a detached context so a canceled request still
+// cleans up. Best-effort — each step is logged on failure, never fatal.
+func (r *Resolver) rollbackDeploy(ctx context.Context, conn VCenterClient, ag *ent.Agent, vmName, key string) {
+	cctx := context.WithoutCancel(ctx)
+	if err := conn.Destroy(cctx, vmName); err != nil {
+		log.Printf("deploy rollback: orphan VM %q, destroy failed: %v", vmName, err)
+	}
+	if r.Gateway != nil {
+		if err := r.Gateway.DeleteKey(cctx, key); err != nil {
+			log.Printf("deploy rollback: orphan gateway key, revoke failed: %v", err)
+		}
+	}
+	if _, err := r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusException).Save(cctx); err != nil {
+		log.Printf("deploy rollback: mark agent %s exception failed: %v", ag.ID, err)
+	}
 }
 
 // RecycleAgent destroys the agent's VM, revokes its key and marks it stopped.
