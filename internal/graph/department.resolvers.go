@@ -24,8 +24,8 @@ func (r *mutationResolver) CreateDepartment(ctx context.Context, input model.Cre
 	// Pre-generate the id so the litellm team handle is written atomically with
 	// the row — it is never empty/wrong. A crash between this commit and the
 	// gateway call leaves a row pointing at a not-yet-created team; that is
-	// recoverable by re-running (the team id is deterministic = dept id). A
-	// reconciliation sweep for that crash window is still TODO. C3.
+	// recoverable by re-running (the team id is deterministic = dept id) and is
+	// also surfaced as a DanglingDepts entry by reconcile.ReconcileTeams. C3.
 	deptID := uuid.New()
 	teamID := deptID.String()
 	c := r.Ent.Department.Create().SetID(deptID).SetName(input.Name).SetLitellmTeamID(teamID)
