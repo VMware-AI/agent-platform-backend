@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/99designs/gqlgen/graphql"
+	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
@@ -42,15 +43,50 @@ func HasRole(ctx context.Context, _ any, next graphql.Resolver, allowed []model.
 	return nil, gqlerror.Errorf("forbidden: requires one of the allowed roles")
 }
 
-// HasPermission implements the @hasPermission directive via the role→permission
-// matrix (LLD-01 §4.3).
-func HasPermission(ctx context.Context, _ any, next graphql.Resolver, perm string) (any, error) {
+// HasPermission implements the @hasPermission directive. It first checks the
+// static role→permission matrix (fast path), then falls back to the union of
+// the caller's custom-role permissions (user_roles → role_permissions), so
+// admin-configured roles actually grant access (LLD-01 §4.2/§4.3).
+func (r *Resolver) HasPermission(ctx context.Context, _ any, next graphql.Resolver, perm string) (any, error) {
 	u := auth.FromContext(ctx)
 	if u == nil {
 		return nil, gqlerror.Errorf("unauthenticated")
 	}
-	if !u.Role.HasPermission(perm) {
-		return nil, gqlerror.Errorf("forbidden: requires permission %q", perm)
+	if u.Role.HasPermission(perm) {
+		return next(ctx)
 	}
-	return next(ctx)
+	set, err := r.effectivePerms(ctx, u.ID)
+	if err != nil {
+		return nil, gqlerror.Errorf("permission check failed")
+	}
+	if set[perm] {
+		return next(ctx)
+	}
+	return nil, gqlerror.Errorf("forbidden: requires permission %q", perm)
+}
+
+// effectivePerms returns the union of permission keys granted to a user by their
+// assigned custom roles. Memoized via permCache (short TTL + eager invalidation).
+func (r *Resolver) effectivePerms(ctx context.Context, userID string) (map[string]bool, error) {
+	if set, ok := r.permCache.get(userID); ok {
+		return set, nil
+	}
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, err
+	}
+	u, err := r.Ent.User.Get(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+	perms, err := u.QueryRoles().QueryPermissions().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	set := make(map[string]bool, len(perms))
+	for _, p := range perms {
+		set[p.Key] = true
+	}
+	r.permCache.put(userID, set)
+	return set, nil
 }

@@ -151,12 +151,16 @@ func TestHasRoleDirective(t *testing.T) {
 }
 
 func TestHasPermissionDirective(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
 	next := func(context.Context) (any, error) { return "ok", nil }
 	obsCtx := auth.WithCurrentUser(context.Background(), &auth.CurrentUser{Role: auth.RoleObservability})
-	if _, err := HasPermission(obsCtx, nil, next, auth.PermAuditView); err != nil {
+	// Static fast path grants audit:view to observability (no custom role needed).
+	if _, err := r.HasPermission(obsCtx, nil, next, auth.PermAuditView); err != nil {
 		t.Fatalf("observability should have audit:view: %v", err)
 	}
-	if _, err := HasPermission(obsCtx, nil, next, auth.PermUserManage); err == nil {
+	// user:manage is neither in the static matrix nor any custom role → denied.
+	if _, err := r.HasPermission(obsCtx, nil, next, auth.PermUserManage); err == nil {
 		t.Fatal("observability must not have user:manage")
 	}
 }

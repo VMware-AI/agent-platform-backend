@@ -39,7 +39,7 @@ func setupE2E(t *testing.T) *e2eEnv {
 		Resolvers: r,
 		Directives: graph.DirectiveRoot{
 			HasRole:       graph.HasRole,
-			HasPermission: graph.HasPermission,
+			HasPermission: r.HasPermission,
 		},
 	})
 	srv := handler.New(es)

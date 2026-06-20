@@ -96,12 +96,13 @@ func main() {
 		VCenterInsecure: cfg.VCenterInsecure,
 		LoginLimiter:    ratelimit.NewMemory(10, 15*time.Minute),
 	}
+	resolver.EnablePermissionCache(60 * time.Second)
 
 	es := graph.NewExecutableSchema(graph.Config{
 		Resolvers: resolver,
 		Directives: graph.DirectiveRoot{
 			HasRole:       graph.HasRole,
-			HasPermission: graph.HasPermission,
+			HasPermission: resolver.HasPermission,
 		},
 	})
 	srv := handler.New(es)

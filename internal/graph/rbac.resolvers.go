@@ -38,6 +38,7 @@ func (r *mutationResolver) DeleteCustomRole(ctx context.Context, id string) (boo
 	if err := r.Ent.Role.DeleteOneID(rid).Exec(ctx); err != nil {
 		return false, err
 	}
+	r.permCache.clear() // affects every user who held this role
 	r.audit(ctx, "role.delete", "role", id, true, actorID(auth.FromContext(ctx)))
 	return true, nil
 }
@@ -89,6 +90,7 @@ func (r *mutationResolver) SetRolePermissions(ctx context.Context, roleID string
 	if err != nil {
 		return nil, err
 	}
+	r.permCache.clear() // affects every user holding this role
 	r.audit(ctx, "role.set_permissions", "role", roleID, true, actorID(auth.FromContext(ctx)))
 	return r.modelCustomRole(ctx, role)
 }
@@ -106,6 +108,7 @@ func (r *mutationResolver) AssignUserRole(ctx context.Context, userID string, ro
 	if err := r.Ent.User.UpdateOneID(uid).AddRoleIDs(rid).Exec(ctx); err != nil {
 		return false, err
 	}
+	r.permCache.invalidate(userID) // the user's effective permissions changed
 	r.audit(ctx, "user.assign_role", "user", userID, true, actorID(auth.FromContext(ctx)))
 	return true, nil
 }
@@ -123,6 +126,7 @@ func (r *mutationResolver) RemoveUserRole(ctx context.Context, userID string, ro
 	if err := r.Ent.User.UpdateOneID(uid).RemoveRoleIDs(rid).Exec(ctx); err != nil {
 		return false, err
 	}
+	r.permCache.invalidate(userID) // revoke takes effect immediately, not after TTL
 	r.audit(ctx, "user.remove_role", "user", userID, true, actorID(auth.FromContext(ctx)))
 	return true, nil
 }

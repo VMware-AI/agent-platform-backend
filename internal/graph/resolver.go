@@ -50,4 +50,14 @@ type Resolver struct {
 	VCenterInsecure bool
 	// LoginLimiter throttles failed logins (brute-force defense); nil disables it.
 	LoginLimiter ratelimit.Limiter
+	// permCache memoizes custom-role permission sets for @hasPermission; nil
+	// disables caching (every check queries — used in tests for freshness).
+	permCache *permCache
+}
+
+// EnablePermissionCache turns on memoization of custom-role permission sets for
+// the @hasPermission directive (recommended in production). Entries expire after
+// ttl and are invalidated eagerly when roles change.
+func (r *Resolver) EnablePermissionCache(ttl time.Duration) {
+	r.permCache = newPermCache(ttl)
 }
