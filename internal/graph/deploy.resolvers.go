@@ -7,6 +7,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
@@ -55,12 +56,12 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 
 	cred, err := r.Secrets.Resolve(ctx, pool.SecretRef)
 	if err != nil {
-		return nil, gqlerror.Errorf("resolve pool credentials: %s", err.Error())
+		return nil, fmt.Errorf("resolve pool credentials: %w", err)
 	}
 	conn, err := r.VCenterConnect(ctx, pool.Endpoint, cred.Username, cred.Password, r.VCenterInsecure)
 	if err != nil {
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
-		return nil, gqlerror.Errorf("connect vcenter: %s", err.Error())
+		return nil, fmt.Errorf("connect vcenter: %w", err)
 	}
 
 	svc := &deploy.Service{Gateway: r.Gateway, VCenter: conn, GatewayURL: r.GatewayURL}
@@ -75,7 +76,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	})
 	if err != nil {
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
-		return nil, gqlerror.Errorf("provision: %s", err.Error())
+		return nil, fmt.Errorf("provision: %w", err)
 	}
 
 	// Persist the issued key (secret is Sensitive) and mark the agent running.
@@ -136,14 +137,14 @@ func (r *mutationResolver) RecycleAgent(ctx context.Context, input model.Recycle
 	conn, err := r.connectPool(ctx, pool)
 	if err != nil {
 		r.audit(ctx, "agent.recycle", "agent", ag.ID.String(), false, cu.ID)
-		return nil, gqlerror.Errorf("connect vcenter: %s", err.Error())
+		return nil, fmt.Errorf("connect vcenter: %w", err)
 	}
 	defer func() { _ = conn.Logout(ctx) }()
 
 	if ag.VMRef != "" {
 		if err := conn.Destroy(ctx, ag.VMRef); err != nil {
 			r.audit(ctx, "agent.recycle", "agent", ag.ID.String(), false, cu.ID)
-			return nil, gqlerror.Errorf("destroy vm: %s", err.Error())
+			return nil, fmt.Errorf("destroy vm: %w", err)
 		}
 	}
 	// Revoke the agent's gateway key so it does not outlive the VM. The VM is
@@ -192,12 +193,12 @@ func (r *queryResolver) VMTemplates(ctx context.Context, resourcePoolID string) 
 	}
 	conn, err := r.connectPool(ctx, pool)
 	if err != nil {
-		return nil, gqlerror.Errorf("connect vcenter: %s", err.Error())
+		return nil, fmt.Errorf("connect vcenter: %w", err)
 	}
 	defer func() { _ = conn.Logout(ctx) }()
 	tpls, err := conn.ListTemplates(ctx)
 	if err != nil {
-		return nil, gqlerror.Errorf("list templates: %s", err.Error())
+		return nil, fmt.Errorf("list templates: %w", err)
 	}
 	out := make([]model.VMTemplate, 0, len(tpls))
 	for _, t := range tpls {

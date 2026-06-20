@@ -111,6 +111,10 @@ func main() {
 	srv.AddTransport(transport.POST{})
 	srv.Use(extension.Introspection{})
 	srv.Use(extension.FixedComplexityLimit(200)) // guard against deep/expensive queries
+	// Mask internal errors/panics behind a generic message + logged correlation id
+	// so resolver/infra detail never reaches the client.
+	srv.SetErrorPresenter(graph.ErrorPresenter)
+	srv.SetRecoverFunc(graph.RecoverFunc)
 
 	mux := http.NewServeMux()
 	mux.Handle("/query", httpx.CSRF(cfg.AllowedOrigins)(auth.SessionMiddleware(sessions)(srv)))

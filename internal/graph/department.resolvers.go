@@ -7,6 +7,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
@@ -42,7 +43,7 @@ func (r *mutationResolver) CreateDepartment(ctx context.Context, input model.Cre
 			TeamID: teamID, TeamAlias: input.Name, MaxBudget: input.MaxBudget,
 		}); err != nil {
 			_ = r.Ent.Department.DeleteOneID(dept.ID).Exec(ctx) // compensate: no orphan row
-			return nil, gqlerror.Errorf("create litellm team: %s", err.Error())
+			return nil, fmt.Errorf("create litellm team: %w", err)
 		}
 	}
 	r.audit(ctx, "department.create", "department", dept.ID.String(), true, actorID(auth.FromContext(ctx)))
@@ -63,7 +64,7 @@ func (r *mutationResolver) DeleteDepartment(ctx context.Context, id string) (boo
 	}
 	if r.Gateway != nil && dept.LitellmTeamID != "" {
 		if err := r.Gateway.DeleteTeam(ctx, dept.LitellmTeamID); err != nil {
-			return false, gqlerror.Errorf("delete litellm team: %s", err.Error())
+			return false, fmt.Errorf("delete litellm team: %w", err)
 		}
 	}
 	if err := r.Ent.Department.DeleteOneID(did).Exec(ctx); err != nil {
