@@ -52,6 +52,7 @@ func TestDeployAgent_EndToEnd(t *testing.T) {
 		Username: "deployer", Email: "d@x.io", Password: "DeployPass12", Role: model.RoleUser,
 	})
 	ownerCtx := userCtx(owner.ID, "user")
+	seedActiveTemplate(t, mr.Resolver, "goose")
 
 	ag, err := mr.CreateAgent(ownerCtx, model.CreateAgentInput{Name: "alice-goose", AgentType: "goose"})
 	if err != nil {
@@ -189,6 +190,7 @@ func TestRecycleAgent_VCSim(t *testing.T) {
 		Username: "recycler", Email: "r@x.io", Password: "RecyclePass1", Role: model.RoleUser,
 	})
 	ownerCtx := userCtx(owner.ID, "user")
+	seedActiveTemplate(t, mr.Resolver, "goose")
 	ag, _ := mr.CreateAgent(ownerCtx, model.CreateAgentInput{Name: "bob-goose", AgentType: "goose"})
 	ref := "vault://oc"
 	pool, _ := mr.RegisterResourcePool(adminCtx(), model.RegisterResourcePoolInput{

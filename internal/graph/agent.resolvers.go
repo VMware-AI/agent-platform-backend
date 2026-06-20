@@ -67,6 +67,18 @@ func (r *mutationResolver) CreateAgent(ctx context.Context, input model.CreateAg
 	if err != nil {
 		return nil, err
 	}
+	// The agent type must be a catalog kind that is active. Unknown or deferred
+	// kinds are not deployable (LLD-05 §5: deferred 不可选).
+	tpl, err := r.Ent.AgentTemplate.Query().Where(agenttemplate.Kind(input.AgentType)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, gqlerror.Errorf("unknown agent type: %s", input.AgentType)
+		}
+		return nil, err
+	}
+	if tpl.Status != agenttemplate.StatusActive {
+		return nil, gqlerror.Errorf("agent type %s is not available", input.AgentType)
+	}
 	create := r.Ent.Agent.Create().
 		SetName(input.Name).
 		SetAgentType(input.AgentType).

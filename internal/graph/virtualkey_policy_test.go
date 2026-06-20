@@ -23,6 +23,7 @@ func TestIssueVirtualKey_AppliesPolicyAndBindsAgent(t *testing.T) {
 	}
 	u, _ := mr.CreateUser(ctx, model.CreateUserInput{Username: "ku", Email: "ku@x.io", Password: "KuPass1234567", Role: model.RoleUser})
 	ownerCtx := auth.WithCurrentUser(ctx, &auth.CurrentUser{ID: u.ID, Role: auth.RoleUser})
+	seedActiveTemplate(t, mr.Resolver, "goose")
 	ag, _ := mr.CreateAgent(ownerCtx, model.CreateAgentInput{Name: "a", AgentType: "goose"})
 
 	issued, err := mr.IssueVirtualKey(ctx, model.IssueVirtualKeyInput{
