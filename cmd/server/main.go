@@ -23,6 +23,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph"
 	"github.com/VMware-AI/agent-platform-backend/internal/httpx"
+	"github.com/VMware-AI/agent-platform-backend/internal/ratelimit"
 	"github.com/VMware-AI/agent-platform-backend/internal/secrets"
 	"github.com/VMware-AI/agent-platform-backend/internal/session"
 	"github.com/VMware-AI/agent-platform-backend/internal/store"
@@ -93,6 +94,7 @@ func main() {
 		GatewayURL:      os.Getenv("GATEWAY_PUBLIC_URL"),
 		VCenterConnect:  vcConnect,
 		VCenterInsecure: cfg.VCenterInsecure,
+		LoginLimiter:    ratelimit.NewMemory(10, 15*time.Minute),
 	}
 
 	es := graph.NewExecutableSchema(graph.Config{
@@ -110,7 +112,7 @@ func main() {
 	srv.Use(extension.FixedComplexityLimit(200)) // guard against deep/expensive queries
 
 	mux := http.NewServeMux()
-	mux.Handle("/query", auth.SessionMiddleware(sessions)(srv))
+	mux.Handle("/query", httpx.CSRF(cfg.AllowedOrigins)(auth.SessionMiddleware(sessions)(srv)))
 	mux.Handle("/", playground.Handler("Agent Platform", "/query"))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)

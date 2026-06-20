@@ -7,6 +7,7 @@ import (
 
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
+	"github.com/VMware-AI/agent-platform-backend/internal/ratelimit"
 	"github.com/VMware-AI/agent-platform-backend/internal/session"
 	"github.com/VMware-AI/agent-platform-backend/internal/store"
 )
@@ -19,6 +20,29 @@ func newTestResolver(t *testing.T) (*Resolver, func()) {
 	}
 	r := &Resolver{Ent: client, Sessions: session.NewMemoryStore(), SessionTTL: time.Hour}
 	return r, func() { _ = client.Close() }
+}
+
+func TestLogin_RateLimited(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	r.LoginLimiter = ratelimit.NewMemory(3, time.Hour)
+	ctx := context.Background()
+	mr := &mutationResolver{r}
+
+	if _, err := mr.CreateUser(adminCtx(), model.CreateUserInput{
+		Username: "victim", Email: "v@x.io", Password: "VictimPass12", Role: model.RoleUser,
+	}); err != nil {
+		t.Fatalf("CreateUser: %v", err)
+	}
+	for i := 0; i < 3; i++ {
+		if _, err := mr.Login(ctx, "victim", "wrongpass"); err == nil {
+			t.Fatalf("attempt %d: expected invalid credentials", i)
+		}
+	}
+	// 4th attempt is locked out even with the CORRECT password.
+	if _, err := mr.Login(ctx, "victim", "VictimPass12"); err == nil {
+		t.Fatal("expected lockout after 3 failed attempts")
+	}
 }
 
 func TestCreateUserAndLogin(t *testing.T) {

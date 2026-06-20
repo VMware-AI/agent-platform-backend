@@ -6,6 +6,7 @@ import (
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
+	"github.com/VMware-AI/agent-platform-backend/internal/ratelimit"
 	"github.com/VMware-AI/agent-platform-backend/internal/secrets"
 	"github.com/VMware-AI/agent-platform-backend/internal/session"
 	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
@@ -47,4 +48,6 @@ type Resolver struct {
 	VCenterConnect VCenterConnector
 	// VCenterInsecure skips vCenter TLS verification (air-gap self-signed only).
 	VCenterInsecure bool
+	// LoginLimiter throttles failed logins (brute-force defense); nil disables it.
+	LoginLimiter ratelimit.Limiter
 }

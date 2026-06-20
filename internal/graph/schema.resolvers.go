@@ -24,8 +24,17 @@ import (
 
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, username string, password string) (*model.AuthPayload, error) {
+	// Brute-force throttle, keyed by account+IP (so one attacker can't lock out
+	// a victim, and one IP can't grind an account).
+	limitKey := "login:" + username + "|" + clientIP(ctx)
+	if r.LoginLimiter != nil && r.LoginLimiter.Blocked(ctx, limitKey) {
+		return nil, gqlerror.Errorf("too many failed login attempts; try again later")
+	}
 	u, err := r.Ent.User.Query().Where(user.Username(username)).Only(ctx)
 	if err != nil {
+		if r.LoginLimiter != nil {
+			r.LoginLimiter.Fail(ctx, limitKey)
+		}
 		// Do not reveal whether the username exists.
 		return nil, gqlerror.Errorf("invalid credentials")
 	}
@@ -33,8 +42,14 @@ func (r *mutationResolver) Login(ctx context.Context, username string, password 
 		return nil, gqlerror.Errorf("account is disabled")
 	}
 	if err := auth.VerifyPassword(u.PasswordHash, password); err != nil {
+		if r.LoginLimiter != nil {
+			r.LoginLimiter.Fail(ctx, limitKey)
+		}
 		r.audit(ctx, "user.login", "user", u.ID.String(), false, u.ID.String())
 		return nil, gqlerror.Errorf("invalid credentials")
+	}
+	if r.LoginLimiter != nil {
+		r.LoginLimiter.Reset(ctx, limitKey) // clear failures on success
 	}
 	tenant := ""
 	if u.TenantID != nil {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // Config holds backend runtime settings. All values come from the environment
@@ -22,6 +23,9 @@ type Config struct {
 	// for prod — prod must use reviewed versioned migrations, never auto-alter
 	// the live schema on boot.
 	DBAutoMigrate bool
+	// AllowedOrigins is the CSRF Origin/Referer allowlist for state-changing
+	// requests (ALLOWED_ORIGINS, comma-separated). Same-origin is always allowed.
+	AllowedOrigins []string
 }
 
 // Load reads config from the environment and validates it. Fails fast on a
@@ -50,6 +54,11 @@ func Load() (*Config, error) {
 		defAutoMigrate = "true"
 	}
 	c.DBAutoMigrate = getenv("DB_AUTO_MIGRATE", defAutoMigrate) == "true"
+	for _, o := range strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",") {
+		if o = strings.TrimSpace(o); o != "" {
+			c.AllowedOrigins = append(c.AllowedOrigins, o)
+		}
+	}
 	return c, nil
 }
 
