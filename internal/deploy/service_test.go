@@ -21,6 +21,9 @@ func (f *fakeGateway) GenerateKey(_ context.Context, req gateway.GenerateKeyRequ
 	return &gateway.KeyResponse{Key: "sk-deploy-xyz", UserID: req.UserID}, nil
 }
 func (f *fakeGateway) UpdateKey(context.Context, gateway.UpdateKeyRequest) error { return nil }
+func (f *fakeGateway) RegenerateKey(context.Context, string) (*gateway.KeyResponse, error) {
+	return &gateway.KeyResponse{}, nil
+}
 func (f *fakeGateway) DeleteKey(_ context.Context, key string) error {
 	f.deleted = append(f.deleted, key)
 	return nil

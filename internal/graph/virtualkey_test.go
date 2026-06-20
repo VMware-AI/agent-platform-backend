@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
@@ -60,6 +61,7 @@ type fakeGateway struct {
 	deleted      []string
 	deletedTeams []string
 	listed       []gateway.KeyInfo
+	regenerated  []string
 }
 
 func (f *fakeGateway) GenerateKey(_ context.Context, req gateway.GenerateKeyRequest) (*gateway.KeyResponse, error) {
@@ -70,6 +72,10 @@ func (f *fakeGateway) UpdateKey(context.Context, gateway.UpdateKeyRequest) error
 func (f *fakeGateway) DeleteKey(_ context.Context, key string) error {
 	f.deleted = append(f.deleted, key)
 	return nil
+}
+func (f *fakeGateway) RegenerateKey(_ context.Context, key string) (*gateway.KeyResponse, error) {
+	f.regenerated = append(f.regenerated, key)
+	return &gateway.KeyResponse{Key: "sk-regenerated"}, nil
 }
 func (f *fakeGateway) CreateTeam(context.Context, gateway.TeamRequest) (*gateway.TeamResponse, error) {
 	return &gateway.TeamResponse{}, nil
@@ -137,6 +143,67 @@ func TestIssueAndRevokeVirtualKey(t *testing.T) {
 	keys, _ = qr.VirtualKeys(ctx, &u.ID)
 	if keys[0].Status != model.VirtualKeyStatusRevoked {
 		t.Fatalf("status should be revoked, got %v", keys[0].Status)
+	}
+}
+
+// RegenerateVirtualKey rotates the secret at the gateway and persists the new key
+// onto the SAME row (binding preserved), returning the new secret once.
+func TestRegenerateVirtualKey(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	fg := &fakeGateway{}
+	r.Gateway = fg
+	ctx := context.Background()
+	mr := &mutationResolver{r}
+
+	u, err := mr.CreateUser(ctx, model.CreateUserInput{
+		Username: "rotuser", Email: "rot@x.io", Password: "RotUserPass1", Role: model.RoleUser,
+	})
+	if err != nil {
+		t.Fatalf("CreateUser: %v", err)
+	}
+	issued, err := mr.IssueVirtualKey(ctx, model.IssueVirtualKeyInput{UserID: u.ID, Models: []string{"smart"}})
+	if err != nil {
+		t.Fatalf("IssueVirtualKey: %v", err)
+	}
+
+	regen, err := mr.RegenerateVirtualKey(ctx, issued.VirtualKey.ID)
+	if err != nil {
+		t.Fatalf("RegenerateVirtualKey: %v", err)
+	}
+	if regen.Secret != "sk-regenerated" {
+		t.Errorf("new secret = %q, want sk-regenerated", regen.Secret)
+	}
+	if len(fg.regenerated) != 1 || fg.regenerated[0] != "sk-fake-123" {
+		t.Errorf("gateway regenerate called with %v, want [sk-fake-123]", fg.regenerated)
+	}
+	if regen.VirtualKey.ID != issued.VirtualKey.ID {
+		t.Errorf("regenerate must reuse the same row: got %s want %s", regen.VirtualKey.ID, issued.VirtualKey.ID)
+	}
+	// The stored secret is now the rotated one.
+	kid, _ := uuid.Parse(issued.VirtualKey.ID)
+	if got := r.Ent.VirtualKey.GetX(ctx, kid).LitellmKey; got != "sk-regenerated" {
+		t.Errorf("DB key not rotated: %q", got)
+	}
+}
+
+func TestRegenerateVirtualKey_RejectsRevoked(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	fg := &fakeGateway{}
+	r.Gateway = fg
+	ctx := context.Background()
+	mr := &mutationResolver{r}
+
+	u, _ := mr.CreateUser(ctx, model.CreateUserInput{
+		Username: "revuser", Email: "rev@x.io", Password: "RevUserPass1", Role: model.RoleUser,
+	})
+	issued, _ := mr.IssueVirtualKey(ctx, model.IssueVirtualKeyInput{UserID: u.ID, Models: []string{"smart"}})
+	if _, err := mr.RevokeVirtualKey(ctx, issued.VirtualKey.ID); err != nil {
+		t.Fatalf("RevokeVirtualKey: %v", err)
+	}
+	if _, err := mr.RegenerateVirtualKey(ctx, issued.VirtualKey.ID); err == nil {
+		t.Fatal("regenerating a revoked key must fail")
 	}
 }
 

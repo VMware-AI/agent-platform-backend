@@ -131,6 +131,46 @@ func (r *mutationResolver) RevokeVirtualKey(ctx context.Context, id string) (boo
 	return true, nil
 }
 
+// RegenerateVirtualKey rotates a key's secret at the gateway while preserving its
+// governance row (binding/policy/budget). Returns the new secret ONCE. LLD-04 §3.
+func (r *mutationResolver) RegenerateVirtualKey(ctx context.Context, id string) (*model.IssuedVirtualKey, error) {
+	kid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid id")
+	}
+	if r.Gateway == nil {
+		return nil, gqlerror.Errorf("model gateway is not configured")
+	}
+	vk, err := r.Ent.VirtualKey.Get(ctx, kid)
+	if err != nil {
+		return nil, err
+	}
+	if vk.Status == virtualkey.StatusRevoked {
+		return nil, gqlerror.Errorf("key is revoked and cannot be regenerated")
+	}
+
+	actor := actorID(auth.FromContext(ctx))
+	resp, err := r.Gateway.RegenerateKey(ctx, vk.LitellmKey)
+	if err != nil {
+		r.audit(ctx, "key.regenerate", "virtual_key", id, false, actor)
+		return nil, fmt.Errorf("gateway: %w", err)
+	}
+	// Gateway-first ordering: the row reflects what the gateway actually did. If
+	// this persist fails the row keeps the now-rotated-away secret; the key
+	// reconciler flags the mismatch (old key absent at gateway). Use a detached
+	// context so a canceled request can't drop the just-rotated secret.
+	vk, err = r.Ent.VirtualKey.UpdateOne(vk).SetLitellmKey(resp.Key).Save(context.WithoutCancel(ctx))
+	if err != nil {
+		r.audit(ctx, "key.regenerate", "virtual_key", id, false, actor)
+		return nil, fmt.Errorf("persist regenerated key failed: %w", err)
+	}
+	r.audit(ctx, "key.regenerate", "virtual_key", id, true, actor)
+	return &model.IssuedVirtualKey{
+		VirtualKey: toModelVirtualKey(vk),
+		Secret:     resp.Key,
+	}, nil
+}
+
 // SetVirtualKeyEnabled toggles a key active/disabled (distinct from revoke).
 func (r *mutationResolver) SetVirtualKeyEnabled(ctx context.Context, id string, enabled bool) (*model.VirtualKey, error) {
 	kid, err := uuid.Parse(id)

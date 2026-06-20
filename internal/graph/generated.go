@@ -219,6 +219,7 @@ type ComplexityRoot struct {
 		RecordRequestLog           func(childComplexity int, input model.RecordRequestLogInput) int
 		RecordTokenUsage           func(childComplexity int, input model.RecordTokenUsageInput) int
 		RecycleAgent               func(childComplexity int, input model.RecycleAgentInput) int
+		RegenerateVirtualKey       func(childComplexity int, id string) int
 		RegisterGatewayConnection  func(childComplexity int, input model.RegisterGatewayConnectionInput) int
 		RegisterResourcePool       func(childComplexity int, input model.RegisterResourcePoolInput) int
 		RemoveMembership           func(childComplexity int, userID string, departmentID string) int
@@ -454,6 +455,7 @@ type MutationResolver interface {
 	SyncResourcePool(ctx context.Context, id string) (*model.ResourcePool, error)
 	IssueVirtualKey(ctx context.Context, input model.IssueVirtualKeyInput) (*model.IssuedVirtualKey, error)
 	RevokeVirtualKey(ctx context.Context, id string) (bool, error)
+	RegenerateVirtualKey(ctx context.Context, id string) (*model.IssuedVirtualKey, error)
 	SetVirtualKeyEnabled(ctx context.Context, id string, enabled bool) (*model.VirtualKey, error)
 }
 type QueryResolver interface {
@@ -1373,6 +1375,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.RecycleAgent(childComplexity, args["input"].(model.RecycleAgentInput)), true
+	case "Mutation.regenerateVirtualKey":
+		if e.ComplexityRoot.Mutation.RegenerateVirtualKey == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_regenerateVirtualKey_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.RegenerateVirtualKey(childComplexity, args["id"].(string)), true
 	case "Mutation.registerGatewayConnection":
 		if e.ComplexityRoot.Mutation.RegisterGatewayConnection == nil {
 			break
@@ -3222,6 +3235,9 @@ extend type Query {
 extend type Mutation {
   issueVirtualKey(input: IssueVirtualKeyInput!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
   revokeVirtualKey(id: ID!): Boolean! @hasPermission(perm: "key:manage")
+  # Rotate the key's secret at the gateway, keeping its governance row/binding.
+  # Returns the new secret ONCE (the old one stops working after litellm's grace). LLD-04 §3.
+  regenerateVirtualKey(id: ID!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
   # Toggle enabled/disabled (distinct from revoke, which is terminal).
   setVirtualKeyEnabled(id: ID!, enabled: Boolean!): VirtualKey! @hasPermission(perm: "key:manage")
 }
@@ -4296,6 +4312,20 @@ func (ec *executionContext) field_Mutation_recycleAgent_args(ctx context.Context
 		return nil, err
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_regenerateVirtualKey_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -10398,6 +10428,68 @@ func (ec *executionContext) fieldContext_Mutation_revokeVirtualKey(ctx context.C
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_revokeVirtualKey_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_regenerateVirtualKey(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_regenerateVirtualKey(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().RegenerateVirtualKey(ctx, fc.Args["id"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				perm, err := ec.unmarshalNString2string(ctx, "key:manage")
+				if err != nil {
+					var zeroVal *model.IssuedVirtualKey
+					return zeroVal, err
+				}
+				if ec.Directives.HasPermission == nil {
+					var zeroVal *model.IssuedVirtualKey
+					return zeroVal, errors.New("directive hasPermission is not implemented")
+				}
+				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.IssuedVirtualKey) graphql.Marshaler {
+			return ec.marshalNIssuedVirtualKey2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐIssuedVirtualKey(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_regenerateVirtualKey(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_IssuedVirtualKey(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_regenerateVirtualKey_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -17539,6 +17631,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "revokeVirtualKey":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_revokeVirtualKey(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "regenerateVirtualKey":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_regenerateVirtualKey(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

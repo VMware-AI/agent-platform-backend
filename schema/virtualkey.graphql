@@ -46,6 +46,9 @@ extend type Query {
 extend type Mutation {
   issueVirtualKey(input: IssueVirtualKeyInput!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
   revokeVirtualKey(id: ID!): Boolean! @hasPermission(perm: "key:manage")
+  # Rotate the key's secret at the gateway, keeping its governance row/binding.
+  # Returns the new secret ONCE (the old one stops working after litellm's grace). LLD-04 §3.
+  regenerateVirtualKey(id: ID!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
   # Toggle enabled/disabled (distinct from revoke, which is terminal).
   setVirtualKeyEnabled(id: ID!, enabled: Boolean!): VirtualKey! @hasPermission(perm: "key:manage")
 }

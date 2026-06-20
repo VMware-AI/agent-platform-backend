@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -19,6 +20,9 @@ type Client interface {
 	GenerateKey(ctx context.Context, req GenerateKeyRequest) (*KeyResponse, error)
 	UpdateKey(ctx context.Context, req UpdateKeyRequest) error
 	DeleteKey(ctx context.Context, key string) error
+	// RegenerateKey rotates a key's secret, returning the new one (POST
+	// /key/{key}/regenerate). The governance row/binding is unchanged. LLD-04 §3.
+	RegenerateKey(ctx context.Context, key string) (*KeyResponse, error)
 	CreateTeam(ctx context.Context, req TeamRequest) (*TeamResponse, error)
 	DeleteTeam(ctx context.Context, teamID string) error
 	// ListKeys enumerates the keys the gateway currently holds, for
@@ -127,6 +131,17 @@ func (c *HTTPClient) DeleteKey(ctx context.Context, key string) error {
 		return fmt.Errorf("DeleteKey: key is required")
 	}
 	return c.post(ctx, "/key/delete", map[string]any{"keys": []string{key}}, nil)
+}
+
+func (c *HTTPClient) RegenerateKey(ctx context.Context, key string) (*KeyResponse, error) {
+	if key == "" {
+		return nil, fmt.Errorf("RegenerateKey: key is required")
+	}
+	var out KeyResponse
+	if err := c.post(ctx, "/key/"+url.PathEscape(key)+"/regenerate", map[string]any{}, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
 }
 
 func (c *HTTPClient) CreateTeam(ctx context.Context, req TeamRequest) (*TeamResponse, error) {

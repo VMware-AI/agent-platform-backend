@@ -98,6 +98,38 @@ func TestDeleteTeam_RequiresTeamID(t *testing.T) {
 	}
 }
 
+func TestRegenerateKey(t *testing.T) {
+	var gotPath, gotMethod, gotAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath, gotMethod, gotAuth = r.URL.Path, r.Method, r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"key":"sk-new","user_id":"u1","spend":0}`))
+	}))
+	defer srv.Close()
+
+	c := NewHTTPClient(srv.URL, "sk-master")
+	resp, err := c.RegenerateKey(context.Background(), "sk-old")
+	if err != nil {
+		t.Fatalf("RegenerateKey: %v", err)
+	}
+	if gotMethod != http.MethodPost || gotPath != "/key/sk-old/regenerate" {
+		t.Errorf("want POST /key/sk-old/regenerate, got %s %s", gotMethod, gotPath)
+	}
+	if gotAuth != "Bearer sk-master" {
+		t.Errorf("auth header = %q", gotAuth)
+	}
+	if resp.Key != "sk-new" {
+		t.Errorf("new key = %q, want sk-new", resp.Key)
+	}
+}
+
+func TestRegenerateKey_RequiresKey(t *testing.T) {
+	c := NewHTTPClient("http://unused", "sk-master")
+	if _, err := c.RegenerateKey(context.Background(), ""); err == nil {
+		t.Fatal("RegenerateKey with empty key should error")
+	}
+}
+
 func TestListTeams(t *testing.T) {
 	var gotPath, gotMethod string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
