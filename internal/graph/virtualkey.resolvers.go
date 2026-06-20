@@ -88,7 +88,18 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 	}
 	vk, err := create.Save(ctx)
 	if err != nil {
-		return nil, err
+		// Compensate: the gateway minted the key but its governance row failed to
+		// persist. Revoke the key so it does not linger as an orphan. Use a
+		// detached context — the original may already be canceled/timed-out,
+		// which can be the very cause of the failure (C3; cf. deploy.Provision).
+		cctx := context.WithoutCancel(ctx)
+		actor := actorID(auth.FromContext(ctx))
+		if delErr := r.Gateway.DeleteKey(cctx, resp.Key); delErr != nil {
+			r.audit(cctx, "key.issue", "virtual_key", input.UserID, false, actor)
+			return nil, gqlerror.Errorf("persist virtual key failed: %s (orphan revoke also failed: %s)", err.Error(), delErr.Error())
+		}
+		r.audit(cctx, "key.issue", "virtual_key", input.UserID, false, actor)
+		return nil, gqlerror.Errorf("persist virtual key failed: %s", err.Error())
 	}
 	r.audit(ctx, "key.issue", "virtual_key", vk.ID.String(), true, actorID(auth.FromContext(ctx)))
 	return &model.IssuedVirtualKey{
@@ -154,7 +165,7 @@ func (r *queryResolver) VirtualKeys(ctx context.Context, userID *string) ([]mode
 		}
 		q = q.Where(virtualkey.UserID(uid))
 	}
-	keys, err := q.All(ctx)
+	keys, err := q.Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}

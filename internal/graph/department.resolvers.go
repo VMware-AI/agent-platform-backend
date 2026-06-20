@@ -20,7 +20,14 @@ import (
 // CreateDepartment creates a department and its backing litellm team. If the
 // team sync fails, the department is rolled back (no orphan — doc43 §2.4).
 func (r *mutationResolver) CreateDepartment(ctx context.Context, input model.CreateDepartmentInput) (*model.Department, error) {
-	c := r.Ent.Department.Create().SetName(input.Name)
+	// Pre-generate the id so the litellm team handle is written atomically with
+	// the row — it is never empty/wrong. A crash between this commit and the
+	// gateway call leaves a row pointing at a not-yet-created team; that is
+	// recoverable by re-running (the team id is deterministic = dept id). A
+	// reconciliation sweep for that crash window is still TODO. C3.
+	deptID := uuid.New()
+	teamID := deptID.String()
+	c := r.Ent.Department.Create().SetID(deptID).SetName(input.Name).SetLitellmTeamID(teamID)
 	if input.TenantID != nil {
 		if tid, err := uuid.Parse(*input.TenantID); err == nil {
 			c.SetTenantID(tid)
@@ -30,28 +37,34 @@ func (r *mutationResolver) CreateDepartment(ctx context.Context, input model.Cre
 	if err != nil {
 		return nil, err
 	}
-	teamID := dept.ID.String()
 	if r.Gateway != nil {
 		if _, err := r.Gateway.CreateTeam(ctx, gateway.TeamRequest{
 			TeamID: teamID, TeamAlias: input.Name, MaxBudget: input.MaxBudget,
 		}); err != nil {
-			_ = r.Ent.Department.DeleteOneID(dept.ID).Exec(ctx) // no orphan
+			_ = r.Ent.Department.DeleteOneID(dept.ID).Exec(ctx) // compensate: no orphan row
 			return nil, gqlerror.Errorf("create litellm team: %s", err.Error())
 		}
-	}
-	dept, err = r.Ent.Department.UpdateOne(dept).SetLitellmTeamID(teamID).Save(ctx)
-	if err != nil {
-		return nil, err
 	}
 	r.audit(ctx, "department.create", "department", dept.ID.String(), true, actorID(auth.FromContext(ctx)))
 	return toModelDepartment(dept), nil
 }
 
-// DeleteDepartment is the resolver for the deleteDepartment field.
+// DeleteDepartment removes a department and its backing litellm team. The team
+// is deleted BEFORE the local row: a gateway failure then leaves the department
+// intact and the operation retryable — no orphan team, no half-delete (C3).
 func (r *mutationResolver) DeleteDepartment(ctx context.Context, id string) (bool, error) {
 	did, err := uuid.Parse(id)
 	if err != nil {
 		return false, gqlerror.Errorf("invalid id")
+	}
+	dept, err := r.Ent.Department.Get(ctx, did)
+	if err != nil {
+		return false, err
+	}
+	if r.Gateway != nil && dept.LitellmTeamID != "" {
+		if err := r.Gateway.DeleteTeam(ctx, dept.LitellmTeamID); err != nil {
+			return false, gqlerror.Errorf("delete litellm team: %s", err.Error())
+		}
 	}
 	if err := r.Ent.Department.DeleteOneID(did).Exec(ctx); err != nil {
 		return false, err
@@ -113,7 +126,7 @@ func (r *mutationResolver) RemoveMembership(ctx context.Context, userID string, 
 
 // Departments is the resolver for the departments field.
 func (r *queryResolver) Departments(ctx context.Context) ([]model.Department, error) {
-	ds, err := r.Ent.Department.Query().All(ctx)
+	ds, err := r.Ent.Department.Query().Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +143,7 @@ func (r *queryResolver) DepartmentMembers(ctx context.Context, departmentID stri
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid departmentId")
 	}
-	ms, err := r.Ent.Membership.Query().Where(membership.DepartmentID(did)).All(ctx)
+	ms, err := r.Ent.Membership.Query().Where(membership.DepartmentID(did)).Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}

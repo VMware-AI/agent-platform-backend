@@ -200,7 +200,7 @@ func (r *mutationResolver) SetDefaultAgentConfig(ctx context.Context, id string)
 
 // AgentTemplates lists the catalog.
 func (r *queryResolver) AgentTemplates(ctx context.Context) ([]model.AgentTemplate, error) {
-	ts, err := r.Ent.AgentTemplate.Query().All(ctx)
+	ts, err := r.Ent.AgentTemplate.Query().Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +217,7 @@ func (r *queryResolver) AgentConfigs(ctx context.Context, agentType *string) ([]
 	if agentType != nil {
 		q = q.Where(agentconfig.AgentType(*agentType))
 	}
-	cs, err := q.All(ctx)
+	cs, err := q.Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +240,7 @@ func (r *queryResolver) Agents(ctx context.Context) ([]model.Agent, error) {
 			q = q.Where(agent.OwnerUserID(uid))
 		}
 	}
-	as, err := q.All(ctx)
+	as, err := q.Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}

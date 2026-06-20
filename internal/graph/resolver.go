@@ -13,8 +13,14 @@ import (
 
 // VCenterClient is what resolvers need from a connected vCenter (deploy +
 // inventory). *vcenter.Client satisfies it; a fake satisfies it in tests.
+// It is a superset of deploy.VMProvisioner so a connected client drives the
+// full provisioning lifecycle.
 type VCenterClient interface {
+	CloneFromTemplate(ctx context.Context, spec vcenter.CloneSpec) (*vcenter.VMInfo, error)
+	ListTemplates(ctx context.Context) ([]vcenter.VMInfo, error)
 	SetGuestinfo(ctx context.Context, vmName string, kv map[string]string) error
+	PowerOn(ctx context.Context, vmName string) error
+	Destroy(ctx context.Context, vmName string) error
 	Inventory(ctx context.Context) (vcenter.Inventory, error)
 	Logout(ctx context.Context) error
 }
@@ -39,4 +45,6 @@ type Resolver struct {
 	GatewayURL string
 	// VCenterConnect dials vCenter; nil disables deploy.
 	VCenterConnect VCenterConnector
+	// VCenterInsecure skips vCenter TLS verification (air-gap self-signed only).
+	VCenterInsecure bool
 }

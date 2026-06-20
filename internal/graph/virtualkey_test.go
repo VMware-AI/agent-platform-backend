@@ -10,8 +10,9 @@ import (
 
 // fakeGateway is an in-memory gateway.Client for tests.
 type fakeGateway struct {
-	generated []gateway.GenerateKeyRequest
-	deleted   []string
+	generated    []gateway.GenerateKeyRequest
+	deleted      []string
+	deletedTeams []string
 }
 
 func (f *fakeGateway) GenerateKey(_ context.Context, req gateway.GenerateKeyRequest) (*gateway.KeyResponse, error) {
@@ -25,6 +26,10 @@ func (f *fakeGateway) DeleteKey(_ context.Context, key string) error {
 }
 func (f *fakeGateway) CreateTeam(context.Context, gateway.TeamRequest) (*gateway.TeamResponse, error) {
 	return &gateway.TeamResponse{}, nil
+}
+func (f *fakeGateway) DeleteTeam(_ context.Context, teamID string) error {
+	f.deletedTeams = append(f.deletedTeams, teamID)
+	return nil
 }
 
 func TestIssueAndRevokeVirtualKey(t *testing.T) {
@@ -79,6 +84,29 @@ func TestIssueAndRevokeVirtualKey(t *testing.T) {
 	keys, _ = qr.VirtualKeys(ctx, &u.ID)
 	if keys[0].Status != model.VirtualKeyStatusRevoked {
 		t.Fatalf("status should be revoked, got %v", keys[0].Status)
+	}
+}
+
+// TestIssueVirtualKey_CompensatesOnDBFailure proves no orphan key is left at the
+// gateway when the governance row fails to persist (C3). A canceled context lets
+// the fake mint succeed but forces the ent Save to fail.
+func TestIssueVirtualKey_CompensatesOnDBFailure(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	fg := &fakeGateway{}
+	r.Gateway = fg
+	mr := &mutationResolver{r}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := mr.IssueVirtualKey(ctx, model.IssueVirtualKeyInput{
+		UserID: "11111111-1111-1111-1111-111111111111", Models: []string{"smart"},
+	})
+	if err == nil {
+		t.Fatal("expected error when the key row fails to persist")
+	}
+	if len(fg.deleted) != 1 || fg.deleted[0] != "sk-fake-123" {
+		t.Fatalf("minted key not revoked at gateway (orphan): %+v", fg.deleted)
 	}
 }
 

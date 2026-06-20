@@ -20,6 +20,7 @@ type Client interface {
 	UpdateKey(ctx context.Context, req UpdateKeyRequest) error
 	DeleteKey(ctx context.Context, key string) error
 	CreateTeam(ctx context.Context, req TeamRequest) (*TeamResponse, error)
+	DeleteTeam(ctx context.Context, teamID string) error
 }
 
 // GenerateKeyRequest mints a per-user virtual key (LLD-04 §3). Budget/rate
@@ -111,6 +112,13 @@ func (c *HTTPClient) CreateTeam(ctx context.Context, req TeamRequest) (*TeamResp
 		return nil, err
 	}
 	return &out, nil
+}
+
+func (c *HTTPClient) DeleteTeam(ctx context.Context, teamID string) error {
+	if teamID == "" {
+		return fmt.Errorf("DeleteTeam: teamID is required")
+	}
+	return c.post(ctx, "/team/delete", map[string]any{"team_ids": []string{teamID}}, nil)
 }
 
 // post sends an admin POST with Bearer auth and decodes the JSON response.

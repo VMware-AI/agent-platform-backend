@@ -83,15 +83,16 @@ func main() {
 	}
 
 	resolver := &graph.Resolver{
-		Ent:            client,
-		Sessions:       sessions,
-		SessionTTL:     ttl,
-		SecureCookies:  cfg.Env == "prod",
-		Gateway:        gw,
-		GatewayModels:  gwModels,
-		Secrets:        sec,
-		GatewayURL:     os.Getenv("GATEWAY_PUBLIC_URL"),
-		VCenterConnect: vcConnect,
+		Ent:             client,
+		Sessions:        sessions,
+		SessionTTL:      ttl,
+		SecureCookies:   cfg.Env == "prod",
+		Gateway:         gw,
+		GatewayModels:   gwModels,
+		Secrets:         sec,
+		GatewayURL:      os.Getenv("GATEWAY_PUBLIC_URL"),
+		VCenterConnect:  vcConnect,
+		VCenterInsecure: cfg.VCenterInsecure,
 	}
 
 	es := graph.NewExecutableSchema(graph.Config{

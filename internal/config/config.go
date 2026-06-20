@@ -15,6 +15,9 @@ type Config struct {
 	RedisURL    string // redis://...     (empty => in-memory session store)
 	SessionTTL  int    // seconds
 	Env         string // dev | prod
+	// VCenterInsecure skips vCenter TLS verification. Default false (verify on);
+	// opt in only for air-gapped vCenters with a pinned/self-signed internal CA.
+	VCenterInsecure bool
 }
 
 // Load reads config from the environment and validates it. Fails fast on a
@@ -37,6 +40,7 @@ func Load() (*Config, error) {
 	if c.Env != "dev" && c.Env != "prod" {
 		return nil, fmt.Errorf("APP_ENV must be dev|prod, got %q", c.Env)
 	}
+	c.VCenterInsecure = getenv("VCENTER_INSECURE", "false") == "true"
 	return c, nil
 }
 

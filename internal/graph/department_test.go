@@ -16,6 +16,62 @@ func (teamFailGateway) CreateTeam(context.Context, gateway.TeamRequest) (*gatewa
 	return nil, errors.New("team boom")
 }
 
+// teamDeleteFailGateway fails DeleteTeam, to assert deleteDepartment keeps the
+// row (retryable, no half-delete) when the gateway is unreachable.
+type teamDeleteFailGateway struct{ fakeGateway }
+
+func (teamDeleteFailGateway) DeleteTeam(context.Context, string) error {
+	return errors.New("delete team boom")
+}
+
+func TestDeleteDepartment_DeletesLitellmTeam(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	fg := &fakeGateway{}
+	r.Gateway = fg
+	ctx := adminCtx()
+	mr := &mutationResolver{r}
+	qr := &queryResolver{r}
+
+	dept, err := mr.CreateDepartment(ctx, model.CreateDepartmentInput{Name: "research"})
+	if err != nil {
+		t.Fatalf("CreateDepartment: %v", err)
+	}
+	ok, err := mr.DeleteDepartment(ctx, dept.ID)
+	if err != nil || !ok {
+		t.Fatalf("DeleteDepartment: ok=%v err=%v", ok, err)
+	}
+	if len(fg.deletedTeams) != 1 || fg.deletedTeams[0] != dept.ID {
+		t.Fatalf("litellm team not deleted (orphan): %+v", fg.deletedTeams)
+	}
+	if depts, _ := qr.Departments(ctx); len(depts) != 0 {
+		t.Fatalf("department row not deleted: %d", len(depts))
+	}
+}
+
+func TestDeleteDepartment_GatewayFailureKeepsDept(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	r.Gateway = &fakeGateway{}
+	ctx := adminCtx()
+	mr := &mutationResolver{r}
+	qr := &queryResolver{r}
+
+	dept, err := mr.CreateDepartment(ctx, model.CreateDepartmentInput{Name: "keepme"})
+	if err != nil {
+		t.Fatalf("CreateDepartment: %v", err)
+	}
+	// Gateway team-delete now fails: the DB row must survive so the op is
+	// retryable — no silent orphan, no half-delete.
+	r.Gateway = &teamDeleteFailGateway{}
+	if _, err := mr.DeleteDepartment(ctx, dept.ID); err == nil {
+		t.Fatal("expected error when litellm team delete fails")
+	}
+	if depts, _ := qr.Departments(ctx); len(depts) != 1 {
+		t.Fatalf("department should be kept when team delete fails: %d", len(depts))
+	}
+}
+
 func TestDepartmentAndMembership(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()

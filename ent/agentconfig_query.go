@@ -23,6 +23,7 @@ type AgentConfigQuery struct {
 	order      []agentconfig.OrderOption
 	inters     []Interceptor
 	predicates []predicate.AgentConfig
+	modifiers  []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -252,8 +253,9 @@ func (_q *AgentConfigQuery) Clone() *AgentConfigQuery {
 		inters:     append([]Interceptor{}, _q.inters...),
 		predicates: append([]predicate.AgentConfig{}, _q.predicates...),
 		// clone intermediate query.
-		sql:  _q.sql.Clone(),
-		path: _q.path,
+		sql:       _q.sql.Clone(),
+		path:      _q.path,
+		modifiers: append([]func(*sql.Selector){}, _q.modifiers...),
 	}
 }
 
@@ -344,6 +346,9 @@ func (_q *AgentConfigQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 		nodes = append(nodes, node)
 		return node.assignValues(columns, values)
 	}
+	if len(_q.modifiers) > 0 {
+		_spec.Modifiers = _q.modifiers
+	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
@@ -358,6 +363,9 @@ func (_q *AgentConfigQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 
 func (_q *AgentConfigQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
+	if len(_q.modifiers) > 0 {
+		_spec.Modifiers = _q.modifiers
+	}
 	_spec.Node.Columns = _q.ctx.Fields
 	if len(_q.ctx.Fields) > 0 {
 		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
@@ -420,6 +428,9 @@ func (_q *AgentConfigQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
+	for _, m := range _q.modifiers {
+		m(selector)
+	}
 	for _, p := range _q.predicates {
 		p(selector)
 	}
@@ -435,6 +446,12 @@ func (_q *AgentConfigQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector.Limit(*limit)
 	}
 	return selector
+}
+
+// Modify adds a query modifier for attaching custom logic to queries.
+func (_q *AgentConfigQuery) Modify(modifiers ...func(s *sql.Selector)) *AgentConfigSelect {
+	_q.modifiers = append(_q.modifiers, modifiers...)
+	return _q.Select()
 }
 
 // AgentConfigGroupBy is the group-by builder for AgentConfig entities.
@@ -525,4 +542,10 @@ func (_s *AgentConfigSelect) sqlScan(ctx context.Context, root *AgentConfigQuery
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
+}
+
+// Modify adds a query modifier for attaching custom logic to queries.
+func (_s *AgentConfigSelect) Modify(modifiers ...func(s *sql.Selector)) *AgentConfigSelect {
+	_s.modifiers = append(_s.modifiers, modifiers...)
+	return _s
 }

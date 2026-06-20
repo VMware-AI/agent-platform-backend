@@ -123,7 +123,7 @@ func (r *queryResolver) RequestLogs(ctx context.Context, filter *model.RequestLo
 		}
 	}
 	limit, offset := pageBounds(page)
-	rows, err := q.Limit(limit).Offset(offset).All(ctx)
+	rows, err := q.Order(orderNewest).Limit(limit).Offset(offset).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (r *queryResolver) RequestLogs(ctx context.Context, filter *model.RequestLo
 
 // RateLimitPolicies lists all policies.
 func (r *queryResolver) RateLimitPolicies(ctx context.Context) ([]model.RateLimitPolicy, error) {
-	ps, err := r.Ent.RateLimitPolicy.Query().All(ctx)
+	ps, err := r.Ent.RateLimitPolicy.Query().Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}

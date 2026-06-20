@@ -38,7 +38,7 @@ docker compose -f deploy/docker-compose.yml up   # 本地 pg + redis
 make run
 ```
 
-## 状态（M1，~41 测试全绿）
+## 状态（M1，70 测试全绿）
 
 **0619 四大 nav 全覆盖**：
 
@@ -54,7 +54,7 @@ make run
 | 网关 | `internal/gateway`：litellm admin API client（key/team/budget） |
 | 部署编排 | `internal/deploy`：签 key → cloud-init → guestinfo 注入（**vcsim + fake gateway 集成测试**） |
 
-**18 Ent 实体**；GraphQL 契约分布在 `schema/*.graphql`（前后端契约单一事实源）。
+**22 Ent 实体**；GraphQL 契约分布在 `schema/*.graphql`（前后端契约单一事实源）。
 
 待续（需用户方向 / 真实环境）：Vaultwarden 凭据解析、`deployAgent` GraphQL 接线、真机 vCenter 验收、前端联调（独立仓）。
 

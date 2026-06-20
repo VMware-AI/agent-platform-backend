@@ -7,8 +7,10 @@ package graph
 
 import (
 	"context"
+	"log"
 
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
+	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/deploy"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
@@ -55,7 +57,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	if err != nil {
 		return nil, gqlerror.Errorf("resolve pool credentials: %s", err.Error())
 	}
-	conn, err := r.VCenterConnect(ctx, pool.Endpoint, cred.Username, cred.Password, true)
+	conn, err := r.VCenterConnect(ctx, pool.Endpoint, cred.Username, cred.Password, r.VCenterInsecure)
 	if err != nil {
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
 		return nil, gqlerror.Errorf("connect vcenter: %s", err.Error())
@@ -63,11 +65,13 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 
 	svc := &deploy.Service{Gateway: r.Gateway, VCenter: conn, GatewayURL: r.GatewayURL}
 	res, err := svc.Provision(ctx, deploy.Request{
-		AgentName: ag.Name,
-		UserID:    ag.OwnerUserID.String(),
-		VMName:    input.VMName,
-		Hostname:  derefString(input.Hostname),
-		MaxBudget: input.MaxBudget,
+		AgentName:    ag.Name,
+		UserID:       ag.OwnerUserID.String(),
+		Template:     input.Template,
+		VMName:       input.VMName,
+		ResourcePool: derefString(input.TargetResourcePool),
+		Hostname:     derefString(input.Hostname),
+		MaxBudget:    input.MaxBudget,
 	})
 	if err != nil {
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
@@ -88,6 +92,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		SetStatus(agent.StatusRunning).
 		SetVMRef(input.VMName).
 		SetVirtualKeyID(vk.ID).
+		SetResourcePoolID(poolID).
 		Save(ctx)
 	if err != nil {
 		return nil, err
@@ -98,4 +103,105 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		Agent:            toModelAgent(ag),
 		VirtualKeySecret: res.VirtualKey,
 	}, nil
+}
+
+// RecycleAgent destroys the agent's VM, revokes its key and marks it stopped.
+// Destructive — guarded by confirm + owner/admin authz + audit (LLD-03 §4 回收).
+func (r *mutationResolver) RecycleAgent(ctx context.Context, input model.RecycleAgentInput) (*model.Agent, error) {
+	cu := auth.FromContext(ctx)
+	if cu == nil {
+		return nil, gqlerror.Errorf("unauthenticated")
+	}
+	if !input.Confirm {
+		return nil, gqlerror.Errorf("recycle is destructive: confirm must be true")
+	}
+	agentID, err := uuid.Parse(input.AgentID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid agentId")
+	}
+	ag, err := r.Ent.Agent.Get(ctx, agentID)
+	if err != nil {
+		return nil, err
+	}
+	if ag.OwnerUserID.String() != cu.ID && cu.Role != auth.RoleAdmin {
+		return nil, gqlerror.Errorf("forbidden: not your agent")
+	}
+	if ag.ResourcePoolID == nil {
+		return nil, gqlerror.Errorf("agent has no resource pool; cannot locate its VM")
+	}
+	pool, err := r.Ent.ResourcePool.Get(ctx, *ag.ResourcePoolID)
+	if err != nil {
+		return nil, err
+	}
+	conn, err := r.connectPool(ctx, pool)
+	if err != nil {
+		r.audit(ctx, "agent.recycle", "agent", ag.ID.String(), false, cu.ID)
+		return nil, gqlerror.Errorf("connect vcenter: %s", err.Error())
+	}
+	defer func() { _ = conn.Logout(ctx) }()
+
+	if ag.VMRef != "" {
+		if err := conn.Destroy(ctx, ag.VMRef); err != nil {
+			r.audit(ctx, "agent.recycle", "agent", ag.ID.String(), false, cu.ID)
+			return nil, gqlerror.Errorf("destroy vm: %s", err.Error())
+		}
+	}
+	// Revoke the agent's gateway key so it does not outlive the VM. The VM is
+	// already destroyed, so a revoke failure can't be rolled back — but it must
+	// NOT be silent (that would leave an orphan key). Detached ctx: the request
+	// ctx may be canceled after the slow Destroy.
+	if ag.VirtualKeyID != nil && r.Gateway != nil {
+		cctx := context.WithoutCancel(ctx)
+		if vk, err := r.Ent.VirtualKey.Get(cctx, *ag.VirtualKeyID); err == nil {
+			if delErr := r.Gateway.DeleteKey(cctx, vk.LitellmKey); delErr != nil {
+				log.Printf("recycle agent %s: orphan gateway key %s, revoke failed: %v", ag.ID, vk.ID, delErr)
+				r.audit(cctx, "key.revoke", "virtual_key", vk.ID.String(), false, cu.ID)
+			} else {
+				_, _ = r.Ent.VirtualKey.UpdateOne(vk).SetStatus(virtualkey.StatusRevoked).Save(cctx)
+			}
+		}
+	}
+	ag, err = r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusStopped).SetVMRef("").Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	r.audit(ctx, "agent.recycle", "agent", ag.ID.String(), true, cu.ID)
+	return toModelAgent(ag), nil
+}
+
+// VMTemplates lists the OVA templates available in a resource pool's vCenter,
+// powering the deploy form's template picker.
+func (r *queryResolver) VMTemplates(ctx context.Context, resourcePoolID string) ([]model.VMTemplate, error) {
+	cu := auth.FromContext(ctx)
+	if cu == nil {
+		return nil, gqlerror.Errorf("unauthenticated")
+	}
+	// Listing templates dials the pool's vCenter with its privileged credentials,
+	// so it is admin-gated like resource-pool management itself (no unauthenticated
+	// or cross-tenant enumeration of another pool's inventory).
+	if cu.Role != auth.RoleAdmin {
+		return nil, gqlerror.Errorf("forbidden: admin only")
+	}
+	poolID, err := uuid.Parse(resourcePoolID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid resourcePoolId")
+	}
+	pool, err := r.Ent.ResourcePool.Get(ctx, poolID)
+	if err != nil {
+		return nil, err
+	}
+	conn, err := r.connectPool(ctx, pool)
+	if err != nil {
+		return nil, gqlerror.Errorf("connect vcenter: %s", err.Error())
+	}
+	defer func() { _ = conn.Logout(ctx) }()
+	tpls, err := conn.ListTemplates(ctx)
+	if err != nil {
+		return nil, gqlerror.Errorf("list templates: %s", err.Error())
+	}
+	out := make([]model.VMTemplate, 0, len(tpls))
+	for _, t := range tpls {
+		out = append(out, model.VMTemplate{Name: t.Name, UUID: t.UUID})
+	}
+	return out, nil
 }

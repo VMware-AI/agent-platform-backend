@@ -218,6 +218,7 @@ type ComplexityRoot struct {
 		Logout                     func(childComplexity int) int
 		RecordRequestLog           func(childComplexity int, input model.RecordRequestLogInput) int
 		RecordTokenUsage           func(childComplexity int, input model.RecordTokenUsageInput) int
+		RecycleAgent               func(childComplexity int, input model.RecycleAgentInput) int
 		RegisterGatewayConnection  func(childComplexity int, input model.RegisterGatewayConnectionInput) int
 		RegisterResourcePool       func(childComplexity int, input model.RegisterResourcePoolInput) int
 		RemoveMembership           func(childComplexity int, userID string, departmentID string) int
@@ -278,6 +279,7 @@ type ComplexityRoot struct {
 		Upstreams          func(childComplexity int) int
 		UserRoles          func(childComplexity int, userID string) int
 		Users              func(childComplexity int, page *model.PageInput) int
+		VMTemplates        func(childComplexity int, resourcePoolID string) int
 		VirtualKeys        func(childComplexity int, userID *string) int
 	}
 
@@ -375,6 +377,11 @@ type ComplexityRoot struct {
 		Total func(childComplexity int) int
 	}
 
+	VMTemplate struct {
+		Name func(childComplexity int) int
+		UUID func(childComplexity int) int
+	}
+
 	VirtualKey struct {
 		AgentID           func(childComplexity int) int
 		Alias             func(childComplexity int) int
@@ -421,6 +428,7 @@ type MutationResolver interface {
 	AddMembership(ctx context.Context, userID string, departmentID string, role *model.MembershipRole) (*model.Membership, error)
 	RemoveMembership(ctx context.Context, userID string, departmentID string) (bool, error)
 	DeployAgent(ctx context.Context, input model.DeployAgentInput) (*model.DeployedAgent, error)
+	RecycleAgent(ctx context.Context, input model.RecycleAgentInput) (*model.Agent, error)
 	RegisterGatewayConnection(ctx context.Context, input model.RegisterGatewayConnectionInput) (*model.GatewayConnection, error)
 	TestGatewayConnection(ctx context.Context, id string) (model.GatewayStatus, error)
 	DeleteGatewayConnection(ctx context.Context, id string) (bool, error)
@@ -460,6 +468,7 @@ type QueryResolver interface {
 	Images(ctx context.Context) ([]model.Image, error)
 	Departments(ctx context.Context) ([]model.Department, error)
 	DepartmentMembers(ctx context.Context, departmentID string) ([]model.Membership, error)
+	VMTemplates(ctx context.Context, resourcePoolID string) ([]model.VMTemplate, error)
 	GatewayConnections(ctx context.Context) ([]model.GatewayConnection, error)
 	Upstreams(ctx context.Context) ([]model.Upstream, error)
 	ModelRoutes(ctx context.Context) ([]model.ModelRoute, error)
@@ -1353,6 +1362,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.RecordTokenUsage(childComplexity, args["input"].(model.RecordTokenUsageInput)), true
+	case "Mutation.recycleAgent":
+		if e.ComplexityRoot.Mutation.RecycleAgent == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_recycleAgent_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.RecycleAgent(childComplexity, args["input"].(model.RecycleAgentInput)), true
 	case "Mutation.registerGatewayConnection":
 		if e.ComplexityRoot.Mutation.RegisterGatewayConnection == nil {
 			break
@@ -1860,6 +1880,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Users(childComplexity, args["page"].(*model.PageInput)), true
+	case "Query.vmTemplates":
+		if e.ComplexityRoot.Query.VMTemplates == nil {
+			break
+		}
+
+		args, err := ec.field_Query_vmTemplates_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.VMTemplates(childComplexity, args["resourcePoolId"].(string)), true
 	case "Query.virtualKeys":
 		if e.ComplexityRoot.Query.VirtualKeys == nil {
 			break
@@ -2266,6 +2297,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.UserConnection.Total(childComplexity), true
 
+	case "VMTemplate.name":
+		if e.ComplexityRoot.VMTemplate.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VMTemplate.Name(childComplexity), true
+	case "VMTemplate.uuid":
+		if e.ComplexityRoot.VMTemplate.UUID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VMTemplate.UUID(childComplexity), true
+
 	case "VirtualKey.agentId":
 		if e.ComplexityRoot.VirtualKey.AgentID == nil {
 			break
@@ -2352,6 +2396,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputPageInput,
 		ec.unmarshalInputRecordRequestLogInput,
 		ec.unmarshalInputRecordTokenUsageInput,
+		ec.unmarshalInputRecycleAgentInput,
 		ec.unmarshalInputRegisterGatewayConnectionInput,
 		ec.unmarshalInputRegisterResourcePoolInput,
 		ec.unmarshalInputRequestLogFilter,
@@ -2666,16 +2711,43 @@ type DeployedAgent {
 
 input DeployAgentInput {
   agentId: ID!
+  # Source OVA template VM to clone the agent from (ListTemplates).
+  template: String!
+  # Name to give the newly cloned agent VM.
   vmName: String!
   resourcePoolId: ID!
+  # Optional vSphere resource pool to place the clone in (empty = template's pool).
+  targetResourcePool: String
   hostname: String
   maxBudget: Float
 }
 
+# An OVA template VM available to clone agents from.
+type VMTemplate {
+  name: String!
+  uuid: String!
+}
+
+input RecycleAgentInput {
+  agentId: ID!
+  # Destructive op double-confirm — must be true.
+  confirm: Boolean!
+}
+
+extend type Query {
+  # List OVA templates in a resource pool's vCenter (powers the deploy form).
+  vmTemplates(resourcePoolId: ID!): [VMTemplate!]!
+}
+
 extend type Mutation {
-  # Owner or admin (checked in resolver). Issues a key, injects cloud-init,
-  # and marks the agent running. On failure the key is revoked (no orphans).
+  # Owner or admin (checked in resolver). Issues a key, clones the VM from the
+  # template, injects cloud-init, powers on, and marks the agent running. On
+  # failure the VM and key are rolled back (no orphans).
   deployAgent(input: DeployAgentInput!): DeployedAgent!
+
+  # Owner or admin. Destroys the agent's VM, revokes its key, marks it stopped.
+  # confirm must be true (double-confirm on a destructive operation).
+  recycleAgent(input: RecycleAgentInput!): Agent!
 }
 `, BuiltIn: false},
 	{Name: "../../schema/gateway-routing.graphql", Input: `# Compute gateway routing (算力网关): connections, upstreams, model routes,
@@ -3669,6 +3741,16 @@ func (ec *executionContext) childFields_UserConnection(ctx context.Context, fiel
 	return nil, fmt.Errorf("no field named %q was found under type UserConnection", field.Name)
 }
 
+func (ec *executionContext) childFields_VMTemplate(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "name":
+		return ec.fieldContext_VMTemplate_name(ctx, field)
+	case "uuid":
+		return ec.fieldContext_VMTemplate_uuid(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type VMTemplate", field.Name)
+}
+
 func (ec *executionContext) childFields_VirtualKey(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -4195,6 +4277,20 @@ func (ec *executionContext) field_Mutation_recordTokenUsage_args(ctx context.Con
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
 		func(ctx context.Context, v any) (model.RecordTokenUsageInput, error) {
 			return ec.unmarshalNRecordTokenUsageInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRecordTokenUsageInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_recycleAgent_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.RecycleAgentInput, error) {
+			return ec.unmarshalNRecycleAgentInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRecycleAgentInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -4860,6 +4956,20 @@ func (ec *executionContext) field_Query_virtualKeys_args(ctx context.Context, ra
 		return nil, err
 	}
 	args["userId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_vmTemplates_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "resourcePoolId",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["resourcePoolId"] = arg0
 	return args, nil
 }
 
@@ -8700,6 +8810,50 @@ func (ec *executionContext) fieldContext_Mutation_deployAgent(ctx context.Contex
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_recycleAgent(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_recycleAgent(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().RecycleAgent(ctx, fc.Args["input"].(model.RecycleAgentInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Agent) graphql.Marshaler {
+			return ec.marshalNAgent2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgent(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_recycleAgent(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Agent(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_recycleAgent_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_registerGatewayConnection(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -10847,6 +11001,50 @@ func (ec *executionContext) fieldContext_Query_departmentMembers(ctx context.Con
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_departmentMembers_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_vmTemplates(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_vmTemplates(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().VMTemplates(ctx, fc.Args["resourcePoolId"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.VMTemplate) graphql.Marshaler {
+			return ec.marshalNVMTemplate2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVMTemplateᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_vmTemplates(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_VMTemplate(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_vmTemplates_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -13120,6 +13318,52 @@ func (ec *executionContext) fieldContext_UserConnection_total(_ context.Context,
 	return graphql.NewScalarFieldContext("UserConnection", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
+func (ec *executionContext) _VMTemplate_name(ctx context.Context, field graphql.CollectedField, obj *model.VMTemplate) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VMTemplate_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_VMTemplate_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VMTemplate", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _VMTemplate_uuid(ctx context.Context, field graphql.CollectedField, obj *model.VMTemplate) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VMTemplate_uuid(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.UUID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_VMTemplate_uuid(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VMTemplate", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _VirtualKey_id(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -14721,7 +14965,7 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"agentId", "vmName", "resourcePoolId", "hostname", "maxBudget"}
+	fieldsInOrder := [...]string{"agentId", "template", "vmName", "resourcePoolId", "targetResourcePool", "hostname", "maxBudget"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -14735,6 +14979,13 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 				return it, err
 			}
 			it.AgentID = data
+		case "template":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("template"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Template = data
 		case "vmName":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("vmName"))
 			data, err := ec.unmarshalNString2string(ctx, v)
@@ -14749,6 +15000,13 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 				return it, err
 			}
 			it.ResourcePoolID = data
+		case "targetResourcePool":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetResourcePool"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.TargetResourcePool = data
 		case "hostname":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hostname"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -15044,6 +15302,43 @@ func (ec *executionContext) unmarshalInputRecordTokenUsageInput(ctx context.Cont
 				return it, err
 			}
 			it.Cost = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputRecycleAgentInput(ctx context.Context, obj any) (model.RecycleAgentInput, error) {
+	var it model.RecycleAgentInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"agentId", "confirm"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "agentId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("agentId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.AgentID = data
+		case "confirm":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("confirm"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Confirm = data
 		}
 	}
 	return it, nil
@@ -17066,6 +17361,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "recycleAgent":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_recycleAgent(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "registerGatewayConnection":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_registerGatewayConnection(ctx, field)
@@ -17569,6 +17871,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_departmentMembers(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "vmTemplates":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_vmTemplates(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -18538,6 +18862,50 @@ func (ec *executionContext) _UserConnection(ctx context.Context, sel ast.Selecti
 			}
 		case "total":
 			out.Values[i] = ec._UserConnection_total(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var vMTemplateImplementors = []string{"VMTemplate"}
+
+func (ec *executionContext) _VMTemplate(ctx context.Context, sel ast.SelectionSet, obj *model.VMTemplate) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, vMTemplateImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("VMTemplate")
+		case "name":
+			out.Values[i] = ec._VMTemplate_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "uuid":
+			out.Values[i] = ec._VMTemplate_uuid(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -19740,6 +20108,11 @@ func (ec *executionContext) unmarshalNRecordTokenUsageInput2githubᚗcomᚋVMwar
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalNRecycleAgentInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRecycleAgentInput(ctx context.Context, v any) (model.RecycleAgentInput, error) {
+	res, err := ec.unmarshalInputRecycleAgentInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNRegisterGatewayConnectionInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRegisterGatewayConnectionInput(ctx context.Context, v any) (model.RegisterGatewayConnectionInput, error) {
 	res, err := ec.unmarshalInputRegisterGatewayConnectionInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -20169,6 +20542,26 @@ func (ec *executionContext) marshalNUserConnection2ᚖgithubᚗcomᚋVMwareᚑAI
 		return graphql.Null
 	}
 	return ec._UserConnection(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNVMTemplate2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVMTemplate(ctx context.Context, sel ast.SelectionSet, v model.VMTemplate) graphql.Marshaler {
+	return ec._VMTemplate(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNVMTemplate2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVMTemplateᚄ(ctx context.Context, sel ast.SelectionSet, v []model.VMTemplate) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNVMTemplate2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVMTemplate(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalNVirtualKey2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKey(ctx context.Context, sel ast.SelectionSet, v model.VirtualKey) graphql.Marshaler {

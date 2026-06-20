@@ -18,8 +18,9 @@ import (
 // ImageUpdate is the builder for updating Image entities.
 type ImageUpdate struct {
 	config
-	hooks    []Hook
-	mutation *ImageMutation
+	hooks     []Hook
+	mutation  *ImageMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the ImageUpdate builder.
@@ -152,6 +153,12 @@ func (_u *ImageUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *ImageUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *ImageUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *ImageUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -182,6 +189,7 @@ func (_u *ImageUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Signed(); ok {
 		_spec.SetField(image.FieldSigned, field.TypeBool, value)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{image.Label}
@@ -197,9 +205,10 @@ func (_u *ImageUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 // ImageUpdateOne is the builder for updating a single Image entity.
 type ImageUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *ImageMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *ImageMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUpdatedAt sets the "updated_at" field.
@@ -339,6 +348,12 @@ func (_u *ImageUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *ImageUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *ImageUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *ImageUpdateOne) sqlSave(ctx context.Context) (_node *Image, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -386,6 +401,7 @@ func (_u *ImageUpdateOne) sqlSave(ctx context.Context) (_node *Image, err error)
 	if value, ok := _u.mutation.Signed(); ok {
 		_spec.SetField(image.FieldSigned, field.TypeBool, value)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &Image{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

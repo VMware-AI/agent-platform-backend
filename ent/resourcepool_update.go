@@ -19,8 +19,9 @@ import (
 // ResourcePoolUpdate is the builder for updating ResourcePool entities.
 type ResourcePoolUpdate struct {
 	config
-	hooks    []Hook
-	mutation *ResourcePoolMutation
+	hooks     []Hook
+	mutation  *ResourcePoolMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the ResourcePoolUpdate builder.
@@ -301,6 +302,12 @@ func (_u *ResourcePoolUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *ResourcePoolUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *ResourcePoolUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *ResourcePoolUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -364,6 +371,7 @@ func (_u *ResourcePoolUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if _u.mutation.TenantIDCleared() {
 		_spec.ClearField(resourcepool.FieldTenantID, field.TypeUUID)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{resourcepool.Label}
@@ -379,9 +387,10 @@ func (_u *ResourcePoolUpdate) sqlSave(ctx context.Context) (_node int, err error
 // ResourcePoolUpdateOne is the builder for updating a single ResourcePool entity.
 type ResourcePoolUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *ResourcePoolMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *ResourcePoolMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUpdatedAt sets the "updated_at" field.
@@ -669,6 +678,12 @@ func (_u *ResourcePoolUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *ResourcePoolUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *ResourcePoolUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *ResourcePoolUpdateOne) sqlSave(ctx context.Context) (_node *ResourcePool, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -749,6 +764,7 @@ func (_u *ResourcePoolUpdateOne) sqlSave(ctx context.Context) (_node *ResourcePo
 	if _u.mutation.TenantIDCleared() {
 		_spec.ClearField(resourcepool.FieldTenantID, field.TypeUUID)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &ResourcePool{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

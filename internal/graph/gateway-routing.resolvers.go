@@ -248,7 +248,7 @@ func (r *mutationResolver) SetRouterTier(ctx context.Context, tier model.RouterT
 
 // GatewayConnections is the resolver for the gatewayConnections field.
 func (r *queryResolver) GatewayConnections(ctx context.Context) ([]model.GatewayConnection, error) {
-	gs, err := r.Ent.GatewayConnection.Query().All(ctx)
+	gs, err := r.Ent.GatewayConnection.Query().Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +261,7 @@ func (r *queryResolver) GatewayConnections(ctx context.Context) ([]model.Gateway
 
 // Upstreams is the resolver for the upstreams field.
 func (r *queryResolver) Upstreams(ctx context.Context) ([]model.Upstream, error) {
-	us, err := r.Ent.Upstream.Query().All(ctx)
+	us, err := r.Ent.Upstream.Query().Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +274,7 @@ func (r *queryResolver) Upstreams(ctx context.Context) ([]model.Upstream, error)
 
 // ModelRoutes is the resolver for the modelRoutes field.
 func (r *queryResolver) ModelRoutes(ctx context.Context) ([]model.ModelRoute, error) {
-	rs, err := r.Ent.ModelRoute.Query().All(ctx)
+	rs, err := r.Ent.ModelRoute.Query().Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +287,7 @@ func (r *queryResolver) ModelRoutes(ctx context.Context) ([]model.ModelRoute, er
 
 // RouterTiers is the resolver for the routerTiers field.
 func (r *queryResolver) RouterTiers(ctx context.Context) ([]model.RouterTier, error) {
-	ts, err := r.Ent.RouterTier.Query().All(ctx)
+	ts, err := r.Ent.RouterTier.Query().Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}

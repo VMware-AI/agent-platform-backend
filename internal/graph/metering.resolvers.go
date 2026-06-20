@@ -7,7 +7,10 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
+	"entgo.io/ent/dialect/sql"
+	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/tokenusage"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/google/uuid"
@@ -51,7 +54,7 @@ func (r *queryResolver) TokenUsage(ctx context.Context, userID *string, page *mo
 		q = q.Where(tokenusage.UserID(uid))
 	}
 	limit, offset := pageBounds(page)
-	rows, err := q.Limit(limit).Offset(offset).All(ctx)
+	rows, err := q.Order(orderNewest).Limit(limit).Offset(offset).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -72,74 +75,76 @@ func (r *queryResolver) MeteringSummary(ctx context.Context, userID *string) (*m
 		}
 		q = q.Where(tokenusage.UserID(uid))
 	}
-	rows, err := q.All(ctx)
-	if err != nil {
+	// Per-model breakdown, pushed down (low cardinality); totals summed from it.
+	var byModel []struct {
+		Model string  `json:"model"`
+		In    int     `json:"in"`
+		Out   int     `json:"out"`
+		Cost  float64 `json:"cost"`
+	}
+	if err := q.Clone().GroupBy(tokenusage.FieldModel).Aggregate(
+		ent.As(ent.Sum(tokenusage.FieldInputTokens), "in"),
+		ent.As(ent.Sum(tokenusage.FieldOutputTokens), "out"),
+		ent.As(ent.Sum(tokenusage.FieldCost), "cost"),
+	).Scan(ctx, &byModel); err != nil {
 		return nil, err
 	}
-	var totalIn, totalOut int
-	var totalCost float64
-	byModel := map[string]*model.ModelUsage{}
-	byAgent := map[string]*model.AgentUsage{}
-	byDate := map[string]*model.DateUsage{}
-	var modelOrder, agentOrder, dateOrder []string
-	for _, t := range rows {
-		totalIn += t.InputTokens
-		totalOut += t.OutputTokens
-		totalCost += t.Cost
 
-		mu, ok := byModel[t.Model]
-		if !ok {
-			mu = &model.ModelUsage{Model: t.Model}
-			byModel[t.Model] = mu
-			modelOrder = append(modelOrder, t.Model)
-		}
-		mu.InputTokens += t.InputTokens
-		mu.OutputTokens += t.OutputTokens
-		mu.Cost += t.Cost
-
-		if t.AgentID != nil {
-			aid := t.AgentID.String()
-			au, ok := byAgent[aid]
-			if !ok {
-				au = &model.AgentUsage{AgentID: aid}
-				byAgent[aid] = au
-				agentOrder = append(agentOrder, aid)
-			}
-			au.InputTokens += t.InputTokens
-			au.OutputTokens += t.OutputTokens
-			au.Cost += t.Cost
-		}
-
-		day := t.CreatedAt.Format("2006-01-02")
-		du, ok := byDate[day]
-		if !ok {
-			du = &model.DateUsage{Date: day}
-			byDate[day] = du
-			dateOrder = append(dateOrder, day)
-		}
-		du.InputTokens += t.InputTokens
-		du.OutputTokens += t.OutputTokens
-		du.Cost += t.Cost
+	// Per-agent breakdown (only rows attributed to an agent).
+	var byAgent []struct {
+		AgentID string  `json:"agent_id"`
+		In      int     `json:"in"`
+		Out     int     `json:"out"`
+		Cost    float64 `json:"cost"`
+	}
+	if err := q.Clone().Where(tokenusage.AgentIDNotNil()).GroupBy(tokenusage.FieldAgentID).Aggregate(
+		ent.As(ent.Sum(tokenusage.FieldInputTokens), "in"),
+		ent.As(ent.Sum(tokenusage.FieldOutputTokens), "out"),
+		ent.As(ent.Sum(tokenusage.FieldCost), "cost"),
+	).Scan(ctx, &byAgent); err != nil {
+		return nil, err
 	}
 
-	models := make([]model.ModelUsage, 0, len(modelOrder))
-	for _, m := range modelOrder {
-		models = append(models, *byModel[m])
+	// Per-day trend, bucketed via a portable date expression (sqlite + postgres),
+	// pushed down so raw rows are never materialized (H2). NOTE: date() buckets in
+	// the DB session timezone; run the DB in UTC so day buckets line up with the
+	// stored UTC timestamps (Postgres date(timestamptz) converts to session TZ).
+	var byDate []struct {
+		Day  string  `json:"day"`
+		In   int     `json:"in"`
+		Out  int     `json:"out"`
+		Cost float64 `json:"cost"`
 	}
-	agents := make([]model.AgentUsage, 0, len(agentOrder))
-	for _, a := range agentOrder {
-		agents = append(agents, *byAgent[a])
+	if err := q.Clone().Modify(func(s *sql.Selector) {
+		day := fmt.Sprintf("cast(date(%s) as text)", s.C(tokenusage.FieldCreatedAt))
+		s.Select(
+			sql.As(day, "day"),
+			sql.As(sql.Sum(s.C(tokenusage.FieldInputTokens)), "in"),
+			sql.As(sql.Sum(s.C(tokenusage.FieldOutputTokens)), "out"),
+			sql.As(sql.Sum(s.C(tokenusage.FieldCost)), "cost"),
+		).GroupBy(day).OrderBy(sql.Desc("day"))
+	}).Scan(ctx, &byDate); err != nil {
+		return nil, err
 	}
-	dates := make([]model.DateUsage, 0, len(dateOrder))
-	for _, d := range dateOrder {
-		dates = append(dates, *byDate[d])
+
+	out := &model.MeteringSummary{}
+	for _, m := range byModel {
+		out.TotalInputTokens += m.In
+		out.TotalOutputTokens += m.Out
+		out.TotalCost += m.Cost
+		out.ByModel = append(out.ByModel, model.ModelUsage{
+			Model: m.Model, InputTokens: m.In, OutputTokens: m.Out, Cost: m.Cost,
+		})
 	}
-	return &model.MeteringSummary{
-		TotalInputTokens:  totalIn,
-		TotalOutputTokens: totalOut,
-		TotalCost:         totalCost,
-		ByModel:           models,
-		ByAgent:           agents,
-		ByDate:            dates,
-	}, nil
+	for _, a := range byAgent {
+		out.ByAgent = append(out.ByAgent, model.AgentUsage{
+			AgentID: a.AgentID, InputTokens: a.In, OutputTokens: a.Out, Cost: a.Cost,
+		})
+	}
+	for _, d := range byDate {
+		out.ByDate = append(out.ByDate, model.DateUsage{
+			Date: d.Day, InputTokens: d.In, OutputTokens: d.Out, Cost: d.Cost,
+		})
+	}
+	return out, nil
 }

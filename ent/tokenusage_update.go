@@ -18,8 +18,9 @@ import (
 // TokenUsageUpdate is the builder for updating TokenUsage entities.
 type TokenUsageUpdate struct {
 	config
-	hooks    []Hook
-	mutation *TokenUsageMutation
+	hooks     []Hook
+	mutation  *TokenUsageMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the TokenUsageUpdate builder.
@@ -257,6 +258,12 @@ func (_u *TokenUsageUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *TokenUsageUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *TokenUsageUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *TokenUsageUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -320,6 +327,7 @@ func (_u *TokenUsageUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if _u.mutation.DepartmentIDCleared() {
 		_spec.ClearField(tokenusage.FieldDepartmentID, field.TypeUUID)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{tokenusage.Label}
@@ -335,9 +343,10 @@ func (_u *TokenUsageUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 // TokenUsageUpdateOne is the builder for updating a single TokenUsage entity.
 type TokenUsageUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *TokenUsageMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *TokenUsageMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUserID sets the "user_id" field.
@@ -582,6 +591,12 @@ func (_u *TokenUsageUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *TokenUsageUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *TokenUsageUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *TokenUsageUpdateOne) sqlSave(ctx context.Context) (_node *TokenUsage, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -662,6 +677,7 @@ func (_u *TokenUsageUpdateOne) sqlSave(ctx context.Context) (_node *TokenUsage, 
 	if _u.mutation.DepartmentIDCleared() {
 		_spec.ClearField(tokenusage.FieldDepartmentID, field.TypeUUID)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &TokenUsage{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

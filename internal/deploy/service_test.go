@@ -28,22 +28,106 @@ func (f *fakeGateway) DeleteKey(_ context.Context, key string) error {
 func (f *fakeGateway) CreateTeam(context.Context, gateway.TeamRequest) (*gateway.TeamResponse, error) {
 	return &gateway.TeamResponse{}, nil
 }
+func (f *fakeGateway) DeleteTeam(context.Context, string) error { return nil }
 
-// failingSetter always fails guestinfo injection, to exercise orphan cleanup.
-type failingSetter struct{}
-
-func (failingSetter) SetGuestinfo(context.Context, string, map[string]string) error {
-	return context.Canceled
+// fakeVC is an in-memory VMProvisioner; failAt forces a chosen step to fail.
+type fakeVC struct {
+	cloned    []string
+	guestinfo []string
+	poweredOn []string
+	destroyed []string
+	failAt    string // "", "clone", "guestinfo", "poweron"
 }
 
-func TestProvision_RevokesKeyOnGuestinfoFailure(t *testing.T) {
+func (f *fakeVC) CloneFromTemplate(_ context.Context, spec vcenter.CloneSpec) (*vcenter.VMInfo, error) {
+	if f.failAt == "clone" {
+		return nil, context.Canceled
+	}
+	f.cloned = append(f.cloned, spec.Name)
+	return &vcenter.VMInfo{Name: spec.Name, PowerState: "poweredOff"}, nil
+}
+func (f *fakeVC) SetGuestinfo(_ context.Context, vm string, _ map[string]string) error {
+	if f.failAt == "guestinfo" {
+		return context.Canceled
+	}
+	f.guestinfo = append(f.guestinfo, vm)
+	return nil
+}
+func (f *fakeVC) PowerOn(_ context.Context, vm string) error {
+	if f.failAt == "poweron" {
+		return context.Canceled
+	}
+	f.poweredOn = append(f.poweredOn, vm)
+	return nil
+}
+func (f *fakeVC) Destroy(_ context.Context, vm string) error {
+	f.destroyed = append(f.destroyed, vm)
+	return nil
+}
+
+func TestProvision_FullLifecycle(t *testing.T) {
 	fg := &fakeGateway{}
-	svc := &Service{Gateway: fg, VCenter: failingSetter{}, GatewayURL: "https://gw"}
-	if _, err := svc.Provision(context.Background(), Request{UserID: "u", VMName: "vm1"}); err == nil {
-		t.Fatal("expected provision error on guestinfo failure")
+	vc := &fakeVC{}
+	svc := &Service{Gateway: fg, VCenter: vc, GatewayURL: "https://gw"}
+	res, err := svc.Provision(context.Background(), Request{
+		UserID: "u", Template: "ova-ubuntu-agent", VMName: "agent-01", Hostname: "agent-01",
+	})
+	if err != nil {
+		t.Fatalf("Provision: %v", err)
+	}
+	if len(vc.cloned) != 1 || vc.cloned[0] != "agent-01" {
+		t.Fatalf("clone not called: %+v", vc.cloned)
+	}
+	if len(vc.guestinfo) != 1 || len(vc.poweredOn) != 1 {
+		t.Fatalf("guestinfo/poweron not called: gi=%+v on=%+v", vc.guestinfo, vc.poweredOn)
+	}
+	if len(vc.destroyed) != 0 {
+		t.Fatalf("nothing should be destroyed on success: %+v", vc.destroyed)
+	}
+	if res.VMName != "agent-01" || res.VirtualKey != "sk-deploy-xyz" {
+		t.Fatalf("unexpected result: %+v", res)
+	}
+}
+
+func TestProvision_RollbackOnCloneFailure(t *testing.T) {
+	fg := &fakeGateway{}
+	vc := &fakeVC{failAt: "clone"}
+	svc := &Service{Gateway: fg, VCenter: vc, GatewayURL: "https://gw"}
+	if _, err := svc.Provision(context.Background(), Request{UserID: "u", Template: "ova", VMName: "vm1"}); err == nil {
+		t.Fatal("expected clone failure")
 	}
 	if len(fg.deleted) != 1 || fg.deleted[0] != "sk-deploy-xyz" {
-		t.Fatalf("issued key should be revoked on failure: %+v", fg.deleted)
+		t.Fatalf("key not revoked on clone failure: %+v", fg.deleted)
+	}
+	if len(vc.destroyed) != 0 {
+		t.Fatalf("no VM should be destroyed (clone failed): %+v", vc.destroyed)
+	}
+}
+
+func TestProvision_RollbackOnGuestinfoFailure(t *testing.T) {
+	fg := &fakeGateway{}
+	vc := &fakeVC{failAt: "guestinfo"}
+	svc := &Service{Gateway: fg, VCenter: vc, GatewayURL: "https://gw"}
+	if _, err := svc.Provision(context.Background(), Request{UserID: "u", Template: "ova", VMName: "vm1"}); err == nil {
+		t.Fatal("expected guestinfo failure")
+	}
+	if len(vc.destroyed) != 1 || vc.destroyed[0] != "vm1" {
+		t.Fatalf("cloned VM not destroyed: %+v", vc.destroyed)
+	}
+	if len(fg.deleted) != 1 || fg.deleted[0] != "sk-deploy-xyz" {
+		t.Fatalf("key not revoked: %+v", fg.deleted)
+	}
+}
+
+func TestProvision_RollbackOnPowerOnFailure(t *testing.T) {
+	fg := &fakeGateway{}
+	vc := &fakeVC{failAt: "poweron"}
+	svc := &Service{Gateway: fg, VCenter: vc, GatewayURL: "https://gw"}
+	if _, err := svc.Provision(context.Background(), Request{UserID: "u", Template: "ova", VMName: "vm1"}); err == nil {
+		t.Fatal("expected power-on failure")
+	}
+	if len(vc.destroyed) != 1 || len(fg.deleted) != 1 {
+		t.Fatalf("VM+key not rolled back: destroyed=%+v deleted=%+v", vc.destroyed, fg.deleted)
 	}
 }
 
@@ -68,18 +152,37 @@ func TestProvision_WiresGatewayAndVCenter(t *testing.T) {
 	if err != nil || len(vms) == 0 {
 		t.Fatalf("list vms: %v (n=%d)", err, len(vms))
 	}
-	target := vms[0].Name
+	template := vms[0].Name // clone source (stands in for the OVA template)
 
 	fg := &fakeGateway{}
 	svc := &Service{Gateway: fg, VCenter: vc, GatewayURL: "https://gateway.internal/"}
 
 	budget := 50.0
 	res, err := svc.Provision(ctx, Request{
-		AgentName: "alice-goose", UserID: "u-alice", VMName: target,
+		AgentName: "alice-goose", UserID: "u-alice",
+		Template: template, VMName: "agent-alice-01",
 		Hostname: "agent-vm-01", MaxBudget: &budget,
 	})
 	if err != nil {
 		t.Fatalf("Provision: %v", err)
+	}
+	if res.VMName != "agent-alice-01" {
+		t.Fatalf("created VM name = %q", res.VMName)
+	}
+
+	// the cloned VM exists and is powered on (cloud-init consumes guestinfo at boot)
+	after, _ := vc.ListVMs(ctx)
+	var found *vcenter.VMInfo
+	for i := range after {
+		if after[i].Name == "agent-alice-01" {
+			found = &after[i]
+		}
+	}
+	if found == nil {
+		t.Fatal("cloned VM not in inventory")
+	}
+	if found.PowerState != "poweredOn" {
+		t.Fatalf("cloned VM should be powered on, got %q", found.PowerState)
 	}
 
 	// gateway issued the key with defaults (smart router)

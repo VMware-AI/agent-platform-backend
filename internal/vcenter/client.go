@@ -9,6 +9,7 @@ import (
 	"net/url"
 
 	"github.com/vmware/govmomi"
+	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/view"
 	"github.com/vmware/govmomi/vim25/mo"
@@ -84,6 +85,221 @@ func (c *Client) SetGuestinfo(ctx context.Context, vmName string, kv map[string]
 	task, err := vm.Reconfigure(ctx, types.VirtualMachineConfigSpec{ExtraConfig: opts})
 	if err != nil {
 		return fmt.Errorf("vcenter: reconfigure %s: %w", vmName, err)
+	}
+	return task.Wait(ctx)
+}
+
+// CloneSpec describes a clone-from-template provisioning request. Placement
+// fields are optional — empty values fall back to the datacenter defaults.
+type CloneSpec struct {
+	Template     string // source template (or VM) name
+	Name         string // new VM name
+	PowerOn      bool   // power on immediately (leave false to inject guestinfo first)
+	ResourcePool string // target pool; "" = datacenter default
+	Datastore    string // target datastore; "" = inherit from source
+	Folder       string // target VM folder; "" = datacenter VM folder
+}
+
+// CloneFromTemplate clones a template VM into a new agent VM and returns its
+// info. This is the auto-provision primitive: the deploy flow clones (powered
+// off), injects guestinfo, then powers on so cloud-init consumes it at first
+// boot (LLD-03 §4 部署).
+func (c *Client) CloneFromTemplate(ctx context.Context, spec CloneSpec) (*VMInfo, error) {
+	if spec.Template == "" || spec.Name == "" {
+		return nil, fmt.Errorf("vcenter: clone requires template and name")
+	}
+	src, err := c.findVM(ctx, spec.Template)
+	if err != nil {
+		return nil, err
+	}
+	finder := find.NewFinder(c.vc.Client, true)
+	dc, err := finder.DefaultDatacenter(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("vcenter: default datacenter: %w", err)
+	}
+	finder.SetDatacenter(dc)
+
+	relocate := types.VirtualMachineRelocateSpec{}
+	if spec.ResourcePool != "" {
+		pool, err := finder.ResourcePool(ctx, spec.ResourcePool)
+		if err != nil {
+			return nil, fmt.Errorf("vcenter: resource pool %q: %w", spec.ResourcePool, err)
+		}
+		relocate.Pool = types.NewReference(pool.Reference())
+	} else {
+		// Default: place the clone in the same pool as the source. A true
+		// template has no pool, so the caller must then specify one.
+		var msrc mo.VirtualMachine
+		if err := src.Properties(ctx, src.Reference(), []string{"resourcePool"}, &msrc); err != nil {
+			return nil, fmt.Errorf("vcenter: read source pool: %w", err)
+		}
+		if msrc.ResourcePool == nil {
+			return nil, fmt.Errorf("vcenter: source %q has no resource pool; specify resourcePool", spec.Template)
+		}
+		relocate.Pool = msrc.ResourcePool
+	}
+	if spec.Datastore != "" {
+		ds, err := finder.Datastore(ctx, spec.Datastore)
+		if err != nil {
+			return nil, fmt.Errorf("vcenter: datastore %q: %w", spec.Datastore, err)
+		}
+		relocate.Datastore = types.NewReference(ds.Reference())
+	}
+
+	folder, err := c.cloneFolder(ctx, finder, dc, spec.Folder)
+	if err != nil {
+		return nil, err
+	}
+	task, err := src.Clone(ctx, folder, spec.Name, types.VirtualMachineCloneSpec{
+		Location: relocate,
+		PowerOn:  spec.PowerOn,
+		Template: false,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("vcenter: clone %s→%s: %w", spec.Template, spec.Name, err)
+	}
+	if err := task.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("vcenter: clone task %s→%s: %w", spec.Template, spec.Name, err)
+	}
+	return c.vmInfo(ctx, spec.Name)
+}
+
+// cloneFolder resolves the target VM folder, defaulting to the datacenter's.
+func (c *Client) cloneFolder(ctx context.Context, finder *find.Finder, dc *object.Datacenter, name string) (*object.Folder, error) {
+	if name != "" {
+		f, err := finder.Folder(ctx, name)
+		if err != nil {
+			return nil, fmt.Errorf("vcenter: folder %q: %w", name, err)
+		}
+		return f, nil
+	}
+	folders, err := dc.Folders(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("vcenter: datacenter folders: %w", err)
+	}
+	return folders.VmFolder, nil
+}
+
+// vmInfo returns the summarized info for a single VM by name.
+func (c *Client) vmInfo(ctx context.Context, name string) (*VMInfo, error) {
+	vm, err := c.findVM(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	var mvm mo.VirtualMachine
+	if err := vm.Properties(ctx, vm.Reference(), []string{"summary"}, &mvm); err != nil {
+		return nil, fmt.Errorf("vcenter: vm properties %s: %w", name, err)
+	}
+	return &VMInfo{
+		Name:       mvm.Summary.Config.Name,
+		PowerState: string(mvm.Summary.Runtime.PowerState),
+		UUID:       mvm.Summary.Config.Uuid,
+	}, nil
+}
+
+// PowerOn powers a VM on and waits for completion (LLD-03 §4 开关机).
+func (c *Client) PowerOn(ctx context.Context, vmName string) error {
+	vm, err := c.findVM(ctx, vmName)
+	if err != nil {
+		return err
+	}
+	task, err := vm.PowerOn(ctx)
+	if err != nil {
+		return fmt.Errorf("vcenter: power on %s: %w", vmName, err)
+	}
+	return task.Wait(ctx)
+}
+
+// PowerOff hard-powers a VM off and waits for completion. Prefer Shutdown for a
+// graceful guest stop; PowerOff is the forceful fallback (LLD-03 §4).
+func (c *Client) PowerOff(ctx context.Context, vmName string) error {
+	vm, err := c.findVM(ctx, vmName)
+	if err != nil {
+		return err
+	}
+	task, err := vm.PowerOff(ctx)
+	if err != nil {
+		return fmt.Errorf("vcenter: power off %s: %w", vmName, err)
+	}
+	return task.Wait(ctx)
+}
+
+// Shutdown requests a graceful guest shutdown via VMware Tools. Unlike PowerOff
+// it is not a task — the guest powers off asynchronously (LLD-03 §4).
+func (c *Client) Shutdown(ctx context.Context, vmName string) error {
+	vm, err := c.findVM(ctx, vmName)
+	if err != nil {
+		return err
+	}
+	if err := vm.ShutdownGuest(ctx); err != nil {
+		return fmt.Errorf("vcenter: shutdown guest %s: %w", vmName, err)
+	}
+	return nil
+}
+
+// ListTemplates returns VMs marked as templates (config.template=true) — the
+// OVA-built images available to clone agent VMs from (LLD-03 §4, 部署表单选模板).
+func (c *Client) ListTemplates(ctx context.Context) ([]VMInfo, error) {
+	m := view.NewManager(c.vc.Client)
+	v, err := m.CreateContainerView(ctx, c.vc.ServiceContent.RootFolder, []string{"VirtualMachine"}, true)
+	if err != nil {
+		return nil, fmt.Errorf("vcenter: create view: %w", err)
+	}
+	defer func() { _ = v.Destroy(ctx) }()
+	var vms []mo.VirtualMachine
+	if err := v.Retrieve(ctx, []string{"VirtualMachine"}, []string{"summary"}, &vms); err != nil {
+		return nil, fmt.Errorf("vcenter: retrieve templates: %w", err)
+	}
+	out := make([]VMInfo, 0)
+	for _, vm := range vms {
+		if vm.Summary.Config.Template {
+			out = append(out, VMInfo{
+				Name:       vm.Summary.Config.Name,
+				PowerState: string(vm.Summary.Runtime.PowerState),
+				UUID:       vm.Summary.Config.Uuid,
+			})
+		}
+	}
+	return out, nil
+}
+
+// MarkAsTemplate converts a powered-off VM into a template, making it available
+// to clone agents from (LLD-03 §4; the OVA-build → template step).
+func (c *Client) MarkAsTemplate(ctx context.Context, vmName string) error {
+	vm, err := c.findVM(ctx, vmName)
+	if err != nil {
+		return err
+	}
+	if err := vm.MarkAsTemplate(ctx); err != nil {
+		return fmt.Errorf("vcenter: mark template %s: %w", vmName, err)
+	}
+	return nil
+}
+
+// Destroy powers a VM off (if needed) and permanently deletes it. This is
+// destructive — the resolver layer gates it with dry-run + confirmation + audit
+// (LLD-03 §4 回收, 沿用旧平台 @vmware_tool 约束精神).
+func (c *Client) Destroy(ctx context.Context, vmName string) error {
+	vm, err := c.findVM(ctx, vmName)
+	if err != nil {
+		return err
+	}
+	var mvm mo.VirtualMachine
+	if err := vm.Properties(ctx, vm.Reference(), []string{"runtime"}, &mvm); err != nil {
+		return fmt.Errorf("vcenter: read power state %s: %w", vmName, err)
+	}
+	if mvm.Runtime.PowerState == types.VirtualMachinePowerStatePoweredOn {
+		task, err := vm.PowerOff(ctx)
+		if err != nil {
+			return fmt.Errorf("vcenter: power off before destroy %s: %w", vmName, err)
+		}
+		if err := task.Wait(ctx); err != nil {
+			return fmt.Errorf("vcenter: power off task %s: %w", vmName, err)
+		}
+	}
+	task, err := vm.Destroy(ctx)
+	if err != nil {
+		return fmt.Errorf("vcenter: destroy %s: %w", vmName, err)
 	}
 	return task.Wait(ctx)
 }

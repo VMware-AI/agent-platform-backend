@@ -26,6 +26,7 @@ type PermissionQuery struct {
 	inters     []Interceptor
 	predicates []predicate.Permission
 	withRoles  *RoleQuery
+	modifiers  []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -278,8 +279,9 @@ func (_q *PermissionQuery) Clone() *PermissionQuery {
 		predicates: append([]predicate.Permission{}, _q.predicates...),
 		withRoles:  _q.withRoles.Clone(),
 		// clone intermediate query.
-		sql:  _q.sql.Clone(),
-		path: _q.path,
+		sql:       _q.sql.Clone(),
+		path:      _q.path,
+		modifiers: append([]func(*sql.Selector){}, _q.modifiers...),
 	}
 }
 
@@ -385,6 +387,9 @@ func (_q *PermissionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*P
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
+	if len(_q.modifiers) > 0 {
+		_spec.Modifiers = _q.modifiers
+	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
@@ -468,6 +473,9 @@ func (_q *PermissionQuery) loadRoles(ctx context.Context, query *RoleQuery, node
 
 func (_q *PermissionQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
+	if len(_q.modifiers) > 0 {
+		_spec.Modifiers = _q.modifiers
+	}
 	_spec.Node.Columns = _q.ctx.Fields
 	if len(_q.ctx.Fields) > 0 {
 		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
@@ -530,6 +538,9 @@ func (_q *PermissionQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
+	for _, m := range _q.modifiers {
+		m(selector)
+	}
 	for _, p := range _q.predicates {
 		p(selector)
 	}
@@ -545,6 +556,12 @@ func (_q *PermissionQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector.Limit(*limit)
 	}
 	return selector
+}
+
+// Modify adds a query modifier for attaching custom logic to queries.
+func (_q *PermissionQuery) Modify(modifiers ...func(s *sql.Selector)) *PermissionSelect {
+	_q.modifiers = append(_q.modifiers, modifiers...)
+	return _q.Select()
 }
 
 // PermissionGroupBy is the group-by builder for Permission entities.
@@ -635,4 +652,10 @@ func (_s *PermissionSelect) sqlScan(ctx context.Context, root *PermissionQuery, 
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
+}
+
+// Modify adds a query modifier for attaching custom logic to queries.
+func (_s *PermissionSelect) Modify(modifiers ...func(s *sql.Selector)) *PermissionSelect {
+	_s.modifiers = append(_s.modifiers, modifiers...)
+	return _s
 }

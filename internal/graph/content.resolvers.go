@@ -149,7 +149,7 @@ func (r *mutationResolver) DeleteImage(ctx context.Context, id string) (bool, er
 
 // Artifacts is the resolver for the artifacts field.
 func (r *queryResolver) Artifacts(ctx context.Context) ([]model.Artifact, error) {
-	as, err := r.Ent.Artifact.Query().All(ctx)
+	as, err := r.Ent.Artifact.Query().Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (r *queryResolver) Artifacts(ctx context.Context) ([]model.Artifact, error)
 
 // Skills is the resolver for the skills field.
 func (r *queryResolver) Skills(ctx context.Context) ([]model.Skill, error) {
-	ss, err := r.Ent.Skill.Query().All(ctx)
+	ss, err := r.Ent.Skill.Query().Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func (r *queryResolver) Skills(ctx context.Context) ([]model.Skill, error) {
 
 // Images is the resolver for the images field.
 func (r *queryResolver) Images(ctx context.Context) ([]model.Image, error) {
-	is, err := r.Ent.Image.Query().All(ctx)
+	is, err := r.Ent.Image.Query().Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}

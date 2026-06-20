@@ -18,8 +18,9 @@ import (
 // UpstreamUpdate is the builder for updating Upstream entities.
 type UpstreamUpdate struct {
 	config
-	hooks    []Hook
-	mutation *UpstreamMutation
+	hooks     []Hook
+	mutation  *UpstreamMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the UpstreamUpdate builder.
@@ -191,6 +192,12 @@ func (_u *UpstreamUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *UpstreamUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *UpstreamUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *UpstreamUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -230,6 +237,7 @@ func (_u *UpstreamUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(upstream.FieldEnabled, field.TypeBool, value)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{upstream.Label}
@@ -245,9 +253,10 @@ func (_u *UpstreamUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 // UpstreamUpdateOne is the builder for updating a single Upstream entity.
 type UpstreamUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *UpstreamMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *UpstreamMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUpdatedAt sets the "updated_at" field.
@@ -426,6 +435,12 @@ func (_u *UpstreamUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *UpstreamUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *UpstreamUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *UpstreamUpdateOne) sqlSave(ctx context.Context) (_node *Upstream, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -482,6 +497,7 @@ func (_u *UpstreamUpdateOne) sqlSave(ctx context.Context) (_node *Upstream, err 
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(upstream.FieldEnabled, field.TypeBool, value)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &Upstream{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

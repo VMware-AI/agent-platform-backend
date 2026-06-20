@@ -141,11 +141,13 @@ type Department struct {
 }
 
 type DeployAgentInput struct {
-	AgentID        string   `json:"agentId"`
-	VMName         string   `json:"vmName"`
-	ResourcePoolID string   `json:"resourcePoolId"`
-	Hostname       *string  `json:"hostname,omitempty"`
-	MaxBudget      *float64 `json:"maxBudget,omitempty"`
+	AgentID            string   `json:"agentId"`
+	Template           string   `json:"template"`
+	VMName             string   `json:"vmName"`
+	ResourcePoolID     string   `json:"resourcePoolId"`
+	TargetResourcePool *string  `json:"targetResourcePool,omitempty"`
+	Hostname           *string  `json:"hostname,omitempty"`
+	MaxBudget          *float64 `json:"maxBudget,omitempty"`
 }
 
 type DeployedAgent struct {
@@ -267,6 +269,11 @@ type RecordTokenUsageInput struct {
 	InputTokens  int      `json:"inputTokens"`
 	OutputTokens int      `json:"outputTokens"`
 	Cost         *float64 `json:"cost,omitempty"`
+}
+
+type RecycleAgentInput struct {
+	AgentID string `json:"agentId"`
+	Confirm bool   `json:"confirm"`
 }
 
 type RegisterGatewayConnectionInput struct {
@@ -445,6 +452,11 @@ type User struct {
 type UserConnection struct {
 	Items []User `json:"items"`
 	Total int    `json:"total"`
+}
+
+type VMTemplate struct {
+	Name string `json:"name"`
+	UUID string `json:"uuid"`
 }
 
 type VirtualKey struct {

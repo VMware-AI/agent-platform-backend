@@ -19,8 +19,9 @@ import (
 // AgentUpdate is the builder for updating Agent entities.
 type AgentUpdate struct {
 	config
-	hooks    []Hook
-	mutation *AgentMutation
+	hooks     []Hook
+	mutation  *AgentMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the AgentUpdate builder.
@@ -252,6 +253,12 @@ func (_u *AgentUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *AgentUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *AgentUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *AgentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -309,6 +316,7 @@ func (_u *AgentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.TenantIDCleared() {
 		_spec.ClearField(agent.FieldTenantID, field.TypeUUID)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{agent.Label}
@@ -324,9 +332,10 @@ func (_u *AgentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 // AgentUpdateOne is the builder for updating a single Agent entity.
 type AgentUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *AgentMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *AgentMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUpdatedAt sets the "updated_at" field.
@@ -565,6 +574,12 @@ func (_u *AgentUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *AgentUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *AgentUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *AgentUpdateOne) sqlSave(ctx context.Context) (_node *Agent, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -639,6 +654,7 @@ func (_u *AgentUpdateOne) sqlSave(ctx context.Context) (_node *Agent, err error)
 	if _u.mutation.TenantIDCleared() {
 		_spec.ClearField(agent.FieldTenantID, field.TypeUUID)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &Agent{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

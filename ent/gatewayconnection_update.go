@@ -18,8 +18,9 @@ import (
 // GatewayConnectionUpdate is the builder for updating GatewayConnection entities.
 type GatewayConnectionUpdate struct {
 	config
-	hooks    []Hook
-	mutation *GatewayConnectionMutation
+	hooks     []Hook
+	mutation  *GatewayConnectionMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the GatewayConnectionUpdate builder.
@@ -176,6 +177,12 @@ func (_u *GatewayConnectionUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *GatewayConnectionUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *GatewayConnectionUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *GatewayConnectionUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -209,6 +216,7 @@ func (_u *GatewayConnectionUpdate) sqlSave(ctx context.Context) (_node int, err 
 	if value, ok := _u.mutation.LoadBalanceStrategy(); ok {
 		_spec.SetField(gatewayconnection.FieldLoadBalanceStrategy, field.TypeEnum, value)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{gatewayconnection.Label}
@@ -224,9 +232,10 @@ func (_u *GatewayConnectionUpdate) sqlSave(ctx context.Context) (_node int, err 
 // GatewayConnectionUpdateOne is the builder for updating a single GatewayConnection entity.
 type GatewayConnectionUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *GatewayConnectionMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *GatewayConnectionMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUpdatedAt sets the "updated_at" field.
@@ -390,6 +399,12 @@ func (_u *GatewayConnectionUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *GatewayConnectionUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *GatewayConnectionUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *GatewayConnectionUpdateOne) sqlSave(ctx context.Context) (_node *GatewayConnection, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -440,6 +455,7 @@ func (_u *GatewayConnectionUpdateOne) sqlSave(ctx context.Context) (_node *Gatew
 	if value, ok := _u.mutation.LoadBalanceStrategy(); ok {
 		_spec.SetField(gatewayconnection.FieldLoadBalanceStrategy, field.TypeEnum, value)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &GatewayConnection{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

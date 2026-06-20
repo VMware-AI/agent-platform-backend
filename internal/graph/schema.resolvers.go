@@ -237,7 +237,7 @@ func (r *queryResolver) Users(ctx context.Context, page *model.PageInput) (*mode
 	if err != nil {
 		return nil, err
 	}
-	us, err := r.Ent.User.Query().Limit(limit).Offset(offset).All(ctx)
+	us, err := r.Ent.User.Query().Order(orderNewest).Limit(limit).Offset(offset).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +272,7 @@ func (r *queryResolver) AuditLogs(ctx context.Context, filter *model.AuditFilter
 		return nil, err
 	}
 	limit, offset := pageBounds(page)
-	logs, err := q.Limit(limit).Offset(offset).All(ctx)
+	logs, err := q.Order(orderNewest).Limit(limit).Offset(offset).All(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -9,14 +9,41 @@ type DeployedAgent {
 
 input DeployAgentInput {
   agentId: ID!
+  # Source OVA template VM to clone the agent from (ListTemplates).
+  template: String!
+  # Name to give the newly cloned agent VM.
   vmName: String!
   resourcePoolId: ID!
+  # Optional vSphere resource pool to place the clone in (empty = template's pool).
+  targetResourcePool: String
   hostname: String
   maxBudget: Float
 }
 
+# An OVA template VM available to clone agents from.
+type VMTemplate {
+  name: String!
+  uuid: String!
+}
+
+input RecycleAgentInput {
+  agentId: ID!
+  # Destructive op double-confirm — must be true.
+  confirm: Boolean!
+}
+
+extend type Query {
+  # List OVA templates in a resource pool's vCenter (powers the deploy form).
+  vmTemplates(resourcePoolId: ID!): [VMTemplate!]!
+}
+
 extend type Mutation {
-  # Owner or admin (checked in resolver). Issues a key, injects cloud-init,
-  # and marks the agent running. On failure the key is revoked (no orphans).
+  # Owner or admin (checked in resolver). Issues a key, clones the VM from the
+  # template, injects cloud-init, powers on, and marks the agent running. On
+  # failure the VM and key are rolled back (no orphans).
   deployAgent(input: DeployAgentInput!): DeployedAgent!
+
+  # Owner or admin. Destroys the agent's VM, revokes its key, marks it stopped.
+  # confirm must be true (double-confirm on a destructive operation).
+  recycleAgent(input: RecycleAgentInput!): Agent!
 }

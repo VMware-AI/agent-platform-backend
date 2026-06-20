@@ -19,8 +19,9 @@ import (
 // ArtifactUpdate is the builder for updating Artifact entities.
 type ArtifactUpdate struct {
 	config
-	hooks    []Hook
-	mutation *ArtifactMutation
+	hooks     []Hook
+	mutation  *ArtifactMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the ArtifactUpdate builder.
@@ -209,6 +210,12 @@ func (_u *ArtifactUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *ArtifactUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *ArtifactUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *ArtifactUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -254,6 +261,7 @@ func (_u *ArtifactUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.TenantIDCleared() {
 		_spec.ClearField(artifact.FieldTenantID, field.TypeUUID)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{artifact.Label}
@@ -269,9 +277,10 @@ func (_u *ArtifactUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 // ArtifactUpdateOne is the builder for updating a single Artifact entity.
 type ArtifactUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *ArtifactMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *ArtifactMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUpdatedAt sets the "updated_at" field.
@@ -467,6 +476,12 @@ func (_u *ArtifactUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *ArtifactUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *ArtifactUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *ArtifactUpdateOne) sqlSave(ctx context.Context) (_node *Artifact, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -529,6 +544,7 @@ func (_u *ArtifactUpdateOne) sqlSave(ctx context.Context) (_node *Artifact, err 
 	if _u.mutation.TenantIDCleared() {
 		_spec.ClearField(artifact.FieldTenantID, field.TypeUUID)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &Artifact{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

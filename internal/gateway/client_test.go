@@ -69,6 +69,35 @@ func TestPost_ErrorStatus(t *testing.T) {
 	}
 }
 
+func TestDeleteTeam(t *testing.T) {
+	var gotPath string
+	var gotBody map[string][]string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		body, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(body, &gotBody)
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer srv.Close()
+	c := NewHTTPClient(srv.URL, "sk-master")
+	if err := c.DeleteTeam(context.Background(), "t-research"); err != nil {
+		t.Fatalf("DeleteTeam: %v", err)
+	}
+	if gotPath != "/team/delete" {
+		t.Errorf("path = %q", gotPath)
+	}
+	if ids := gotBody["team_ids"]; len(ids) != 1 || ids[0] != "t-research" {
+		t.Errorf("team_ids not sent: %+v", gotBody)
+	}
+}
+
+func TestDeleteTeam_RequiresTeamID(t *testing.T) {
+	c := NewHTTPClient("http://unused", "sk-master")
+	if err := c.DeleteTeam(context.Background(), ""); err == nil {
+		t.Fatal("DeleteTeam with empty id should error")
+	}
+}
+
 func TestCreateTeam(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/team/new" {

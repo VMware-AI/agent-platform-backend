@@ -19,8 +19,9 @@ import (
 // DepartmentUpdate is the builder for updating Department entities.
 type DepartmentUpdate struct {
 	config
-	hooks    []Hook
-	mutation *DepartmentMutation
+	hooks     []Hook
+	mutation  *DepartmentMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the DepartmentUpdate builder.
@@ -140,6 +141,12 @@ func (_u *DepartmentUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *DepartmentUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *DepartmentUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *DepartmentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -170,6 +177,7 @@ func (_u *DepartmentUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if _u.mutation.LitellmTeamIDCleared() {
 		_spec.ClearField(department.FieldLitellmTeamID, field.TypeString)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{department.Label}
@@ -185,9 +193,10 @@ func (_u *DepartmentUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 // DepartmentUpdateOne is the builder for updating a single Department entity.
 type DepartmentUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *DepartmentMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *DepartmentMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUpdatedAt sets the "updated_at" field.
@@ -314,6 +323,12 @@ func (_u *DepartmentUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *DepartmentUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *DepartmentUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *DepartmentUpdateOne) sqlSave(ctx context.Context) (_node *Department, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -361,6 +376,7 @@ func (_u *DepartmentUpdateOne) sqlSave(ctx context.Context) (_node *Department, 
 	if _u.mutation.LitellmTeamIDCleared() {
 		_spec.ClearField(department.FieldLitellmTeamID, field.TypeString)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &Department{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

@@ -20,8 +20,9 @@ import (
 // VirtualKeyUpdate is the builder for updating VirtualKey entities.
 type VirtualKeyUpdate struct {
 	config
-	hooks    []Hook
-	mutation *VirtualKeyMutation
+	hooks     []Hook
+	mutation  *VirtualKeyMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the VirtualKeyUpdate builder.
@@ -279,6 +280,12 @@ func (_u *VirtualKeyUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *VirtualKeyUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *VirtualKeyUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *VirtualKeyUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -353,6 +360,7 @@ func (_u *VirtualKeyUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if _u.mutation.ExpiresAtCleared() {
 		_spec.ClearField(virtualkey.FieldExpiresAt, field.TypeTime)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{virtualkey.Label}
@@ -368,9 +376,10 @@ func (_u *VirtualKeyUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 // VirtualKeyUpdateOne is the builder for updating a single VirtualKey entity.
 type VirtualKeyUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *VirtualKeyMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *VirtualKeyMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUpdatedAt sets the "updated_at" field.
@@ -635,6 +644,12 @@ func (_u *VirtualKeyUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *VirtualKeyUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *VirtualKeyUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *VirtualKeyUpdateOne) sqlSave(ctx context.Context) (_node *VirtualKey, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -726,6 +741,7 @@ func (_u *VirtualKeyUpdateOne) sqlSave(ctx context.Context) (_node *VirtualKey, 
 	if _u.mutation.ExpiresAtCleared() {
 		_spec.ClearField(virtualkey.FieldExpiresAt, field.TypeTime)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &VirtualKey{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

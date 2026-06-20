@@ -19,8 +19,9 @@ import (
 // PermissionUpdate is the builder for updating Permission entities.
 type PermissionUpdate struct {
 	config
-	hooks    []Hook
-	mutation *PermissionMutation
+	hooks     []Hook
+	mutation  *PermissionMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the PermissionUpdate builder.
@@ -141,6 +142,12 @@ func (_u *PermissionUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *PermissionUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *PermissionUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *PermissionUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -207,6 +214,7 @@ func (_u *PermissionUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{permission.Label}
@@ -222,9 +230,10 @@ func (_u *PermissionUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 // PermissionUpdateOne is the builder for updating a single Permission entity.
 type PermissionUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *PermissionMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *PermissionMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetKey sets the "key" field.
@@ -352,6 +361,12 @@ func (_u *PermissionUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *PermissionUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *PermissionUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *PermissionUpdateOne) sqlSave(ctx context.Context) (_node *Permission, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -435,6 +450,7 @@ func (_u *PermissionUpdateOne) sqlSave(ctx context.Context) (_node *Permission, 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &Permission{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

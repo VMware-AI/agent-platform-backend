@@ -128,7 +128,7 @@ func (r *mutationResolver) SyncResourcePool(ctx context.Context, id string) (*mo
 
 // ResourcePools is the resolver for the resourcePools field.
 func (r *queryResolver) ResourcePools(ctx context.Context) ([]model.ResourcePool, error) {
-	pools, err := r.Ent.ResourcePool.Query().All(ctx)
+	pools, err := r.Ent.ResourcePool.Query().Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}

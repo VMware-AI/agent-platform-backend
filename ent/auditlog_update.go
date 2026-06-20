@@ -18,8 +18,9 @@ import (
 // AuditLogUpdate is the builder for updating AuditLog entities.
 type AuditLogUpdate struct {
 	config
-	hooks    []Hook
-	mutation *AuditLogMutation
+	hooks     []Hook
+	mutation  *AuditLogMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the AuditLogUpdate builder.
@@ -195,6 +196,12 @@ func (_u *AuditLogUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *AuditLogUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *AuditLogUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *AuditLogUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -243,6 +250,7 @@ func (_u *AuditLogUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.DetailCleared() {
 		_spec.ClearField(auditlog.FieldDetail, field.TypeJSON)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{auditlog.Label}
@@ -258,9 +266,10 @@ func (_u *AuditLogUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 // AuditLogUpdateOne is the builder for updating a single AuditLog entity.
 type AuditLogUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *AuditLogMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *AuditLogMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetActorUserID sets the "actor_user_id" field.
@@ -443,6 +452,12 @@ func (_u *AuditLogUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *AuditLogUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *AuditLogUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *AuditLogUpdateOne) sqlSave(ctx context.Context) (_node *AuditLog, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -508,6 +523,7 @@ func (_u *AuditLogUpdateOne) sqlSave(ctx context.Context) (_node *AuditLog, err 
 	if _u.mutation.DetailCleared() {
 		_spec.ClearField(auditlog.FieldDetail, field.TypeJSON)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &AuditLog{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

@@ -18,8 +18,9 @@ import (
 // AgentTemplateUpdate is the builder for updating AgentTemplate entities.
 type AgentTemplateUpdate struct {
 	config
-	hooks    []Hook
-	mutation *AgentTemplateMutation
+	hooks     []Hook
+	mutation  *AgentTemplateMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the AgentTemplateUpdate builder.
@@ -216,6 +217,12 @@ func (_u *AgentTemplateUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *AgentTemplateUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *AgentTemplateUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *AgentTemplateUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -261,6 +268,7 @@ func (_u *AgentTemplateUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	if _u.mutation.VersionCleared() {
 		_spec.ClearField(agenttemplate.FieldVersion, field.TypeString)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{agenttemplate.Label}
@@ -276,9 +284,10 @@ func (_u *AgentTemplateUpdate) sqlSave(ctx context.Context) (_node int, err erro
 // AgentTemplateUpdateOne is the builder for updating a single AgentTemplate entity.
 type AgentTemplateUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *AgentTemplateMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *AgentTemplateMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUpdatedAt sets the "updated_at" field.
@@ -482,6 +491,12 @@ func (_u *AgentTemplateUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *AgentTemplateUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *AgentTemplateUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *AgentTemplateUpdateOne) sqlSave(ctx context.Context) (_node *AgentTemplate, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -544,6 +559,7 @@ func (_u *AgentTemplateUpdateOne) sqlSave(ctx context.Context) (_node *AgentTemp
 	if _u.mutation.VersionCleared() {
 		_spec.ClearField(agenttemplate.FieldVersion, field.TypeString)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &AgentTemplate{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

@@ -18,8 +18,9 @@ import (
 // RouterTierUpdate is the builder for updating RouterTier entities.
 type RouterTierUpdate struct {
 	config
-	hooks    []Hook
-	mutation *RouterTierMutation
+	hooks     []Hook
+	mutation  *RouterTierMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // Where appends a list predicates to the RouterTierUpdate builder.
@@ -118,6 +119,12 @@ func (_u *RouterTierUpdate) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *RouterTierUpdate) Modify(modifiers ...func(u *sql.UpdateBuilder)) *RouterTierUpdate {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *RouterTierUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -139,6 +146,7 @@ func (_u *RouterTierUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.ModelAlias(); ok {
 		_spec.SetField(routertier.FieldModelAlias, field.TypeString, value)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{routertier.Label}
@@ -154,9 +162,10 @@ func (_u *RouterTierUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 // RouterTierUpdateOne is the builder for updating a single RouterTier entity.
 type RouterTierUpdateOne struct {
 	config
-	fields   []string
-	hooks    []Hook
-	mutation *RouterTierMutation
+	fields    []string
+	hooks     []Hook
+	mutation  *RouterTierMutation
+	modifiers []func(*sql.UpdateBuilder)
 }
 
 // SetUpdatedAt sets the "updated_at" field.
@@ -262,6 +271,12 @@ func (_u *RouterTierUpdateOne) check() error {
 	return nil
 }
 
+// Modify adds a statement modifier for attaching custom logic to the UPDATE statement.
+func (_u *RouterTierUpdateOne) Modify(modifiers ...func(u *sql.UpdateBuilder)) *RouterTierUpdateOne {
+	_u.modifiers = append(_u.modifiers, modifiers...)
+	return _u
+}
+
 func (_u *RouterTierUpdateOne) sqlSave(ctx context.Context) (_node *RouterTier, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
@@ -300,6 +315,7 @@ func (_u *RouterTierUpdateOne) sqlSave(ctx context.Context) (_node *RouterTier, 
 	if value, ok := _u.mutation.ModelAlias(); ok {
 		_spec.SetField(routertier.FieldModelAlias, field.TypeString, value)
 	}
+	_spec.AddModifiers(_u.modifiers...)
 	_node = &RouterTier{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues

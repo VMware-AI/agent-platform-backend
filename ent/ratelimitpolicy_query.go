@@ -23,6 +23,7 @@ type RateLimitPolicyQuery struct {
 	order      []ratelimitpolicy.OrderOption
 	inters     []Interceptor
 	predicates []predicate.RateLimitPolicy
+	modifiers  []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -252,8 +253,9 @@ func (_q *RateLimitPolicyQuery) Clone() *RateLimitPolicyQuery {
 		inters:     append([]Interceptor{}, _q.inters...),
 		predicates: append([]predicate.RateLimitPolicy{}, _q.predicates...),
 		// clone intermediate query.
-		sql:  _q.sql.Clone(),
-		path: _q.path,
+		sql:       _q.sql.Clone(),
+		path:      _q.path,
+		modifiers: append([]func(*sql.Selector){}, _q.modifiers...),
 	}
 }
 
@@ -344,6 +346,9 @@ func (_q *RateLimitPolicyQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 		nodes = append(nodes, node)
 		return node.assignValues(columns, values)
 	}
+	if len(_q.modifiers) > 0 {
+		_spec.Modifiers = _q.modifiers
+	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
@@ -358,6 +363,9 @@ func (_q *RateLimitPolicyQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 
 func (_q *RateLimitPolicyQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
+	if len(_q.modifiers) > 0 {
+		_spec.Modifiers = _q.modifiers
+	}
 	_spec.Node.Columns = _q.ctx.Fields
 	if len(_q.ctx.Fields) > 0 {
 		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
@@ -420,6 +428,9 @@ func (_q *RateLimitPolicyQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
+	for _, m := range _q.modifiers {
+		m(selector)
+	}
 	for _, p := range _q.predicates {
 		p(selector)
 	}
@@ -435,6 +446,12 @@ func (_q *RateLimitPolicyQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector.Limit(*limit)
 	}
 	return selector
+}
+
+// Modify adds a query modifier for attaching custom logic to queries.
+func (_q *RateLimitPolicyQuery) Modify(modifiers ...func(s *sql.Selector)) *RateLimitPolicySelect {
+	_q.modifiers = append(_q.modifiers, modifiers...)
+	return _q.Select()
 }
 
 // RateLimitPolicyGroupBy is the group-by builder for RateLimitPolicy entities.
@@ -525,4 +542,10 @@ func (_s *RateLimitPolicySelect) sqlScan(ctx context.Context, root *RateLimitPol
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
+}
+
+// Modify adds a query modifier for attaching custom logic to queries.
+func (_s *RateLimitPolicySelect) Modify(modifiers ...func(s *sql.Selector)) *RateLimitPolicySelect {
+	_s.modifiers = append(_s.modifiers, modifiers...)
+	return _s
 }

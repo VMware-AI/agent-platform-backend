@@ -14,6 +14,16 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/httpx"
 )
 
+// orderNewest / orderByKey give list queries a stable TOTAL sort so Limit/Offset
+// pagination is deterministic (no duplicate/dropped rows across pages) and logs
+// read newest-first. The id tiebreaker matters: created_at alone is not unique
+// (rapid inserts share a timestamp), so without it pages could overlap. orderByKey
+// is for entities without created_at (Permission); key is unique.
+var (
+	orderNewest = ent.Desc("created_at", "id")
+	orderByKey  = ent.Asc("key")
+)
+
 // actorID returns the current user's id, or "" if unauthenticated.
 func actorID(cu *auth.CurrentUser) string {
 	if cu != nil {
@@ -389,7 +399,7 @@ func toModelPermission(p *ent.Permission) *model.Permission {
 
 // modelCustomRole maps an ent.Role to the GraphQL model, loading its permission keys.
 func (r *Resolver) modelCustomRole(ctx context.Context, role *ent.Role) (*model.CustomRole, error) {
-	perms, err := role.QueryPermissions().All(ctx)
+	perms, err := role.QueryPermissions().Order(orderByKey).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -415,7 +425,7 @@ func (r *Resolver) connectPool(ctx context.Context, pool *ent.ResourcePool) (VCe
 	if err != nil {
 		return nil, fmt.Errorf("resolve credentials: %w", err)
 	}
-	return r.VCenterConnect(ctx, pool.Endpoint, cred.Username, cred.Password, true)
+	return r.VCenterConnect(ctx, pool.Endpoint, cred.Username, cred.Password, r.VCenterInsecure)
 }
 
 // clientIP extracts the remote address from the request in context.
