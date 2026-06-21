@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/google/uuid"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
@@ -15,6 +16,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/catalog"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/VMware-AI/agent-platform-backend/internal/httpx"
+	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 )
 
 // orderNewest / orderByKey give list queries a stable TOTAL sort so Limit/Offset
@@ -582,6 +584,42 @@ func (r *Resolver) rollbackDeploy(ctx context.Context, conn VCenterClient, ag *e
 	if _, err := r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusException).Save(cctx); err != nil {
 		log.Printf("deploy rollback: mark agent %s exception failed: %v", ag.ID, err)
 	}
+}
+
+// connectAgentVM resolves an agent the caller owns, dials its resource pool's
+// vCenter, and returns the live connection plus the agent's VM ref. The caller
+// MUST Logout the returned connection. Errors (404-style via getOwnedAgent) if
+// the agent is not the caller's, has no pool, or has no deployed VM.
+func (r *Resolver) connectAgentVM(ctx context.Context, cu *auth.CurrentUser, agentID uuid.UUID) (VCenterClient, string, error) {
+	ag, err := r.getOwnedAgent(ctx, agentID, cu)
+	if err != nil {
+		return nil, "", err
+	}
+	if ag.VMRef == "" {
+		return nil, "", gqlerror.Errorf("agent has no VM (not deployed)")
+	}
+	if ag.ResourcePoolID == nil {
+		return nil, "", gqlerror.Errorf("agent has no resource pool; cannot locate its VM")
+	}
+	pool, err := r.Ent.ResourcePool.Get(ctx, *ag.ResourcePoolID)
+	if err != nil {
+		return nil, "", err
+	}
+	conn, err := r.connectPool(ctx, pool)
+	if err != nil {
+		return nil, "", fmt.Errorf("connect vcenter: %w", err)
+	}
+	return conn, ag.VMRef, nil
+}
+
+// toModelAgentSnapshot maps a vcenter snapshot to its GraphQL model.
+func toModelAgentSnapshot(s vcenter.SnapshotInfo) *model.AgentSnapshot {
+	m := &model.AgentSnapshot{Name: s.Name, State: s.State, CreatedAt: s.CreatedAt}
+	if s.Description != "" {
+		d := s.Description
+		m.Description = &d
+	}
+	return m
 }
 
 // audit writes an AuditLog row for a write operation. Failures are logged, not

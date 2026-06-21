@@ -182,6 +182,70 @@ func (r *mutationResolver) RecycleAgent(ctx context.Context, input model.Recycle
 	return toModelAgent(ag), nil
 }
 
+// SnapshotAgent snapshots the agent's VM (LLD-03 §4). Owner/admin; the snapshot
+// name is the handle RevertAgentSnapshot uses.
+func (r *mutationResolver) SnapshotAgent(ctx context.Context, input model.SnapshotAgentInput) (*model.AgentSnapshot, error) {
+	cu := auth.FromContext(ctx)
+	if cu == nil {
+		return nil, gqlerror.Errorf("unauthenticated")
+	}
+	aid, err := uuid.Parse(input.AgentID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid agentId")
+	}
+	conn, vmRef, err := r.connectAgentVM(ctx, cu, aid)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = conn.Logout(ctx) }()
+
+	if err := conn.CreateSnapshot(ctx, vmRef, input.Name, derefString(input.Description)); err != nil {
+		r.audit(ctx, "agent.snapshot", "agent", input.AgentID, false, cu.ID)
+		return nil, fmt.Errorf("create snapshot: %w", err)
+	}
+	r.audit(ctx, "agent.snapshot", "agent", input.AgentID, true, cu.ID)
+
+	// Re-read so the response carries the recorded state/createdAt, not guesses.
+	snaps, err := conn.ListSnapshots(ctx, vmRef)
+	if err != nil {
+		return nil, fmt.Errorf("list snapshots: %w", err)
+	}
+	for _, s := range snaps {
+		if s.Name == input.Name {
+			return toModelAgentSnapshot(s), nil
+		}
+	}
+	return &model.AgentSnapshot{Name: input.Name, Description: input.Description}, nil
+}
+
+// RevertAgentSnapshot rolls the agent's VM back to a snapshot. DESTRUCTIVE:
+// discards all state since the snapshot, so confirm must be true (LLD-03 §4).
+func (r *mutationResolver) RevertAgentSnapshot(ctx context.Context, input model.RevertAgentSnapshotInput) (bool, error) {
+	cu := auth.FromContext(ctx)
+	if cu == nil {
+		return false, gqlerror.Errorf("unauthenticated")
+	}
+	if !input.Confirm {
+		return false, gqlerror.Errorf("revert is destructive: confirm must be true")
+	}
+	aid, err := uuid.Parse(input.AgentID)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid agentId")
+	}
+	conn, vmRef, err := r.connectAgentVM(ctx, cu, aid)
+	if err != nil {
+		return false, err
+	}
+	defer func() { _ = conn.Logout(ctx) }()
+
+	if err := conn.RevertSnapshot(ctx, vmRef, input.SnapshotName); err != nil {
+		r.audit(ctx, "agent.revert_snapshot", "agent", input.AgentID, false, cu.ID)
+		return false, fmt.Errorf("revert snapshot: %w", err)
+	}
+	r.audit(ctx, "agent.revert_snapshot", "agent", input.AgentID, true, cu.ID)
+	return true, nil
+}
+
 // VMTemplates lists the OVA templates available in a resource pool's vCenter,
 // powering the deploy form's template picker.
 func (r *queryResolver) VMTemplates(ctx context.Context, resourcePoolID string) ([]model.VMTemplate, error) {
@@ -215,6 +279,33 @@ func (r *queryResolver) VMTemplates(ctx context.Context, resourcePoolID string) 
 	out := make([]model.VMTemplate, 0, len(tpls))
 	for _, t := range tpls {
 		out = append(out, model.VMTemplate{Name: t.Name, UUID: t.UUID})
+	}
+	return out, nil
+}
+
+// AgentSnapshots lists the agent VM's snapshots. Owner/admin.
+func (r *queryResolver) AgentSnapshots(ctx context.Context, agentID string) ([]model.AgentSnapshot, error) {
+	cu := auth.FromContext(ctx)
+	if cu == nil {
+		return nil, gqlerror.Errorf("unauthenticated")
+	}
+	aid, err := uuid.Parse(agentID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid agentId")
+	}
+	conn, vmRef, err := r.connectAgentVM(ctx, cu, aid)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = conn.Logout(ctx) }()
+
+	snaps, err := conn.ListSnapshots(ctx, vmRef)
+	if err != nil {
+		return nil, fmt.Errorf("list snapshots: %w", err)
+	}
+	out := make([]model.AgentSnapshot, 0, len(snaps))
+	for _, s := range snaps {
+		out = append(out, *toModelAgentSnapshot(s))
 	}
 	return out, nil
 }

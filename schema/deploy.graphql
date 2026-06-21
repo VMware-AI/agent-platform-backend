@@ -32,9 +32,33 @@ input RecycleAgentInput {
   confirm: Boolean!
 }
 
+# A vCenter snapshot of an agent's VM (LLD-03 §4 生命周期/快照).
+type AgentSnapshot {
+  name: String!
+  description: String
+  # vCenter power state recorded in the snapshot.
+  state: String!
+  createdAt: Time!
+}
+
+input SnapshotAgentInput {
+  agentId: ID!
+  name: String!
+  description: String
+}
+
+input RevertAgentSnapshotInput {
+  agentId: ID!
+  snapshotName: String!
+  # Destructive op double-confirm — must be true (discards state since the snapshot).
+  confirm: Boolean!
+}
+
 extend type Query {
   # List OVA templates in a resource pool's vCenter (powers the deploy form).
   vmTemplates(resourcePoolId: ID!): [VMTemplate!]!
+  # List the agent VM's snapshots. Owner/admin (checked in resolver).
+  agentSnapshots(agentId: ID!): [AgentSnapshot!]!
 }
 
 extend type Mutation {
@@ -46,4 +70,11 @@ extend type Mutation {
   # Owner or admin. Destroys the agent's VM, revokes its key, marks it stopped.
   # confirm must be true (double-confirm on a destructive operation).
   recycleAgent(input: RecycleAgentInput!): Agent!
+
+  # Owner or admin. Snapshots the agent's VM (LLD-03 §4).
+  snapshotAgent(input: SnapshotAgentInput!): AgentSnapshot!
+
+  # Owner or admin. Reverts the agent's VM to a snapshot — DESTRUCTIVE, confirm
+  # must be true (discards all state since the snapshot).
+  revertAgentSnapshot(input: RevertAgentSnapshotInput!): Boolean!
 }

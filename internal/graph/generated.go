@@ -57,6 +57,13 @@ type ComplexityRoot struct {
 		Name      func(childComplexity int) int
 	}
 
+	AgentSnapshot struct {
+		CreatedAt   func(childComplexity int) int
+		Description func(childComplexity int) int
+		Name        func(childComplexity int) int
+		State       func(childComplexity int) int
+	}
+
 	AgentTemplate struct {
 		CreatedAt      func(childComplexity int) int
 		Description    func(childComplexity int) int
@@ -227,6 +234,7 @@ type ComplexityRoot struct {
 		RemoveMembership           func(childComplexity int, userID string, departmentID string) int
 		RemoveUserRole             func(childComplexity int, userID string, roleID string) int
 		ResetPassword              func(childComplexity int, userID string) int
+		RevertAgentSnapshot        func(childComplexity int, input model.RevertAgentSnapshotInput) int
 		RevokeVirtualKey           func(childComplexity int, id string) int
 		SetAgentStatus             func(childComplexity int, id string, status model.AgentStatus) int
 		SetDefaultAgentConfig      func(childComplexity int, id string) int
@@ -236,6 +244,7 @@ type ComplexityRoot struct {
 		SetRouterTier              func(childComplexity int, tier model.RouterTierLevel, modelAlias string) int
 		SetUserActive              func(childComplexity int, id string, active bool) int
 		SetVirtualKeyEnabled       func(childComplexity int, id string, enabled bool) int
+		SnapshotAgent              func(childComplexity int, input model.SnapshotAgentInput) int
 		SyncResourcePool           func(childComplexity int, id string) int
 		TestGatewayConnection      func(childComplexity int, id string) int
 		TestResourcePoolConnection func(childComplexity int, id string) int
@@ -260,6 +269,7 @@ type ComplexityRoot struct {
 
 	Query struct {
 		AgentConfigs       func(childComplexity int, agentType *string) int
+		AgentSnapshots     func(childComplexity int, agentID string) int
 		AgentTemplates     func(childComplexity int) int
 		Agents             func(childComplexity int) int
 		ArtifactVersions   func(childComplexity int, name string) int
@@ -433,6 +443,8 @@ type MutationResolver interface {
 	RemoveMembership(ctx context.Context, userID string, departmentID string) (bool, error)
 	DeployAgent(ctx context.Context, input model.DeployAgentInput) (*model.DeployedAgent, error)
 	RecycleAgent(ctx context.Context, input model.RecycleAgentInput) (*model.Agent, error)
+	SnapshotAgent(ctx context.Context, input model.SnapshotAgentInput) (*model.AgentSnapshot, error)
+	RevertAgentSnapshot(ctx context.Context, input model.RevertAgentSnapshotInput) (bool, error)
 	RegisterGatewayConnection(ctx context.Context, input model.RegisterGatewayConnectionInput) (*model.GatewayConnection, error)
 	TestGatewayConnection(ctx context.Context, id string) (model.GatewayStatus, error)
 	DeleteGatewayConnection(ctx context.Context, id string) (bool, error)
@@ -476,6 +488,7 @@ type QueryResolver interface {
 	Departments(ctx context.Context) ([]model.Department, error)
 	DepartmentMembers(ctx context.Context, departmentID string) ([]model.Membership, error)
 	VMTemplates(ctx context.Context, resourcePoolID string) ([]model.VMTemplate, error)
+	AgentSnapshots(ctx context.Context, agentID string) ([]model.AgentSnapshot, error)
 	GatewayConnections(ctx context.Context) ([]model.GatewayConnection, error)
 	Upstreams(ctx context.Context) ([]model.Upstream, error)
 	ModelRoutes(ctx context.Context) ([]model.ModelRoute, error)
@@ -582,6 +595,31 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.AgentConfig.Name(childComplexity), true
+
+	case "AgentSnapshot.createdAt":
+		if e.ComplexityRoot.AgentSnapshot.CreatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentSnapshot.CreatedAt(childComplexity), true
+	case "AgentSnapshot.description":
+		if e.ComplexityRoot.AgentSnapshot.Description == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentSnapshot.Description(childComplexity), true
+	case "AgentSnapshot.name":
+		if e.ComplexityRoot.AgentSnapshot.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentSnapshot.Name(childComplexity), true
+	case "AgentSnapshot.state":
+		if e.ComplexityRoot.AgentSnapshot.State == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentSnapshot.State(childComplexity), true
 
 	case "AgentTemplate.createdAt":
 		if e.ComplexityRoot.AgentTemplate.CreatedAt == nil {
@@ -1463,6 +1501,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.ResetPassword(childComplexity, args["userId"].(string)), true
+	case "Mutation.revertAgentSnapshot":
+		if e.ComplexityRoot.Mutation.RevertAgentSnapshot == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_revertAgentSnapshot_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.RevertAgentSnapshot(childComplexity, args["input"].(model.RevertAgentSnapshotInput)), true
 	case "Mutation.revokeVirtualKey":
 		if e.ComplexityRoot.Mutation.RevokeVirtualKey == nil {
 			break
@@ -1562,6 +1611,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.SetVirtualKeyEnabled(childComplexity, args["id"].(string), args["enabled"].(bool)), true
+	case "Mutation.snapshotAgent":
+		if e.ComplexityRoot.Mutation.SnapshotAgent == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_snapshotAgent_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.SnapshotAgent(childComplexity, args["input"].(model.SnapshotAgentInput)), true
 	case "Mutation.syncResourcePool":
 		if e.ComplexityRoot.Mutation.SyncResourcePool == nil {
 			break
@@ -1747,6 +1807,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.AgentConfigs(childComplexity, args["agentType"].(*string)), true
+	case "Query.agentSnapshots":
+		if e.ComplexityRoot.Query.AgentSnapshots == nil {
+			break
+		}
+
+		args, err := ec.field_Query_agentSnapshots_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.AgentSnapshots(childComplexity, args["agentId"].(string)), true
 	case "Query.agentTemplates":
 		if e.ComplexityRoot.Query.AgentTemplates == nil {
 			break
@@ -2446,6 +2517,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputRegisterGatewayConnectionInput,
 		ec.unmarshalInputRegisterResourcePoolInput,
 		ec.unmarshalInputRequestLogFilter,
+		ec.unmarshalInputRevertAgentSnapshotInput,
+		ec.unmarshalInputSnapshotAgentInput,
 		ec.unmarshalInputUpdateAgentConfigInput,
 		ec.unmarshalInputUpdateResourcePoolInput,
 		ec.unmarshalInputUpdateUserInput,
@@ -2788,9 +2861,33 @@ input RecycleAgentInput {
   confirm: Boolean!
 }
 
+# A vCenter snapshot of an agent's VM (LLD-03 §4 生命周期/快照).
+type AgentSnapshot {
+  name: String!
+  description: String
+  # vCenter power state recorded in the snapshot.
+  state: String!
+  createdAt: Time!
+}
+
+input SnapshotAgentInput {
+  agentId: ID!
+  name: String!
+  description: String
+}
+
+input RevertAgentSnapshotInput {
+  agentId: ID!
+  snapshotName: String!
+  # Destructive op double-confirm — must be true (discards state since the snapshot).
+  confirm: Boolean!
+}
+
 extend type Query {
   # List OVA templates in a resource pool's vCenter (powers the deploy form).
   vmTemplates(resourcePoolId: ID!): [VMTemplate!]!
+  # List the agent VM's snapshots. Owner/admin (checked in resolver).
+  agentSnapshots(agentId: ID!): [AgentSnapshot!]!
 }
 
 extend type Mutation {
@@ -2802,6 +2899,13 @@ extend type Mutation {
   # Owner or admin. Destroys the agent's VM, revokes its key, marks it stopped.
   # confirm must be true (double-confirm on a destructive operation).
   recycleAgent(input: RecycleAgentInput!): Agent!
+
+  # Owner or admin. Snapshots the agent's VM (LLD-03 §4).
+  snapshotAgent(input: SnapshotAgentInput!): AgentSnapshot!
+
+  # Owner or admin. Reverts the agent's VM to a snapshot — DESTRUCTIVE, confirm
+  # must be true (discards all state since the snapshot).
+  revertAgentSnapshot(input: RevertAgentSnapshotInput!): Boolean!
 }
 `, BuiltIn: false},
 	{Name: "../../schema/gateway-routing.graphql", Input: `# Compute gateway routing (算力网关): connections, upstreams, model routes,
@@ -3327,6 +3431,20 @@ func (ec *executionContext) childFields_AgentConfig(ctx context.Context, field g
 		return ec.fieldContext_AgentConfig_createdAt(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type AgentConfig", field.Name)
+}
+
+func (ec *executionContext) childFields_AgentSnapshot(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "name":
+		return ec.fieldContext_AgentSnapshot_name(ctx, field)
+	case "description":
+		return ec.fieldContext_AgentSnapshot_description(ctx, field)
+	case "state":
+		return ec.fieldContext_AgentSnapshot_state(ctx, field)
+	case "createdAt":
+		return ec.fieldContext_AgentSnapshot_createdAt(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type AgentSnapshot", field.Name)
 }
 
 func (ec *executionContext) childFields_AgentTemplate(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -4475,6 +4593,20 @@ func (ec *executionContext) field_Mutation_resetPassword_args(ctx context.Contex
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_revertAgentSnapshot_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.RevertAgentSnapshotInput, error) {
+			return ec.unmarshalNRevertAgentSnapshotInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRevertAgentSnapshotInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_revokeVirtualKey_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -4654,6 +4786,20 @@ func (ec *executionContext) field_Mutation_setVirtualKeyEnabled_args(ctx context
 		return nil, err
 	}
 	args["enabled"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_snapshotAgent_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.SnapshotAgentInput, error) {
+			return ec.unmarshalNSnapshotAgentInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSnapshotAgentInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -4910,6 +5056,20 @@ func (ec *executionContext) field_Query_agentConfigs_args(ctx context.Context, r
 		return nil, err
 	}
 	args["agentType"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_agentSnapshots_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "agentId",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["agentId"] = arg0
 	return args, nil
 }
 
@@ -5411,6 +5571,98 @@ func (ec *executionContext) _AgentConfig_createdAt(ctx context.Context, field gr
 }
 func (ec *executionContext) fieldContext_AgentConfig_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("AgentConfig", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _AgentSnapshot_name(ctx context.Context, field graphql.CollectedField, obj *model.AgentSnapshot) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentSnapshot_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentSnapshot_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentSnapshot", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _AgentSnapshot_description(ctx context.Context, field graphql.CollectedField, obj *model.AgentSnapshot) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentSnapshot_description(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Description, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_AgentSnapshot_description(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentSnapshot", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _AgentSnapshot_state(ctx context.Context, field graphql.CollectedField, obj *model.AgentSnapshot) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentSnapshot_state(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.State, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentSnapshot_state(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentSnapshot", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _AgentSnapshot_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.AgentSnapshot) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentSnapshot_createdAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentSnapshot_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentSnapshot", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
 func (ec *executionContext) _AgentTemplate_id(ctx context.Context, field graphql.CollectedField, obj *model.AgentTemplate) (ret graphql.Marshaler) {
@@ -8945,6 +9197,94 @@ func (ec *executionContext) fieldContext_Mutation_recycleAgent(ctx context.Conte
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_snapshotAgent(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_snapshotAgent(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().SnapshotAgent(ctx, fc.Args["input"].(model.SnapshotAgentInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.AgentSnapshot) graphql.Marshaler {
+			return ec.marshalNAgentSnapshot2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentSnapshot(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_snapshotAgent(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_AgentSnapshot(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_snapshotAgent_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_revertAgentSnapshot(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_revertAgentSnapshot(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().RevertAgentSnapshot(ctx, fc.Args["input"].(model.RevertAgentSnapshotInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_revertAgentSnapshot(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_revertAgentSnapshot_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_registerGatewayConnection(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -11286,6 +11626,50 @@ func (ec *executionContext) fieldContext_Query_vmTemplates(ctx context.Context, 
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_vmTemplates_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_agentSnapshots(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_agentSnapshots(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().AgentSnapshots(ctx, fc.Args["agentId"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.AgentSnapshot) graphql.Marshaler {
+			return ec.marshalNAgentSnapshot2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentSnapshotᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_agentSnapshots(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_AgentSnapshot(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_agentSnapshots_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -15731,6 +16115,94 @@ func (ec *executionContext) unmarshalInputRequestLogFilter(ctx context.Context, 
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputRevertAgentSnapshotInput(ctx context.Context, obj any) (model.RevertAgentSnapshotInput, error) {
+	var it model.RevertAgentSnapshotInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"agentId", "snapshotName", "confirm"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "agentId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("agentId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.AgentID = data
+		case "snapshotName":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("snapshotName"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SnapshotName = data
+		case "confirm":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("confirm"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Confirm = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputSnapshotAgentInput(ctx context.Context, obj any) (model.SnapshotAgentInput, error) {
+	var it model.SnapshotAgentInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"agentId", "name", "description"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "agentId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("agentId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.AgentID = data
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "description":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Description = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputUpdateAgentConfigInput(ctx context.Context, obj any) (model.UpdateAgentConfigInput, error) {
 	var it model.UpdateAgentConfigInput
 	if obj == nil {
@@ -16379,6 +16851,60 @@ func (ec *executionContext) _AgentConfig(ctx context.Context, sel ast.SelectionS
 			}
 		case "createdAt":
 			out.Values[i] = ec._AgentConfig_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var agentSnapshotImplementors = []string{"AgentSnapshot"}
+
+func (ec *executionContext) _AgentSnapshot(ctx context.Context, sel ast.SelectionSet, obj *model.AgentSnapshot) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, agentSnapshotImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AgentSnapshot")
+		case "name":
+			out.Values[i] = ec._AgentSnapshot_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "description":
+			out.Values[i] = ec._AgentSnapshot_description(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "state":
+			out.Values[i] = ec._AgentSnapshot_state(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createdAt":
+			out.Values[i] = ec._AgentSnapshot_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -17621,6 +18147,20 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "snapshotAgent":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_snapshotAgent(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "revertAgentSnapshot":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_revertAgentSnapshot(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "registerGatewayConnection":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_registerGatewayConnection(ctx, field)
@@ -18182,6 +18722,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_vmTemplates(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "agentSnapshots":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_agentSnapshots(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -19768,6 +20330,36 @@ func (ec *executionContext) marshalNAgentConfig2ᚖgithubᚗcomᚋVMwareᚑAIᚋ
 	return ec._AgentConfig(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNAgentSnapshot2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentSnapshot(ctx context.Context, sel ast.SelectionSet, v model.AgentSnapshot) graphql.Marshaler {
+	return ec._AgentSnapshot(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNAgentSnapshot2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentSnapshotᚄ(ctx context.Context, sel ast.SelectionSet, v []model.AgentSnapshot) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNAgentSnapshot2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentSnapshot(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNAgentSnapshot2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentSnapshot(ctx context.Context, sel ast.SelectionSet, v *model.AgentSnapshot) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._AgentSnapshot(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNAgentStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentStatus(ctx context.Context, v any) (model.AgentStatus, error) {
 	var res model.AgentStatus
 	err := res.UnmarshalGQL(v)
@@ -20482,6 +21074,11 @@ func (ec *executionContext) marshalNResourcePoolStatus2githubᚗcomᚋVMwareᚑA
 	return v
 }
 
+func (ec *executionContext) unmarshalNRevertAgentSnapshotInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRevertAgentSnapshotInput(ctx context.Context, v any) (model.RevertAgentSnapshotInput, error) {
+	res, err := ec.unmarshalInputRevertAgentSnapshotInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNRole2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRole(ctx context.Context, v any) (model.Role, error) {
 	var res model.Role
 	err := res.UnmarshalGQL(v)
@@ -20591,6 +21188,11 @@ func (ec *executionContext) marshalNSkill2ᚖgithubᚗcomᚋVMwareᚑAIᚋagent�
 		return graphql.Null
 	}
 	return ec._Skill(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNSnapshotAgentInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSnapshotAgentInput(ctx context.Context, v any) (model.SnapshotAgentInput, error) {
+	res, err := ec.unmarshalInputSnapshotAgentInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v any) (string, error) {

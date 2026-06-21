@@ -23,6 +23,9 @@ type VCenterClient interface {
 	PowerOn(ctx context.Context, vmName string) error
 	Destroy(ctx context.Context, vmName string) error
 	Inventory(ctx context.Context) (vcenter.Inventory, error)
+	CreateSnapshot(ctx context.Context, vmName, name, description string) error
+	RevertSnapshot(ctx context.Context, vmName, snapshotName string) error
+	ListSnapshots(ctx context.Context, vmName string) ([]vcenter.SnapshotInfo, error)
 	Logout(ctx context.Context) error
 }
 

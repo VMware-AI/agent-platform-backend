@@ -28,6 +28,13 @@ type AgentConfig struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
+type AgentSnapshot struct {
+	Name        string    `json:"name"`
+	Description *string   `json:"description,omitempty"`
+	State       string    `json:"state"`
+	CreatedAt   time.Time `json:"createdAt"`
+}
+
 type AgentTemplate struct {
 	ID             string              `json:"id"`
 	Kind           string              `json:"kind"`
@@ -324,6 +331,12 @@ type ResourcePool struct {
 	CreatedAt       time.Time          `json:"createdAt"`
 }
 
+type RevertAgentSnapshotInput struct {
+	AgentID      string `json:"agentId"`
+	SnapshotName string `json:"snapshotName"`
+	Confirm      bool   `json:"confirm"`
+}
+
 type RouterTier struct {
 	ID         string          `json:"id"`
 	Tier       RouterTierLevel `json:"tier"`
@@ -337,6 +350,12 @@ type Skill struct {
 	Description *string   `json:"description,omitempty"`
 	URI         string    `json:"uri"`
 	CreatedAt   time.Time `json:"createdAt"`
+}
+
+type SnapshotAgentInput struct {
+	AgentID     string  `json:"agentId"`
+	Name        string  `json:"name"`
+	Description *string `json:"description,omitempty"`
 }
 
 type TempPasswordPayload struct {
