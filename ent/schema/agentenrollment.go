@@ -57,8 +57,8 @@ func (AgentHeartbeat) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		field.UUID("agent_id", uuid.UUID{}),
-		field.Time("reported_at"),                                  // daemon clock
-		field.Time("received_at").Immutable().Default(time.Now),    // backend clock
+		field.Time("reported_at"),                               // daemon clock
+		field.Time("received_at").Immutable().Default(time.Now), // backend clock
 		field.Enum("status").Values("ok", "degraded", "error"),
 		field.String("agent_version").Optional(),
 		field.Enum("rotation_state").Values("idle", "rotating", "failed").Optional(),
