@@ -18,7 +18,11 @@ import (
 
 // CreateCustomRole is the resolver for the createCustomRole field.
 func (r *mutationResolver) CreateCustomRole(ctx context.Context, input model.CreateCustomRoleInput) (*model.CustomRole, error) {
-	role, err := r.Ent.Role.Create().SetName(input.Name).Save(ctx)
+	tenantID, err := writeTenant(ctx)
+	if err != nil {
+		return nil, err
+	}
+	role, err := r.Ent.Role.Create().SetName(input.Name).SetNillableTenantID(tenantID).Save(ctx)
 	if err != nil {
 		if ent.IsConstraintError(err) {
 			return nil, gqlerror.Errorf("role name already exists")

@@ -56,6 +56,25 @@ func tenantScopeFor(ctx context.Context) tenantScopeDecision {
 	return tenantScopeDecision{apply: true, denyAll: true}
 }
 
+// writeTenant decides which tenant a newly created tenant-scoped resource should
+// be stamped with (LLD-10 §1.6 STAMP). A caller with a tenant (tenant-admin or a
+// regular user) always stamps their own tenant — they cannot create cross-tenant
+// rows. A platform admin (no tenant) leaves it nil = an untenanted platform
+// resource. This makes the data layer forward-correct ahead of the full
+// multi-tenant read sweep: rows created now are already correctly tenanted
+// rather than orphaned (NULL) forever.
+func writeTenant(ctx context.Context) (*uuid.UUID, error) {
+	cu := auth.FromContext(ctx)
+	if cu == nil || cu.TenantID == "" {
+		return nil, nil
+	}
+	id, err := uuid.Parse(cu.TenantID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid caller tenant")
+	}
+	return &id, nil
+}
+
 // getOwnedAgent loads an agent the caller is allowed to act on. To avoid an
 // existence oracle, a missing agent and an agent owned by ANOTHER user return the
 // SAME error (notFoundErr) — the caller cannot tell "does not exist" from "not

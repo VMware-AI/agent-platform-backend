@@ -38,6 +38,10 @@ func (r *mutationResolver) UpsertArtifact(ctx context.Context, input model.Upser
 		contentSHA = hex.EncodeToString(sum[:])
 	}
 
+	tenantID, err := writeTenant(ctx)
+	if err != nil {
+		return nil, err
+	}
 	existing, err := r.Ent.Artifact.Query().
 		Where(artifact.Name(input.Name), artifact.Version(input.Version)).Only(ctx)
 	var a *ent.Artifact
@@ -45,7 +49,8 @@ func (r *mutationResolver) UpsertArtifact(ctx context.Context, input model.Upser
 	case ent.IsNotFound(err):
 		c := r.Ent.Artifact.Create().
 			SetName(input.Name).SetKind(artifact.Kind(input.Kind)).
-			SetVersion(input.Version).SetURI(input.URI)
+			SetVersion(input.Version).SetURI(input.URI).
+			SetNillableTenantID(tenantID)
 		if content != "" {
 			c.SetContent(content).SetSha256(contentSHA)
 		} else if input.Sha256 != nil {

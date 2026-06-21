@@ -79,10 +79,15 @@ func (r *mutationResolver) CreateAgent(ctx context.Context, input model.CreateAg
 	if tpl.Status != agenttemplate.StatusActive {
 		return nil, gqlerror.Errorf("agent type %s is not available", input.AgentType)
 	}
+	tenantID, err := writeTenant(ctx)
+	if err != nil {
+		return nil, err
+	}
 	create := r.Ent.Agent.Create().
 		SetName(input.Name).
 		SetAgentType(input.AgentType).
-		SetOwnerUserID(ownerID)
+		SetOwnerUserID(ownerID).
+		SetNillableTenantID(tenantID)
 	if input.ConfigID != nil {
 		if cid, err := uuid.Parse(*input.ConfigID); err == nil {
 			create.SetConfigID(cid)
@@ -125,7 +130,12 @@ func (r *mutationResolver) SetAgentStatus(ctx context.Context, id string, status
 
 // CreateAgentConfig creates a named config for an agent type.
 func (r *mutationResolver) CreateAgentConfig(ctx context.Context, input model.CreateAgentConfigInput) (*model.AgentConfig, error) {
-	c := r.Ent.AgentConfig.Create().SetName(input.Name).SetAgentType(input.AgentType)
+	tenantID, err := writeTenant(ctx)
+	if err != nil {
+		return nil, err
+	}
+	c := r.Ent.AgentConfig.Create().SetName(input.Name).SetAgentType(input.AgentType).
+		SetNillableTenantID(tenantID)
 	isDefault := input.IsDefault != nil && *input.IsDefault
 	c.SetIsDefault(isDefault)
 	if input.ArtifactID != nil {

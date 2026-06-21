@@ -50,6 +50,10 @@ func (r *mutationResolver) RecordRequestLog(ctx context.Context, input model.Rec
 
 // UpsertRateLimitPolicy creates or updates a policy keyed by name.
 func (r *mutationResolver) UpsertRateLimitPolicy(ctx context.Context, input model.UpsertRateLimitPolicyInput) (*model.RateLimitPolicy, error) {
+	tenantID, err := writeTenant(ctx)
+	if err != nil {
+		return nil, err
+	}
 	existing, err := r.Ent.RateLimitPolicy.Query().Where(ratelimitpolicy.Name(input.Name)).Only(ctx)
 	enabled := false
 	if input.Enabled != nil {
@@ -57,7 +61,8 @@ func (r *mutationResolver) UpsertRateLimitPolicy(ctx context.Context, input mode
 	}
 	switch {
 	case ent.IsNotFound(err):
-		c := r.Ent.RateLimitPolicy.Create().SetName(input.Name).SetEnabled(enabled)
+		c := r.Ent.RateLimitPolicy.Create().SetName(input.Name).SetEnabled(enabled).
+			SetNillableTenantID(tenantID)
 		if input.Rpm != nil {
 			c.SetRpm(*input.Rpm)
 		}
