@@ -134,19 +134,17 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.CreateUse
 	if err != nil {
 		return nil, err
 	}
+	tenantID, err := r.resolveUserWriteTenant(ctx, input.TenantID, input.Role)
+	if err != nil {
+		return nil, err
+	}
 	create := r.Ent.User.Create().
 		SetUsername(input.Username).
 		SetEmail(input.Email).
 		SetPasswordHash(hash).
 		SetRole(user.Role(gqlRoleToEnt(input.Role))).
-		SetMustChangePassword(true)
-	if input.TenantID != nil {
-		tid, err := uuid.Parse(*input.TenantID)
-		if err != nil {
-			return nil, gqlerror.Errorf("invalid tenantId")
-		}
-		create.SetTenantID(tid)
-	}
+		SetMustChangePassword(true).
+		SetNillableTenantID(tenantID)
 	u, err := create.Save(ctx)
 	if err != nil {
 		r.audit(ctx, "user.create", "user", input.Username, false, actor)
@@ -164,6 +162,15 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, id string, input mode
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid id")
+	}
+	if err := r.assertUserInCallerTenant(ctx, uid); err != nil {
+		return nil, err
+	}
+	if input.Role != nil {
+		if cu := auth.FromContext(ctx); cu != nil && cu.Role == auth.RoleTenantAdmin &&
+			(*input.Role == model.RoleAdmin || *input.Role == model.RoleTenantAdmin) {
+			return nil, gqlerror.Errorf("forbidden: tenant-admin cannot grant admin roles")
+		}
 	}
 	upd := r.Ent.User.UpdateOneID(uid)
 	if input.Email != nil {
@@ -186,6 +193,9 @@ func (r *mutationResolver) SetUserActive(ctx context.Context, id string, active 
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid id")
 	}
+	if err := r.assertUserInCallerTenant(ctx, uid); err != nil {
+		return nil, err
+	}
 	u, err := r.Ent.User.UpdateOneID(uid).SetIsActive(active).Save(ctx)
 	if err != nil {
 		return nil, err
@@ -199,6 +209,9 @@ func (r *mutationResolver) ResetPassword(ctx context.Context, userID string) (*m
 	uid, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid id")
+	}
+	if err := r.assertUserInCallerTenant(ctx, uid); err != nil {
+		return nil, err
 	}
 	temp, err := auth.GenerateTempPassword()
 	if err != nil {
@@ -220,6 +233,9 @@ func (r *mutationResolver) DeleteUser(ctx context.Context, id string) (bool, err
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return false, gqlerror.Errorf("invalid id")
+	}
+	if err := r.assertUserInCallerTenant(ctx, uid); err != nil {
+		return false, err
 	}
 	if err := r.Ent.User.DeleteOneID(uid).Exec(ctx); err != nil {
 		return false, err

@@ -93,11 +93,11 @@ type Mutation {
   logout: Boolean!
   changePassword(oldPassword: String!, newPassword: String!): Boolean!
 
-  createUser(input: CreateUserInput!): User! @hasRole(any: [admin])
-  updateUser(id: ID!, input: UpdateUserInput!): User! @hasRole(any: [admin])
-  setUserActive(id: ID!, active: Boolean!): User! @hasRole(any: [admin])
-  resetPassword(userId: ID!): TempPasswordPayload! @hasRole(any: [admin])
-  deleteUser(id: ID!): Boolean! @hasRole(any: [admin])
+  createUser(input: CreateUserInput!): User! @hasRole(any: [admin, tenant_admin])
+  updateUser(id: ID!, input: UpdateUserInput!): User! @hasRole(any: [admin, tenant_admin])
+  setUserActive(id: ID!, active: Boolean!): User! @hasRole(any: [admin, tenant_admin])
+  resetPassword(userId: ID!): TempPasswordPayload! @hasRole(any: [admin, tenant_admin])
+  deleteUser(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
 }
 
 directive @hasRole(any: [Role!]!) on FIELD_DEFINITION

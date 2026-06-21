@@ -208,17 +208,21 @@ func TestResetPassword(t *testing.T) {
 	defer cleanup()
 	ctx := context.Background()
 	mr := &mutationResolver{r}
-	u, _ := mr.CreateUser(ctx, model.CreateUserInput{
+	// CreateUser/ResetPassword are admin-gated; call them with an admin context
+	// (the directive guarantees a caller in prod — resolvers now enforce tenant
+	// scope on the caller).
+	admin := adminCtx()
+	u, _ := mr.CreateUser(admin, model.CreateUserInput{
 		Username: "carol", Email: "carol@x.io", Password: "CarolPass123", Role: model.RoleUser,
 	})
-	payload, err := mr.ResetPassword(ctx, u.ID)
+	payload, err := mr.ResetPassword(admin, u.ID)
 	if err != nil {
 		t.Fatalf("ResetPassword: %v", err)
 	}
 	if payload.TempPassword == "" {
 		t.Fatal("temp password must be returned")
 	}
-	// the temp password should log the user in
+	// the temp password should log the user in (login is unauthenticated)
 	if _, err := mr.Login(ctx, "carol", payload.TempPassword); err != nil {
 		t.Fatalf("login with temp password: %v", err)
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
+	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 )
 
 // TestCrossTenant_Write404Oracle verifies LLD-10 §1.5 write isolation: a
@@ -89,5 +90,66 @@ func TestCrossTenant_RBACMutations(t *testing.T) {
 	}
 	if ok, err := mr.RemoveUserRole(taCtx, userA.ID.String(), roleA.ID.String()); err != nil || !ok {
 		t.Fatalf("remove own role from own user: ok=%v err=%v", ok, err)
+	}
+}
+
+// TestCrossTenant_UserDepartmentWrites covers LLD-10 ④: User/Department write
+// STAMP + 404 oracle + anti-escalation for tenant-admins.
+func TestCrossTenant_UserDepartmentWrites(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := context.Background()
+	tA, tB := uuid.New(), uuid.New()
+	mr := &mutationResolver{r}
+	taCtx := tenantAdminCtx(uuid.NewString(), tA.String())
+
+	// create → stamped to caller's tenant
+	uA, err := mr.CreateUser(taCtx, model.CreateUserInput{Username: "ca", Email: "ca@x.io", Password: "PassWord1234", Role: model.RoleUser})
+	if err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+	if got := r.Ent.User.GetX(ctx, uuid.MustParse(uA.ID)).TenantID; got == nil || *got != tA {
+		t.Fatalf("created user tenant = %v, want %s", got, tA)
+	}
+
+	// escalation blocked: tenant-admin cannot mint an admin
+	if _, err := mr.CreateUser(taCtx, model.CreateUserInput{Username: "x", Email: "x@x.io", Password: "PassWord1234", Role: model.RoleAdmin}); err == nil {
+		t.Fatal("tenant-admin must not create an admin user")
+	}
+	// cross-tenant create blocked
+	tbStr := tB.String()
+	if _, err := mr.CreateUser(taCtx, model.CreateUserInput{Username: "y", Email: "y@x.io", Password: "PassWord1234", Role: model.RoleUser, TenantID: &tbStr}); err == nil {
+		t.Fatal("tenant-admin must not create a cross-tenant user")
+	}
+
+	// cross-tenant user is untouchable (delete/reset/update → fail)
+	uB := r.Ent.User.Create().SetUsername("ub3").SetEmail("ub3@x.io").SetPasswordHash("h").SetTenantID(tB).SaveX(ctx)
+	if _, err := mr.DeleteUser(taCtx, uB.ID.String()); err == nil {
+		t.Fatal("cross-tenant DeleteUser must fail")
+	}
+	if _, err := mr.ResetPassword(taCtx, uB.ID.String()); err == nil {
+		t.Fatal("cross-tenant ResetPassword must fail")
+	}
+	if _, err := mr.UpdateUser(taCtx, uB.ID.String(), model.UpdateUserInput{}); err == nil {
+		t.Fatal("cross-tenant UpdateUser must fail")
+	}
+
+	// no self-tenant escalation via update
+	roleAdmin := model.RoleAdmin
+	if _, err := mr.UpdateUser(taCtx, uA.ID, model.UpdateUserInput{Role: &roleAdmin}); err == nil {
+		t.Fatal("tenant-admin must not promote own user to admin")
+	}
+
+	// Department: create stamps tenant; cross-tenant delete fails
+	dA, err := mr.CreateDepartment(taCtx, model.CreateDepartmentInput{Name: "da"})
+	if err != nil {
+		t.Fatalf("create dept: %v", err)
+	}
+	if got := r.Ent.Department.GetX(ctx, uuid.MustParse(dA.ID)).TenantID; got == nil || *got != tA {
+		t.Fatalf("created dept tenant = %v, want %s", got, tA)
+	}
+	deptB := r.Ent.Department.Create().SetName("db").SetTenantID(tB).SaveX(ctx)
+	if _, err := mr.DeleteDepartment(taCtx, deptB.ID.String()); err == nil {
+		t.Fatal("cross-tenant DeleteDepartment must fail")
 	}
 }

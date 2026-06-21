@@ -2857,8 +2857,8 @@ extend type Query {
 
 extend type Mutation {
   # Creates the department AND its litellm team (no orphan: rolls back on sync failure).
-  createDepartment(input: CreateDepartmentInput!): Department! @hasRole(any: [admin])
-  deleteDepartment(id: ID!): Boolean! @hasRole(any: [admin])
+  createDepartment(input: CreateDepartmentInput!): Department! @hasRole(any: [admin, tenant_admin])
+  deleteDepartment(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
   # Membership management is delegated: platform/tenant admins OR the department's
   # dept-admin (checked in-resolver, since @hasRole only covers platform/tenant level).
   addMembership(userId: ID!, departmentId: ID!, role: MembershipRole): Membership!
@@ -3377,11 +3377,11 @@ type Mutation {
   logout: Boolean!
   changePassword(oldPassword: String!, newPassword: String!): Boolean!
 
-  createUser(input: CreateUserInput!): User! @hasRole(any: [admin])
-  updateUser(id: ID!, input: UpdateUserInput!): User! @hasRole(any: [admin])
-  setUserActive(id: ID!, active: Boolean!): User! @hasRole(any: [admin])
-  resetPassword(userId: ID!): TempPasswordPayload! @hasRole(any: [admin])
-  deleteUser(id: ID!): Boolean! @hasRole(any: [admin])
+  createUser(input: CreateUserInput!): User! @hasRole(any: [admin, tenant_admin])
+  updateUser(id: ID!, input: UpdateUserInput!): User! @hasRole(any: [admin, tenant_admin])
+  setUserActive(id: ID!, active: Boolean!): User! @hasRole(any: [admin, tenant_admin])
+  resetPassword(userId: ID!): TempPasswordPayload! @hasRole(any: [admin, tenant_admin])
+  deleteUser(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
 }
 
 directive @hasRole(any: [Role!]!) on FIELD_DEFINITION
@@ -7946,7 +7946,7 @@ func (ec *executionContext) _Mutation_createUser(ctx context.Context, field grap
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal *model.User
 					return zeroVal, err
@@ -8008,7 +8008,7 @@ func (ec *executionContext) _Mutation_updateUser(ctx context.Context, field grap
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal *model.User
 					return zeroVal, err
@@ -8070,7 +8070,7 @@ func (ec *executionContext) _Mutation_setUserActive(ctx context.Context, field g
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal *model.User
 					return zeroVal, err
@@ -8132,7 +8132,7 @@ func (ec *executionContext) _Mutation_resetPassword(ctx context.Context, field g
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal *model.TempPasswordPayload
 					return zeroVal, err
@@ -8194,7 +8194,7 @@ func (ec *executionContext) _Mutation_deleteUser(ctx context.Context, field grap
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
@@ -9026,7 +9026,7 @@ func (ec *executionContext) _Mutation_createDepartment(ctx context.Context, fiel
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal *model.Department
 					return zeroVal, err
@@ -9088,7 +9088,7 @@ func (ec *executionContext) _Mutation_deleteDepartment(ctx context.Context, fiel
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err

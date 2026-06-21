@@ -27,14 +27,27 @@ func (r *mutationResolver) CreateDepartment(ctx context.Context, input model.Cre
 	// gateway call leaves a row pointing at a not-yet-created team; that is
 	// recoverable by re-running (the team id is deterministic = dept id) and is
 	// also surfaced as a DanglingDepts entry by reconcile.ReconcileTeams. C3.
-	deptID := uuid.New()
-	teamID := deptID.String()
-	c := r.Ent.Department.Create().SetID(deptID).SetName(input.Name).SetLitellmTeamID(teamID)
-	if input.TenantID != nil {
+	// Tenant STAMP/GUARD (LLD-10 §1.5): a tenant-admin's department lands in their
+	// own tenant and may not target another; a platform admin may set it explicitly.
+	var tenantID *uuid.UUID
+	if cu := auth.FromContext(ctx); cu != nil && cu.Role == auth.RoleTenantAdmin {
+		tid, err := uuid.Parse(cu.TenantID)
+		if err != nil {
+			return nil, gqlerror.Errorf("forbidden")
+		}
+		if input.TenantID != nil && *input.TenantID != tid.String() {
+			return nil, gqlerror.Errorf("forbidden: cannot create department in another tenant")
+		}
+		tenantID = &tid
+	} else if input.TenantID != nil {
 		if tid, err := uuid.Parse(*input.TenantID); err == nil {
-			c.SetTenantID(tid)
+			tenantID = &tid
 		}
 	}
+	deptID := uuid.New()
+	teamID := deptID.String()
+	c := r.Ent.Department.Create().SetID(deptID).SetName(input.Name).
+		SetLitellmTeamID(teamID).SetNillableTenantID(tenantID)
 	dept, err := c.Save(ctx)
 	if err != nil {
 		return nil, err
@@ -58,6 +71,13 @@ func (r *mutationResolver) DeleteDepartment(ctx context.Context, id string) (boo
 	did, err := uuid.Parse(id)
 	if err != nil {
 		return false, gqlerror.Errorf("invalid id")
+	}
+	// Tenant 404 oracle (LLD-10): a tenant-admin may delete only their own
+	// tenant's department (canManageDepartment includes the tenant check).
+	if ok, err := r.canManageDepartment(ctx, did); err != nil {
+		return false, err
+	} else if !ok {
+		return false, notFoundErr("department")
 	}
 	dept, err := r.Ent.Department.Get(ctx, did)
 	if err != nil {

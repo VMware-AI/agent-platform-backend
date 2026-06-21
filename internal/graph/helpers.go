@@ -97,6 +97,35 @@ func (r *Resolver) assertAgentConfigWritable(ctx context.Context, id uuid.UUID) 
 	return nil
 }
 
+// resolveUserWriteTenant decides which tenant a created user lands in and guards
+// against escalation (LLD-10 §1.5): a tenant-admin is confined to their own
+// tenant and may not mint admin/tenant-admin users; a platform admin may target
+// any tenant via explicit input (or none = untenanted platform user).
+func (r *Resolver) resolveUserWriteTenant(ctx context.Context, inputTenantID *string, role model.Role) (*uuid.UUID, error) {
+	cu := auth.FromContext(ctx)
+	if cu != nil && cu.Role == auth.RoleTenantAdmin {
+		tid, err := uuid.Parse(cu.TenantID)
+		if err != nil {
+			return nil, gqlerror.Errorf("forbidden")
+		}
+		if inputTenantID != nil && *inputTenantID != tid.String() {
+			return nil, gqlerror.Errorf("forbidden: cannot create users in another tenant")
+		}
+		if role == model.RoleAdmin || role == model.RoleTenantAdmin {
+			return nil, gqlerror.Errorf("forbidden: tenant-admin cannot grant admin roles")
+		}
+		return &tid, nil
+	}
+	if inputTenantID != nil {
+		tid, err := uuid.Parse(*inputTenantID)
+		if err != nil {
+			return nil, gqlerror.Errorf("invalid tenantId")
+		}
+		return &tid, nil
+	}
+	return nil, nil
+}
+
 // assertRoleWritable enforces the tenant 404 oracle for Role mutations: a
 // tenant-admin may modify only their own tenant's roles; system/other-tenant
 // roles read as missing.
