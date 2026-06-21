@@ -21,10 +21,13 @@ lint:
 	gofmt -l .
 	go vet ./...
 
-# Versioned migrations (prod; dev/sqlite still auto-migrate). Needs Atlas CLI.
-# Generate a migration after a schema change (ATLAS_DEV_URL = throwaway pg):
+# Versioned migrations (prod; dev/sqlite still auto-migrate).
+# Generate a migration after a schema change. Uses Ent's native Atlas
+# integration (./ent/migrate/main.go), not the atlas-provider-ent plugin.
+# ATLAS_DEV_URL = a throwaway dev postgres used to compute the diff.
 migrate-diff:
-	atlas migrate diff $(name) --env ent
+	@test -n "$(name)" || { echo "usage: make migrate-diff name=<change>"; exit 1; }
+	go run -mod=mod ./ent/migrate/main.go $(name)
 
 # Apply pending migrations to DATABASE_URL:
 migrate-apply:
