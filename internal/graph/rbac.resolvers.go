@@ -10,6 +10,7 @@ import (
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/permission"
+	"github.com/VMware-AI/agent-platform-backend/ent/role"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/google/uuid"
@@ -137,7 +138,18 @@ func (r *mutationResolver) RemoveUserRole(ctx context.Context, userID string, ro
 
 // CustomRoles is the resolver for the customRoles field.
 func (r *queryResolver) CustomRoles(ctx context.Context) ([]model.CustomRole, error) {
-	roles, err := r.Ent.Role.Query().Order(orderNewest).All(ctx)
+	q := r.Ent.Role.Query()
+	// Tenant isolation (LLD-10): a tenant-admin sees their tenant's roles PLUS
+	// platform/system roles (tenant_id NULL) so they can assign built-in roles;
+	// other tenants' roles stay hidden. Admin sees all; malformed tenant → none.
+	if d := contentScopeFor(ctx); d.apply {
+		if d.denyAll {
+			q = q.Where(role.IDEQ(uuid.Nil))
+		} else {
+			q = q.Where(role.Or(role.TenantID(d.tenant), role.TenantIDIsNil()))
+		}
+	}
+	roles, err := q.Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}

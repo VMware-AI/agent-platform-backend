@@ -141,7 +141,16 @@ func (r *queryResolver) RequestLogs(ctx context.Context, filter *model.RequestLo
 
 // RateLimitPolicies lists all policies.
 func (r *queryResolver) RateLimitPolicies(ctx context.Context) ([]model.RateLimitPolicy, error) {
-	ps, err := r.Ent.RateLimitPolicy.Query().Order(orderNewest).All(ctx)
+	q := r.Ent.RateLimitPolicy.Query()
+	// Tenant isolation (LLD-10): tenant-admin confined to own tenant.
+	if d := tenantScopeFor(ctx); d.apply {
+		if d.denyAll {
+			q = q.Where(ratelimitpolicy.IDEQ(uuid.Nil))
+		} else {
+			q = q.Where(ratelimitpolicy.TenantID(d.tenant))
+		}
+	}
+	ps, err := q.Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}

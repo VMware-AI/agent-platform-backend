@@ -182,7 +182,17 @@ func (r *mutationResolver) DeleteImage(ctx context.Context, id string) (bool, er
 
 // Artifacts is the resolver for the artifacts field.
 func (r *queryResolver) Artifacts(ctx context.Context) ([]model.Artifact, error) {
-	as, err := r.Ent.Artifact.Query().Order(orderNewest).All(ctx)
+	q := r.Ent.Artifact.Query()
+	// Tenant isolation (LLD-10 §9): a caller with a tenant sees their tenant's +
+	// platform-global (NULL) artifacts; admin sees all; malformed tenant → none.
+	if d := contentScopeFor(ctx); d.apply {
+		if d.denyAll {
+			q = q.Where(artifact.IDEQ(uuid.Nil))
+		} else {
+			q = q.Where(artifact.Or(artifact.TenantID(d.tenant), artifact.TenantIDIsNil()))
+		}
+	}
+	as, err := q.Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -196,8 +206,15 @@ func (r *queryResolver) Artifacts(ctx context.Context) ([]model.Artifact, error)
 // ArtifactVersions lists every version of a named artifact, newest first (制品库
 // 版本列表, LLD-06 §3).
 func (r *queryResolver) ArtifactVersions(ctx context.Context, name string) ([]model.Artifact, error) {
-	as, err := r.Ent.Artifact.Query().
-		Where(artifact.Name(name)).Order(orderNewest).All(ctx)
+	q := r.Ent.Artifact.Query().Where(artifact.Name(name))
+	if d := contentScopeFor(ctx); d.apply {
+		if d.denyAll {
+			q = q.Where(artifact.IDEQ(uuid.Nil))
+		} else {
+			q = q.Where(artifact.Or(artifact.TenantID(d.tenant), artifact.TenantIDIsNil()))
+		}
+	}
+	as, err := q.Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}

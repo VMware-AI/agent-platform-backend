@@ -75,6 +75,26 @@ func writeTenant(ctx context.Context) (*uuid.UUID, error) {
 	return &id, nil
 }
 
+// contentScopeFor confines a browsable resource to the caller's tenant PLUS
+// platform-global rows (tenant_id NULL) — the hybrid model for content like
+// AgentConfig/Artifact (LLD-10 §9: built-in platform items are NULL/global
+// read-only, customer items are tenant-stamped). Unlike tenantScopeFor (which
+// only scopes tenant-admins, strictly), this applies to ANY caller that belongs
+// to a tenant, so a regular user browses their tenant's + platform content.
+// Platform admin (no tenant) → apply=false (sees all). A caller with a malformed
+// tenant → denyAll (fail closed). Application differs from the strict block: the
+// caller adds `Or(TenantID(t), TenantIDIsNil())`, not a bare `TenantID(t)`.
+func contentScopeFor(ctx context.Context) tenantScopeDecision {
+	cu := auth.FromContext(ctx)
+	if cu == nil || cu.TenantID == "" {
+		return tenantScopeDecision{}
+	}
+	if id, err := uuid.Parse(cu.TenantID); err == nil {
+		return tenantScopeDecision{apply: true, tenant: id}
+	}
+	return tenantScopeDecision{apply: true, denyAll: true}
+}
+
 // getOwnedAgent loads an agent the caller is allowed to act on. To avoid an
 // existence oracle, a missing agent and an agent owned by ANOTHER user return the
 // SAME error (notFoundErr) — the caller cannot tell "does not exist" from "not

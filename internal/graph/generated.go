@@ -3187,7 +3187,7 @@ input UpsertRateLimitPolicyInput {
 
 extend type Query {
   requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
-  rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin])
+  rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin, tenant_admin])
 }
 
 extend type Mutation {
@@ -3219,7 +3219,7 @@ input CreateCustomRoleInput {
 }
 
 extend type Query {
-  customRoles: [CustomRole!]! @hasRole(any: [admin])
+  customRoles: [CustomRole!]! @hasRole(any: [admin, tenant_admin])
   permissions: [Permission!]! @hasRole(any: [admin])
   userRoles(userId: ID!): [CustomRole!]! @hasRole(any: [admin])
 }
@@ -12278,7 +12278,7 @@ func (ec *executionContext) _Query_rateLimitPolicies(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal []model.RateLimitPolicy
 					return zeroVal, err
@@ -12328,7 +12328,7 @@ func (ec *executionContext) _Query_customRoles(ctx context.Context, field graphq
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal []model.CustomRole
 					return zeroVal, err

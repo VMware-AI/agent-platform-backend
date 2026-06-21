@@ -51,7 +51,7 @@ input UpsertRateLimitPolicyInput {
 
 extend type Query {
   requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
-  rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin])
+  rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin, tenant_admin])
 }
 
 extend type Mutation {

@@ -236,6 +236,16 @@ func (r *queryResolver) AgentConfigs(ctx context.Context, agentType *string) ([]
 	if agentType != nil {
 		q = q.Where(agentconfig.AgentType(*agentType))
 	}
+	// Tenant isolation (LLD-10): browsable content — a caller with a tenant sees
+	// their tenant's + platform-global (NULL) configs; admin sees all; malformed
+	// tenant fails closed.
+	if d := contentScopeFor(ctx); d.apply {
+		if d.denyAll {
+			q = q.Where(agentconfig.IDEQ(uuid.Nil))
+		} else {
+			q = q.Where(agentconfig.Or(agentconfig.TenantID(d.tenant), agentconfig.TenantIDIsNil()))
+		}
+	}
 	cs, err := q.Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err

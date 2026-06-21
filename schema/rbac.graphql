@@ -21,7 +21,7 @@ input CreateCustomRoleInput {
 }
 
 extend type Query {
-  customRoles: [CustomRole!]! @hasRole(any: [admin])
+  customRoles: [CustomRole!]! @hasRole(any: [admin, tenant_admin])
   permissions: [Permission!]! @hasRole(any: [admin])
   userRoles(userId: ID!): [CustomRole!]! @hasRole(any: [admin])
 }

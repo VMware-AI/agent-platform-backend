@@ -37,13 +37,14 @@ var authExemptFields = map[string]string{
 	"departmentMembers": "canManageDepartment",
 	"addMembership":     "canManageDepartment",
 	"removeMembership":  "canManageDepartment",
-	// content/catalog — currently any authenticated user; LLD-10 B2 will add
-	// tenant scoping in-resolver (not a directive), hence exempt here.
-	"agentConfigs":     "scoped read (tenant scoping pending B2)",
-	"artifacts":        "scoped read (tenant scoping pending B2)",
-	"artifactVersions": "scoped read (tenant scoping pending B2)",
-	"skills":           "scoped read (tenant scoping pending B2)",
-	"images":           "scoped read (tenant scoping pending B2)",
+	// content/catalog — any authenticated user, tenant-scoped IN-RESOLVER via
+	// contentScopeFor (not a directive), hence exempt here (LLD-10 B2 done).
+	"agentConfigs":     "content: contentScopeFor (tenant+platform)",
+	"artifacts":        "content: contentScopeFor (tenant+platform)",
+	"artifactVersions": "content: contentScopeFor (tenant+platform)",
+	// Skill/Image are C-class platform-global (no tenant_id) — global read.
+	"skills": "C-class global catalog",
+	"images": "C-class global catalog",
 }
 
 // TestDirectiveCoverage asserts every root Query/Mutation field is either gated
