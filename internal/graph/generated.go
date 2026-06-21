@@ -234,8 +234,10 @@ type ComplexityRoot struct {
 		RegisterResourcePool       func(childComplexity int, input model.RegisterResourcePoolInput) int
 		RemoveMembership           func(childComplexity int, userID string, departmentID string) int
 		RemoveUserRole             func(childComplexity int, userID string, roleID string) int
+		RequestRotation            func(childComplexity int, agentID string, kind model.RotationKind) int
 		ResetPassword              func(childComplexity int, userID string) int
 		RevertAgentSnapshot        func(childComplexity int, input model.RevertAgentSnapshotInput) int
+		RevokeAgentEnrollment      func(childComplexity int, agentID string) int
 		RevokeVirtualKey           func(childComplexity int, id string) int
 		SetAgentStatus             func(childComplexity int, id string, status model.AgentStatus) int
 		SetDefaultAgentConfig      func(childComplexity int, id string) int
@@ -446,6 +448,8 @@ type MutationResolver interface {
 	RecycleAgent(ctx context.Context, input model.RecycleAgentInput) (*model.Agent, error)
 	SnapshotAgent(ctx context.Context, input model.SnapshotAgentInput) (*model.AgentSnapshot, error)
 	RevertAgentSnapshot(ctx context.Context, input model.RevertAgentSnapshotInput) (bool, error)
+	RequestRotation(ctx context.Context, agentID string, kind model.RotationKind) (bool, error)
+	RevokeAgentEnrollment(ctx context.Context, agentID string) (bool, error)
 	RegisterGatewayConnection(ctx context.Context, input model.RegisterGatewayConnectionInput) (*model.GatewayConnection, error)
 	TestGatewayConnection(ctx context.Context, id string) (model.GatewayStatus, error)
 	DeleteGatewayConnection(ctx context.Context, id string) (bool, error)
@@ -1497,6 +1501,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.RemoveUserRole(childComplexity, args["userId"].(string), args["roleId"].(string)), true
+	case "Mutation.requestRotation":
+		if e.ComplexityRoot.Mutation.RequestRotation == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_requestRotation_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.RequestRotation(childComplexity, args["agentId"].(string), args["kind"].(model.RotationKind)), true
 	case "Mutation.resetPassword":
 		if e.ComplexityRoot.Mutation.ResetPassword == nil {
 			break
@@ -1519,6 +1534,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.RevertAgentSnapshot(childComplexity, args["input"].(model.RevertAgentSnapshotInput)), true
+	case "Mutation.revokeAgentEnrollment":
+		if e.ComplexityRoot.Mutation.RevokeAgentEnrollment == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_revokeAgentEnrollment_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.RevokeAgentEnrollment(childComplexity, args["agentId"].(string)), true
 	case "Mutation.revokeVirtualKey":
 		if e.ComplexityRoot.Mutation.RevokeVirtualKey == nil {
 			break
@@ -2918,6 +2944,20 @@ extend type Mutation {
   # Owner or admin. Reverts the agent's VM to a snapshot — DESTRUCTIVE, confirm
   # must be true (discards all state since the snapshot).
   revertAgentSnapshot(input: RevertAgentSnapshotInput!): Boolean!
+
+  # Owner or admin. Enqueue a credential rotation for the agent's VM (LLD-08);
+  # the agent-manager daemon executes it on its next heartbeat. No-op (true) if
+  # a rotation of that kind is already in flight.
+  requestRotation(agentId: ID!, kind: RotationKind!): Boolean!
+
+  # Owner or admin. Revoke the agent VM's bearer credential — its next heartbeat
+  # is rejected (LLD-08 §4.4). Idempotent.
+  revokeAgentEnrollment(agentId: ID!): Boolean!
+}
+
+enum RotationKind {
+  rotate_ui_password
+  rotate_os_password
 }
 `, BuiltIn: false},
 	{Name: "../../schema/gateway-routing.graphql", Input: `# Compute gateway routing (算力网关): connections, upstreams, model routes,
@@ -4593,6 +4633,28 @@ func (ec *executionContext) field_Mutation_removeUserRole_args(ctx context.Conte
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_requestRotation_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "agentId",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["agentId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "kind",
+		func(ctx context.Context, v any) (model.RotationKind, error) {
+			return ec.unmarshalNRotationKind2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRotationKind(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["kind"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_resetPassword_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -4618,6 +4680,20 @@ func (ec *executionContext) field_Mutation_revertAgentSnapshot_args(ctx context.
 		return nil, err
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_revokeAgentEnrollment_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "agentId",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["agentId"] = arg0
 	return args, nil
 }
 
@@ -9316,6 +9392,94 @@ func (ec *executionContext) fieldContext_Mutation_revertAgentSnapshot(ctx contex
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_revertAgentSnapshot_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_requestRotation(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_requestRotation(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().RequestRotation(ctx, fc.Args["agentId"].(string), fc.Args["kind"].(model.RotationKind))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_requestRotation(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_requestRotation_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_revokeAgentEnrollment(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_revokeAgentEnrollment(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().RevokeAgentEnrollment(ctx, fc.Args["agentId"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_revokeAgentEnrollment(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_revokeAgentEnrollment_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -18210,6 +18374,20 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "requestRotation":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_requestRotation(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "revokeAgentEnrollment":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_revokeAgentEnrollment(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "registerGatewayConnection":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_registerGatewayConnection(ctx, field)
@@ -21167,6 +21345,16 @@ func (ec *executionContext) marshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagent�
 	}
 
 	return ret
+}
+
+func (ec *executionContext) unmarshalNRotationKind2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRotationKind(ctx context.Context, v any) (model.RotationKind, error) {
+	var res model.RotationKind
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNRotationKind2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRotationKind(ctx context.Context, sel ast.SelectionSet, v model.RotationKind) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) marshalNRouterTier2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRouterTier(ctx context.Context, sel ast.SelectionSet, v model.RouterTier) graphql.Marshaler {

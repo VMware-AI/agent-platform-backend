@@ -77,4 +77,18 @@ extend type Mutation {
   # Owner or admin. Reverts the agent's VM to a snapshot — DESTRUCTIVE, confirm
   # must be true (discards all state since the snapshot).
   revertAgentSnapshot(input: RevertAgentSnapshotInput!): Boolean!
+
+  # Owner or admin. Enqueue a credential rotation for the agent's VM (LLD-08);
+  # the agent-manager daemon executes it on its next heartbeat. No-op (true) if
+  # a rotation of that kind is already in flight.
+  requestRotation(agentId: ID!, kind: RotationKind!): Boolean!
+
+  # Owner or admin. Revoke the agent VM's bearer credential — its next heartbeat
+  # is rejected (LLD-08 §4.4). Idempotent.
+  revokeAgentEnrollment(agentId: ID!): Boolean!
+}
+
+enum RotationKind {
+  rotate_ui_password
+  rotate_os_password
 }

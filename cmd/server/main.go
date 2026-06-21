@@ -18,6 +18,7 @@ import (
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
+	"github.com/VMware-AI/agent-platform-backend/internal/agentmgr"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/catalog"
 	"github.com/VMware-AI/agent-platform-backend/internal/config"
@@ -107,6 +108,14 @@ func main() {
 		installVars["AGENT_PKG_BASE_URL"] = cfg.AgentPkgBaseURL
 	}
 
+	// agent-manager backend (LLD-08): VM enrollment + heartbeat + rotation. Its
+	// secret store needs write access (Vaultwarden); EnvResolver (dev) is read-only,
+	// so rotation completions can't persist there — acceptable for dev.
+	agentMgr := &agentmgr.Service{Ent: client}
+	if st, ok := sec.(secrets.Store); ok {
+		agentMgr.Secrets = st
+	}
+
 	resolver := &graph.Resolver{
 		Ent:             client,
 		Sessions:        sessions,
@@ -120,6 +129,8 @@ func main() {
 		VCenterConnect:  vcConnect,
 		VCenterInsecure: cfg.VCenterInsecure,
 		LoginLimiter:    loginLimiter,
+		AgentMgr:        agentMgr,
+		ControlPlaneURL: os.Getenv("CONTROL_PLANE_URL"),
 	}
 	resolver.EnablePermissionCache(60 * time.Second)
 
@@ -160,6 +171,10 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("/query", httpx.CSRF(cfg.AllowedOrigins)(auth.SessionMiddleware(sessions)(srv)))
+	// Daemon-facing REST (LLD-08): bearer-authenticated, mounted OUTSIDE the CSRF +
+	// session middleware (machine client, no cookies/Origin). Still inside the
+	// RequestLogger wrap below.
+	mux.Handle("/v1/agents/", agentmgr.Handler(agentMgr))
 	mux.Handle("/", playground.Handler("Agent Platform", "/query"))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)

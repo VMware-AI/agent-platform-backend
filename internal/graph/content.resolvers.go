@@ -20,9 +20,6 @@ import (
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
-// maxArtifactContent caps inline artifact content (matches the ent MaxLen).
-const maxArtifactContent = 65536
-
 // UpsertArtifact is the resolver for the upsertArtifact field.
 func (r *mutationResolver) UpsertArtifact(ctx context.Context, input model.UpsertArtifactInput) (*model.Artifact, error) {
 	// Inline content is for small text artifacts only (config/script); packages

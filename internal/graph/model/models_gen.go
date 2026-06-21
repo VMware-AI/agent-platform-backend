@@ -1013,6 +1013,61 @@ func (e Role) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type RotationKind string
+
+const (
+	RotationKindRotateUIPassword RotationKind = "rotate_ui_password"
+	RotationKindRotateOsPassword RotationKind = "rotate_os_password"
+)
+
+var AllRotationKind = []RotationKind{
+	RotationKindRotateUIPassword,
+	RotationKindRotateOsPassword,
+}
+
+func (e RotationKind) IsValid() bool {
+	switch e {
+	case RotationKindRotateUIPassword, RotationKindRotateOsPassword:
+		return true
+	}
+	return false
+}
+
+func (e RotationKind) String() string {
+	return string(e)
+}
+
+func (e *RotationKind) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = RotationKind(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid RotationKind", str)
+	}
+	return nil
+}
+
+func (e RotationKind) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *RotationKind) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e RotationKind) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type RouterTierLevel string
 
 const (

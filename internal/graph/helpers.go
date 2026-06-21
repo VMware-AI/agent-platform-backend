@@ -616,6 +616,9 @@ func (r *Resolver) connectAgentVM(ctx context.Context, cu *auth.CurrentUser, age
 	return conn, ag.VMRef, nil
 }
 
+// maxArtifactContent caps inline artifact content (matches the ent MaxLen).
+const maxArtifactContent = 65536
+
 // defaultAgentConfigPath is where an agent's inline default_config lands in the
 // VM when the artifact doesn't override it via metadata["config_path"].
 const defaultAgentConfigPath = "/etc/agent/config"

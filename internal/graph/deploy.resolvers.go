@@ -11,6 +11,7 @@ import (
 	"log"
 
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
+	"github.com/VMware-AI/agent-platform-backend/ent/rotationcommand"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/deploy"
@@ -65,17 +66,34 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	// so it is embedded into cloud-init at deploy — no fetch from the VM (LLD-09).
 	defaultConfig, configPath := r.resolveAgentConfig(ctx, ag)
 
+	// Issue a one-time agent-manager enroll token (LLD-08 §4.2) and inject it via
+	// guestinfo so the daemon can exchange it for a long-lived VM token on first
+	// boot. vm_id = the VM name (stable per deploy). Skipped if agent-manager is
+	// not configured.
+	var enrollToken string
+	if r.AgentMgr != nil {
+		tok, err := r.AgentMgr.IssueEnrollment(ctx, ag.ID, input.VMName, ag.TenantID)
+		if err != nil {
+			r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
+			return nil, fmt.Errorf("issue enrollment: %w", err)
+		}
+		enrollToken = tok
+	}
+
 	svc := &deploy.Service{Gateway: r.Gateway, VCenter: conn, GatewayURL: r.GatewayURL}
 	res, err := svc.Provision(ctx, deploy.Request{
-		AgentName:     ag.Name,
-		UserID:        ag.OwnerUserID.String(),
-		Template:      input.Template,
-		VMName:        input.VMName,
-		ResourcePool:  derefString(input.TargetResourcePool),
-		Hostname:      derefString(input.Hostname),
-		MaxBudget:     input.MaxBudget,
-		DefaultConfig: defaultConfig,
-		ConfigPath:    configPath,
+		AgentName:       ag.Name,
+		UserID:          ag.OwnerUserID.String(),
+		Template:        input.Template,
+		VMName:          input.VMName,
+		ResourcePool:    derefString(input.TargetResourcePool),
+		Hostname:        derefString(input.Hostname),
+		MaxBudget:       input.MaxBudget,
+		DefaultConfig:   defaultConfig,
+		ConfigPath:      configPath,
+		VMID:            input.VMName,
+		EnrollToken:     enrollToken,
+		ControlPlaneURL: r.ControlPlaneURL,
 	})
 	if err != nil {
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
@@ -249,6 +267,52 @@ func (r *mutationResolver) RevertAgentSnapshot(ctx context.Context, input model.
 		return false, fmt.Errorf("revert snapshot: %w", err)
 	}
 	r.audit(ctx, "agent.revert_snapshot", "agent", input.AgentID, true, cu.ID)
+	return true, nil
+}
+
+// RequestRotation enqueues a credential rotation for the agent's VM (LLD-08 §5.1).
+// Owner/admin; no-op if a rotation of that kind is already in flight.
+func (r *mutationResolver) RequestRotation(ctx context.Context, agentID string, kind model.RotationKind) (bool, error) {
+	cu := auth.FromContext(ctx)
+	if cu == nil {
+		return false, gqlerror.Errorf("unauthenticated")
+	}
+	if r.AgentMgr == nil {
+		return false, gqlerror.Errorf("agent-manager is not configured")
+	}
+	aid, err := uuid.Parse(agentID)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid agentId")
+	}
+	if _, err := r.getOwnedAgent(ctx, aid, cu); err != nil {
+		return false, err
+	}
+	if _, err := r.AgentMgr.RequestRotation(ctx, aid, rotationcommand.Kind(kind), "manual", cu.ID); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// RevokeAgentEnrollment revokes the agent VM's bearer credential (LLD-08 §4.4).
+// Owner/admin; idempotent.
+func (r *mutationResolver) RevokeAgentEnrollment(ctx context.Context, agentID string) (bool, error) {
+	cu := auth.FromContext(ctx)
+	if cu == nil {
+		return false, gqlerror.Errorf("unauthenticated")
+	}
+	if r.AgentMgr == nil {
+		return false, gqlerror.Errorf("agent-manager is not configured")
+	}
+	aid, err := uuid.Parse(agentID)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid agentId")
+	}
+	if _, err := r.getOwnedAgent(ctx, aid, cu); err != nil {
+		return false, err
+	}
+	if err := r.AgentMgr.Revoke(ctx, aid, cu.ID); err != nil {
+		return false, err
+	}
 	return true, nil
 }
 

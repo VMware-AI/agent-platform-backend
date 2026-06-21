@@ -47,6 +47,12 @@ type Request struct {
 	// embedded into cloud-init at ConfigPath so the VM never fetches it.
 	DefaultConfig string
 	ConfigPath    string
+	// agent-manager enrollment (LLD-08): a one-time enroll token + stable vm id
+	// injected via guestinfo for the daemon to exchange on first boot. Empty when
+	// agent-manager is not configured.
+	VMID            string
+	EnrollToken     string
+	ControlPlaneURL string
 }
 
 // Result carries the issued secret (returned once), the rendered userdata, and
@@ -104,6 +110,16 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 	gi := map[string]string{"userdata": userdata}
 	if req.Hostname != "" {
 		gi["metadata"] = buildMetadata(req.Hostname)
+	}
+	// agent-manager enrollment (LLD-08 §4.2/§10): hand the daemon a one-time
+	// enroll token + its stable id + the control-plane URL via guestinfo. The
+	// token is short-lived and single-use; SetGuestinfo base64-encodes values.
+	if req.EnrollToken != "" {
+		gi["agentmgr.enroll_token"] = req.EnrollToken
+		gi["agentmgr.vm_id"] = req.VMID
+		if req.ControlPlaneURL != "" {
+			gi["agentmgr.control_plane_url"] = req.ControlPlaneURL
+		}
 	}
 	if err := s.VCenter.SetGuestinfo(ctx, req.VMName, gi); err != nil {
 		s.rollback(ctx, key.Key, req.VMName)

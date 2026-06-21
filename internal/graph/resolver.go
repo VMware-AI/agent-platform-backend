@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
+	"github.com/VMware-AI/agent-platform-backend/internal/agentmgr"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/ratelimit"
 	"github.com/VMware-AI/agent-platform-backend/internal/secrets"
@@ -54,6 +55,12 @@ type Resolver struct {
 	VCenterConnect VCenterConnector
 	// VCenterInsecure skips vCenter TLS verification (air-gap self-signed only).
 	VCenterInsecure bool
+	// AgentMgr issues VM enrollments + processes heartbeats (LLD-08); nil disables
+	// agent-manager (deploy then injects no enroll token).
+	AgentMgr *agentmgr.Service
+	// ControlPlaneURL is the backend base URL injected into VMs for the daemon's
+	// heartbeat/enroll calls (LLD-08).
+	ControlPlaneURL string
 	// LoginLimiter throttles failed logins (brute-force defense); nil disables it.
 	LoginLimiter ratelimit.Limiter
 	// permCache memoizes custom-role permission sets for @hasPermission; nil
