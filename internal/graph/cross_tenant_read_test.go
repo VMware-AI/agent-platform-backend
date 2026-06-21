@@ -229,3 +229,32 @@ func TestCrossTenant_BClass_ViaParentUser(t *testing.T) {
 		t.Fatalf("tenant-admin should see only tenant A's audit (total=%d items=%d)", audit.Total, len(audit.Items))
 	}
 }
+
+// AC-8: two tenants may hold an artifact of the same name+version (per-tenant
+// unique index); within one tenant it stays unique (upsert updates in place).
+func TestCrossTenant_SameNameAcrossTenants(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := context.Background()
+	tA, tB := uuid.New(), uuid.New()
+	mr := &mutationResolver{r}
+
+	mkInput := model.UpsertArtifactInput{Name: "shared", Kind: model.ArtifactKindConfig, Version: "1", URI: "u"}
+	if _, err := mr.UpsertArtifact(tenantUserCtx(uuid.NewString(), tA.String()), mkInput); err != nil {
+		t.Fatalf("tenant A upsert: %v", err)
+	}
+	if _, err := mr.UpsertArtifact(tenantUserCtx(uuid.NewString(), tB.String()), mkInput); err != nil {
+		t.Fatalf("tenant B upsert (same name) should be allowed: %v", err)
+	}
+	// two distinct rows now share name "shared"
+	if n := r.Ent.Artifact.Query().CountX(ctx); n != 2 {
+		t.Fatalf("expected 2 same-named artifacts across tenants, got %d", n)
+	}
+	// re-upsert within tenant A updates in place (no third row)
+	if _, err := mr.UpsertArtifact(tenantUserCtx(uuid.NewString(), tA.String()), mkInput); err != nil {
+		t.Fatalf("tenant A re-upsert: %v", err)
+	}
+	if n := r.Ent.Artifact.Query().CountX(ctx); n != 2 {
+		t.Fatalf("re-upsert within tenant should not add a row, got %d", n)
+	}
+}

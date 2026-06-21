@@ -55,7 +55,14 @@ func (r *mutationResolver) UpsertRateLimitPolicy(ctx context.Context, input mode
 	if err != nil {
 		return nil, err
 	}
-	existing, err := r.Ent.RateLimitPolicy.Query().Where(ratelimitpolicy.Name(input.Name)).Only(ctx)
+	// Find-or-create within the caller's tenant namespace (LLD-10 §1.7).
+	lookup := r.Ent.RateLimitPolicy.Query().Where(ratelimitpolicy.Name(input.Name))
+	if tenantID != nil {
+		lookup = lookup.Where(ratelimitpolicy.TenantID(*tenantID))
+	} else {
+		lookup = lookup.Where(ratelimitpolicy.TenantIDIsNil())
+	}
+	existing, err := lookup.Only(ctx)
 	enabled := false
 	if input.Enabled != nil {
 		enabled = *input.Enabled

@@ -42,8 +42,16 @@ func (r *mutationResolver) UpsertArtifact(ctx context.Context, input model.Upser
 	if err != nil {
 		return nil, err
 	}
-	existing, err := r.Ent.Artifact.Query().
-		Where(artifact.Name(input.Name), artifact.Version(input.Version)).Only(ctx)
+	// Look up within the SAME tenant scope as the write (LLD-10 §1.7): names are
+	// unique per tenant, so the find-or-create must match the caller's tenant
+	// (admin/platform → the NULL-tenant namespace).
+	lookup := r.Ent.Artifact.Query().Where(artifact.Name(input.Name), artifact.Version(input.Version))
+	if tenantID != nil {
+		lookup = lookup.Where(artifact.TenantID(*tenantID))
+	} else {
+		lookup = lookup.Where(artifact.TenantIDIsNil())
+	}
+	existing, err := lookup.Only(ctx)
 	var a *ent.Artifact
 	switch {
 	case ent.IsNotFound(err):

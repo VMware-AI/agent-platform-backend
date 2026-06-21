@@ -2,6 +2,7 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -34,7 +35,15 @@ func (Artifact) Fields() []ent.Field {
 }
 
 func (Artifact) Indexes() []ent.Index {
+	// Unique per tenant (LLD-10 §1.7): two tenants may hold the same name+version,
+	// but within one tenant — and within the platform (NULL-tenant) namespace —
+	// name+version stays unique. Two partial indexes handle NULL vs non-NULL
+	// (Postgres/SQLite treat NULLs as distinct, so a plain composite would let
+	// platform rows duplicate).
 	return []ent.Index{
-		index.Fields("name", "version").Unique(),
+		index.Fields("tenant_id", "name", "version").Unique().
+			Annotations(entsql.IndexWhere("tenant_id IS NOT NULL")),
+		index.Fields("name", "version").Unique().
+			Annotations(entsql.IndexWhere("tenant_id IS NULL")),
 	}
 }

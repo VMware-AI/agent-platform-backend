@@ -2,8 +2,10 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
 )
 
@@ -20,7 +22,7 @@ func (Role) Mixin() []ent.Mixin {
 func (Role) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
-		field.String("name").NotEmpty().Unique(),
+		field.String("name").NotEmpty(),
 		field.Bool("is_system").Default(false),
 		field.UUID("tenant_id", uuid.UUID{}).Optional().Nillable(),
 	}
@@ -30,5 +32,16 @@ func (Role) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("users", User.Type).Ref("roles"),
 		edge.To("permissions", Permission.Type),
+	}
+}
+
+func (Role) Indexes() []ent.Index {
+	// Unique per tenant (LLD-10 §1.7): each tenant has its own role namespace;
+	// system roles (tenant_id NULL) stay globally unique by name.
+	return []ent.Index{
+		index.Fields("tenant_id", "name").Unique().
+			Annotations(entsql.IndexWhere("tenant_id IS NOT NULL")),
+		index.Fields("name").Unique().
+			Annotations(entsql.IndexWhere("tenant_id IS NULL")),
 	}
 }

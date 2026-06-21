@@ -3,6 +3,7 @@
 package migrate
 
 import (
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/dialect/sql/schema"
 	"entgo.io/ent/schema/field"
 )
@@ -159,9 +160,20 @@ var (
 		PrimaryKey: []*schema.Column{ArtifactsColumns[0]},
 		Indexes: []*schema.Index{
 			{
+				Name:    "artifact_tenant_id_name_version",
+				Unique:  true,
+				Columns: []*schema.Column{ArtifactsColumns[10], ArtifactsColumns[3], ArtifactsColumns[5]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "tenant_id IS NOT NULL",
+				},
+			},
+			{
 				Name:    "artifact_name_version",
 				Unique:  true,
 				Columns: []*schema.Column{ArtifactsColumns[3], ArtifactsColumns[5]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "tenant_id IS NULL",
+				},
 			},
 		},
 	}
@@ -332,7 +344,7 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "name", Type: field.TypeString, Unique: true},
+		{Name: "name", Type: field.TypeString},
 		{Name: "rpm", Type: field.TypeInt, Nullable: true},
 		{Name: "tpm", Type: field.TypeInt, Nullable: true},
 		{Name: "enabled", Type: field.TypeBool, Default: false},
@@ -344,6 +356,24 @@ var (
 		Name:       "rate_limit_policies",
 		Columns:    RateLimitPoliciesColumns,
 		PrimaryKey: []*schema.Column{RateLimitPoliciesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "ratelimitpolicy_tenant_id_name",
+				Unique:  true,
+				Columns: []*schema.Column{RateLimitPoliciesColumns[7], RateLimitPoliciesColumns[3]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "tenant_id IS NOT NULL",
+				},
+			},
+			{
+				Name:    "ratelimitpolicy_name",
+				Unique:  true,
+				Columns: []*schema.Column{RateLimitPoliciesColumns[3]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "tenant_id IS NULL",
+				},
+			},
+		},
 	}
 	// RequestLogsColumns holds the columns for the "request_logs" table.
 	RequestLogsColumns = []*schema.Column{
@@ -410,7 +440,7 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "name", Type: field.TypeString, Unique: true},
+		{Name: "name", Type: field.TypeString},
 		{Name: "is_system", Type: field.TypeBool, Default: false},
 		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
 	}
@@ -419,6 +449,24 @@ var (
 		Name:       "roles",
 		Columns:    RolesColumns,
 		PrimaryKey: []*schema.Column{RolesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "role_tenant_id_name",
+				Unique:  true,
+				Columns: []*schema.Column{RolesColumns[5], RolesColumns[3]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "tenant_id IS NOT NULL",
+				},
+			},
+			{
+				Name:    "role_name",
+				Unique:  true,
+				Columns: []*schema.Column{RolesColumns[3]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "tenant_id IS NULL",
+				},
+			},
+		},
 	}
 	// RotationCommandsColumns holds the columns for the "rotation_commands" table.
 	RotationCommandsColumns = []*schema.Column{
