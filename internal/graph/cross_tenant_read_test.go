@@ -138,3 +138,44 @@ func assertNames(t *testing.T, got []string, want ...string) {
 		}
 	}
 }
+
+func TestCrossTenant_Agents_TenantAdminSeesTenantWide(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := context.Background()
+	tA, tB := uuid.New(), uuid.New()
+
+	// two agents in tenant A (different owners) + one in tenant B
+	r.Ent.Agent.Create().SetName("a1").SetAgentType("goose").SetOwnerUserID(uuid.New()).SetTenantID(tA).SaveX(ctx)
+	r.Ent.Agent.Create().SetName("a2").SetAgentType("goose").SetOwnerUserID(uuid.New()).SetTenantID(tA).SaveX(ctx)
+	r.Ent.Agent.Create().SetName("b1").SetAgentType("goose").SetOwnerUserID(uuid.New()).SetTenantID(tB).SaveX(ctx)
+
+	qr := &queryResolver{r}
+	got, err := qr.Agents(tenantAdminCtx(uuid.NewString(), tA.String()))
+	if err != nil {
+		t.Fatalf("Agents: %v", err)
+	}
+	// tenant-admin sees BOTH of tenant A's agents (tenant-wide, not just owned),
+	// and none of tenant B's.
+	assertNames(t, names(got, func(a model.Agent) string { return a.Name }), "a1", "a2")
+}
+
+func TestCrossTenant_TokenUsage_Strict(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := context.Background()
+	tA, tB := uuid.New(), uuid.New()
+
+	r.Ent.TokenUsage.Create().SetUserID(uuid.New()).SetModel("m").SetTenantID(tA).SaveX(ctx)
+	r.Ent.TokenUsage.Create().SetUserID(uuid.New()).SetModel("m").SetTenantID(tB).SaveX(ctx)
+	r.Ent.TokenUsage.Create().SetUserID(uuid.New()).SetModel("m").SaveX(ctx) // platform NULL
+
+	qr := &queryResolver{r}
+	got, err := qr.TokenUsage(tenantAdminCtx(uuid.NewString(), tA.String()), nil, nil)
+	if err != nil {
+		t.Fatalf("TokenUsage: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("tenant-admin should see only their tenant's 1 usage row, got %d", len(got))
+	}
+}

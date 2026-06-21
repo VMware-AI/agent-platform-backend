@@ -53,6 +53,13 @@ func (r *queryResolver) TokenUsage(ctx context.Context, userID *string, page *mo
 		}
 		q = q.Where(tokenusage.UserID(uid))
 	}
+	if d := tenantScopeFor(ctx); d.apply { // tenant-admin → own tenant metering
+		if d.denyAll {
+			q = q.Where(tokenusage.IDEQ(uuid.Nil))
+		} else {
+			q = q.Where(tokenusage.TenantID(d.tenant))
+		}
+	}
 	limit, offset := pageBounds(page)
 	rows, err := q.Order(orderNewest).Limit(limit).Offset(offset).All(ctx)
 	if err != nil {
@@ -74,6 +81,13 @@ func (r *queryResolver) MeteringSummary(ctx context.Context, userID *string) (*m
 			return nil, gqlerror.Errorf("invalid userId")
 		}
 		q = q.Where(tokenusage.UserID(uid))
+	}
+	if d := tenantScopeFor(ctx); d.apply { // tenant-admin → own tenant metering
+		if d.denyAll {
+			q = q.Where(tokenusage.IDEQ(uuid.Nil))
+		} else {
+			q = q.Where(tokenusage.TenantID(d.tenant))
+		}
 	}
 	// Per-model breakdown, pushed down (low cardinality); totals summed from it.
 	var byModel []struct {

@@ -264,7 +264,20 @@ func (r *queryResolver) Agents(ctx context.Context) ([]model.Agent, error) {
 		return nil, gqlerror.Errorf("unauthenticated")
 	}
 	q := r.Ent.Agent.Query()
-	if cu.Role != auth.RoleAdmin {
+	// Three-track visibility (LLD-10 §1.3): admin → all; tenant-admin → their
+	// whole tenant; regular user → only their own agents (owner track).
+	switch {
+	case cu.Role == auth.RoleAdmin:
+		// no filter
+	case cu.Role == auth.RoleTenantAdmin:
+		if d := tenantScopeFor(ctx); d.apply {
+			if d.denyAll {
+				q = q.Where(agent.IDEQ(uuid.Nil))
+			} else {
+				q = q.Where(agent.TenantID(d.tenant))
+			}
+		}
+	default:
 		if uid, err := uuid.Parse(cu.ID); err == nil {
 			q = q.Where(agent.OwnerUserID(uid))
 		}
