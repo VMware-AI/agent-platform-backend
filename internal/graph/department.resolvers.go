@@ -75,69 +75,6 @@ func (r *mutationResolver) DeleteDepartment(ctx context.Context, id string) (boo
 	return true, nil
 }
 
-// canManageDepartment reports whether the caller may manage the given department's
-// memberships: platform/tenant admins always, or a dept-admin of THAT department
-// (delegation — LLD-01 §4.1, the @hasRole directive only covers platform/tenant).
-func (r *Resolver) canManageDepartment(ctx context.Context, did uuid.UUID) (bool, error) {
-	cu := auth.FromContext(ctx)
-	if cu == nil {
-		return false, nil
-	}
-	// Platform admin: every tenant.
-	if cu.Role == auth.RoleAdmin {
-		return true, nil
-	}
-	// Tenant admin: ONLY departments in their own tenant (C1 — without this a
-	// tenant-admin could manage/read any tenant's departments).
-	if cu.Role == auth.RoleTenantAdmin {
-		dept, err := r.Ent.Department.Get(ctx, did)
-		if err != nil {
-			if ent.IsNotFound(err) {
-				return false, nil
-			}
-			return false, err
-		}
-		return tenantMatches(cu.TenantID, dept.TenantID), nil
-	}
-	// Dept-admin delegation: a dept-admin membership in THIS department.
-	uid, err := uuid.Parse(cu.ID)
-	if err != nil {
-		return false, nil
-	}
-	return r.Ent.Membership.Query().
-		Where(
-			membership.UserID(uid),
-			membership.DepartmentID(did),
-			membership.RoleEQ(membership.RoleDeptAdmin),
-		).Exist(ctx)
-}
-
-// tenantMatches reports whether the caller's tenant equals the row's tenant. Both
-// must be present — a tenant-less caller or untenanted row never matches (fail
-// closed), so a misconfigured tenant-admin manages nothing across the boundary.
-// sameTenant reports whether two nullable tenant references denote the same tenant
-// (both untenanted, or the same id). Keeps a membership from crossing tenants.
-func sameTenant(a, b *uuid.UUID) bool {
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-	return *a == *b
-}
-
-func tenantMatches(callerTenant string, rowTenant *uuid.UUID) bool {
-	if callerTenant == "" || rowTenant == nil {
-		return false
-	}
-	tid, err := uuid.Parse(callerTenant)
-	if err != nil {
-		return false
-	}
-	return tid == *rowTenant
-}
-
 // AddMembership adds (or updates the role of) a user in a department.
 func (r *mutationResolver) AddMembership(ctx context.Context, userID string, departmentID string, role *model.MembershipRole) (*model.Membership, error) {
 	uid, err := uuid.Parse(userID)

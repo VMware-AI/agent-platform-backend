@@ -8,7 +8,9 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
+	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
+	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/catalog"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
@@ -495,6 +497,91 @@ func clientIP(ctx context.Context) string {
 		return r.RemoteAddr
 	}
 	return ""
+}
+
+// canManageDepartment reports whether the caller may manage the given department's
+// memberships: platform/tenant admins always, or a dept-admin of THAT department
+// (delegation — LLD-01 §4.1, the @hasRole directive only covers platform/tenant).
+//
+// Lives here, not in *.resolvers.go: gqlgen regen relocates non-resolver funcs out
+// of resolver files (and can mangle them), so all shared helpers stay in helpers.go.
+func (r *Resolver) canManageDepartment(ctx context.Context, did uuid.UUID) (bool, error) {
+	cu := auth.FromContext(ctx)
+	if cu == nil {
+		return false, nil
+	}
+	// Platform admin: every tenant.
+	if cu.Role == auth.RoleAdmin {
+		return true, nil
+	}
+	// Tenant admin: ONLY departments in their own tenant (C1 — without this a
+	// tenant-admin could manage/read any tenant's departments).
+	if cu.Role == auth.RoleTenantAdmin {
+		dept, err := r.Ent.Department.Get(ctx, did)
+		if err != nil {
+			if ent.IsNotFound(err) {
+				return false, nil
+			}
+			return false, err
+		}
+		return tenantMatches(cu.TenantID, dept.TenantID), nil
+	}
+	// Dept-admin delegation: a dept-admin membership in THIS department.
+	uid, err := uuid.Parse(cu.ID)
+	if err != nil {
+		return false, nil
+	}
+	return r.Ent.Membership.Query().
+		Where(
+			membership.UserID(uid),
+			membership.DepartmentID(did),
+			membership.RoleEQ(membership.RoleDeptAdmin),
+		).Exist(ctx)
+}
+
+// sameTenant reports whether two nullable tenant references denote the same tenant
+// (both untenanted, or the same id). Keeps a membership from crossing tenants.
+func sameTenant(a, b *uuid.UUID) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
+}
+
+// tenantMatches reports whether the caller's tenant equals the row's tenant. Both
+// must be present — a tenant-less caller or untenanted row never matches (fail
+// closed), so a misconfigured tenant-admin manages nothing across the boundary.
+func tenantMatches(callerTenant string, rowTenant *uuid.UUID) bool {
+	if callerTenant == "" || rowTenant == nil {
+		return false
+	}
+	tid, err := uuid.Parse(callerTenant)
+	if err != nil {
+		return false
+	}
+	return tid == *rowTenant
+}
+
+// rollbackDeploy tears down a half-deployed agent after Provision succeeded but
+// DB persistence failed: destroy the running VM, revoke the live gateway key, and
+// mark the agent exception. Uses a detached context so a canceled request still
+// cleans up. Best-effort — each step is logged on failure, never fatal.
+func (r *Resolver) rollbackDeploy(ctx context.Context, conn VCenterClient, ag *ent.Agent, vmName, key string) {
+	cctx := context.WithoutCancel(ctx)
+	if err := conn.Destroy(cctx, vmName); err != nil {
+		log.Printf("deploy rollback: orphan VM %q, destroy failed: %v", vmName, err)
+	}
+	if r.Gateway != nil {
+		if err := r.Gateway.DeleteKey(cctx, key); err != nil {
+			log.Printf("deploy rollback: orphan gateway key, revoke failed: %v", err)
+		}
+	}
+	if _, err := r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusException).Save(cctx); err != nil {
+		log.Printf("deploy rollback: mark agent %s exception failed: %v", ag.ID, err)
+	}
 }
 
 // audit writes an AuditLog row for a write operation. Failures are logged, not

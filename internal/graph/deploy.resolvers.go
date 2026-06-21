@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
@@ -120,25 +119,6 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		Agent:            toModelAgent(updated),
 		VirtualKeySecret: res.VirtualKey,
 	}, nil
-}
-
-// rollbackDeploy tears down a half-deployed agent after Provision succeeded but
-// DB persistence failed: destroy the running VM, revoke the live gateway key, and
-// mark the agent exception. Uses a detached context so a canceled request still
-// cleans up. Best-effort — each step is logged on failure, never fatal.
-func (r *Resolver) rollbackDeploy(ctx context.Context, conn VCenterClient, ag *ent.Agent, vmName, key string) {
-	cctx := context.WithoutCancel(ctx)
-	if err := conn.Destroy(cctx, vmName); err != nil {
-		log.Printf("deploy rollback: orphan VM %q, destroy failed: %v", vmName, err)
-	}
-	if r.Gateway != nil {
-		if err := r.Gateway.DeleteKey(cctx, key); err != nil {
-			log.Printf("deploy rollback: orphan gateway key, revoke failed: %v", err)
-		}
-	}
-	if _, err := r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusException).Save(cctx); err != nil {
-		log.Printf("deploy rollback: mark agent %s exception failed: %v", ag.ID, err)
-	}
 }
 
 // RecycleAgent destroys the agent's VM, revokes its key and marks it stopped.

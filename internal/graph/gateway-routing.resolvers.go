@@ -210,6 +210,21 @@ func (r *mutationResolver) SetModelRouteEnabled(ctx context.Context, id string, 
 	return toModelModelRoute(mr), nil
 }
 
+// DeleteModelRoute removes a model route. Mirrors DeleteUpstream: parse + delete
+// + audit. The litellm-side model is managed via upstream sync, so deleting the
+// route record only drops the backend mapping.
+func (r *mutationResolver) DeleteModelRoute(ctx context.Context, id string) (bool, error) {
+	rid, err := uuid.Parse(id)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid id")
+	}
+	if err := r.Ent.ModelRoute.DeleteOneID(rid).Exec(ctx); err != nil {
+		return false, err
+	}
+	r.audit(ctx, "model_route.delete", "model_route", id, true, actorID(auth.FromContext(ctx)))
+	return true, nil
+}
+
 // SetRouterTier maps a difficulty tier to a model alias and re-syncs the litellm
 // Complexity Router: simple questions → cheap model, hard → strong model.
 func (r *mutationResolver) SetRouterTier(ctx context.Context, tier model.RouterTierLevel, modelAlias string) (*model.RouterTier, error) {

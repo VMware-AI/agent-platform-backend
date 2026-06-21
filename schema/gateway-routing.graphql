@@ -102,6 +102,7 @@ extend type Mutation {
   deleteUpstream(id: ID!): Boolean! @hasPermission(perm: "route:manage")
   upsertModelRoute(input: UpsertModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
   setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute! @hasPermission(perm: "route:manage")
+  deleteModelRoute(id: ID!): Boolean! @hasPermission(perm: "route:manage")
 
   # The difficulty router: map a tier to a model alias → syncs litellm Complexity Router.
   setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier! @hasPermission(perm: "route:manage")

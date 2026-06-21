@@ -109,3 +109,35 @@ func TestRegisterAndTestGatewayConnection(t *testing.T) {
 		t.Fatalf("status = %v, want connected", st)
 	}
 }
+
+func TestDeleteModelRoute(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	mr := &mutationResolver{r}
+	qr := &queryResolver{r}
+	ctx := adminCtx()
+
+	mrte, err := mr.UpsertModelRoute(ctx, model.UpsertModelRouteInput{
+		Name: "smart", ModelAlias: "smart", Upstreams: []string{"tier-fast"},
+	})
+	if err != nil {
+		t.Fatalf("UpsertModelRoute: %v", err)
+	}
+
+	if _, err := mr.DeleteModelRoute(ctx, "not-a-uuid"); err == nil {
+		t.Fatal("expected error for invalid id")
+	}
+
+	ok, err := mr.DeleteModelRoute(ctx, mrte.ID)
+	if err != nil || !ok {
+		t.Fatalf("DeleteModelRoute: ok=%v err=%v", ok, err)
+	}
+
+	routes, err := qr.ModelRoutes(ctx)
+	if err != nil {
+		t.Fatalf("ModelRoutes: %v", err)
+	}
+	if len(routes) != 0 {
+		t.Fatalf("expected route deleted, got %d", len(routes))
+	}
+}
