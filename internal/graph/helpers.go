@@ -97,6 +97,40 @@ func (r *Resolver) assertAgentConfigWritable(ctx context.Context, id uuid.UUID) 
 	return nil
 }
 
+// assertRoleWritable enforces the tenant 404 oracle for Role mutations: a
+// tenant-admin may modify only their own tenant's roles; system/other-tenant
+// roles read as missing.
+func (r *Resolver) assertRoleWritable(ctx context.Context, id uuid.UUID) error {
+	role0, err := r.Ent.Role.Get(ctx, id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return notFoundErr("role")
+		}
+		return err
+	}
+	if !writeAllowed(ctx, role0.TenantID) {
+		return notFoundErr("role")
+	}
+	return nil
+}
+
+// assertUserInCallerTenant enforces that a target user is in the caller's tenant
+// (admin: any). Keeps a tenant-admin from acting on users outside their tenant
+// (cross-tenant role assignment, etc.) — the user reads as missing otherwise.
+func (r *Resolver) assertUserInCallerTenant(ctx context.Context, id uuid.UUID) error {
+	u, err := r.Ent.User.Get(ctx, id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return notFoundErr("user")
+		}
+		return err
+	}
+	if !writeAllowed(ctx, u.TenantID) {
+		return notFoundErr("user")
+	}
+	return nil
+}
+
 // writeTenant decides which tenant a newly created tenant-scoped resource should
 // be stamped with (LLD-10 §1.6 STAMP). A caller with a tenant (tenant-admin or a
 // regular user) always stamps their own tenant — they cannot create cross-tenant

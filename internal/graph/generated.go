@@ -3229,9 +3229,9 @@ extend type Mutation {
   deleteCustomRole(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
   upsertPermission(key: String!, description: String): Permission! @hasRole(any: [admin])
   # Replace the role's permission set (the matrix row).
-  setRolePermissions(roleId: ID!, permissionKeys: [String!]!): CustomRole! @hasRole(any: [admin])
-  assignUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin])
-  removeUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin])
+  setRolePermissions(roleId: ID!, permissionKeys: [String!]!): CustomRole! @hasRole(any: [admin, tenant_admin])
+  assignUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
+  removeUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
 }
 `, BuiltIn: false},
 	{Name: "../../schema/resourcepool.graphql", Input: `# Resource pool (vCenter) registration + inventory. See LLD-03 / LLD-06, 0619 第13页.
@@ -10494,7 +10494,7 @@ func (ec *executionContext) _Mutation_setRolePermissions(ctx context.Context, fi
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal *model.CustomRole
 					return zeroVal, err
@@ -10556,7 +10556,7 @@ func (ec *executionContext) _Mutation_assignUserRole(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
@@ -10618,7 +10618,7 @@ func (ec *executionContext) _Mutation_removeUserRole(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err

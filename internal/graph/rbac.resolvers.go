@@ -92,6 +92,9 @@ func (r *mutationResolver) SetRolePermissions(ctx context.Context, roleID string
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid roleId")
 	}
+	if err := r.assertRoleWritable(ctx, rid); err != nil {
+		return nil, err
+	}
 	permIDs := make([]uuid.UUID, 0, len(permissionKeys))
 	for _, key := range permissionKeys {
 		p, err := r.Ent.Permission.Query().Where(permission.Key(key)).Only(ctx)
@@ -122,6 +125,15 @@ func (r *mutationResolver) AssignUserRole(ctx context.Context, userID string, ro
 	if err != nil {
 		return false, gqlerror.Errorf("invalid roleId")
 	}
+	// Tenant guards (LLD-10): a tenant-admin may only assign their own tenant's
+	// role to a user in their own tenant — cross-tenant role or user reads as
+	// missing (no escalation, no existence oracle).
+	if err := r.assertRoleWritable(ctx, rid); err != nil {
+		return false, err
+	}
+	if err := r.assertUserInCallerTenant(ctx, uid); err != nil {
+		return false, err
+	}
 	if err := r.Ent.User.UpdateOneID(uid).AddRoleIDs(rid).Exec(ctx); err != nil {
 		return false, err
 	}
@@ -139,6 +151,12 @@ func (r *mutationResolver) RemoveUserRole(ctx context.Context, userID string, ro
 	rid, err := uuid.Parse(roleID)
 	if err != nil {
 		return false, gqlerror.Errorf("invalid roleId")
+	}
+	if err := r.assertRoleWritable(ctx, rid); err != nil {
+		return false, err
+	}
+	if err := r.assertUserInCallerTenant(ctx, uid); err != nil {
+		return false, err
 	}
 	if err := r.Ent.User.UpdateOneID(uid).RemoveRoleIDs(rid).Exec(ctx); err != nil {
 		return false, err

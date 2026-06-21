@@ -54,3 +54,40 @@ func TestCrossTenant_Write404Oracle(t *testing.T) {
 		t.Fatal("deleting a missing artifact must fail the same way")
 	}
 }
+
+// TestCrossTenant_RBACMutations verifies the role/user guards on
+// setRolePermissions / assignUserRole / removeUserRole (LLD-10 ①): a tenant-admin
+// cannot touch another tenant's role or user.
+func TestCrossTenant_RBACMutations(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := context.Background()
+	tA, tB := uuid.New(), uuid.New()
+	mr := &mutationResolver{r}
+
+	roleB := r.Ent.Role.Create().SetName("rb").SetTenantID(tB).SaveX(ctx)
+	roleA := r.Ent.Role.Create().SetName("ra").SetTenantID(tA).SaveX(ctx)
+	userB := r.Ent.User.Create().SetUsername("ub2").SetEmail("ub2@x.io").SetPasswordHash("h").SetTenantID(tB).SaveX(ctx)
+	userA := r.Ent.User.Create().SetUsername("ua2").SetEmail("ua2@x.io").SetPasswordHash("h").SetTenantID(tA).SaveX(ctx)
+
+	taCtx := tenantAdminCtx(uuid.NewString(), tA.String())
+
+	if _, err := mr.SetRolePermissions(taCtx, roleB.ID.String(), []string{"audit:view"}); err == nil {
+		t.Fatal("setRolePermissions on cross-tenant role must fail")
+	}
+	if _, err := mr.SetRolePermissions(taCtx, roleA.ID.String(), []string{"audit:view"}); err != nil {
+		t.Fatalf("setRolePermissions own role: %v", err)
+	}
+	if _, err := mr.AssignUserRole(taCtx, userA.ID.String(), roleB.ID.String()); err == nil {
+		t.Fatal("assigning a cross-tenant role must fail")
+	}
+	if _, err := mr.AssignUserRole(taCtx, userB.ID.String(), roleA.ID.String()); err == nil {
+		t.Fatal("assigning to a cross-tenant user must fail")
+	}
+	if ok, err := mr.AssignUserRole(taCtx, userA.ID.String(), roleA.ID.String()); err != nil || !ok {
+		t.Fatalf("assign own role to own user: ok=%v err=%v", ok, err)
+	}
+	if ok, err := mr.RemoveUserRole(taCtx, userA.ID.String(), roleA.ID.String()); err != nil || !ok {
+		t.Fatalf("remove own role from own user: ok=%v err=%v", ok, err)
+	}
+}
