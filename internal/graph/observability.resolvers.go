@@ -175,6 +175,9 @@ func (r *queryResolver) RateLimitPolicies(ctx context.Context) ([]model.RateLimi
 			q = q.Where(ratelimitpolicy.TenantID(d.tenant))
 		}
 	}
+	if env, ok := r.envScopeFor(ctx); ok {
+		q = q.Where(ratelimitpolicy.Or(ratelimitpolicy.EnvironmentID(env), ratelimitpolicy.EnvironmentIDIsNil()))
+	}
 	ps, err := q.Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err

@@ -258,6 +258,9 @@ func (r *queryResolver) AgentConfigs(ctx context.Context, agentType *string) ([]
 			q = q.Where(agentconfig.Or(agentconfig.TenantID(d.tenant), agentconfig.TenantIDIsNil()))
 		}
 	}
+	if env, ok := r.envScopeFor(ctx); ok {
+		q = q.Where(agentconfig.Or(agentconfig.EnvironmentID(env), agentconfig.EnvironmentIDIsNil()))
+	}
 	cs, err := q.Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
@@ -293,6 +296,9 @@ func (r *queryResolver) Agents(ctx context.Context) ([]model.Agent, error) {
 		if uid, err := uuid.Parse(cu.ID); err == nil {
 			q = q.Where(agent.OwnerUserID(uid))
 		}
+	}
+	if env, ok := r.envScopeFor(ctx); ok { // soft env filter, after tenant (LLD-10 §2.3)
+		q = q.Where(agent.Or(agent.EnvironmentID(env), agent.EnvironmentIDIsNil()))
 	}
 	as, err := q.Order(orderNewest).All(ctx)
 	if err != nil {

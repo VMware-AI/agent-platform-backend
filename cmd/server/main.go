@@ -131,6 +131,7 @@ func main() {
 		LoginLimiter:    loginLimiter,
 		AgentMgr:        agentMgr,
 		ControlPlaneURL: os.Getenv("CONTROL_PLANE_URL"),
+		EnvScopeEnabled: cfg.EnvScopeEnabled,
 	}
 	resolver.EnablePermissionCache(60 * time.Second)
 
@@ -170,7 +171,7 @@ func main() {
 	srv.SetRecoverFunc(graph.RecoverFunc)
 
 	mux := http.NewServeMux()
-	mux.Handle("/query", httpx.CSRF(cfg.AllowedOrigins)(auth.SessionMiddleware(sessions)(srv)))
+	mux.Handle("/query", httpx.CSRF(cfg.AllowedOrigins)(auth.SessionMiddleware(sessions)(httpx.Environment(srv))))
 	// Daemon-facing REST (LLD-08): bearer-authenticated, mounted OUTSIDE the CSRF +
 	// session middleware (machine client, no cookies/Origin). Still inside the
 	// RequestLogger wrap below.

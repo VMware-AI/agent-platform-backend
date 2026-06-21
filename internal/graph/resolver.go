@@ -61,6 +61,9 @@ type Resolver struct {
 	// ControlPlaneURL is the backend base URL injected into VMs for the daemon's
 	// heartbeat/enroll calls (LLD-08).
 	ControlPlaneURL string
+	// EnvScopeEnabled turns on env_scope soft filtering (LLD-10 §2.3); OFF by
+	// default until the frontend X-Environment contract is live.
+	EnvScopeEnabled bool
 	// LoginLimiter throttles failed logins (brute-force defense); nil disables it.
 	LoginLimiter ratelimit.Limiter
 	// permCache memoizes custom-role permission sets for @hasPermission; nil

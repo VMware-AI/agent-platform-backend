@@ -39,6 +39,10 @@ type Config struct {
 	// AgentUser is the OS user that runs installed agents, substituted for
 	// {{AGENT_USER}} in catalog install commands. Defaults to "agent".
 	AgentUser string
+	// EnvScopeEnabled turns on environment (env_scope) filtering on top of tenant
+	// isolation (LLD-10 §2.3). OFF by default — the tables/columns exist but env
+	// filtering only activates once the frontend X-Environment contract is ready.
+	EnvScopeEnabled bool
 }
 
 // Load reads config from the environment and validates it. Fails fast on a
@@ -83,6 +87,7 @@ func Load() (*Config, error) {
 	c.ReconcilePrune = getenv("RECONCILE_PRUNE", "false") == "true"
 	c.AgentPkgBaseURL = strings.TrimRight(os.Getenv("AGENT_PKG_BASE_URL"), "/")
 	c.AgentUser = getenv("AGENT_USER", "agent")
+	c.EnvScopeEnabled = getenv("ENV_SCOPE_ENABLED", "false") == "true"
 	return c, nil
 }
 

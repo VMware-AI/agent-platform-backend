@@ -212,6 +212,9 @@ func (r *queryResolver) Artifacts(ctx context.Context) ([]model.Artifact, error)
 			q = q.Where(artifact.Or(artifact.TenantID(d.tenant), artifact.TenantIDIsNil()))
 		}
 	}
+	if env, ok := r.envScopeFor(ctx); ok {
+		q = q.Where(artifact.Or(artifact.EnvironmentID(env), artifact.EnvironmentIDIsNil()))
+	}
 	as, err := q.Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
@@ -233,6 +236,9 @@ func (r *queryResolver) ArtifactVersions(ctx context.Context, name string) ([]mo
 		} else {
 			q = q.Where(artifact.Or(artifact.TenantID(d.tenant), artifact.TenantIDIsNil()))
 		}
+	}
+	if env, ok := r.envScopeFor(ctx); ok {
+		q = q.Where(artifact.Or(artifact.EnvironmentID(env), artifact.EnvironmentIDIsNil()))
 	}
 	as, err := q.Order(orderNewest).All(ctx)
 	if err != nil {

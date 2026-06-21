@@ -158,6 +158,18 @@ func (r *Resolver) tenantMemberIDs(ctx context.Context, tenant uuid.UUID) ([]uui
 	return r.Ent.User.Query().Where(user.TenantID(tenant)).IDs(ctx)
 }
 
+// envScopeFor returns the environment to soft-filter a query by, and ok=true
+// only when env_scope is enabled AND the request carried a valid X-Environment
+// (LLD-10 §2.3). It is applied AFTER tenant_scope (hard boundary) as
+// `env_id == env OR env_id IS NULL` (NULL = tenant-level, visible in any env).
+// Disabled by default → ok=false → callers add no env predicate (no-op).
+func (r *Resolver) envScopeFor(ctx context.Context) (uuid.UUID, bool) {
+	if !r.EnvScopeEnabled {
+		return uuid.Nil, false
+	}
+	return httpx.EnvironmentFromContext(ctx)
+}
+
 // contentScopeFor confines a browsable resource to the caller's tenant PLUS
 // platform-global rows (tenant_id NULL) — the hybrid model for content like
 // AgentConfig/Artifact (LLD-10 §9: built-in platform items are NULL/global

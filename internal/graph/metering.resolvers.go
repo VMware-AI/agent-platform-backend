@@ -60,6 +60,9 @@ func (r *queryResolver) TokenUsage(ctx context.Context, userID *string, page *mo
 			q = q.Where(tokenusage.TenantID(d.tenant))
 		}
 	}
+	if env, ok := r.envScopeFor(ctx); ok {
+		q = q.Where(tokenusage.Or(tokenusage.EnvironmentID(env), tokenusage.EnvironmentIDIsNil()))
+	}
 	limit, offset := pageBounds(page)
 	rows, err := q.Order(orderNewest).Limit(limit).Offset(offset).All(ctx)
 	if err != nil {
@@ -88,6 +91,9 @@ func (r *queryResolver) MeteringSummary(ctx context.Context, userID *string) (*m
 		} else {
 			q = q.Where(tokenusage.TenantID(d.tenant))
 		}
+	}
+	if env, ok := r.envScopeFor(ctx); ok {
+		q = q.Where(tokenusage.Or(tokenusage.EnvironmentID(env), tokenusage.EnvironmentIDIsNil()))
 	}
 	// Per-model breakdown, pushed down (low cardinality); totals summed from it.
 	var byModel []struct {
