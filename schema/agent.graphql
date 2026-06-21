@@ -93,9 +93,9 @@ extend type Mutation {
   setAgentStatus(id: ID!, status: AgentStatus!): Agent!
 
   # Agent config management (智能体配置).
-  createAgentConfig(input: CreateAgentConfigInput!): AgentConfig! @hasRole(any: [admin])
-  updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig! @hasRole(any: [admin])
-  deleteAgentConfig(id: ID!): Boolean! @hasRole(any: [admin])
+  createAgentConfig(input: CreateAgentConfigInput!): AgentConfig! @hasRole(any: [admin, tenant_admin])
+  updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig! @hasRole(any: [admin, tenant_admin])
+  deleteAgentConfig(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
   # Mark this config the default for its agent type (unsets others of that type).
-  setDefaultAgentConfig(id: ID!): AgentConfig! @hasRole(any: [admin])
+  setDefaultAgentConfig(id: ID!): AgentConfig! @hasRole(any: [admin, tenant_admin])
 }

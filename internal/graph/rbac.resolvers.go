@@ -40,6 +40,18 @@ func (r *mutationResolver) DeleteCustomRole(ctx context.Context, id string) (boo
 	if err != nil {
 		return false, gqlerror.Errorf("invalid id")
 	}
+	// Tenant 404 oracle (LLD-10 §1.5): a tenant-admin may delete only their own
+	// tenant's roles; system/other-tenant roles read as missing.
+	role0, err := r.Ent.Role.Get(ctx, rid)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return false, notFoundErr("role")
+		}
+		return false, err
+	}
+	if !writeAllowed(ctx, role0.TenantID) {
+		return false, notFoundErr("role")
+	}
 	if err := r.Ent.Role.DeleteOneID(rid).Exec(ctx); err != nil {
 		return false, err
 	}

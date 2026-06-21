@@ -57,6 +57,46 @@ func tenantScopeFor(ctx context.Context) tenantScopeDecision {
 	return tenantScopeDecision{apply: true, denyAll: true}
 }
 
+// writeAllowed reports whether the caller may mutate (update/delete) a row owned
+// by rowTenant (LLD-10 §1.5 404 oracle). admin: any row. A tenant-scoped caller:
+// only rows in their own tenant — NOT platform (NULL-tenant) rows, and never
+// another tenant's. Callers translate a false result into notFoundErr so a
+// cross-tenant row is indistinguishable from a missing one (no existence oracle).
+func writeAllowed(ctx context.Context, rowTenant *uuid.UUID) bool {
+	cu := auth.FromContext(ctx)
+	if cu == nil {
+		return false
+	}
+	if cu.Role == auth.RoleAdmin {
+		return true
+	}
+	if cu.TenantID == "" {
+		return false
+	}
+	tid, err := uuid.Parse(cu.TenantID)
+	if err != nil {
+		return false
+	}
+	return rowTenant != nil && *rowTenant == tid
+}
+
+// assertAgentConfigWritable enforces the tenant 404 oracle for AgentConfig
+// update/delete: a cross-tenant or platform row reads as missing to a tenant
+// caller (no existence oracle).
+func (r *Resolver) assertAgentConfigWritable(ctx context.Context, id uuid.UUID) error {
+	cfg, err := r.Ent.AgentConfig.Get(ctx, id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return notFoundErr("agent config")
+		}
+		return err
+	}
+	if !writeAllowed(ctx, cfg.TenantID) {
+		return notFoundErr("agent config")
+	}
+	return nil
+}
+
 // writeTenant decides which tenant a newly created tenant-scoped resource should
 // be stamped with (LLD-10 §1.6 STAMP). A caller with a tenant (tenant-admin or a
 // regular user) always stamps their own tenant — they cannot create cross-tenant

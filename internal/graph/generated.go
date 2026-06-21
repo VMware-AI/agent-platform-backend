@@ -2732,11 +2732,11 @@ extend type Mutation {
   setAgentStatus(id: ID!, status: AgentStatus!): Agent!
 
   # Agent config management (智能体配置).
-  createAgentConfig(input: CreateAgentConfigInput!): AgentConfig! @hasRole(any: [admin])
-  updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig! @hasRole(any: [admin])
-  deleteAgentConfig(id: ID!): Boolean! @hasRole(any: [admin])
+  createAgentConfig(input: CreateAgentConfigInput!): AgentConfig! @hasRole(any: [admin, tenant_admin])
+  updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig! @hasRole(any: [admin, tenant_admin])
+  deleteAgentConfig(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
   # Mark this config the default for its agent type (unsets others of that type).
-  setDefaultAgentConfig(id: ID!): AgentConfig! @hasRole(any: [admin])
+  setDefaultAgentConfig(id: ID!): AgentConfig! @hasRole(any: [admin, tenant_admin])
 }
 `, BuiltIn: false},
 	{Name: "../../schema/content.graphql", Input: `# Content lib (制品库) / Skill hub / Harbor (镜像仓) CRUD. See LLD-06.
@@ -2811,8 +2811,8 @@ extend type Query {
 }
 
 extend type Mutation {
-  upsertArtifact(input: UpsertArtifactInput!): Artifact! @hasRole(any: [admin])
-  deleteArtifact(id: ID!): Boolean! @hasRole(any: [admin])
+  upsertArtifact(input: UpsertArtifactInput!): Artifact! @hasRole(any: [admin, tenant_admin])
+  deleteArtifact(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
   upsertSkill(input: UpsertSkillInput!): Skill! @hasRole(any: [admin])
   deleteSkill(id: ID!): Boolean! @hasRole(any: [admin])
   upsertImage(input: UpsertImageInput!): Image! @hasRole(any: [admin])
@@ -3225,8 +3225,8 @@ extend type Query {
 }
 
 extend type Mutation {
-  createCustomRole(input: CreateCustomRoleInput!): CustomRole! @hasRole(any: [admin])
-  deleteCustomRole(id: ID!): Boolean! @hasRole(any: [admin])
+  createCustomRole(input: CreateCustomRoleInput!): CustomRole! @hasRole(any: [admin, tenant_admin])
+  deleteCustomRole(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
   upsertPermission(key: String!, description: String): Permission! @hasRole(any: [admin])
   # Replace the role's permission set (the matrix row).
   setRolePermissions(roleId: ID!, permissionKeys: [String!]!): CustomRole! @hasRole(any: [admin])
@@ -8406,7 +8406,7 @@ func (ec *executionContext) _Mutation_createAgentConfig(ctx context.Context, fie
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal *model.AgentConfig
 					return zeroVal, err
@@ -8468,7 +8468,7 @@ func (ec *executionContext) _Mutation_updateAgentConfig(ctx context.Context, fie
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal *model.AgentConfig
 					return zeroVal, err
@@ -8530,7 +8530,7 @@ func (ec *executionContext) _Mutation_deleteAgentConfig(ctx context.Context, fie
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
@@ -8592,7 +8592,7 @@ func (ec *executionContext) _Mutation_setDefaultAgentConfig(ctx context.Context,
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal *model.AgentConfig
 					return zeroVal, err
@@ -8654,7 +8654,7 @@ func (ec *executionContext) _Mutation_upsertArtifact(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal *model.Artifact
 					return zeroVal, err
@@ -8716,7 +8716,7 @@ func (ec *executionContext) _Mutation_deleteArtifact(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
@@ -10308,7 +10308,7 @@ func (ec *executionContext) _Mutation_createCustomRole(ctx context.Context, fiel
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal *model.CustomRole
 					return zeroVal, err
@@ -10370,7 +10370,7 @@ func (ec *executionContext) _Mutation_deleteCustomRole(ctx context.Context, fiel
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err

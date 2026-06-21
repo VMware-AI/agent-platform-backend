@@ -95,6 +95,18 @@ func (r *mutationResolver) DeleteArtifact(ctx context.Context, id string) (bool,
 	if err != nil {
 		return false, gqlerror.Errorf("invalid id")
 	}
+	// Tenant 404 oracle (LLD-10 §1.5): a tenant-scoped caller may only delete
+	// their own tenant's artifact; a cross-tenant / platform row reads as missing.
+	art, err := r.Ent.Artifact.Get(ctx, uid)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return false, notFoundErr("artifact")
+		}
+		return false, err
+	}
+	if !writeAllowed(ctx, art.TenantID) {
+		return false, notFoundErr("artifact")
+	}
 	if err := r.Ent.Artifact.DeleteOneID(uid).Exec(ctx); err != nil {
 		return false, err
 	}

@@ -164,6 +164,9 @@ func (r *mutationResolver) UpdateAgentConfig(ctx context.Context, id string, inp
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid id")
 	}
+	if err := r.assertAgentConfigWritable(ctx, cid); err != nil {
+		return nil, err
+	}
 	u := r.Ent.AgentConfig.UpdateOneID(cid)
 	if input.Name != nil {
 		u.SetName(*input.Name)
@@ -187,6 +190,9 @@ func (r *mutationResolver) DeleteAgentConfig(ctx context.Context, id string) (bo
 	if err != nil {
 		return false, gqlerror.Errorf("invalid id")
 	}
+	if err := r.assertAgentConfigWritable(ctx, cid); err != nil {
+		return false, err
+	}
 	if err := r.Ent.AgentConfig.DeleteOneID(cid).Exec(ctx); err != nil {
 		return false, err
 	}
@@ -202,7 +208,13 @@ func (r *mutationResolver) SetDefaultAgentConfig(ctx context.Context, id string)
 	}
 	cfg, err := r.Ent.AgentConfig.Get(ctx, cid)
 	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, notFoundErr("agent config")
+		}
 		return nil, err
+	}
+	if !writeAllowed(ctx, cfg.TenantID) {
+		return nil, notFoundErr("agent config")
 	}
 	if _, err := r.Ent.AgentConfig.Update().
 		Where(agentconfig.AgentType(cfg.AgentType), agentconfig.IDNEQ(cid)).
