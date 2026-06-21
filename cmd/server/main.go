@@ -150,6 +150,9 @@ func main() {
 	srv.AddTransport(transport.POST{})
 	srv.Use(extension.Introspection{})
 	srv.Use(extension.FixedComplexityLimit(200)) // guard against deep/expensive queries
+	// LLD-01 §6: block all mutations except changePassword/logout while the
+	// caller still has must_change_password set (centralized, fail-closed).
+	srv.AroundFields(graph.RequirePasswordChange())
 	// Mask internal errors/panics behind a generic message + logged correlation id
 	// so resolver/infra detail never reaches the client.
 	srv.SetErrorPresenter(graph.ErrorPresenter)
