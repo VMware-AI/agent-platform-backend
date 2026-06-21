@@ -12,6 +12,12 @@ type Agent func(*sql.Selector)
 // AgentConfig is the predicate function for agentconfig builders.
 type AgentConfig func(*sql.Selector)
 
+// AgentEnrollment is the predicate function for agentenrollment builders.
+type AgentEnrollment func(*sql.Selector)
+
+// AgentHeartbeat is the predicate function for agentheartbeat builders.
+type AgentHeartbeat func(*sql.Selector)
+
 // AgentTemplate is the predicate function for agenttemplate builders.
 type AgentTemplate func(*sql.Selector)
 
@@ -50,6 +56,9 @@ type ResourcePool func(*sql.Selector)
 
 // Role is the predicate function for role builders.
 type Role func(*sql.Selector)
+
+// RotationCommand is the predicate function for rotationcommand builders.
+type RotationCommand func(*sql.Selector)
 
 // RouterTier is the predicate function for routertier builders.
 type RouterTier func(*sql.Selector)

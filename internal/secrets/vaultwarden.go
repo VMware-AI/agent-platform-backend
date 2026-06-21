@@ -1,6 +1,7 @@
 package secrets
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -84,4 +85,49 @@ func (v *VaultwardenResolver) Resolve(ctx context.Context, ref string) (Credenti
 		}
 	}
 	return cred, nil
+}
+
+// bwCreated is the subset of `bw serve` create-item response we consume.
+type bwCreated struct {
+	Success bool `json:"success"`
+	Data    struct {
+		ID string `json:"id"`
+	} `json:"data"`
+}
+
+// Put creates a login item via `bw serve` and returns its "vault://<id>" ref
+// (LLD-08 §6). Used to persist a rotated agent UI password so the platform DB
+// only ever stores the pointer, never the plaintext.
+func (v *VaultwardenResolver) Put(ctx context.Context, name string, cred Credential) (string, error) {
+	payload := map[string]any{
+		"type":  1, // login
+		"name":  name,
+		"login": map[string]string{"username": cred.Username, "password": cred.Password},
+	}
+	buf, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, v.baseURL+"/object/item", bytes.NewReader(buf))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := v.http.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("vaultwarden put: %w", err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("vaultwarden put: status %d: %s", resp.StatusCode, string(body))
+	}
+	var created bwCreated
+	if err := json.Unmarshal(body, &created); err != nil {
+		return "", fmt.Errorf("vaultwarden put: decode: %w", err)
+	}
+	if !created.Success || created.Data.ID == "" {
+		return "", fmt.Errorf("vaultwarden put: bw reported failure or empty id")
+	}
+	return "vault://" + created.Data.ID, nil
 }

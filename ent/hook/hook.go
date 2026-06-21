@@ -33,6 +33,30 @@ func (f AgentConfigFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value,
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AgentConfigMutation", m)
 }
 
+// The AgentEnrollmentFunc type is an adapter to allow the use of ordinary
+// function as AgentEnrollment mutator.
+type AgentEnrollmentFunc func(context.Context, *ent.AgentEnrollmentMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AgentEnrollmentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AgentEnrollmentMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AgentEnrollmentMutation", m)
+}
+
+// The AgentHeartbeatFunc type is an adapter to allow the use of ordinary
+// function as AgentHeartbeat mutator.
+type AgentHeartbeatFunc func(context.Context, *ent.AgentHeartbeatMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AgentHeartbeatFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AgentHeartbeatMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AgentHeartbeatMutation", m)
+}
+
 // The AgentTemplateFunc type is an adapter to allow the use of ordinary
 // function as AgentTemplate mutator.
 type AgentTemplateFunc func(context.Context, *ent.AgentTemplateMutation) (ent.Value, error)
@@ -187,6 +211,18 @@ func (f RoleFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error)
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RoleMutation", m)
+}
+
+// The RotationCommandFunc type is an adapter to allow the use of ordinary
+// function as RotationCommand mutator.
+type RotationCommandFunc func(context.Context, *ent.RotationCommandMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f RotationCommandFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.RotationCommandMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RotationCommandMutation", m)
 }
 
 // The RouterTierFunc type is an adapter to allow the use of ordinary

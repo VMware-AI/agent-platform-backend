@@ -63,3 +63,34 @@ func TestVaultwardenResolver(t *testing.T) {
 		t.Fatalf("missing item want ErrNotFound, got %v", err)
 	}
 }
+
+func TestStaticResolver_PutThenResolve(t *testing.T) {
+	s := NewStaticResolver(nil)
+	ref, err := s.Put(context.Background(), "agent-ui/vm-1", Credential{Username: "agent", Password: "p@ss"})
+	if err != nil {
+		t.Fatalf("Put: %v", err)
+	}
+	if ref == "" {
+		t.Fatal("Put returned empty ref")
+	}
+	got, err := s.Resolve(context.Background(), ref)
+	if err != nil {
+		t.Fatalf("Resolve(%q): %v", ref, err)
+	}
+	if got.Username != "agent" || got.Password != "p@ss" {
+		t.Fatalf("round-trip mismatch: %+v", got)
+	}
+	// distinct refs for distinct puts
+	ref2, _ := s.Put(context.Background(), "agent-ui/vm-1", Credential{Password: "x"})
+	if ref2 == ref {
+		t.Fatal("Put should mint a distinct ref each call")
+	}
+}
+
+// VaultwardenResolver and StaticResolver must both satisfy Resolver + Store.
+var (
+	_ Resolver = (*VaultwardenResolver)(nil)
+	_ Store    = (*VaultwardenResolver)(nil)
+	_ Resolver = (*StaticResolver)(nil)
+	_ Store    = (*StaticResolver)(nil)
+)

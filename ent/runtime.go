@@ -7,6 +7,8 @@ import (
 
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agentconfig"
+	"github.com/VMware-AI/agent-platform-backend/ent/agentenrollment"
+	"github.com/VMware-AI/agent-platform-backend/ent/agentheartbeat"
 	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
 	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
@@ -20,6 +22,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/ent/role"
+	"github.com/VMware-AI/agent-platform-backend/ent/rotationcommand"
 	"github.com/VMware-AI/agent-platform-backend/ent/routertier"
 	"github.com/VMware-AI/agent-platform-backend/ent/schema"
 	"github.com/VMware-AI/agent-platform-backend/ent/skill"
@@ -93,6 +96,39 @@ func init() {
 	agentconfigDescID := agentconfigFields[0].Descriptor()
 	// agentconfig.DefaultID holds the default value on creation for the id field.
 	agentconfig.DefaultID = agentconfigDescID.Default.(func() uuid.UUID)
+	agentenrollmentMixin := schema.AgentEnrollment{}.Mixin()
+	agentenrollmentMixinFields0 := agentenrollmentMixin[0].Fields()
+	_ = agentenrollmentMixinFields0
+	agentenrollmentFields := schema.AgentEnrollment{}.Fields()
+	_ = agentenrollmentFields
+	// agentenrollmentDescCreatedAt is the schema descriptor for created_at field.
+	agentenrollmentDescCreatedAt := agentenrollmentMixinFields0[0].Descriptor()
+	// agentenrollment.DefaultCreatedAt holds the default value on creation for the created_at field.
+	agentenrollment.DefaultCreatedAt = agentenrollmentDescCreatedAt.Default.(func() time.Time)
+	// agentenrollmentDescUpdatedAt is the schema descriptor for updated_at field.
+	agentenrollmentDescUpdatedAt := agentenrollmentMixinFields0[1].Descriptor()
+	// agentenrollment.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	agentenrollment.DefaultUpdatedAt = agentenrollmentDescUpdatedAt.Default.(func() time.Time)
+	// agentenrollment.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	agentenrollment.UpdateDefaultUpdatedAt = agentenrollmentDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// agentenrollmentDescVMID is the schema descriptor for vm_id field.
+	agentenrollmentDescVMID := agentenrollmentFields[2].Descriptor()
+	// agentenrollment.VMIDValidator is a validator for the "vm_id" field. It is called by the builders before save.
+	agentenrollment.VMIDValidator = agentenrollmentDescVMID.Validators[0].(func(string) error)
+	// agentenrollmentDescID is the schema descriptor for id field.
+	agentenrollmentDescID := agentenrollmentFields[0].Descriptor()
+	// agentenrollment.DefaultID holds the default value on creation for the id field.
+	agentenrollment.DefaultID = agentenrollmentDescID.Default.(func() uuid.UUID)
+	agentheartbeatFields := schema.AgentHeartbeat{}.Fields()
+	_ = agentheartbeatFields
+	// agentheartbeatDescReceivedAt is the schema descriptor for received_at field.
+	agentheartbeatDescReceivedAt := agentheartbeatFields[3].Descriptor()
+	// agentheartbeat.DefaultReceivedAt holds the default value on creation for the received_at field.
+	agentheartbeat.DefaultReceivedAt = agentheartbeatDescReceivedAt.Default.(func() time.Time)
+	// agentheartbeatDescID is the schema descriptor for id field.
+	agentheartbeatDescID := agentheartbeatFields[0].Descriptor()
+	// agentheartbeat.DefaultID holds the default value on creation for the id field.
+	agentheartbeat.DefaultID = agentheartbeatDescID.Default.(func() uuid.UUID)
 	agenttemplateMixin := schema.AgentTemplate{}.Mixin()
 	agenttemplateMixinFields0 := agenttemplateMixin[0].Fields()
 	_ = agenttemplateMixinFields0
@@ -451,6 +487,29 @@ func init() {
 	roleDescID := roleFields[0].Descriptor()
 	// role.DefaultID holds the default value on creation for the id field.
 	role.DefaultID = roleDescID.Default.(func() uuid.UUID)
+	rotationcommandMixin := schema.RotationCommand{}.Mixin()
+	rotationcommandMixinFields0 := rotationcommandMixin[0].Fields()
+	_ = rotationcommandMixinFields0
+	rotationcommandFields := schema.RotationCommand{}.Fields()
+	_ = rotationcommandFields
+	// rotationcommandDescCreatedAt is the schema descriptor for created_at field.
+	rotationcommandDescCreatedAt := rotationcommandMixinFields0[0].Descriptor()
+	// rotationcommand.DefaultCreatedAt holds the default value on creation for the created_at field.
+	rotationcommand.DefaultCreatedAt = rotationcommandDescCreatedAt.Default.(func() time.Time)
+	// rotationcommandDescUpdatedAt is the schema descriptor for updated_at field.
+	rotationcommandDescUpdatedAt := rotationcommandMixinFields0[1].Descriptor()
+	// rotationcommand.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	rotationcommand.DefaultUpdatedAt = rotationcommandDescUpdatedAt.Default.(func() time.Time)
+	// rotationcommand.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	rotationcommand.UpdateDefaultUpdatedAt = rotationcommandDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// rotationcommandDescCommandID is the schema descriptor for command_id field.
+	rotationcommandDescCommandID := rotationcommandFields[1].Descriptor()
+	// rotationcommand.CommandIDValidator is a validator for the "command_id" field. It is called by the builders before save.
+	rotationcommand.CommandIDValidator = rotationcommandDescCommandID.Validators[0].(func(string) error)
+	// rotationcommandDescID is the schema descriptor for id field.
+	rotationcommandDescID := rotationcommandFields[0].Descriptor()
+	// rotationcommand.DefaultID holds the default value on creation for the id field.
+	rotationcommand.DefaultID = rotationcommandDescID.Default.(func() uuid.UUID)
 	routertierMixin := schema.RouterTier{}.Mixin()
 	routertierMixinFields0 := routertierMixin[0].Fields()
 	_ = routertierMixinFields0

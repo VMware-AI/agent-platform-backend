@@ -29,9 +29,19 @@ type Resolver interface {
 	Resolve(ctx context.Context, ref string) (Credential, error)
 }
 
-// StaticResolver resolves refs from an in-memory map (dev/test).
+// Store persists a credential and returns a secret_ref pointer (e.g.
+// "vault://<item-id>"). Used for credentials minted at runtime — e.g. a
+// rotated agent UI password (LLD-08 §6) — so the platform DB only ever holds
+// the pointer, never the plaintext.
+type Store interface {
+	Put(ctx context.Context, name string, cred Credential) (ref string, err error)
+}
+
+// StaticResolver resolves refs from an in-memory map (dev/test). It also
+// implements Store so tests can exercise the rotation write path.
 type StaticResolver struct {
-	m map[string]Credential
+	m   map[string]Credential
+	seq int
 }
 
 // NewStaticResolver returns a resolver backed by the given map (copied).
@@ -49,6 +59,17 @@ func (s *StaticResolver) Resolve(_ context.Context, ref string) (Credential, err
 		return Credential{}, fmt.Errorf("%w: %s", ErrNotFound, ref)
 	}
 	return c, nil
+}
+
+// Put stores the credential under a generated ref (dev/test in-memory Store).
+func (s *StaticResolver) Put(_ context.Context, name string, cred Credential) (string, error) {
+	if s.m == nil {
+		s.m = map[string]Credential{}
+	}
+	s.seq++
+	ref := fmt.Sprintf("vault://%s-%d", name, s.seq)
+	s.m[ref] = cred
+	return ref, nil
 }
 
 // EnvResolver resolves refs of the form "env://USER_VAR,PASS_VAR" (or

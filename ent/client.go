@@ -18,6 +18,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agentconfig"
+	"github.com/VMware-AI/agent-platform-backend/ent/agentenrollment"
+	"github.com/VMware-AI/agent-platform-backend/ent/agentheartbeat"
 	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
 	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
@@ -31,6 +33,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/ent/role"
+	"github.com/VMware-AI/agent-platform-backend/ent/rotationcommand"
 	"github.com/VMware-AI/agent-platform-backend/ent/routertier"
 	"github.com/VMware-AI/agent-platform-backend/ent/skill"
 	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
@@ -49,6 +52,10 @@ type Client struct {
 	Agent *AgentClient
 	// AgentConfig is the client for interacting with the AgentConfig builders.
 	AgentConfig *AgentConfigClient
+	// AgentEnrollment is the client for interacting with the AgentEnrollment builders.
+	AgentEnrollment *AgentEnrollmentClient
+	// AgentHeartbeat is the client for interacting with the AgentHeartbeat builders.
+	AgentHeartbeat *AgentHeartbeatClient
 	// AgentTemplate is the client for interacting with the AgentTemplate builders.
 	AgentTemplate *AgentTemplateClient
 	// Artifact is the client for interacting with the Artifact builders.
@@ -75,6 +82,8 @@ type Client struct {
 	ResourcePool *ResourcePoolClient
 	// Role is the client for interacting with the Role builders.
 	Role *RoleClient
+	// RotationCommand is the client for interacting with the RotationCommand builders.
+	RotationCommand *RotationCommandClient
 	// RouterTier is the client for interacting with the RouterTier builders.
 	RouterTier *RouterTierClient
 	// Skill is the client for interacting with the Skill builders.
@@ -102,6 +111,8 @@ func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.Agent = NewAgentClient(c.config)
 	c.AgentConfig = NewAgentConfigClient(c.config)
+	c.AgentEnrollment = NewAgentEnrollmentClient(c.config)
+	c.AgentHeartbeat = NewAgentHeartbeatClient(c.config)
 	c.AgentTemplate = NewAgentTemplateClient(c.config)
 	c.Artifact = NewArtifactClient(c.config)
 	c.AuditLog = NewAuditLogClient(c.config)
@@ -115,6 +126,7 @@ func (c *Client) init() {
 	c.RequestLog = NewRequestLogClient(c.config)
 	c.ResourcePool = NewResourcePoolClient(c.config)
 	c.Role = NewRoleClient(c.config)
+	c.RotationCommand = NewRotationCommandClient(c.config)
 	c.RouterTier = NewRouterTierClient(c.config)
 	c.Skill = NewSkillClient(c.config)
 	c.Tenant = NewTenantClient(c.config)
@@ -216,6 +228,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		config:            cfg,
 		Agent:             NewAgentClient(cfg),
 		AgentConfig:       NewAgentConfigClient(cfg),
+		AgentEnrollment:   NewAgentEnrollmentClient(cfg),
+		AgentHeartbeat:    NewAgentHeartbeatClient(cfg),
 		AgentTemplate:     NewAgentTemplateClient(cfg),
 		Artifact:          NewArtifactClient(cfg),
 		AuditLog:          NewAuditLogClient(cfg),
@@ -229,6 +243,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		RequestLog:        NewRequestLogClient(cfg),
 		ResourcePool:      NewResourcePoolClient(cfg),
 		Role:              NewRoleClient(cfg),
+		RotationCommand:   NewRotationCommandClient(cfg),
 		RouterTier:        NewRouterTierClient(cfg),
 		Skill:             NewSkillClient(cfg),
 		Tenant:            NewTenantClient(cfg),
@@ -257,6 +272,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		config:            cfg,
 		Agent:             NewAgentClient(cfg),
 		AgentConfig:       NewAgentConfigClient(cfg),
+		AgentEnrollment:   NewAgentEnrollmentClient(cfg),
+		AgentHeartbeat:    NewAgentHeartbeatClient(cfg),
 		AgentTemplate:     NewAgentTemplateClient(cfg),
 		Artifact:          NewArtifactClient(cfg),
 		AuditLog:          NewAuditLogClient(cfg),
@@ -270,6 +287,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		RequestLog:        NewRequestLogClient(cfg),
 		ResourcePool:      NewResourcePoolClient(cfg),
 		Role:              NewRoleClient(cfg),
+		RotationCommand:   NewRotationCommandClient(cfg),
 		RouterTier:        NewRouterTierClient(cfg),
 		Skill:             NewSkillClient(cfg),
 		Tenant:            NewTenantClient(cfg),
@@ -306,10 +324,11 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.Agent, c.AgentConfig, c.AgentTemplate, c.Artifact, c.AuditLog, c.Department,
-		c.GatewayConnection, c.Image, c.Membership, c.ModelRoute, c.Permission,
-		c.RateLimitPolicy, c.RequestLog, c.ResourcePool, c.Role, c.RouterTier, c.Skill,
-		c.Tenant, c.TokenUsage, c.Upstream, c.User, c.VirtualKey,
+		c.Agent, c.AgentConfig, c.AgentEnrollment, c.AgentHeartbeat, c.AgentTemplate,
+		c.Artifact, c.AuditLog, c.Department, c.GatewayConnection, c.Image,
+		c.Membership, c.ModelRoute, c.Permission, c.RateLimitPolicy, c.RequestLog,
+		c.ResourcePool, c.Role, c.RotationCommand, c.RouterTier, c.Skill, c.Tenant,
+		c.TokenUsage, c.Upstream, c.User, c.VirtualKey,
 	} {
 		n.Use(hooks...)
 	}
@@ -319,10 +338,11 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Agent, c.AgentConfig, c.AgentTemplate, c.Artifact, c.AuditLog, c.Department,
-		c.GatewayConnection, c.Image, c.Membership, c.ModelRoute, c.Permission,
-		c.RateLimitPolicy, c.RequestLog, c.ResourcePool, c.Role, c.RouterTier, c.Skill,
-		c.Tenant, c.TokenUsage, c.Upstream, c.User, c.VirtualKey,
+		c.Agent, c.AgentConfig, c.AgentEnrollment, c.AgentHeartbeat, c.AgentTemplate,
+		c.Artifact, c.AuditLog, c.Department, c.GatewayConnection, c.Image,
+		c.Membership, c.ModelRoute, c.Permission, c.RateLimitPolicy, c.RequestLog,
+		c.ResourcePool, c.Role, c.RotationCommand, c.RouterTier, c.Skill, c.Tenant,
+		c.TokenUsage, c.Upstream, c.User, c.VirtualKey,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -335,6 +355,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Agent.mutate(ctx, m)
 	case *AgentConfigMutation:
 		return c.AgentConfig.mutate(ctx, m)
+	case *AgentEnrollmentMutation:
+		return c.AgentEnrollment.mutate(ctx, m)
+	case *AgentHeartbeatMutation:
+		return c.AgentHeartbeat.mutate(ctx, m)
 	case *AgentTemplateMutation:
 		return c.AgentTemplate.mutate(ctx, m)
 	case *ArtifactMutation:
@@ -361,6 +385,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ResourcePool.mutate(ctx, m)
 	case *RoleMutation:
 		return c.Role.mutate(ctx, m)
+	case *RotationCommandMutation:
+		return c.RotationCommand.mutate(ctx, m)
 	case *RouterTierMutation:
 		return c.RouterTier.mutate(ctx, m)
 	case *SkillMutation:
@@ -643,6 +669,272 @@ func (c *AgentConfigClient) mutate(ctx context.Context, m *AgentConfigMutation) 
 		return (&AgentConfigDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown AgentConfig mutation op: %q", m.Op())
+	}
+}
+
+// AgentEnrollmentClient is a client for the AgentEnrollment schema.
+type AgentEnrollmentClient struct {
+	config
+}
+
+// NewAgentEnrollmentClient returns a client for the AgentEnrollment from the given config.
+func NewAgentEnrollmentClient(c config) *AgentEnrollmentClient {
+	return &AgentEnrollmentClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `agentenrollment.Hooks(f(g(h())))`.
+func (c *AgentEnrollmentClient) Use(hooks ...Hook) {
+	c.hooks.AgentEnrollment = append(c.hooks.AgentEnrollment, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `agentenrollment.Intercept(f(g(h())))`.
+func (c *AgentEnrollmentClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AgentEnrollment = append(c.inters.AgentEnrollment, interceptors...)
+}
+
+// Create returns a builder for creating a AgentEnrollment entity.
+func (c *AgentEnrollmentClient) Create() *AgentEnrollmentCreate {
+	mutation := newAgentEnrollmentMutation(c.config, OpCreate)
+	return &AgentEnrollmentCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AgentEnrollment entities.
+func (c *AgentEnrollmentClient) CreateBulk(builders ...*AgentEnrollmentCreate) *AgentEnrollmentCreateBulk {
+	return &AgentEnrollmentCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AgentEnrollmentClient) MapCreateBulk(slice any, setFunc func(*AgentEnrollmentCreate, int)) *AgentEnrollmentCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AgentEnrollmentCreateBulk{err: fmt.Errorf("calling to AgentEnrollmentClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AgentEnrollmentCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AgentEnrollmentCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AgentEnrollment.
+func (c *AgentEnrollmentClient) Update() *AgentEnrollmentUpdate {
+	mutation := newAgentEnrollmentMutation(c.config, OpUpdate)
+	return &AgentEnrollmentUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AgentEnrollmentClient) UpdateOne(_m *AgentEnrollment) *AgentEnrollmentUpdateOne {
+	mutation := newAgentEnrollmentMutation(c.config, OpUpdateOne, withAgentEnrollment(_m))
+	return &AgentEnrollmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AgentEnrollmentClient) UpdateOneID(id uuid.UUID) *AgentEnrollmentUpdateOne {
+	mutation := newAgentEnrollmentMutation(c.config, OpUpdateOne, withAgentEnrollmentID(id))
+	return &AgentEnrollmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AgentEnrollment.
+func (c *AgentEnrollmentClient) Delete() *AgentEnrollmentDelete {
+	mutation := newAgentEnrollmentMutation(c.config, OpDelete)
+	return &AgentEnrollmentDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AgentEnrollmentClient) DeleteOne(_m *AgentEnrollment) *AgentEnrollmentDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AgentEnrollmentClient) DeleteOneID(id uuid.UUID) *AgentEnrollmentDeleteOne {
+	builder := c.Delete().Where(agentenrollment.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AgentEnrollmentDeleteOne{builder}
+}
+
+// Query returns a query builder for AgentEnrollment.
+func (c *AgentEnrollmentClient) Query() *AgentEnrollmentQuery {
+	return &AgentEnrollmentQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAgentEnrollment},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a AgentEnrollment entity by its id.
+func (c *AgentEnrollmentClient) Get(ctx context.Context, id uuid.UUID) (*AgentEnrollment, error) {
+	return c.Query().Where(agentenrollment.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AgentEnrollmentClient) GetX(ctx context.Context, id uuid.UUID) *AgentEnrollment {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *AgentEnrollmentClient) Hooks() []Hook {
+	return c.hooks.AgentEnrollment
+}
+
+// Interceptors returns the client interceptors.
+func (c *AgentEnrollmentClient) Interceptors() []Interceptor {
+	return c.inters.AgentEnrollment
+}
+
+func (c *AgentEnrollmentClient) mutate(ctx context.Context, m *AgentEnrollmentMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AgentEnrollmentCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AgentEnrollmentUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AgentEnrollmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AgentEnrollmentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown AgentEnrollment mutation op: %q", m.Op())
+	}
+}
+
+// AgentHeartbeatClient is a client for the AgentHeartbeat schema.
+type AgentHeartbeatClient struct {
+	config
+}
+
+// NewAgentHeartbeatClient returns a client for the AgentHeartbeat from the given config.
+func NewAgentHeartbeatClient(c config) *AgentHeartbeatClient {
+	return &AgentHeartbeatClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `agentheartbeat.Hooks(f(g(h())))`.
+func (c *AgentHeartbeatClient) Use(hooks ...Hook) {
+	c.hooks.AgentHeartbeat = append(c.hooks.AgentHeartbeat, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `agentheartbeat.Intercept(f(g(h())))`.
+func (c *AgentHeartbeatClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AgentHeartbeat = append(c.inters.AgentHeartbeat, interceptors...)
+}
+
+// Create returns a builder for creating a AgentHeartbeat entity.
+func (c *AgentHeartbeatClient) Create() *AgentHeartbeatCreate {
+	mutation := newAgentHeartbeatMutation(c.config, OpCreate)
+	return &AgentHeartbeatCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AgentHeartbeat entities.
+func (c *AgentHeartbeatClient) CreateBulk(builders ...*AgentHeartbeatCreate) *AgentHeartbeatCreateBulk {
+	return &AgentHeartbeatCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AgentHeartbeatClient) MapCreateBulk(slice any, setFunc func(*AgentHeartbeatCreate, int)) *AgentHeartbeatCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AgentHeartbeatCreateBulk{err: fmt.Errorf("calling to AgentHeartbeatClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AgentHeartbeatCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AgentHeartbeatCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AgentHeartbeat.
+func (c *AgentHeartbeatClient) Update() *AgentHeartbeatUpdate {
+	mutation := newAgentHeartbeatMutation(c.config, OpUpdate)
+	return &AgentHeartbeatUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AgentHeartbeatClient) UpdateOne(_m *AgentHeartbeat) *AgentHeartbeatUpdateOne {
+	mutation := newAgentHeartbeatMutation(c.config, OpUpdateOne, withAgentHeartbeat(_m))
+	return &AgentHeartbeatUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AgentHeartbeatClient) UpdateOneID(id uuid.UUID) *AgentHeartbeatUpdateOne {
+	mutation := newAgentHeartbeatMutation(c.config, OpUpdateOne, withAgentHeartbeatID(id))
+	return &AgentHeartbeatUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AgentHeartbeat.
+func (c *AgentHeartbeatClient) Delete() *AgentHeartbeatDelete {
+	mutation := newAgentHeartbeatMutation(c.config, OpDelete)
+	return &AgentHeartbeatDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AgentHeartbeatClient) DeleteOne(_m *AgentHeartbeat) *AgentHeartbeatDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AgentHeartbeatClient) DeleteOneID(id uuid.UUID) *AgentHeartbeatDeleteOne {
+	builder := c.Delete().Where(agentheartbeat.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AgentHeartbeatDeleteOne{builder}
+}
+
+// Query returns a query builder for AgentHeartbeat.
+func (c *AgentHeartbeatClient) Query() *AgentHeartbeatQuery {
+	return &AgentHeartbeatQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAgentHeartbeat},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a AgentHeartbeat entity by its id.
+func (c *AgentHeartbeatClient) Get(ctx context.Context, id uuid.UUID) (*AgentHeartbeat, error) {
+	return c.Query().Where(agentheartbeat.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AgentHeartbeatClient) GetX(ctx context.Context, id uuid.UUID) *AgentHeartbeat {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *AgentHeartbeatClient) Hooks() []Hook {
+	return c.hooks.AgentHeartbeat
+}
+
+// Interceptors returns the client interceptors.
+func (c *AgentHeartbeatClient) Interceptors() []Interceptor {
+	return c.inters.AgentHeartbeat
+}
+
+func (c *AgentHeartbeatClient) mutate(ctx context.Context, m *AgentHeartbeatMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AgentHeartbeatCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AgentHeartbeatUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AgentHeartbeatUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AgentHeartbeatDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown AgentHeartbeat mutation op: %q", m.Op())
 	}
 }
 
@@ -2423,6 +2715,139 @@ func (c *RoleClient) mutate(ctx context.Context, m *RoleMutation) (Value, error)
 	}
 }
 
+// RotationCommandClient is a client for the RotationCommand schema.
+type RotationCommandClient struct {
+	config
+}
+
+// NewRotationCommandClient returns a client for the RotationCommand from the given config.
+func NewRotationCommandClient(c config) *RotationCommandClient {
+	return &RotationCommandClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `rotationcommand.Hooks(f(g(h())))`.
+func (c *RotationCommandClient) Use(hooks ...Hook) {
+	c.hooks.RotationCommand = append(c.hooks.RotationCommand, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `rotationcommand.Intercept(f(g(h())))`.
+func (c *RotationCommandClient) Intercept(interceptors ...Interceptor) {
+	c.inters.RotationCommand = append(c.inters.RotationCommand, interceptors...)
+}
+
+// Create returns a builder for creating a RotationCommand entity.
+func (c *RotationCommandClient) Create() *RotationCommandCreate {
+	mutation := newRotationCommandMutation(c.config, OpCreate)
+	return &RotationCommandCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of RotationCommand entities.
+func (c *RotationCommandClient) CreateBulk(builders ...*RotationCommandCreate) *RotationCommandCreateBulk {
+	return &RotationCommandCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *RotationCommandClient) MapCreateBulk(slice any, setFunc func(*RotationCommandCreate, int)) *RotationCommandCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &RotationCommandCreateBulk{err: fmt.Errorf("calling to RotationCommandClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*RotationCommandCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &RotationCommandCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for RotationCommand.
+func (c *RotationCommandClient) Update() *RotationCommandUpdate {
+	mutation := newRotationCommandMutation(c.config, OpUpdate)
+	return &RotationCommandUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *RotationCommandClient) UpdateOne(_m *RotationCommand) *RotationCommandUpdateOne {
+	mutation := newRotationCommandMutation(c.config, OpUpdateOne, withRotationCommand(_m))
+	return &RotationCommandUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *RotationCommandClient) UpdateOneID(id uuid.UUID) *RotationCommandUpdateOne {
+	mutation := newRotationCommandMutation(c.config, OpUpdateOne, withRotationCommandID(id))
+	return &RotationCommandUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for RotationCommand.
+func (c *RotationCommandClient) Delete() *RotationCommandDelete {
+	mutation := newRotationCommandMutation(c.config, OpDelete)
+	return &RotationCommandDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *RotationCommandClient) DeleteOne(_m *RotationCommand) *RotationCommandDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *RotationCommandClient) DeleteOneID(id uuid.UUID) *RotationCommandDeleteOne {
+	builder := c.Delete().Where(rotationcommand.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &RotationCommandDeleteOne{builder}
+}
+
+// Query returns a query builder for RotationCommand.
+func (c *RotationCommandClient) Query() *RotationCommandQuery {
+	return &RotationCommandQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeRotationCommand},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a RotationCommand entity by its id.
+func (c *RotationCommandClient) Get(ctx context.Context, id uuid.UUID) (*RotationCommand, error) {
+	return c.Query().Where(rotationcommand.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *RotationCommandClient) GetX(ctx context.Context, id uuid.UUID) *RotationCommand {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *RotationCommandClient) Hooks() []Hook {
+	return c.hooks.RotationCommand
+}
+
+// Interceptors returns the client interceptors.
+func (c *RotationCommandClient) Interceptors() []Interceptor {
+	return c.inters.RotationCommand
+}
+
+func (c *RotationCommandClient) mutate(ctx context.Context, m *RotationCommandMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&RotationCommandCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&RotationCommandUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&RotationCommandUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&RotationCommandDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown RotationCommand mutation op: %q", m.Op())
+	}
+}
+
 // RouterTierClient is a client for the RouterTier schema.
 type RouterTierClient struct {
 	config
@@ -3373,15 +3798,16 @@ func (c *VirtualKeyClient) mutate(ctx context.Context, m *VirtualKeyMutation) (V
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Agent, AgentConfig, AgentTemplate, Artifact, AuditLog, Department,
-		GatewayConnection, Image, Membership, ModelRoute, Permission, RateLimitPolicy,
-		RequestLog, ResourcePool, Role, RouterTier, Skill, Tenant, TokenUsage,
-		Upstream, User, VirtualKey []ent.Hook
+		Agent, AgentConfig, AgentEnrollment, AgentHeartbeat, AgentTemplate, Artifact,
+		AuditLog, Department, GatewayConnection, Image, Membership, ModelRoute,
+		Permission, RateLimitPolicy, RequestLog, ResourcePool, Role, RotationCommand,
+		RouterTier, Skill, Tenant, TokenUsage, Upstream, User, VirtualKey []ent.Hook
 	}
 	inters struct {
-		Agent, AgentConfig, AgentTemplate, Artifact, AuditLog, Department,
-		GatewayConnection, Image, Membership, ModelRoute, Permission, RateLimitPolicy,
-		RequestLog, ResourcePool, Role, RouterTier, Skill, Tenant, TokenUsage,
-		Upstream, User, VirtualKey []ent.Interceptor
+		Agent, AgentConfig, AgentEnrollment, AgentHeartbeat, AgentTemplate, Artifact,
+		AuditLog, Department, GatewayConnection, Image, Membership, ModelRoute,
+		Permission, RateLimitPolicy, RequestLog, ResourcePool, Role, RotationCommand,
+		RouterTier, Skill, Tenant, TokenUsage, Upstream, User,
+		VirtualKey []ent.Interceptor
 	}
 )

@@ -58,6 +58,64 @@ var (
 		Columns:    AgentConfigsColumns,
 		PrimaryKey: []*schema.Column{AgentConfigsColumns[0]},
 	}
+	// AgentEnrollmentsColumns holds the columns for the "agent_enrollments" table.
+	AgentEnrollmentsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "agent_id", Type: field.TypeUUID, Unique: true},
+		{Name: "vm_id", Type: field.TypeString, Unique: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "active", "revoked"}, Default: "pending"},
+		{Name: "enroll_token_hash", Type: field.TypeString, Nullable: true},
+		{Name: "enroll_expires_at", Type: field.TypeTime},
+		{Name: "vm_token_hash", Type: field.TypeString, Nullable: true},
+		{Name: "vm_token_issued_at", Type: field.TypeTime, Nullable: true},
+		{Name: "vm_token_expires_at", Type: field.TypeTime, Nullable: true},
+		{Name: "last_seen_at", Type: field.TypeTime, Nullable: true},
+		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
+	}
+	// AgentEnrollmentsTable holds the schema information for the "agent_enrollments" table.
+	AgentEnrollmentsTable = &schema.Table{
+		Name:       "agent_enrollments",
+		Columns:    AgentEnrollmentsColumns,
+		PrimaryKey: []*schema.Column{AgentEnrollmentsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "agentenrollment_status",
+				Unique:  false,
+				Columns: []*schema.Column{AgentEnrollmentsColumns[5]},
+			},
+		},
+	}
+	// AgentHeartbeatsColumns holds the columns for the "agent_heartbeats" table.
+	AgentHeartbeatsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "agent_id", Type: field.TypeUUID},
+		{Name: "reported_at", Type: field.TypeTime},
+		{Name: "received_at", Type: field.TypeTime},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"ok", "degraded", "error"}},
+		{Name: "agent_version", Type: field.TypeString, Nullable: true},
+		{Name: "rotation_state", Type: field.TypeEnum, Nullable: true, Enums: []string{"idle", "rotating", "failed"}},
+		{Name: "detail", Type: field.TypeJSON, Nullable: true},
+	}
+	// AgentHeartbeatsTable holds the schema information for the "agent_heartbeats" table.
+	AgentHeartbeatsTable = &schema.Table{
+		Name:       "agent_heartbeats",
+		Columns:    AgentHeartbeatsColumns,
+		PrimaryKey: []*schema.Column{AgentHeartbeatsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "agentheartbeat_agent_id",
+				Unique:  false,
+				Columns: []*schema.Column{AgentHeartbeatsColumns[1]},
+			},
+			{
+				Name:    "agentheartbeat_received_at",
+				Unique:  false,
+				Columns: []*schema.Column{AgentHeartbeatsColumns[3]},
+			},
+		},
+	}
 	// AgentTemplatesColumns holds the columns for the "agent_templates" table.
 	AgentTemplatesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -330,6 +388,47 @@ var (
 		Columns:    RolesColumns,
 		PrimaryKey: []*schema.Column{RolesColumns[0]},
 	}
+	// RotationCommandsColumns holds the columns for the "rotation_commands" table.
+	RotationCommandsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "command_id", Type: field.TypeString, Unique: true},
+		{Name: "agent_id", Type: field.TypeUUID},
+		{Name: "kind", Type: field.TypeEnum, Enums: []string{"rotate_ui_password", "rotate_os_password"}},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "dispatched", "acked", "completed", "failed"}, Default: "pending"},
+		{Name: "reason", Type: field.TypeString, Nullable: true},
+		{Name: "dispatched_at", Type: field.TypeTime, Nullable: true},
+		{Name: "acked_at", Type: field.TypeTime, Nullable: true},
+		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "result_fingerprint", Type: field.TypeString, Nullable: true},
+		{Name: "secret_ref", Type: field.TypeString, Nullable: true},
+		{Name: "error", Type: field.TypeString, Nullable: true},
+		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
+	}
+	// RotationCommandsTable holds the schema information for the "rotation_commands" table.
+	RotationCommandsTable = &schema.Table{
+		Name:       "rotation_commands",
+		Columns:    RotationCommandsColumns,
+		PrimaryKey: []*schema.Column{RotationCommandsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "rotationcommand_agent_id",
+				Unique:  false,
+				Columns: []*schema.Column{RotationCommandsColumns[4]},
+			},
+			{
+				Name:    "rotationcommand_status",
+				Unique:  false,
+				Columns: []*schema.Column{RotationCommandsColumns[6]},
+			},
+			{
+				Name:    "rotationcommand_agent_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{RotationCommandsColumns[4], RotationCommandsColumns[6]},
+			},
+		},
+	}
 	// RouterTiersColumns holds the columns for the "router_tiers" table.
 	RouterTiersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -546,6 +645,8 @@ var (
 	Tables = []*schema.Table{
 		AgentsTable,
 		AgentConfigsTable,
+		AgentEnrollmentsTable,
+		AgentHeartbeatsTable,
 		AgentTemplatesTable,
 		ArtifactsTable,
 		AuditLogsTable,
@@ -559,6 +660,7 @@ var (
 		RequestLogsTable,
 		ResourcePoolsTable,
 		RolesTable,
+		RotationCommandsTable,
 		RouterTiersTable,
 		SkillsTable,
 		TenantsTable,

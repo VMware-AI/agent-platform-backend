@@ -14,6 +14,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agentconfig"
+	"github.com/VMware-AI/agent-platform-backend/ent/agentenrollment"
+	"github.com/VMware-AI/agent-platform-backend/ent/agentheartbeat"
 	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
 	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
@@ -27,6 +29,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/ent/role"
+	"github.com/VMware-AI/agent-platform-backend/ent/rotationcommand"
 	"github.com/VMware-AI/agent-platform-backend/ent/routertier"
 	"github.com/VMware-AI/agent-platform-backend/ent/skill"
 	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
@@ -96,6 +99,8 @@ func checkColumn(t, c string) error {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
 			agent.Table:             agent.ValidColumn,
 			agentconfig.Table:       agentconfig.ValidColumn,
+			agentenrollment.Table:   agentenrollment.ValidColumn,
+			agentheartbeat.Table:    agentheartbeat.ValidColumn,
 			agenttemplate.Table:     agenttemplate.ValidColumn,
 			artifact.Table:          artifact.ValidColumn,
 			auditlog.Table:          auditlog.ValidColumn,
@@ -109,6 +114,7 @@ func checkColumn(t, c string) error {
 			requestlog.Table:        requestlog.ValidColumn,
 			resourcepool.Table:      resourcepool.ValidColumn,
 			role.Table:              role.ValidColumn,
+			rotationcommand.Table:   rotationcommand.ValidColumn,
 			routertier.Table:        routertier.ValidColumn,
 			skill.Table:             skill.ValidColumn,
 			tenant.Table:            tenant.ValidColumn,

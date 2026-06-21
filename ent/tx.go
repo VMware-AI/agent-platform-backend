@@ -16,6 +16,10 @@ type Tx struct {
 	Agent *AgentClient
 	// AgentConfig is the client for interacting with the AgentConfig builders.
 	AgentConfig *AgentConfigClient
+	// AgentEnrollment is the client for interacting with the AgentEnrollment builders.
+	AgentEnrollment *AgentEnrollmentClient
+	// AgentHeartbeat is the client for interacting with the AgentHeartbeat builders.
+	AgentHeartbeat *AgentHeartbeatClient
 	// AgentTemplate is the client for interacting with the AgentTemplate builders.
 	AgentTemplate *AgentTemplateClient
 	// Artifact is the client for interacting with the Artifact builders.
@@ -42,6 +46,8 @@ type Tx struct {
 	ResourcePool *ResourcePoolClient
 	// Role is the client for interacting with the Role builders.
 	Role *RoleClient
+	// RotationCommand is the client for interacting with the RotationCommand builders.
+	RotationCommand *RotationCommandClient
 	// RouterTier is the client for interacting with the RouterTier builders.
 	RouterTier *RouterTierClient
 	// Skill is the client for interacting with the Skill builders.
@@ -189,6 +195,8 @@ func (tx *Tx) Client() *Client {
 func (tx *Tx) init() {
 	tx.Agent = NewAgentClient(tx.config)
 	tx.AgentConfig = NewAgentConfigClient(tx.config)
+	tx.AgentEnrollment = NewAgentEnrollmentClient(tx.config)
+	tx.AgentHeartbeat = NewAgentHeartbeatClient(tx.config)
 	tx.AgentTemplate = NewAgentTemplateClient(tx.config)
 	tx.Artifact = NewArtifactClient(tx.config)
 	tx.AuditLog = NewAuditLogClient(tx.config)
@@ -202,6 +210,7 @@ func (tx *Tx) init() {
 	tx.RequestLog = NewRequestLogClient(tx.config)
 	tx.ResourcePool = NewResourcePoolClient(tx.config)
 	tx.Role = NewRoleClient(tx.config)
+	tx.RotationCommand = NewRotationCommandClient(tx.config)
 	tx.RouterTier = NewRouterTierClient(tx.config)
 	tx.Skill = NewSkillClient(tx.config)
 	tx.Tenant = NewTenantClient(tx.config)
