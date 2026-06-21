@@ -115,6 +115,18 @@ func (r *Resolver) canManageDepartment(ctx context.Context, did uuid.UUID) (bool
 // tenantMatches reports whether the caller's tenant equals the row's tenant. Both
 // must be present — a tenant-less caller or untenanted row never matches (fail
 // closed), so a misconfigured tenant-admin manages nothing across the boundary.
+// sameTenant reports whether two nullable tenant references denote the same tenant
+// (both untenanted, or the same id). Keeps a membership from crossing tenants.
+func sameTenant(a, b *uuid.UUID) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
+}
+
 func tenantMatches(callerTenant string, rowTenant *uuid.UUID) bool {
 	if callerTenant == "" || rowTenant == nil {
 		return false
@@ -140,6 +152,25 @@ func (r *mutationResolver) AddMembership(ctx context.Context, userID string, dep
 		return nil, err
 	} else if !ok {
 		return nil, gqlerror.Errorf("forbidden: not a department admin")
+	}
+	// Delegated admins (tenant-admin / dept-admin) may only add a user from the
+	// department's OWN tenant — otherwise a tenant-A admin could pull a tenant-B
+	// user (even as dept-admin) into A. Platform admin may cross tenants.
+	if cu := auth.FromContext(ctx); cu == nil || cu.Role != auth.RoleAdmin {
+		targetUser, err := r.Ent.User.Get(ctx, uid)
+		if err != nil {
+			if ent.IsNotFound(err) {
+				return nil, gqlerror.Errorf("invalid userId")
+			}
+			return nil, err
+		}
+		dept, err := r.Ent.Department.Get(ctx, did)
+		if err != nil {
+			return nil, err
+		}
+		if !sameTenant(dept.TenantID, targetUser.TenantID) {
+			return nil, gqlerror.Errorf("forbidden: user is not in this department's tenant")
+		}
 	}
 	roleStr := "user"
 	if role != nil {
