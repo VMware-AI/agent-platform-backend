@@ -13,6 +13,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/department"
+	"github.com/VMware-AI/agent-platform-backend/ent/environment"
 	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
 	"github.com/VMware-AI/agent-platform-backend/ent/image"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
@@ -228,6 +229,29 @@ func init() {
 	departmentDescID := departmentFields[0].Descriptor()
 	// department.DefaultID holds the default value on creation for the id field.
 	department.DefaultID = departmentDescID.Default.(func() uuid.UUID)
+	environmentMixin := schema.Environment{}.Mixin()
+	environmentMixinFields0 := environmentMixin[0].Fields()
+	_ = environmentMixinFields0
+	environmentFields := schema.Environment{}.Fields()
+	_ = environmentFields
+	// environmentDescCreatedAt is the schema descriptor for created_at field.
+	environmentDescCreatedAt := environmentMixinFields0[0].Descriptor()
+	// environment.DefaultCreatedAt holds the default value on creation for the created_at field.
+	environment.DefaultCreatedAt = environmentDescCreatedAt.Default.(func() time.Time)
+	// environmentDescUpdatedAt is the schema descriptor for updated_at field.
+	environmentDescUpdatedAt := environmentMixinFields0[1].Descriptor()
+	// environment.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	environment.DefaultUpdatedAt = environmentDescUpdatedAt.Default.(func() time.Time)
+	// environment.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	environment.UpdateDefaultUpdatedAt = environmentDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// environmentDescName is the schema descriptor for name field.
+	environmentDescName := environmentFields[2].Descriptor()
+	// environment.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	environment.NameValidator = environmentDescName.Validators[0].(func(string) error)
+	// environmentDescID is the schema descriptor for id field.
+	environmentDescID := environmentFields[0].Descriptor()
+	// environment.DefaultID holds the default value on creation for the id field.
+	environment.DefaultID = environmentDescID.Default.(func() uuid.UUID)
 	gatewayconnectionMixin := schema.GatewayConnection{}.Mixin()
 	gatewayconnectionMixinFields0 := gatewayconnectionMixin[0].Fields()
 	_ = gatewayconnectionMixinFields0
@@ -610,7 +634,7 @@ func init() {
 	// tokenusage.DefaultCost holds the default value on creation for the cost field.
 	tokenusage.DefaultCost = tokenusageDescCost.Default.(float64)
 	// tokenusageDescCreatedAt is the schema descriptor for created_at field.
-	tokenusageDescCreatedAt := tokenusageFields[10].Descriptor()
+	tokenusageDescCreatedAt := tokenusageFields[11].Descriptor()
 	// tokenusage.DefaultCreatedAt holds the default value on creation for the created_at field.
 	tokenusage.DefaultCreatedAt = tokenusageDescCreatedAt.Default.(func() time.Time)
 	// tokenusageDescID is the schema descriptor for id field.

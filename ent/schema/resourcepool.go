@@ -30,5 +30,6 @@ func (ResourcePool) Fields() []ent.Field {
 		field.Int("host_count").NonNegative().Default(0),
 		field.Int("vm_count").NonNegative().Default(0),
 		field.UUID("tenant_id", uuid.UUID{}).Optional().Nillable(),
+		field.UUID("environment_id", uuid.UUID{}).Optional().Nillable(), // LLD-10 env_scope (default off)
 	}
 }

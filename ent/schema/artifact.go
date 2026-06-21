@@ -29,6 +29,7 @@ func (Artifact) Fields() []ent.Field {
 		field.String("sha256").Optional(),
 		field.JSON("metadata", map[string]any{}).Optional(),
 		field.UUID("tenant_id", uuid.UUID{}).Optional().Nillable(),
+		field.UUID("environment_id", uuid.UUID{}).Optional().Nillable(), // LLD-10 env_scope (default off)
 	}
 }
 

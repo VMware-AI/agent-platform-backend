@@ -105,6 +105,18 @@ func (f DepartmentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DepartmentMutation", m)
 }
 
+// The EnvironmentFunc type is an adapter to allow the use of ordinary
+// function as Environment mutator.
+type EnvironmentFunc func(context.Context, *ent.EnvironmentMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f EnvironmentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.EnvironmentMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EnvironmentMutation", m)
+}
+
 // The GatewayConnectionFunc type is an adapter to allow the use of ordinary
 // function as GatewayConnection mutator.
 type GatewayConnectionFunc func(context.Context, *ent.GatewayConnectionMutation) (ent.Value, error)

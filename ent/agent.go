@@ -39,8 +39,10 @@ type Agent struct {
 	// ResourcePoolID holds the value of the "resource_pool_id" field.
 	ResourcePoolID *uuid.UUID `json:"resource_pool_id,omitempty"`
 	// TenantID holds the value of the "tenant_id" field.
-	TenantID     *uuid.UUID `json:"tenant_id,omitempty"`
-	selectValues sql.SelectValues
+	TenantID *uuid.UUID `json:"tenant_id,omitempty"`
+	// EnvironmentID holds the value of the "environment_id" field.
+	EnvironmentID *uuid.UUID `json:"environment_id,omitempty"`
+	selectValues  sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -48,7 +50,7 @@ func (*Agent) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case agent.FieldConfigID, agent.FieldVirtualKeyID, agent.FieldResourcePoolID, agent.FieldTenantID:
+		case agent.FieldConfigID, agent.FieldVirtualKeyID, agent.FieldResourcePoolID, agent.FieldTenantID, agent.FieldEnvironmentID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case agent.FieldName, agent.FieldAgentType, agent.FieldStatus, agent.FieldVMRef:
 			values[i] = new(sql.NullString)
@@ -147,6 +149,13 @@ func (_m *Agent) assignValues(columns []string, values []any) error {
 				_m.TenantID = new(uuid.UUID)
 				*_m.TenantID = *value.S.(*uuid.UUID)
 			}
+		case agent.FieldEnvironmentID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field environment_id", values[i])
+			} else if value.Valid {
+				_m.EnvironmentID = new(uuid.UUID)
+				*_m.EnvironmentID = *value.S.(*uuid.UUID)
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -221,6 +230,11 @@ func (_m *Agent) String() string {
 	builder.WriteString(", ")
 	if v := _m.TenantID; v != nil {
 		builder.WriteString("tenant_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.EnvironmentID; v != nil {
+		builder.WriteString("environment_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteByte(')')

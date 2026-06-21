@@ -30,6 +30,8 @@ const (
 	FieldCorrelationID = "correlation_id"
 	// FieldTenantID holds the string denoting the tenant_id field in the database.
 	FieldTenantID = "tenant_id"
+	// FieldEnvironmentID holds the string denoting the environment_id field in the database.
+	FieldEnvironmentID = "environment_id"
 	// FieldDepartmentID holds the string denoting the department_id field in the database.
 	FieldDepartmentID = "department_id"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -49,6 +51,7 @@ var Columns = []string{
 	FieldCost,
 	FieldCorrelationID,
 	FieldTenantID,
+	FieldEnvironmentID,
 	FieldDepartmentID,
 	FieldCreatedAt,
 }
@@ -128,6 +131,11 @@ func ByCorrelationID(opts ...sql.OrderTermOption) OrderOption {
 // ByTenantID orders the results by the tenant_id field.
 func ByTenantID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTenantID, opts...).ToFunc()
+}
+
+// ByEnvironmentID orders the results by the environment_id field.
+func ByEnvironmentID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEnvironmentID, opts...).ToFunc()
 }
 
 // ByDepartmentID orders the results by the department_id field.

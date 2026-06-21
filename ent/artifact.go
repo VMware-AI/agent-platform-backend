@@ -38,8 +38,10 @@ type Artifact struct {
 	// Metadata holds the value of the "metadata" field.
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// TenantID holds the value of the "tenant_id" field.
-	TenantID     *uuid.UUID `json:"tenant_id,omitempty"`
-	selectValues sql.SelectValues
+	TenantID *uuid.UUID `json:"tenant_id,omitempty"`
+	// EnvironmentID holds the value of the "environment_id" field.
+	EnvironmentID *uuid.UUID `json:"environment_id,omitempty"`
+	selectValues  sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -47,7 +49,7 @@ func (*Artifact) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case artifact.FieldTenantID:
+		case artifact.FieldTenantID, artifact.FieldEnvironmentID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case artifact.FieldMetadata:
 			values[i] = new([]byte)
@@ -141,6 +143,13 @@ func (_m *Artifact) assignValues(columns []string, values []any) error {
 				_m.TenantID = new(uuid.UUID)
 				*_m.TenantID = *value.S.(*uuid.UUID)
 			}
+		case artifact.FieldEnvironmentID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field environment_id", values[i])
+			} else if value.Valid {
+				_m.EnvironmentID = new(uuid.UUID)
+				*_m.EnvironmentID = *value.S.(*uuid.UUID)
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -206,6 +215,11 @@ func (_m *Artifact) String() string {
 	builder.WriteString(", ")
 	if v := _m.TenantID; v != nil {
 		builder.WriteString("tenant_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.EnvironmentID; v != nil {
+		builder.WriteString("environment_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteByte(')')

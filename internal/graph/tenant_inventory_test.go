@@ -23,6 +23,7 @@ var tenantedTables = map[string]bool{
 	"token_usages":        true,
 	"agent_enrollments":   true, // LLD-08
 	"rotation_commands":   true, // LLD-08
+	"environments":        true, // LLD-10 B4 (tenant_id required; env is tenant-owned)
 }
 
 // TestTenantedEntityInventory reflects over ent's compiled schema and asserts the

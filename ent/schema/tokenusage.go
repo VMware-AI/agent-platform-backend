@@ -26,6 +26,7 @@ func (TokenUsage) Fields() []ent.Field {
 		field.Float("cost").Optional().Default(0),
 		field.String("correlation_id").Optional(),
 		field.UUID("tenant_id", uuid.UUID{}).Optional().Nillable(),
+		field.UUID("environment_id", uuid.UUID{}).Optional().Nillable(), // LLD-10 env_scope (default off)
 		field.UUID("department_id", uuid.UUID{}).Optional().Nillable(),
 		field.Time("created_at").Immutable().Default(time.Now),
 	}

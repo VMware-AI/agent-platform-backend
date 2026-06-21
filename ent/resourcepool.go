@@ -41,8 +41,10 @@ type ResourcePool struct {
 	// VMCount holds the value of the "vm_count" field.
 	VMCount int `json:"vm_count,omitempty"`
 	// TenantID holds the value of the "tenant_id" field.
-	TenantID     *uuid.UUID `json:"tenant_id,omitempty"`
-	selectValues sql.SelectValues
+	TenantID *uuid.UUID `json:"tenant_id,omitempty"`
+	// EnvironmentID holds the value of the "environment_id" field.
+	EnvironmentID *uuid.UUID `json:"environment_id,omitempty"`
+	selectValues  sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -50,7 +52,7 @@ func (*ResourcePool) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case resourcepool.FieldTenantID:
+		case resourcepool.FieldTenantID, resourcepool.FieldEnvironmentID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case resourcepool.FieldDatacenterCount, resourcepool.FieldClusterCount, resourcepool.FieldHostCount, resourcepool.FieldVMCount:
 			values[i] = new(sql.NullInt64)
@@ -154,6 +156,13 @@ func (_m *ResourcePool) assignValues(columns []string, values []any) error {
 				_m.TenantID = new(uuid.UUID)
 				*_m.TenantID = *value.S.(*uuid.UUID)
 			}
+		case resourcepool.FieldEnvironmentID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field environment_id", values[i])
+			} else if value.Valid {
+				_m.EnvironmentID = new(uuid.UUID)
+				*_m.EnvironmentID = *value.S.(*uuid.UUID)
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -225,6 +234,11 @@ func (_m *ResourcePool) String() string {
 	builder.WriteString(", ")
 	if v := _m.TenantID; v != nil {
 		builder.WriteString("tenant_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.EnvironmentID; v != nil {
+		builder.WriteString("environment_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteByte(')')

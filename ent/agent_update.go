@@ -192,6 +192,26 @@ func (_u *AgentUpdate) ClearTenantID() *AgentUpdate {
 	return _u
 }
 
+// SetEnvironmentID sets the "environment_id" field.
+func (_u *AgentUpdate) SetEnvironmentID(v uuid.UUID) *AgentUpdate {
+	_u.mutation.SetEnvironmentID(v)
+	return _u
+}
+
+// SetNillableEnvironmentID sets the "environment_id" field if the given value is not nil.
+func (_u *AgentUpdate) SetNillableEnvironmentID(v *uuid.UUID) *AgentUpdate {
+	if v != nil {
+		_u.SetEnvironmentID(*v)
+	}
+	return _u
+}
+
+// ClearEnvironmentID clears the value of the "environment_id" field.
+func (_u *AgentUpdate) ClearEnvironmentID() *AgentUpdate {
+	_u.mutation.ClearEnvironmentID()
+	return _u
+}
+
 // Mutation returns the AgentMutation object of the builder.
 func (_u *AgentUpdate) Mutation() *AgentMutation {
 	return _u.mutation
@@ -315,6 +335,12 @@ func (_u *AgentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.TenantIDCleared() {
 		_spec.ClearField(agent.FieldTenantID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.EnvironmentID(); ok {
+		_spec.SetField(agent.FieldEnvironmentID, field.TypeUUID, value)
+	}
+	if _u.mutation.EnvironmentIDCleared() {
+		_spec.ClearField(agent.FieldEnvironmentID, field.TypeUUID)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
@@ -500,6 +526,26 @@ func (_u *AgentUpdateOne) ClearTenantID() *AgentUpdateOne {
 	return _u
 }
 
+// SetEnvironmentID sets the "environment_id" field.
+func (_u *AgentUpdateOne) SetEnvironmentID(v uuid.UUID) *AgentUpdateOne {
+	_u.mutation.SetEnvironmentID(v)
+	return _u
+}
+
+// SetNillableEnvironmentID sets the "environment_id" field if the given value is not nil.
+func (_u *AgentUpdateOne) SetNillableEnvironmentID(v *uuid.UUID) *AgentUpdateOne {
+	if v != nil {
+		_u.SetEnvironmentID(*v)
+	}
+	return _u
+}
+
+// ClearEnvironmentID clears the value of the "environment_id" field.
+func (_u *AgentUpdateOne) ClearEnvironmentID() *AgentUpdateOne {
+	_u.mutation.ClearEnvironmentID()
+	return _u
+}
+
 // Mutation returns the AgentMutation object of the builder.
 func (_u *AgentUpdateOne) Mutation() *AgentMutation {
 	return _u.mutation
@@ -653,6 +699,12 @@ func (_u *AgentUpdateOne) sqlSave(ctx context.Context) (_node *Agent, err error)
 	}
 	if _u.mutation.TenantIDCleared() {
 		_spec.ClearField(agent.FieldTenantID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.EnvironmentID(); ok {
+		_spec.SetField(agent.FieldEnvironmentID, field.TypeUUID, value)
+	}
+	if _u.mutation.EnvironmentIDCleared() {
+		_spec.ClearField(agent.FieldEnvironmentID, field.TypeUUID)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &Agent{config: _u.config}

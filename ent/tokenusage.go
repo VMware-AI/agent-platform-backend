@@ -34,6 +34,8 @@ type TokenUsage struct {
 	CorrelationID string `json:"correlation_id,omitempty"`
 	// TenantID holds the value of the "tenant_id" field.
 	TenantID *uuid.UUID `json:"tenant_id,omitempty"`
+	// EnvironmentID holds the value of the "environment_id" field.
+	EnvironmentID *uuid.UUID `json:"environment_id,omitempty"`
 	// DepartmentID holds the value of the "department_id" field.
 	DepartmentID *uuid.UUID `json:"department_id,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -46,7 +48,7 @@ func (*TokenUsage) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case tokenusage.FieldAgentID, tokenusage.FieldTenantID, tokenusage.FieldDepartmentID:
+		case tokenusage.FieldAgentID, tokenusage.FieldTenantID, tokenusage.FieldEnvironmentID, tokenusage.FieldDepartmentID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case tokenusage.FieldCost:
 			values[i] = new(sql.NullFloat64)
@@ -129,6 +131,13 @@ func (_m *TokenUsage) assignValues(columns []string, values []any) error {
 				_m.TenantID = new(uuid.UUID)
 				*_m.TenantID = *value.S.(*uuid.UUID)
 			}
+		case tokenusage.FieldEnvironmentID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field environment_id", values[i])
+			} else if value.Valid {
+				_m.EnvironmentID = new(uuid.UUID)
+				*_m.EnvironmentID = *value.S.(*uuid.UUID)
+			}
 		case tokenusage.FieldDepartmentID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field department_id", values[i])
@@ -203,6 +212,11 @@ func (_m *TokenUsage) String() string {
 	builder.WriteString(", ")
 	if v := _m.TenantID; v != nil {
 		builder.WriteString("tenant_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.EnvironmentID; v != nil {
+		builder.WriteString("environment_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")

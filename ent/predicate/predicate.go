@@ -30,6 +30,9 @@ type AuditLog func(*sql.Selector)
 // Department is the predicate function for department builders.
 type Department func(*sql.Selector)
 
+// Environment is the predicate function for environment builders.
+type Environment func(*sql.Selector)
+
 // GatewayConnection is the predicate function for gatewayconnection builders.
 type GatewayConnection func(*sql.Selector)
 

@@ -29,6 +29,7 @@ func (Agent) Fields() []ent.Field {
 		field.UUID("virtual_key_id", uuid.UUID{}).Optional().Nillable(),
 		field.UUID("resource_pool_id", uuid.UUID{}).Optional().Nillable(),
 		field.UUID("tenant_id", uuid.UUID{}).Optional().Nillable(),
+		field.UUID("environment_id", uuid.UUID{}).Optional().Nillable(), // LLD-10 env_scope (default off)
 	}
 }
 

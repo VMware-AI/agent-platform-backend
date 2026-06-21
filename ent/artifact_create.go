@@ -121,6 +121,20 @@ func (_c *ArtifactCreate) SetNillableTenantID(v *uuid.UUID) *ArtifactCreate {
 	return _c
 }
 
+// SetEnvironmentID sets the "environment_id" field.
+func (_c *ArtifactCreate) SetEnvironmentID(v uuid.UUID) *ArtifactCreate {
+	_c.mutation.SetEnvironmentID(v)
+	return _c
+}
+
+// SetNillableEnvironmentID sets the "environment_id" field if the given value is not nil.
+func (_c *ArtifactCreate) SetNillableEnvironmentID(v *uuid.UUID) *ArtifactCreate {
+	if v != nil {
+		_c.SetEnvironmentID(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *ArtifactCreate) SetID(v uuid.UUID) *ArtifactCreate {
 	_c.mutation.SetID(v)
@@ -303,6 +317,10 @@ func (_c *ArtifactCreate) createSpec() (*Artifact, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.TenantID(); ok {
 		_spec.SetField(artifact.FieldTenantID, field.TypeUUID, value)
 		_node.TenantID = &value
+	}
+	if value, ok := _c.mutation.EnvironmentID(); ok {
+		_spec.SetField(artifact.FieldEnvironmentID, field.TypeUUID, value)
+		_node.EnvironmentID = &value
 	}
 	return _node, _spec
 }

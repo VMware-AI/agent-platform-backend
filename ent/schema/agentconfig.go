@@ -22,5 +22,6 @@ func (AgentConfig) Fields() []ent.Field {
 		field.Bool("is_default").Default(false),
 		field.UUID("artifact_id", uuid.UUID{}).Optional().Nillable(), // -> Artifact default_config
 		field.UUID("tenant_id", uuid.UUID{}).Optional().Nillable(),
+		field.UUID("environment_id", uuid.UUID{}).Optional().Nillable(), // LLD-10 env_scope (default off)
 	}
 }

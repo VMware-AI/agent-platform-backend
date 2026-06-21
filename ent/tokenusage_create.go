@@ -117,6 +117,20 @@ func (_c *TokenUsageCreate) SetNillableTenantID(v *uuid.UUID) *TokenUsageCreate 
 	return _c
 }
 
+// SetEnvironmentID sets the "environment_id" field.
+func (_c *TokenUsageCreate) SetEnvironmentID(v uuid.UUID) *TokenUsageCreate {
+	_c.mutation.SetEnvironmentID(v)
+	return _c
+}
+
+// SetNillableEnvironmentID sets the "environment_id" field if the given value is not nil.
+func (_c *TokenUsageCreate) SetNillableEnvironmentID(v *uuid.UUID) *TokenUsageCreate {
+	if v != nil {
+		_c.SetEnvironmentID(*v)
+	}
+	return _c
+}
+
 // SetDepartmentID sets the "department_id" field.
 func (_c *TokenUsageCreate) SetDepartmentID(v uuid.UUID) *TokenUsageCreate {
 	_c.mutation.SetDepartmentID(v)
@@ -314,6 +328,10 @@ func (_c *TokenUsageCreate) createSpec() (*TokenUsage, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.TenantID(); ok {
 		_spec.SetField(tokenusage.FieldTenantID, field.TypeUUID, value)
 		_node.TenantID = &value
+	}
+	if value, ok := _c.mutation.EnvironmentID(); ok {
+		_spec.SetField(tokenusage.FieldEnvironmentID, field.TypeUUID, value)
+		_node.EnvironmentID = &value
 	}
 	if value, ok := _c.mutation.DepartmentID(); ok {
 		_spec.SetField(tokenusage.FieldDepartmentID, field.TypeUUID, value)

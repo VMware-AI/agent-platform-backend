@@ -164,6 +164,26 @@ func (_u *ArtifactUpdate) ClearTenantID() *ArtifactUpdate {
 	return _u
 }
 
+// SetEnvironmentID sets the "environment_id" field.
+func (_u *ArtifactUpdate) SetEnvironmentID(v uuid.UUID) *ArtifactUpdate {
+	_u.mutation.SetEnvironmentID(v)
+	return _u
+}
+
+// SetNillableEnvironmentID sets the "environment_id" field if the given value is not nil.
+func (_u *ArtifactUpdate) SetNillableEnvironmentID(v *uuid.UUID) *ArtifactUpdate {
+	if v != nil {
+		_u.SetEnvironmentID(*v)
+	}
+	return _u
+}
+
+// ClearEnvironmentID clears the value of the "environment_id" field.
+func (_u *ArtifactUpdate) ClearEnvironmentID() *ArtifactUpdate {
+	_u.mutation.ClearEnvironmentID()
+	return _u
+}
+
 // Mutation returns the ArtifactMutation object of the builder.
 func (_u *ArtifactUpdate) Mutation() *ArtifactMutation {
 	return _u.mutation
@@ -291,6 +311,12 @@ func (_u *ArtifactUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.TenantIDCleared() {
 		_spec.ClearField(artifact.FieldTenantID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.EnvironmentID(); ok {
+		_spec.SetField(artifact.FieldEnvironmentID, field.TypeUUID, value)
+	}
+	if _u.mutation.EnvironmentIDCleared() {
+		_spec.ClearField(artifact.FieldEnvironmentID, field.TypeUUID)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
@@ -445,6 +471,26 @@ func (_u *ArtifactUpdateOne) SetNillableTenantID(v *uuid.UUID) *ArtifactUpdateOn
 // ClearTenantID clears the value of the "tenant_id" field.
 func (_u *ArtifactUpdateOne) ClearTenantID() *ArtifactUpdateOne {
 	_u.mutation.ClearTenantID()
+	return _u
+}
+
+// SetEnvironmentID sets the "environment_id" field.
+func (_u *ArtifactUpdateOne) SetEnvironmentID(v uuid.UUID) *ArtifactUpdateOne {
+	_u.mutation.SetEnvironmentID(v)
+	return _u
+}
+
+// SetNillableEnvironmentID sets the "environment_id" field if the given value is not nil.
+func (_u *ArtifactUpdateOne) SetNillableEnvironmentID(v *uuid.UUID) *ArtifactUpdateOne {
+	if v != nil {
+		_u.SetEnvironmentID(*v)
+	}
+	return _u
+}
+
+// ClearEnvironmentID clears the value of the "environment_id" field.
+func (_u *ArtifactUpdateOne) ClearEnvironmentID() *ArtifactUpdateOne {
+	_u.mutation.ClearEnvironmentID()
 	return _u
 }
 
@@ -605,6 +651,12 @@ func (_u *ArtifactUpdateOne) sqlSave(ctx context.Context) (_node *Artifact, err 
 	}
 	if _u.mutation.TenantIDCleared() {
 		_spec.ClearField(artifact.FieldTenantID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.EnvironmentID(); ok {
+		_spec.SetField(artifact.FieldEnvironmentID, field.TypeUUID, value)
+	}
+	if _u.mutation.EnvironmentIDCleared() {
+		_spec.ClearField(artifact.FieldEnvironmentID, field.TypeUUID)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &Artifact{config: _u.config}

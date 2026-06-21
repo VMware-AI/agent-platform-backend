@@ -186,6 +186,26 @@ func (_u *TokenUsageUpdate) ClearTenantID() *TokenUsageUpdate {
 	return _u
 }
 
+// SetEnvironmentID sets the "environment_id" field.
+func (_u *TokenUsageUpdate) SetEnvironmentID(v uuid.UUID) *TokenUsageUpdate {
+	_u.mutation.SetEnvironmentID(v)
+	return _u
+}
+
+// SetNillableEnvironmentID sets the "environment_id" field if the given value is not nil.
+func (_u *TokenUsageUpdate) SetNillableEnvironmentID(v *uuid.UUID) *TokenUsageUpdate {
+	if v != nil {
+		_u.SetEnvironmentID(*v)
+	}
+	return _u
+}
+
+// ClearEnvironmentID clears the value of the "environment_id" field.
+func (_u *TokenUsageUpdate) ClearEnvironmentID() *TokenUsageUpdate {
+	_u.mutation.ClearEnvironmentID()
+	return _u
+}
+
 // SetDepartmentID sets the "department_id" field.
 func (_u *TokenUsageUpdate) SetDepartmentID(v uuid.UUID) *TokenUsageUpdate {
 	_u.mutation.SetDepartmentID(v)
@@ -320,6 +340,12 @@ func (_u *TokenUsageUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if _u.mutation.TenantIDCleared() {
 		_spec.ClearField(tokenusage.FieldTenantID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.EnvironmentID(); ok {
+		_spec.SetField(tokenusage.FieldEnvironmentID, field.TypeUUID, value)
+	}
+	if _u.mutation.EnvironmentIDCleared() {
+		_spec.ClearField(tokenusage.FieldEnvironmentID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.DepartmentID(); ok {
 		_spec.SetField(tokenusage.FieldDepartmentID, field.TypeUUID, value)
@@ -506,6 +532,26 @@ func (_u *TokenUsageUpdateOne) ClearTenantID() *TokenUsageUpdateOne {
 	return _u
 }
 
+// SetEnvironmentID sets the "environment_id" field.
+func (_u *TokenUsageUpdateOne) SetEnvironmentID(v uuid.UUID) *TokenUsageUpdateOne {
+	_u.mutation.SetEnvironmentID(v)
+	return _u
+}
+
+// SetNillableEnvironmentID sets the "environment_id" field if the given value is not nil.
+func (_u *TokenUsageUpdateOne) SetNillableEnvironmentID(v *uuid.UUID) *TokenUsageUpdateOne {
+	if v != nil {
+		_u.SetEnvironmentID(*v)
+	}
+	return _u
+}
+
+// ClearEnvironmentID clears the value of the "environment_id" field.
+func (_u *TokenUsageUpdateOne) ClearEnvironmentID() *TokenUsageUpdateOne {
+	_u.mutation.ClearEnvironmentID()
+	return _u
+}
+
 // SetDepartmentID sets the "department_id" field.
 func (_u *TokenUsageUpdateOne) SetDepartmentID(v uuid.UUID) *TokenUsageUpdateOne {
 	_u.mutation.SetDepartmentID(v)
@@ -670,6 +716,12 @@ func (_u *TokenUsageUpdateOne) sqlSave(ctx context.Context) (_node *TokenUsage, 
 	}
 	if _u.mutation.TenantIDCleared() {
 		_spec.ClearField(tokenusage.FieldTenantID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.EnvironmentID(); ok {
+		_spec.SetField(tokenusage.FieldEnvironmentID, field.TypeUUID, value)
+	}
+	if _u.mutation.EnvironmentIDCleared() {
+		_spec.ClearField(tokenusage.FieldEnvironmentID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.DepartmentID(); ok {
 		_spec.SetField(tokenusage.FieldDepartmentID, field.TypeUUID, value)

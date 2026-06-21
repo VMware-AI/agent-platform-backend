@@ -31,8 +31,10 @@ type AgentConfig struct {
 	// ArtifactID holds the value of the "artifact_id" field.
 	ArtifactID *uuid.UUID `json:"artifact_id,omitempty"`
 	// TenantID holds the value of the "tenant_id" field.
-	TenantID     *uuid.UUID `json:"tenant_id,omitempty"`
-	selectValues sql.SelectValues
+	TenantID *uuid.UUID `json:"tenant_id,omitempty"`
+	// EnvironmentID holds the value of the "environment_id" field.
+	EnvironmentID *uuid.UUID `json:"environment_id,omitempty"`
+	selectValues  sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -40,7 +42,7 @@ func (*AgentConfig) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case agentconfig.FieldArtifactID, agentconfig.FieldTenantID:
+		case agentconfig.FieldArtifactID, agentconfig.FieldTenantID, agentconfig.FieldEnvironmentID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case agentconfig.FieldIsDefault:
 			values[i] = new(sql.NullBool)
@@ -115,6 +117,13 @@ func (_m *AgentConfig) assignValues(columns []string, values []any) error {
 				_m.TenantID = new(uuid.UUID)
 				*_m.TenantID = *value.S.(*uuid.UUID)
 			}
+		case agentconfig.FieldEnvironmentID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field environment_id", values[i])
+			} else if value.Valid {
+				_m.EnvironmentID = new(uuid.UUID)
+				*_m.EnvironmentID = *value.S.(*uuid.UUID)
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -173,6 +182,11 @@ func (_m *AgentConfig) String() string {
 	builder.WriteString(", ")
 	if v := _m.TenantID; v != nil {
 		builder.WriteString("tenant_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.EnvironmentID; v != nil {
+		builder.WriteString("environment_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteByte(')')

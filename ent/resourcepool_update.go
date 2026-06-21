@@ -216,6 +216,26 @@ func (_u *ResourcePoolUpdate) ClearTenantID() *ResourcePoolUpdate {
 	return _u
 }
 
+// SetEnvironmentID sets the "environment_id" field.
+func (_u *ResourcePoolUpdate) SetEnvironmentID(v uuid.UUID) *ResourcePoolUpdate {
+	_u.mutation.SetEnvironmentID(v)
+	return _u
+}
+
+// SetNillableEnvironmentID sets the "environment_id" field if the given value is not nil.
+func (_u *ResourcePoolUpdate) SetNillableEnvironmentID(v *uuid.UUID) *ResourcePoolUpdate {
+	if v != nil {
+		_u.SetEnvironmentID(*v)
+	}
+	return _u
+}
+
+// ClearEnvironmentID clears the value of the "environment_id" field.
+func (_u *ResourcePoolUpdate) ClearEnvironmentID() *ResourcePoolUpdate {
+	_u.mutation.ClearEnvironmentID()
+	return _u
+}
+
 // Mutation returns the ResourcePoolMutation object of the builder.
 func (_u *ResourcePoolUpdate) Mutation() *ResourcePoolMutation {
 	return _u.mutation
@@ -370,6 +390,12 @@ func (_u *ResourcePoolUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if _u.mutation.TenantIDCleared() {
 		_spec.ClearField(resourcepool.FieldTenantID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.EnvironmentID(); ok {
+		_spec.SetField(resourcepool.FieldEnvironmentID, field.TypeUUID, value)
+	}
+	if _u.mutation.EnvironmentIDCleared() {
+		_spec.ClearField(resourcepool.FieldEnvironmentID, field.TypeUUID)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
@@ -579,6 +605,26 @@ func (_u *ResourcePoolUpdateOne) ClearTenantID() *ResourcePoolUpdateOne {
 	return _u
 }
 
+// SetEnvironmentID sets the "environment_id" field.
+func (_u *ResourcePoolUpdateOne) SetEnvironmentID(v uuid.UUID) *ResourcePoolUpdateOne {
+	_u.mutation.SetEnvironmentID(v)
+	return _u
+}
+
+// SetNillableEnvironmentID sets the "environment_id" field if the given value is not nil.
+func (_u *ResourcePoolUpdateOne) SetNillableEnvironmentID(v *uuid.UUID) *ResourcePoolUpdateOne {
+	if v != nil {
+		_u.SetEnvironmentID(*v)
+	}
+	return _u
+}
+
+// ClearEnvironmentID clears the value of the "environment_id" field.
+func (_u *ResourcePoolUpdateOne) ClearEnvironmentID() *ResourcePoolUpdateOne {
+	_u.mutation.ClearEnvironmentID()
+	return _u
+}
+
 // Mutation returns the ResourcePoolMutation object of the builder.
 func (_u *ResourcePoolUpdateOne) Mutation() *ResourcePoolMutation {
 	return _u.mutation
@@ -763,6 +809,12 @@ func (_u *ResourcePoolUpdateOne) sqlSave(ctx context.Context) (_node *ResourcePo
 	}
 	if _u.mutation.TenantIDCleared() {
 		_spec.ClearField(resourcepool.FieldTenantID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.EnvironmentID(); ok {
+		_spec.SetField(resourcepool.FieldEnvironmentID, field.TypeUUID, value)
+	}
+	if _u.mutation.EnvironmentIDCleared() {
+		_spec.ClearField(resourcepool.FieldEnvironmentID, field.TypeUUID)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &ResourcePool{config: _u.config}

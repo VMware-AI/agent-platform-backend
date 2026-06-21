@@ -24,6 +24,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/department"
+	"github.com/VMware-AI/agent-platform-backend/ent/environment"
 	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
 	"github.com/VMware-AI/agent-platform-backend/ent/image"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
@@ -64,6 +65,8 @@ type Client struct {
 	AuditLog *AuditLogClient
 	// Department is the client for interacting with the Department builders.
 	Department *DepartmentClient
+	// Environment is the client for interacting with the Environment builders.
+	Environment *EnvironmentClient
 	// GatewayConnection is the client for interacting with the GatewayConnection builders.
 	GatewayConnection *GatewayConnectionClient
 	// Image is the client for interacting with the Image builders.
@@ -117,6 +120,7 @@ func (c *Client) init() {
 	c.Artifact = NewArtifactClient(c.config)
 	c.AuditLog = NewAuditLogClient(c.config)
 	c.Department = NewDepartmentClient(c.config)
+	c.Environment = NewEnvironmentClient(c.config)
 	c.GatewayConnection = NewGatewayConnectionClient(c.config)
 	c.Image = NewImageClient(c.config)
 	c.Membership = NewMembershipClient(c.config)
@@ -234,6 +238,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Artifact:          NewArtifactClient(cfg),
 		AuditLog:          NewAuditLogClient(cfg),
 		Department:        NewDepartmentClient(cfg),
+		Environment:       NewEnvironmentClient(cfg),
 		GatewayConnection: NewGatewayConnectionClient(cfg),
 		Image:             NewImageClient(cfg),
 		Membership:        NewMembershipClient(cfg),
@@ -278,6 +283,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Artifact:          NewArtifactClient(cfg),
 		AuditLog:          NewAuditLogClient(cfg),
 		Department:        NewDepartmentClient(cfg),
+		Environment:       NewEnvironmentClient(cfg),
 		GatewayConnection: NewGatewayConnectionClient(cfg),
 		Image:             NewImageClient(cfg),
 		Membership:        NewMembershipClient(cfg),
@@ -325,10 +331,10 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Agent, c.AgentConfig, c.AgentEnrollment, c.AgentHeartbeat, c.AgentTemplate,
-		c.Artifact, c.AuditLog, c.Department, c.GatewayConnection, c.Image,
-		c.Membership, c.ModelRoute, c.Permission, c.RateLimitPolicy, c.RequestLog,
-		c.ResourcePool, c.Role, c.RotationCommand, c.RouterTier, c.Skill, c.Tenant,
-		c.TokenUsage, c.Upstream, c.User, c.VirtualKey,
+		c.Artifact, c.AuditLog, c.Department, c.Environment, c.GatewayConnection,
+		c.Image, c.Membership, c.ModelRoute, c.Permission, c.RateLimitPolicy,
+		c.RequestLog, c.ResourcePool, c.Role, c.RotationCommand, c.RouterTier, c.Skill,
+		c.Tenant, c.TokenUsage, c.Upstream, c.User, c.VirtualKey,
 	} {
 		n.Use(hooks...)
 	}
@@ -339,10 +345,10 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Agent, c.AgentConfig, c.AgentEnrollment, c.AgentHeartbeat, c.AgentTemplate,
-		c.Artifact, c.AuditLog, c.Department, c.GatewayConnection, c.Image,
-		c.Membership, c.ModelRoute, c.Permission, c.RateLimitPolicy, c.RequestLog,
-		c.ResourcePool, c.Role, c.RotationCommand, c.RouterTier, c.Skill, c.Tenant,
-		c.TokenUsage, c.Upstream, c.User, c.VirtualKey,
+		c.Artifact, c.AuditLog, c.Department, c.Environment, c.GatewayConnection,
+		c.Image, c.Membership, c.ModelRoute, c.Permission, c.RateLimitPolicy,
+		c.RequestLog, c.ResourcePool, c.Role, c.RotationCommand, c.RouterTier, c.Skill,
+		c.Tenant, c.TokenUsage, c.Upstream, c.User, c.VirtualKey,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -367,6 +373,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.AuditLog.mutate(ctx, m)
 	case *DepartmentMutation:
 		return c.Department.mutate(ctx, m)
+	case *EnvironmentMutation:
+		return c.Environment.mutate(ctx, m)
 	case *GatewayConnectionMutation:
 		return c.GatewayConnection.mutate(ctx, m)
 	case *ImageMutation:
@@ -1467,6 +1475,139 @@ func (c *DepartmentClient) mutate(ctx context.Context, m *DepartmentMutation) (V
 		return (&DepartmentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Department mutation op: %q", m.Op())
+	}
+}
+
+// EnvironmentClient is a client for the Environment schema.
+type EnvironmentClient struct {
+	config
+}
+
+// NewEnvironmentClient returns a client for the Environment from the given config.
+func NewEnvironmentClient(c config) *EnvironmentClient {
+	return &EnvironmentClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `environment.Hooks(f(g(h())))`.
+func (c *EnvironmentClient) Use(hooks ...Hook) {
+	c.hooks.Environment = append(c.hooks.Environment, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `environment.Intercept(f(g(h())))`.
+func (c *EnvironmentClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Environment = append(c.inters.Environment, interceptors...)
+}
+
+// Create returns a builder for creating a Environment entity.
+func (c *EnvironmentClient) Create() *EnvironmentCreate {
+	mutation := newEnvironmentMutation(c.config, OpCreate)
+	return &EnvironmentCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Environment entities.
+func (c *EnvironmentClient) CreateBulk(builders ...*EnvironmentCreate) *EnvironmentCreateBulk {
+	return &EnvironmentCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *EnvironmentClient) MapCreateBulk(slice any, setFunc func(*EnvironmentCreate, int)) *EnvironmentCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &EnvironmentCreateBulk{err: fmt.Errorf("calling to EnvironmentClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*EnvironmentCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &EnvironmentCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Environment.
+func (c *EnvironmentClient) Update() *EnvironmentUpdate {
+	mutation := newEnvironmentMutation(c.config, OpUpdate)
+	return &EnvironmentUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *EnvironmentClient) UpdateOne(_m *Environment) *EnvironmentUpdateOne {
+	mutation := newEnvironmentMutation(c.config, OpUpdateOne, withEnvironment(_m))
+	return &EnvironmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *EnvironmentClient) UpdateOneID(id uuid.UUID) *EnvironmentUpdateOne {
+	mutation := newEnvironmentMutation(c.config, OpUpdateOne, withEnvironmentID(id))
+	return &EnvironmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Environment.
+func (c *EnvironmentClient) Delete() *EnvironmentDelete {
+	mutation := newEnvironmentMutation(c.config, OpDelete)
+	return &EnvironmentDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *EnvironmentClient) DeleteOne(_m *Environment) *EnvironmentDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *EnvironmentClient) DeleteOneID(id uuid.UUID) *EnvironmentDeleteOne {
+	builder := c.Delete().Where(environment.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &EnvironmentDeleteOne{builder}
+}
+
+// Query returns a query builder for Environment.
+func (c *EnvironmentClient) Query() *EnvironmentQuery {
+	return &EnvironmentQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeEnvironment},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Environment entity by its id.
+func (c *EnvironmentClient) Get(ctx context.Context, id uuid.UUID) (*Environment, error) {
+	return c.Query().Where(environment.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *EnvironmentClient) GetX(ctx context.Context, id uuid.UUID) *Environment {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *EnvironmentClient) Hooks() []Hook {
+	return c.hooks.Environment
+}
+
+// Interceptors returns the client interceptors.
+func (c *EnvironmentClient) Interceptors() []Interceptor {
+	return c.inters.Environment
+}
+
+func (c *EnvironmentClient) mutate(ctx context.Context, m *EnvironmentMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&EnvironmentCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&EnvironmentUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&EnvironmentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&EnvironmentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Environment mutation op: %q", m.Op())
 	}
 }
 
@@ -3799,15 +3940,16 @@ func (c *VirtualKeyClient) mutate(ctx context.Context, m *VirtualKeyMutation) (V
 type (
 	hooks struct {
 		Agent, AgentConfig, AgentEnrollment, AgentHeartbeat, AgentTemplate, Artifact,
-		AuditLog, Department, GatewayConnection, Image, Membership, ModelRoute,
-		Permission, RateLimitPolicy, RequestLog, ResourcePool, Role, RotationCommand,
-		RouterTier, Skill, Tenant, TokenUsage, Upstream, User, VirtualKey []ent.Hook
+		AuditLog, Department, Environment, GatewayConnection, Image, Membership,
+		ModelRoute, Permission, RateLimitPolicy, RequestLog, ResourcePool, Role,
+		RotationCommand, RouterTier, Skill, Tenant, TokenUsage, Upstream, User,
+		VirtualKey []ent.Hook
 	}
 	inters struct {
 		Agent, AgentConfig, AgentEnrollment, AgentHeartbeat, AgentTemplate, Artifact,
-		AuditLog, Department, GatewayConnection, Image, Membership, ModelRoute,
-		Permission, RateLimitPolicy, RequestLog, ResourcePool, Role, RotationCommand,
-		RouterTier, Skill, Tenant, TokenUsage, Upstream, User,
+		AuditLog, Department, Environment, GatewayConnection, Image, Membership,
+		ModelRoute, Permission, RateLimitPolicy, RequestLog, ResourcePool, Role,
+		RotationCommand, RouterTier, Skill, Tenant, TokenUsage, Upstream, User,
 		VirtualKey []ent.Interceptor
 	}
 )

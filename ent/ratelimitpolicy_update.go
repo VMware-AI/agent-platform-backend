@@ -138,6 +138,26 @@ func (_u *RateLimitPolicyUpdate) ClearTenantID() *RateLimitPolicyUpdate {
 	return _u
 }
 
+// SetEnvironmentID sets the "environment_id" field.
+func (_u *RateLimitPolicyUpdate) SetEnvironmentID(v uuid.UUID) *RateLimitPolicyUpdate {
+	_u.mutation.SetEnvironmentID(v)
+	return _u
+}
+
+// SetNillableEnvironmentID sets the "environment_id" field if the given value is not nil.
+func (_u *RateLimitPolicyUpdate) SetNillableEnvironmentID(v *uuid.UUID) *RateLimitPolicyUpdate {
+	if v != nil {
+		_u.SetEnvironmentID(*v)
+	}
+	return _u
+}
+
+// ClearEnvironmentID clears the value of the "environment_id" field.
+func (_u *RateLimitPolicyUpdate) ClearEnvironmentID() *RateLimitPolicyUpdate {
+	_u.mutation.ClearEnvironmentID()
+	return _u
+}
+
 // Mutation returns the RateLimitPolicyMutation object of the builder.
 func (_u *RateLimitPolicyUpdate) Mutation() *RateLimitPolicyMutation {
 	return _u.mutation
@@ -239,6 +259,12 @@ func (_u *RateLimitPolicyUpdate) sqlSave(ctx context.Context) (_node int, err er
 	}
 	if _u.mutation.TenantIDCleared() {
 		_spec.ClearField(ratelimitpolicy.FieldTenantID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.EnvironmentID(); ok {
+		_spec.SetField(ratelimitpolicy.FieldEnvironmentID, field.TypeUUID, value)
+	}
+	if _u.mutation.EnvironmentIDCleared() {
+		_spec.ClearField(ratelimitpolicy.FieldEnvironmentID, field.TypeUUID)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
@@ -367,6 +393,26 @@ func (_u *RateLimitPolicyUpdateOne) SetNillableTenantID(v *uuid.UUID) *RateLimit
 // ClearTenantID clears the value of the "tenant_id" field.
 func (_u *RateLimitPolicyUpdateOne) ClearTenantID() *RateLimitPolicyUpdateOne {
 	_u.mutation.ClearTenantID()
+	return _u
+}
+
+// SetEnvironmentID sets the "environment_id" field.
+func (_u *RateLimitPolicyUpdateOne) SetEnvironmentID(v uuid.UUID) *RateLimitPolicyUpdateOne {
+	_u.mutation.SetEnvironmentID(v)
+	return _u
+}
+
+// SetNillableEnvironmentID sets the "environment_id" field if the given value is not nil.
+func (_u *RateLimitPolicyUpdateOne) SetNillableEnvironmentID(v *uuid.UUID) *RateLimitPolicyUpdateOne {
+	if v != nil {
+		_u.SetEnvironmentID(*v)
+	}
+	return _u
+}
+
+// ClearEnvironmentID clears the value of the "environment_id" field.
+func (_u *RateLimitPolicyUpdateOne) ClearEnvironmentID() *RateLimitPolicyUpdateOne {
+	_u.mutation.ClearEnvironmentID()
 	return _u
 }
 
@@ -501,6 +547,12 @@ func (_u *RateLimitPolicyUpdateOne) sqlSave(ctx context.Context) (_node *RateLim
 	}
 	if _u.mutation.TenantIDCleared() {
 		_spec.ClearField(ratelimitpolicy.FieldTenantID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.EnvironmentID(); ok {
+		_spec.SetField(ratelimitpolicy.FieldEnvironmentID, field.TypeUUID, value)
+	}
+	if _u.mutation.EnvironmentIDCleared() {
+		_spec.ClearField(ratelimitpolicy.FieldEnvironmentID, field.TypeUUID)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &RateLimitPolicy{config: _u.config}

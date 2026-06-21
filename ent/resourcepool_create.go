@@ -173,6 +173,20 @@ func (_c *ResourcePoolCreate) SetNillableTenantID(v *uuid.UUID) *ResourcePoolCre
 	return _c
 }
 
+// SetEnvironmentID sets the "environment_id" field.
+func (_c *ResourcePoolCreate) SetEnvironmentID(v uuid.UUID) *ResourcePoolCreate {
+	_c.mutation.SetEnvironmentID(v)
+	return _c
+}
+
+// SetNillableEnvironmentID sets the "environment_id" field if the given value is not nil.
+func (_c *ResourcePoolCreate) SetNillableEnvironmentID(v *uuid.UUID) *ResourcePoolCreate {
+	if v != nil {
+		_c.SetEnvironmentID(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *ResourcePoolCreate) SetID(v uuid.UUID) *ResourcePoolCreate {
 	_c.mutation.SetID(v)
@@ -414,6 +428,10 @@ func (_c *ResourcePoolCreate) createSpec() (*ResourcePool, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.TenantID(); ok {
 		_spec.SetField(resourcepool.FieldTenantID, field.TypeUUID, value)
 		_node.TenantID = &value
+	}
+	if value, ok := _c.mutation.EnvironmentID(); ok {
+		_spec.SetField(resourcepool.FieldEnvironmentID, field.TypeUUID, value)
+		_node.EnvironmentID = &value
 	}
 	return _node, _spec
 }

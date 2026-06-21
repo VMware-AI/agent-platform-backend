@@ -28,6 +28,8 @@ type Tx struct {
 	AuditLog *AuditLogClient
 	// Department is the client for interacting with the Department builders.
 	Department *DepartmentClient
+	// Environment is the client for interacting with the Environment builders.
+	Environment *EnvironmentClient
 	// GatewayConnection is the client for interacting with the GatewayConnection builders.
 	GatewayConnection *GatewayConnectionClient
 	// Image is the client for interacting with the Image builders.
@@ -201,6 +203,7 @@ func (tx *Tx) init() {
 	tx.Artifact = NewArtifactClient(tx.config)
 	tx.AuditLog = NewAuditLogClient(tx.config)
 	tx.Department = NewDepartmentClient(tx.config)
+	tx.Environment = NewEnvironmentClient(tx.config)
 	tx.GatewayConnection = NewGatewayConnectionClient(tx.config)
 	tx.Image = NewImageClient(tx.config)
 	tx.Membership = NewMembershipClient(tx.config)

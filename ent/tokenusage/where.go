@@ -95,6 +95,11 @@ func TenantID(v uuid.UUID) predicate.TokenUsage {
 	return predicate.TokenUsage(sql.FieldEQ(FieldTenantID, v))
 }
 
+// EnvironmentID applies equality check predicate on the "environment_id" field. It's identical to EnvironmentIDEQ.
+func EnvironmentID(v uuid.UUID) predicate.TokenUsage {
+	return predicate.TokenUsage(sql.FieldEQ(FieldEnvironmentID, v))
+}
+
 // DepartmentID applies equality check predicate on the "department_id" field. It's identical to DepartmentIDEQ.
 func DepartmentID(v uuid.UUID) predicate.TokenUsage {
 	return predicate.TokenUsage(sql.FieldEQ(FieldDepartmentID, v))
@@ -513,6 +518,56 @@ func TenantIDIsNil() predicate.TokenUsage {
 // TenantIDNotNil applies the NotNil predicate on the "tenant_id" field.
 func TenantIDNotNil() predicate.TokenUsage {
 	return predicate.TokenUsage(sql.FieldNotNull(FieldTenantID))
+}
+
+// EnvironmentIDEQ applies the EQ predicate on the "environment_id" field.
+func EnvironmentIDEQ(v uuid.UUID) predicate.TokenUsage {
+	return predicate.TokenUsage(sql.FieldEQ(FieldEnvironmentID, v))
+}
+
+// EnvironmentIDNEQ applies the NEQ predicate on the "environment_id" field.
+func EnvironmentIDNEQ(v uuid.UUID) predicate.TokenUsage {
+	return predicate.TokenUsage(sql.FieldNEQ(FieldEnvironmentID, v))
+}
+
+// EnvironmentIDIn applies the In predicate on the "environment_id" field.
+func EnvironmentIDIn(vs ...uuid.UUID) predicate.TokenUsage {
+	return predicate.TokenUsage(sql.FieldIn(FieldEnvironmentID, vs...))
+}
+
+// EnvironmentIDNotIn applies the NotIn predicate on the "environment_id" field.
+func EnvironmentIDNotIn(vs ...uuid.UUID) predicate.TokenUsage {
+	return predicate.TokenUsage(sql.FieldNotIn(FieldEnvironmentID, vs...))
+}
+
+// EnvironmentIDGT applies the GT predicate on the "environment_id" field.
+func EnvironmentIDGT(v uuid.UUID) predicate.TokenUsage {
+	return predicate.TokenUsage(sql.FieldGT(FieldEnvironmentID, v))
+}
+
+// EnvironmentIDGTE applies the GTE predicate on the "environment_id" field.
+func EnvironmentIDGTE(v uuid.UUID) predicate.TokenUsage {
+	return predicate.TokenUsage(sql.FieldGTE(FieldEnvironmentID, v))
+}
+
+// EnvironmentIDLT applies the LT predicate on the "environment_id" field.
+func EnvironmentIDLT(v uuid.UUID) predicate.TokenUsage {
+	return predicate.TokenUsage(sql.FieldLT(FieldEnvironmentID, v))
+}
+
+// EnvironmentIDLTE applies the LTE predicate on the "environment_id" field.
+func EnvironmentIDLTE(v uuid.UUID) predicate.TokenUsage {
+	return predicate.TokenUsage(sql.FieldLTE(FieldEnvironmentID, v))
+}
+
+// EnvironmentIDIsNil applies the IsNil predicate on the "environment_id" field.
+func EnvironmentIDIsNil() predicate.TokenUsage {
+	return predicate.TokenUsage(sql.FieldIsNull(FieldEnvironmentID))
+}
+
+// EnvironmentIDNotNil applies the NotNil predicate on the "environment_id" field.
+func EnvironmentIDNotNil() predicate.TokenUsage {
+	return predicate.TokenUsage(sql.FieldNotNull(FieldEnvironmentID))
 }
 
 // DepartmentIDEQ applies the EQ predicate on the "department_id" field.

@@ -19,6 +19,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/department"
+	"github.com/VMware-AI/agent-platform-backend/ent/environment"
 	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
 	"github.com/VMware-AI/agent-platform-backend/ent/image"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
@@ -57,6 +58,7 @@ const (
 	TypeArtifact          = "Artifact"
 	TypeAuditLog          = "AuditLog"
 	TypeDepartment        = "Department"
+	TypeEnvironment       = "Environment"
 	TypeGatewayConnection = "GatewayConnection"
 	TypeImage             = "Image"
 	TypeMembership        = "Membership"
@@ -93,6 +95,7 @@ type AgentMutation struct {
 	virtual_key_id   *uuid.UUID
 	resource_pool_id *uuid.UUID
 	tenant_id        *uuid.UUID
+	environment_id   *uuid.UUID
 	clearedFields    map[string]struct{}
 	done             bool
 	oldValue         func(context.Context) (*Agent, error)
@@ -664,6 +667,55 @@ func (m *AgentMutation) ResetTenantID() {
 	delete(m.clearedFields, agent.FieldTenantID)
 }
 
+// SetEnvironmentID sets the "environment_id" field.
+func (m *AgentMutation) SetEnvironmentID(u uuid.UUID) {
+	m.environment_id = &u
+}
+
+// EnvironmentID returns the value of the "environment_id" field in the mutation.
+func (m *AgentMutation) EnvironmentID() (r uuid.UUID, exists bool) {
+	v := m.environment_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEnvironmentID returns the old "environment_id" field's value of the Agent entity.
+// If the Agent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentMutation) OldEnvironmentID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEnvironmentID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEnvironmentID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEnvironmentID: %w", err)
+	}
+	return oldValue.EnvironmentID, nil
+}
+
+// ClearEnvironmentID clears the value of the "environment_id" field.
+func (m *AgentMutation) ClearEnvironmentID() {
+	m.environment_id = nil
+	m.clearedFields[agent.FieldEnvironmentID] = struct{}{}
+}
+
+// EnvironmentIDCleared returns if the "environment_id" field was cleared in this mutation.
+func (m *AgentMutation) EnvironmentIDCleared() bool {
+	_, ok := m.clearedFields[agent.FieldEnvironmentID]
+	return ok
+}
+
+// ResetEnvironmentID resets all changes to the "environment_id" field.
+func (m *AgentMutation) ResetEnvironmentID() {
+	m.environment_id = nil
+	delete(m.clearedFields, agent.FieldEnvironmentID)
+}
+
 // Where appends a list predicates to the AgentMutation builder.
 func (m *AgentMutation) Where(ps ...predicate.Agent) {
 	m.predicates = append(m.predicates, ps...)
@@ -698,7 +750,7 @@ func (m *AgentMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AgentMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 12)
 	if m.created_at != nil {
 		fields = append(fields, agent.FieldCreatedAt)
 	}
@@ -732,6 +784,9 @@ func (m *AgentMutation) Fields() []string {
 	if m.tenant_id != nil {
 		fields = append(fields, agent.FieldTenantID)
 	}
+	if m.environment_id != nil {
+		fields = append(fields, agent.FieldEnvironmentID)
+	}
 	return fields
 }
 
@@ -762,6 +817,8 @@ func (m *AgentMutation) Field(name string) (ent.Value, bool) {
 		return m.ResourcePoolID()
 	case agent.FieldTenantID:
 		return m.TenantID()
+	case agent.FieldEnvironmentID:
+		return m.EnvironmentID()
 	}
 	return nil, false
 }
@@ -793,6 +850,8 @@ func (m *AgentMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldResourcePoolID(ctx)
 	case agent.FieldTenantID:
 		return m.OldTenantID(ctx)
+	case agent.FieldEnvironmentID:
+		return m.OldEnvironmentID(ctx)
 	}
 	return nil, fmt.Errorf("unknown Agent field %s", name)
 }
@@ -879,6 +938,13 @@ func (m *AgentMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetTenantID(v)
 		return nil
+	case agent.FieldEnvironmentID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEnvironmentID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Agent field %s", name)
 }
@@ -924,6 +990,9 @@ func (m *AgentMutation) ClearedFields() []string {
 	if m.FieldCleared(agent.FieldTenantID) {
 		fields = append(fields, agent.FieldTenantID)
 	}
+	if m.FieldCleared(agent.FieldEnvironmentID) {
+		fields = append(fields, agent.FieldEnvironmentID)
+	}
 	return fields
 }
 
@@ -952,6 +1021,9 @@ func (m *AgentMutation) ClearField(name string) error {
 		return nil
 	case agent.FieldTenantID:
 		m.ClearTenantID()
+		return nil
+	case agent.FieldEnvironmentID:
+		m.ClearEnvironmentID()
 		return nil
 	}
 	return fmt.Errorf("unknown Agent nullable field %s", name)
@@ -993,6 +1065,9 @@ func (m *AgentMutation) ResetField(name string) error {
 		return nil
 	case agent.FieldTenantID:
 		m.ResetTenantID()
+		return nil
+	case agent.FieldEnvironmentID:
+		m.ResetEnvironmentID()
 		return nil
 	}
 	return fmt.Errorf("unknown Agent field %s", name)
@@ -1049,20 +1124,21 @@ func (m *AgentMutation) ResetEdge(name string) error {
 // AgentConfigMutation represents an operation that mutates the AgentConfig nodes in the graph.
 type AgentConfigMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	created_at    *time.Time
-	updated_at    *time.Time
-	name          *string
-	agent_type    *string
-	is_default    *bool
-	artifact_id   *uuid.UUID
-	tenant_id     *uuid.UUID
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*AgentConfig, error)
-	predicates    []predicate.AgentConfig
+	op             Op
+	typ            string
+	id             *uuid.UUID
+	created_at     *time.Time
+	updated_at     *time.Time
+	name           *string
+	agent_type     *string
+	is_default     *bool
+	artifact_id    *uuid.UUID
+	tenant_id      *uuid.UUID
+	environment_id *uuid.UUID
+	clearedFields  map[string]struct{}
+	done           bool
+	oldValue       func(context.Context) (*AgentConfig, error)
+	predicates     []predicate.AgentConfig
 }
 
 var _ ent.Mutation = (*AgentConfigMutation)(nil)
@@ -1447,6 +1523,55 @@ func (m *AgentConfigMutation) ResetTenantID() {
 	delete(m.clearedFields, agentconfig.FieldTenantID)
 }
 
+// SetEnvironmentID sets the "environment_id" field.
+func (m *AgentConfigMutation) SetEnvironmentID(u uuid.UUID) {
+	m.environment_id = &u
+}
+
+// EnvironmentID returns the value of the "environment_id" field in the mutation.
+func (m *AgentConfigMutation) EnvironmentID() (r uuid.UUID, exists bool) {
+	v := m.environment_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEnvironmentID returns the old "environment_id" field's value of the AgentConfig entity.
+// If the AgentConfig object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentConfigMutation) OldEnvironmentID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEnvironmentID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEnvironmentID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEnvironmentID: %w", err)
+	}
+	return oldValue.EnvironmentID, nil
+}
+
+// ClearEnvironmentID clears the value of the "environment_id" field.
+func (m *AgentConfigMutation) ClearEnvironmentID() {
+	m.environment_id = nil
+	m.clearedFields[agentconfig.FieldEnvironmentID] = struct{}{}
+}
+
+// EnvironmentIDCleared returns if the "environment_id" field was cleared in this mutation.
+func (m *AgentConfigMutation) EnvironmentIDCleared() bool {
+	_, ok := m.clearedFields[agentconfig.FieldEnvironmentID]
+	return ok
+}
+
+// ResetEnvironmentID resets all changes to the "environment_id" field.
+func (m *AgentConfigMutation) ResetEnvironmentID() {
+	m.environment_id = nil
+	delete(m.clearedFields, agentconfig.FieldEnvironmentID)
+}
+
 // Where appends a list predicates to the AgentConfigMutation builder.
 func (m *AgentConfigMutation) Where(ps ...predicate.AgentConfig) {
 	m.predicates = append(m.predicates, ps...)
@@ -1481,7 +1606,7 @@ func (m *AgentConfigMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AgentConfigMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 8)
 	if m.created_at != nil {
 		fields = append(fields, agentconfig.FieldCreatedAt)
 	}
@@ -1502,6 +1627,9 @@ func (m *AgentConfigMutation) Fields() []string {
 	}
 	if m.tenant_id != nil {
 		fields = append(fields, agentconfig.FieldTenantID)
+	}
+	if m.environment_id != nil {
+		fields = append(fields, agentconfig.FieldEnvironmentID)
 	}
 	return fields
 }
@@ -1525,6 +1653,8 @@ func (m *AgentConfigMutation) Field(name string) (ent.Value, bool) {
 		return m.ArtifactID()
 	case agentconfig.FieldTenantID:
 		return m.TenantID()
+	case agentconfig.FieldEnvironmentID:
+		return m.EnvironmentID()
 	}
 	return nil, false
 }
@@ -1548,6 +1678,8 @@ func (m *AgentConfigMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldArtifactID(ctx)
 	case agentconfig.FieldTenantID:
 		return m.OldTenantID(ctx)
+	case agentconfig.FieldEnvironmentID:
+		return m.OldEnvironmentID(ctx)
 	}
 	return nil, fmt.Errorf("unknown AgentConfig field %s", name)
 }
@@ -1606,6 +1738,13 @@ func (m *AgentConfigMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetTenantID(v)
 		return nil
+	case agentconfig.FieldEnvironmentID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEnvironmentID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown AgentConfig field %s", name)
 }
@@ -1642,6 +1781,9 @@ func (m *AgentConfigMutation) ClearedFields() []string {
 	if m.FieldCleared(agentconfig.FieldTenantID) {
 		fields = append(fields, agentconfig.FieldTenantID)
 	}
+	if m.FieldCleared(agentconfig.FieldEnvironmentID) {
+		fields = append(fields, agentconfig.FieldEnvironmentID)
+	}
 	return fields
 }
 
@@ -1661,6 +1803,9 @@ func (m *AgentConfigMutation) ClearField(name string) error {
 		return nil
 	case agentconfig.FieldTenantID:
 		m.ClearTenantID()
+		return nil
+	case agentconfig.FieldEnvironmentID:
+		m.ClearEnvironmentID()
 		return nil
 	}
 	return fmt.Errorf("unknown AgentConfig nullable field %s", name)
@@ -1690,6 +1835,9 @@ func (m *AgentConfigMutation) ResetField(name string) error {
 		return nil
 	case agentconfig.FieldTenantID:
 		m.ResetTenantID()
+		return nil
+	case agentconfig.FieldEnvironmentID:
+		m.ResetEnvironmentID()
 		return nil
 	}
 	return fmt.Errorf("unknown AgentConfig field %s", name)
@@ -4329,23 +4477,24 @@ func (m *AgentTemplateMutation) ResetEdge(name string) error {
 // ArtifactMutation represents an operation that mutates the Artifact nodes in the graph.
 type ArtifactMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	created_at    *time.Time
-	updated_at    *time.Time
-	name          *string
-	kind          *artifact.Kind
-	version       *string
-	uri           *string
-	content       *string
-	sha256        *string
-	metadata      *map[string]interface{}
-	tenant_id     *uuid.UUID
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*Artifact, error)
-	predicates    []predicate.Artifact
+	op             Op
+	typ            string
+	id             *uuid.UUID
+	created_at     *time.Time
+	updated_at     *time.Time
+	name           *string
+	kind           *artifact.Kind
+	version        *string
+	uri            *string
+	content        *string
+	sha256         *string
+	metadata       *map[string]interface{}
+	tenant_id      *uuid.UUID
+	environment_id *uuid.UUID
+	clearedFields  map[string]struct{}
+	done           bool
+	oldValue       func(context.Context) (*Artifact, error)
+	predicates     []predicate.Artifact
 }
 
 var _ ent.Mutation = (*ArtifactMutation)(nil)
@@ -4864,6 +5013,55 @@ func (m *ArtifactMutation) ResetTenantID() {
 	delete(m.clearedFields, artifact.FieldTenantID)
 }
 
+// SetEnvironmentID sets the "environment_id" field.
+func (m *ArtifactMutation) SetEnvironmentID(u uuid.UUID) {
+	m.environment_id = &u
+}
+
+// EnvironmentID returns the value of the "environment_id" field in the mutation.
+func (m *ArtifactMutation) EnvironmentID() (r uuid.UUID, exists bool) {
+	v := m.environment_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEnvironmentID returns the old "environment_id" field's value of the Artifact entity.
+// If the Artifact object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ArtifactMutation) OldEnvironmentID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEnvironmentID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEnvironmentID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEnvironmentID: %w", err)
+	}
+	return oldValue.EnvironmentID, nil
+}
+
+// ClearEnvironmentID clears the value of the "environment_id" field.
+func (m *ArtifactMutation) ClearEnvironmentID() {
+	m.environment_id = nil
+	m.clearedFields[artifact.FieldEnvironmentID] = struct{}{}
+}
+
+// EnvironmentIDCleared returns if the "environment_id" field was cleared in this mutation.
+func (m *ArtifactMutation) EnvironmentIDCleared() bool {
+	_, ok := m.clearedFields[artifact.FieldEnvironmentID]
+	return ok
+}
+
+// ResetEnvironmentID resets all changes to the "environment_id" field.
+func (m *ArtifactMutation) ResetEnvironmentID() {
+	m.environment_id = nil
+	delete(m.clearedFields, artifact.FieldEnvironmentID)
+}
+
 // Where appends a list predicates to the ArtifactMutation builder.
 func (m *ArtifactMutation) Where(ps ...predicate.Artifact) {
 	m.predicates = append(m.predicates, ps...)
@@ -4898,7 +5096,7 @@ func (m *ArtifactMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ArtifactMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.created_at != nil {
 		fields = append(fields, artifact.FieldCreatedAt)
 	}
@@ -4929,6 +5127,9 @@ func (m *ArtifactMutation) Fields() []string {
 	if m.tenant_id != nil {
 		fields = append(fields, artifact.FieldTenantID)
 	}
+	if m.environment_id != nil {
+		fields = append(fields, artifact.FieldEnvironmentID)
+	}
 	return fields
 }
 
@@ -4957,6 +5158,8 @@ func (m *ArtifactMutation) Field(name string) (ent.Value, bool) {
 		return m.Metadata()
 	case artifact.FieldTenantID:
 		return m.TenantID()
+	case artifact.FieldEnvironmentID:
+		return m.EnvironmentID()
 	}
 	return nil, false
 }
@@ -4986,6 +5189,8 @@ func (m *ArtifactMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldMetadata(ctx)
 	case artifact.FieldTenantID:
 		return m.OldTenantID(ctx)
+	case artifact.FieldEnvironmentID:
+		return m.OldEnvironmentID(ctx)
 	}
 	return nil, fmt.Errorf("unknown Artifact field %s", name)
 }
@@ -5065,6 +5270,13 @@ func (m *ArtifactMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetTenantID(v)
 		return nil
+	case artifact.FieldEnvironmentID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEnvironmentID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Artifact field %s", name)
 }
@@ -5107,6 +5319,9 @@ func (m *ArtifactMutation) ClearedFields() []string {
 	if m.FieldCleared(artifact.FieldTenantID) {
 		fields = append(fields, artifact.FieldTenantID)
 	}
+	if m.FieldCleared(artifact.FieldEnvironmentID) {
+		fields = append(fields, artifact.FieldEnvironmentID)
+	}
 	return fields
 }
 
@@ -5132,6 +5347,9 @@ func (m *ArtifactMutation) ClearField(name string) error {
 		return nil
 	case artifact.FieldTenantID:
 		m.ClearTenantID()
+		return nil
+	case artifact.FieldEnvironmentID:
+		m.ClearEnvironmentID()
 		return nil
 	}
 	return fmt.Errorf("unknown Artifact nullable field %s", name)
@@ -5170,6 +5388,9 @@ func (m *ArtifactMutation) ResetField(name string) error {
 		return nil
 	case artifact.FieldTenantID:
 		m.ResetTenantID()
+		return nil
+	case artifact.FieldEnvironmentID:
+		m.ResetEnvironmentID()
 		return nil
 	}
 	return fmt.Errorf("unknown Artifact field %s", name)
@@ -6618,6 +6839,576 @@ func (m *DepartmentMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *DepartmentMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Department edge %s", name)
+}
+
+// EnvironmentMutation represents an operation that mutates the Environment nodes in the graph.
+type EnvironmentMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *uuid.UUID
+	created_at    *time.Time
+	updated_at    *time.Time
+	tenant_id     *uuid.UUID
+	name          *string
+	description   *string
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*Environment, error)
+	predicates    []predicate.Environment
+}
+
+var _ ent.Mutation = (*EnvironmentMutation)(nil)
+
+// environmentOption allows management of the mutation configuration using functional options.
+type environmentOption func(*EnvironmentMutation)
+
+// newEnvironmentMutation creates new mutation for the Environment entity.
+func newEnvironmentMutation(c config, op Op, opts ...environmentOption) *EnvironmentMutation {
+	m := &EnvironmentMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeEnvironment,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withEnvironmentID sets the ID field of the mutation.
+func withEnvironmentID(id uuid.UUID) environmentOption {
+	return func(m *EnvironmentMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Environment
+		)
+		m.oldValue = func(ctx context.Context) (*Environment, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Environment.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withEnvironment sets the old Environment of the mutation.
+func withEnvironment(node *Environment) environmentOption {
+	return func(m *EnvironmentMutation) {
+		m.oldValue = func(context.Context) (*Environment, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m EnvironmentMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m EnvironmentMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Environment entities.
+func (m *EnvironmentMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *EnvironmentMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *EnvironmentMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Environment.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *EnvironmentMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *EnvironmentMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the Environment entity.
+// If the Environment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EnvironmentMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *EnvironmentMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *EnvironmentMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *EnvironmentMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the Environment entity.
+// If the Environment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EnvironmentMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *EnvironmentMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetTenantID sets the "tenant_id" field.
+func (m *EnvironmentMutation) SetTenantID(u uuid.UUID) {
+	m.tenant_id = &u
+}
+
+// TenantID returns the value of the "tenant_id" field in the mutation.
+func (m *EnvironmentMutation) TenantID() (r uuid.UUID, exists bool) {
+	v := m.tenant_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantID returns the old "tenant_id" field's value of the Environment entity.
+// If the Environment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EnvironmentMutation) OldTenantID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantID: %w", err)
+	}
+	return oldValue.TenantID, nil
+}
+
+// ResetTenantID resets all changes to the "tenant_id" field.
+func (m *EnvironmentMutation) ResetTenantID() {
+	m.tenant_id = nil
+}
+
+// SetName sets the "name" field.
+func (m *EnvironmentMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *EnvironmentMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the Environment entity.
+// If the Environment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EnvironmentMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *EnvironmentMutation) ResetName() {
+	m.name = nil
+}
+
+// SetDescription sets the "description" field.
+func (m *EnvironmentMutation) SetDescription(s string) {
+	m.description = &s
+}
+
+// Description returns the value of the "description" field in the mutation.
+func (m *EnvironmentMutation) Description() (r string, exists bool) {
+	v := m.description
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDescription returns the old "description" field's value of the Environment entity.
+// If the Environment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EnvironmentMutation) OldDescription(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDescription requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDescription: %w", err)
+	}
+	return oldValue.Description, nil
+}
+
+// ClearDescription clears the value of the "description" field.
+func (m *EnvironmentMutation) ClearDescription() {
+	m.description = nil
+	m.clearedFields[environment.FieldDescription] = struct{}{}
+}
+
+// DescriptionCleared returns if the "description" field was cleared in this mutation.
+func (m *EnvironmentMutation) DescriptionCleared() bool {
+	_, ok := m.clearedFields[environment.FieldDescription]
+	return ok
+}
+
+// ResetDescription resets all changes to the "description" field.
+func (m *EnvironmentMutation) ResetDescription() {
+	m.description = nil
+	delete(m.clearedFields, environment.FieldDescription)
+}
+
+// Where appends a list predicates to the EnvironmentMutation builder.
+func (m *EnvironmentMutation) Where(ps ...predicate.Environment) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the EnvironmentMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *EnvironmentMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Environment, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *EnvironmentMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *EnvironmentMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (Environment).
+func (m *EnvironmentMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *EnvironmentMutation) Fields() []string {
+	fields := make([]string, 0, 5)
+	if m.created_at != nil {
+		fields = append(fields, environment.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, environment.FieldUpdatedAt)
+	}
+	if m.tenant_id != nil {
+		fields = append(fields, environment.FieldTenantID)
+	}
+	if m.name != nil {
+		fields = append(fields, environment.FieldName)
+	}
+	if m.description != nil {
+		fields = append(fields, environment.FieldDescription)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *EnvironmentMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case environment.FieldCreatedAt:
+		return m.CreatedAt()
+	case environment.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case environment.FieldTenantID:
+		return m.TenantID()
+	case environment.FieldName:
+		return m.Name()
+	case environment.FieldDescription:
+		return m.Description()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *EnvironmentMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case environment.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case environment.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case environment.FieldTenantID:
+		return m.OldTenantID(ctx)
+	case environment.FieldName:
+		return m.OldName(ctx)
+	case environment.FieldDescription:
+		return m.OldDescription(ctx)
+	}
+	return nil, fmt.Errorf("unknown Environment field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *EnvironmentMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case environment.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case environment.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case environment.FieldTenantID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantID(v)
+		return nil
+	case environment.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case environment.FieldDescription:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDescription(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Environment field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *EnvironmentMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *EnvironmentMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *EnvironmentMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown Environment numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *EnvironmentMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(environment.FieldDescription) {
+		fields = append(fields, environment.FieldDescription)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *EnvironmentMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *EnvironmentMutation) ClearField(name string) error {
+	switch name {
+	case environment.FieldDescription:
+		m.ClearDescription()
+		return nil
+	}
+	return fmt.Errorf("unknown Environment nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *EnvironmentMutation) ResetField(name string) error {
+	switch name {
+	case environment.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case environment.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case environment.FieldTenantID:
+		m.ResetTenantID()
+		return nil
+	case environment.FieldName:
+		m.ResetName()
+		return nil
+	case environment.FieldDescription:
+		m.ResetDescription()
+		return nil
+	}
+	return fmt.Errorf("unknown Environment field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *EnvironmentMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *EnvironmentMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *EnvironmentMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *EnvironmentMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *EnvironmentMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *EnvironmentMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *EnvironmentMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown Environment unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *EnvironmentMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown Environment edge %s", name)
 }
 
 // GatewayConnectionMutation represents an operation that mutates the GatewayConnection nodes in the graph.
@@ -9742,22 +10533,23 @@ func (m *PermissionMutation) ResetEdge(name string) error {
 // RateLimitPolicyMutation represents an operation that mutates the RateLimitPolicy nodes in the graph.
 type RateLimitPolicyMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	created_at    *time.Time
-	updated_at    *time.Time
-	name          *string
-	rpm           *int
-	addrpm        *int
-	tpm           *int
-	addtpm        *int
-	enabled       *bool
-	tenant_id     *uuid.UUID
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*RateLimitPolicy, error)
-	predicates    []predicate.RateLimitPolicy
+	op             Op
+	typ            string
+	id             *uuid.UUID
+	created_at     *time.Time
+	updated_at     *time.Time
+	name           *string
+	rpm            *int
+	addrpm         *int
+	tpm            *int
+	addtpm         *int
+	enabled        *bool
+	tenant_id      *uuid.UUID
+	environment_id *uuid.UUID
+	clearedFields  map[string]struct{}
+	done           bool
+	oldValue       func(context.Context) (*RateLimitPolicy, error)
+	predicates     []predicate.RateLimitPolicy
 }
 
 var _ ent.Mutation = (*RateLimitPolicyMutation)(nil)
@@ -10197,6 +10989,55 @@ func (m *RateLimitPolicyMutation) ResetTenantID() {
 	delete(m.clearedFields, ratelimitpolicy.FieldTenantID)
 }
 
+// SetEnvironmentID sets the "environment_id" field.
+func (m *RateLimitPolicyMutation) SetEnvironmentID(u uuid.UUID) {
+	m.environment_id = &u
+}
+
+// EnvironmentID returns the value of the "environment_id" field in the mutation.
+func (m *RateLimitPolicyMutation) EnvironmentID() (r uuid.UUID, exists bool) {
+	v := m.environment_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEnvironmentID returns the old "environment_id" field's value of the RateLimitPolicy entity.
+// If the RateLimitPolicy object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RateLimitPolicyMutation) OldEnvironmentID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEnvironmentID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEnvironmentID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEnvironmentID: %w", err)
+	}
+	return oldValue.EnvironmentID, nil
+}
+
+// ClearEnvironmentID clears the value of the "environment_id" field.
+func (m *RateLimitPolicyMutation) ClearEnvironmentID() {
+	m.environment_id = nil
+	m.clearedFields[ratelimitpolicy.FieldEnvironmentID] = struct{}{}
+}
+
+// EnvironmentIDCleared returns if the "environment_id" field was cleared in this mutation.
+func (m *RateLimitPolicyMutation) EnvironmentIDCleared() bool {
+	_, ok := m.clearedFields[ratelimitpolicy.FieldEnvironmentID]
+	return ok
+}
+
+// ResetEnvironmentID resets all changes to the "environment_id" field.
+func (m *RateLimitPolicyMutation) ResetEnvironmentID() {
+	m.environment_id = nil
+	delete(m.clearedFields, ratelimitpolicy.FieldEnvironmentID)
+}
+
 // Where appends a list predicates to the RateLimitPolicyMutation builder.
 func (m *RateLimitPolicyMutation) Where(ps ...predicate.RateLimitPolicy) {
 	m.predicates = append(m.predicates, ps...)
@@ -10231,7 +11072,7 @@ func (m *RateLimitPolicyMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RateLimitPolicyMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 8)
 	if m.created_at != nil {
 		fields = append(fields, ratelimitpolicy.FieldCreatedAt)
 	}
@@ -10252,6 +11093,9 @@ func (m *RateLimitPolicyMutation) Fields() []string {
 	}
 	if m.tenant_id != nil {
 		fields = append(fields, ratelimitpolicy.FieldTenantID)
+	}
+	if m.environment_id != nil {
+		fields = append(fields, ratelimitpolicy.FieldEnvironmentID)
 	}
 	return fields
 }
@@ -10275,6 +11119,8 @@ func (m *RateLimitPolicyMutation) Field(name string) (ent.Value, bool) {
 		return m.Enabled()
 	case ratelimitpolicy.FieldTenantID:
 		return m.TenantID()
+	case ratelimitpolicy.FieldEnvironmentID:
+		return m.EnvironmentID()
 	}
 	return nil, false
 }
@@ -10298,6 +11144,8 @@ func (m *RateLimitPolicyMutation) OldField(ctx context.Context, name string) (en
 		return m.OldEnabled(ctx)
 	case ratelimitpolicy.FieldTenantID:
 		return m.OldTenantID(ctx)
+	case ratelimitpolicy.FieldEnvironmentID:
+		return m.OldEnvironmentID(ctx)
 	}
 	return nil, fmt.Errorf("unknown RateLimitPolicy field %s", name)
 }
@@ -10355,6 +11203,13 @@ func (m *RateLimitPolicyMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTenantID(v)
+		return nil
+	case ratelimitpolicy.FieldEnvironmentID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEnvironmentID(v)
 		return nil
 	}
 	return fmt.Errorf("unknown RateLimitPolicy field %s", name)
@@ -10422,6 +11277,9 @@ func (m *RateLimitPolicyMutation) ClearedFields() []string {
 	if m.FieldCleared(ratelimitpolicy.FieldTenantID) {
 		fields = append(fields, ratelimitpolicy.FieldTenantID)
 	}
+	if m.FieldCleared(ratelimitpolicy.FieldEnvironmentID) {
+		fields = append(fields, ratelimitpolicy.FieldEnvironmentID)
+	}
 	return fields
 }
 
@@ -10444,6 +11302,9 @@ func (m *RateLimitPolicyMutation) ClearField(name string) error {
 		return nil
 	case ratelimitpolicy.FieldTenantID:
 		m.ClearTenantID()
+		return nil
+	case ratelimitpolicy.FieldEnvironmentID:
+		m.ClearEnvironmentID()
 		return nil
 	}
 	return fmt.Errorf("unknown RateLimitPolicy nullable field %s", name)
@@ -10473,6 +11334,9 @@ func (m *RateLimitPolicyMutation) ResetField(name string) error {
 		return nil
 	case ratelimitpolicy.FieldTenantID:
 		m.ResetTenantID()
+		return nil
+	case ratelimitpolicy.FieldEnvironmentID:
+		m.ResetEnvironmentID()
 		return nil
 	}
 	return fmt.Errorf("unknown RateLimitPolicy field %s", name)
@@ -11580,6 +12444,7 @@ type ResourcePoolMutation struct {
 	vm_count            *int
 	addvm_count         *int
 	tenant_id           *uuid.UUID
+	environment_id      *uuid.UUID
 	clearedFields       map[string]struct{}
 	done                bool
 	oldValue            func(context.Context) (*ResourcePool, error)
@@ -12228,6 +13093,55 @@ func (m *ResourcePoolMutation) ResetTenantID() {
 	delete(m.clearedFields, resourcepool.FieldTenantID)
 }
 
+// SetEnvironmentID sets the "environment_id" field.
+func (m *ResourcePoolMutation) SetEnvironmentID(u uuid.UUID) {
+	m.environment_id = &u
+}
+
+// EnvironmentID returns the value of the "environment_id" field in the mutation.
+func (m *ResourcePoolMutation) EnvironmentID() (r uuid.UUID, exists bool) {
+	v := m.environment_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEnvironmentID returns the old "environment_id" field's value of the ResourcePool entity.
+// If the ResourcePool object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ResourcePoolMutation) OldEnvironmentID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEnvironmentID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEnvironmentID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEnvironmentID: %w", err)
+	}
+	return oldValue.EnvironmentID, nil
+}
+
+// ClearEnvironmentID clears the value of the "environment_id" field.
+func (m *ResourcePoolMutation) ClearEnvironmentID() {
+	m.environment_id = nil
+	m.clearedFields[resourcepool.FieldEnvironmentID] = struct{}{}
+}
+
+// EnvironmentIDCleared returns if the "environment_id" field was cleared in this mutation.
+func (m *ResourcePoolMutation) EnvironmentIDCleared() bool {
+	_, ok := m.clearedFields[resourcepool.FieldEnvironmentID]
+	return ok
+}
+
+// ResetEnvironmentID resets all changes to the "environment_id" field.
+func (m *ResourcePoolMutation) ResetEnvironmentID() {
+	m.environment_id = nil
+	delete(m.clearedFields, resourcepool.FieldEnvironmentID)
+}
+
 // Where appends a list predicates to the ResourcePoolMutation builder.
 func (m *ResourcePoolMutation) Where(ps ...predicate.ResourcePool) {
 	m.predicates = append(m.predicates, ps...)
@@ -12262,7 +13176,7 @@ func (m *ResourcePoolMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ResourcePoolMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 13)
 	if m.created_at != nil {
 		fields = append(fields, resourcepool.FieldCreatedAt)
 	}
@@ -12299,6 +13213,9 @@ func (m *ResourcePoolMutation) Fields() []string {
 	if m.tenant_id != nil {
 		fields = append(fields, resourcepool.FieldTenantID)
 	}
+	if m.environment_id != nil {
+		fields = append(fields, resourcepool.FieldEnvironmentID)
+	}
 	return fields
 }
 
@@ -12331,6 +13248,8 @@ func (m *ResourcePoolMutation) Field(name string) (ent.Value, bool) {
 		return m.VMCount()
 	case resourcepool.FieldTenantID:
 		return m.TenantID()
+	case resourcepool.FieldEnvironmentID:
+		return m.EnvironmentID()
 	}
 	return nil, false
 }
@@ -12364,6 +13283,8 @@ func (m *ResourcePoolMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldVMCount(ctx)
 	case resourcepool.FieldTenantID:
 		return m.OldTenantID(ctx)
+	case resourcepool.FieldEnvironmentID:
+		return m.OldEnvironmentID(ctx)
 	}
 	return nil, fmt.Errorf("unknown ResourcePool field %s", name)
 }
@@ -12457,6 +13378,13 @@ func (m *ResourcePoolMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetTenantID(v)
 		return nil
+	case resourcepool.FieldEnvironmentID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEnvironmentID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown ResourcePool field %s", name)
 }
@@ -12544,6 +13472,9 @@ func (m *ResourcePoolMutation) ClearedFields() []string {
 	if m.FieldCleared(resourcepool.FieldTenantID) {
 		fields = append(fields, resourcepool.FieldTenantID)
 	}
+	if m.FieldCleared(resourcepool.FieldEnvironmentID) {
+		fields = append(fields, resourcepool.FieldEnvironmentID)
+	}
 	return fields
 }
 
@@ -12563,6 +13494,9 @@ func (m *ResourcePoolMutation) ClearField(name string) error {
 		return nil
 	case resourcepool.FieldTenantID:
 		m.ClearTenantID()
+		return nil
+	case resourcepool.FieldEnvironmentID:
+		m.ClearEnvironmentID()
 		return nil
 	}
 	return fmt.Errorf("unknown ResourcePool nullable field %s", name)
@@ -12607,6 +13541,9 @@ func (m *ResourcePoolMutation) ResetField(name string) error {
 		return nil
 	case resourcepool.FieldTenantID:
 		m.ResetTenantID()
+		return nil
+	case resourcepool.FieldEnvironmentID:
+		m.ResetEnvironmentID()
 		return nil
 	}
 	return fmt.Errorf("unknown ResourcePool field %s", name)
@@ -16170,6 +17107,7 @@ type TokenUsageMutation struct {
 	addcost          *float64
 	correlation_id   *string
 	tenant_id        *uuid.UUID
+	environment_id   *uuid.UUID
 	department_id    *uuid.UUID
 	created_at       *time.Time
 	clearedFields    map[string]struct{}
@@ -16683,6 +17621,55 @@ func (m *TokenUsageMutation) ResetTenantID() {
 	delete(m.clearedFields, tokenusage.FieldTenantID)
 }
 
+// SetEnvironmentID sets the "environment_id" field.
+func (m *TokenUsageMutation) SetEnvironmentID(u uuid.UUID) {
+	m.environment_id = &u
+}
+
+// EnvironmentID returns the value of the "environment_id" field in the mutation.
+func (m *TokenUsageMutation) EnvironmentID() (r uuid.UUID, exists bool) {
+	v := m.environment_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEnvironmentID returns the old "environment_id" field's value of the TokenUsage entity.
+// If the TokenUsage object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TokenUsageMutation) OldEnvironmentID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEnvironmentID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEnvironmentID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEnvironmentID: %w", err)
+	}
+	return oldValue.EnvironmentID, nil
+}
+
+// ClearEnvironmentID clears the value of the "environment_id" field.
+func (m *TokenUsageMutation) ClearEnvironmentID() {
+	m.environment_id = nil
+	m.clearedFields[tokenusage.FieldEnvironmentID] = struct{}{}
+}
+
+// EnvironmentIDCleared returns if the "environment_id" field was cleared in this mutation.
+func (m *TokenUsageMutation) EnvironmentIDCleared() bool {
+	_, ok := m.clearedFields[tokenusage.FieldEnvironmentID]
+	return ok
+}
+
+// ResetEnvironmentID resets all changes to the "environment_id" field.
+func (m *TokenUsageMutation) ResetEnvironmentID() {
+	m.environment_id = nil
+	delete(m.clearedFields, tokenusage.FieldEnvironmentID)
+}
+
 // SetDepartmentID sets the "department_id" field.
 func (m *TokenUsageMutation) SetDepartmentID(u uuid.UUID) {
 	m.department_id = &u
@@ -16802,7 +17789,7 @@ func (m *TokenUsageMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TokenUsageMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.user_id != nil {
 		fields = append(fields, tokenusage.FieldUserID)
 	}
@@ -16826,6 +17813,9 @@ func (m *TokenUsageMutation) Fields() []string {
 	}
 	if m.tenant_id != nil {
 		fields = append(fields, tokenusage.FieldTenantID)
+	}
+	if m.environment_id != nil {
+		fields = append(fields, tokenusage.FieldEnvironmentID)
 	}
 	if m.department_id != nil {
 		fields = append(fields, tokenusage.FieldDepartmentID)
@@ -16857,6 +17847,8 @@ func (m *TokenUsageMutation) Field(name string) (ent.Value, bool) {
 		return m.CorrelationID()
 	case tokenusage.FieldTenantID:
 		return m.TenantID()
+	case tokenusage.FieldEnvironmentID:
+		return m.EnvironmentID()
 	case tokenusage.FieldDepartmentID:
 		return m.DepartmentID()
 	case tokenusage.FieldCreatedAt:
@@ -16886,6 +17878,8 @@ func (m *TokenUsageMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldCorrelationID(ctx)
 	case tokenusage.FieldTenantID:
 		return m.OldTenantID(ctx)
+	case tokenusage.FieldEnvironmentID:
+		return m.OldEnvironmentID(ctx)
 	case tokenusage.FieldDepartmentID:
 		return m.OldDepartmentID(ctx)
 	case tokenusage.FieldCreatedAt:
@@ -16954,6 +17948,13 @@ func (m *TokenUsageMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTenantID(v)
+		return nil
+	case tokenusage.FieldEnvironmentID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEnvironmentID(v)
 		return nil
 	case tokenusage.FieldDepartmentID:
 		v, ok := value.(uuid.UUID)
@@ -17050,6 +18051,9 @@ func (m *TokenUsageMutation) ClearedFields() []string {
 	if m.FieldCleared(tokenusage.FieldTenantID) {
 		fields = append(fields, tokenusage.FieldTenantID)
 	}
+	if m.FieldCleared(tokenusage.FieldEnvironmentID) {
+		fields = append(fields, tokenusage.FieldEnvironmentID)
+	}
 	if m.FieldCleared(tokenusage.FieldDepartmentID) {
 		fields = append(fields, tokenusage.FieldDepartmentID)
 	}
@@ -17078,6 +18082,9 @@ func (m *TokenUsageMutation) ClearField(name string) error {
 		return nil
 	case tokenusage.FieldTenantID:
 		m.ClearTenantID()
+		return nil
+	case tokenusage.FieldEnvironmentID:
+		m.ClearEnvironmentID()
 		return nil
 	case tokenusage.FieldDepartmentID:
 		m.ClearDepartmentID()
@@ -17113,6 +18120,9 @@ func (m *TokenUsageMutation) ResetField(name string) error {
 		return nil
 	case tokenusage.FieldTenantID:
 		m.ResetTenantID()
+		return nil
+	case tokenusage.FieldEnvironmentID:
+		m.ResetEnvironmentID()
 		return nil
 	case tokenusage.FieldDepartmentID:
 		m.ResetDepartmentID()

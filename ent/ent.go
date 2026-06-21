@@ -20,6 +20,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/department"
+	"github.com/VMware-AI/agent-platform-backend/ent/environment"
 	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
 	"github.com/VMware-AI/agent-platform-backend/ent/image"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
@@ -105,6 +106,7 @@ func checkColumn(t, c string) error {
 			artifact.Table:          artifact.ValidColumn,
 			auditlog.Table:          auditlog.ValidColumn,
 			department.Table:        department.ValidColumn,
+			environment.Table:       environment.ValidColumn,
 			gatewayconnection.Table: gatewayconnection.ValidColumn,
 			image.Table:             image.ValidColumn,
 			membership.Table:        membership.ValidColumn,

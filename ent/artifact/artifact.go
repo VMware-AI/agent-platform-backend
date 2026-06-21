@@ -35,6 +35,8 @@ const (
 	FieldMetadata = "metadata"
 	// FieldTenantID holds the string denoting the tenant_id field in the database.
 	FieldTenantID = "tenant_id"
+	// FieldEnvironmentID holds the string denoting the environment_id field in the database.
+	FieldEnvironmentID = "environment_id"
 	// Table holds the table name of the artifact in the database.
 	Table = "artifacts"
 )
@@ -52,6 +54,7 @@ var Columns = []string{
 	FieldSha256,
 	FieldMetadata,
 	FieldTenantID,
+	FieldEnvironmentID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -158,4 +161,9 @@ func BySha256(opts ...sql.OrderTermOption) OrderOption {
 // ByTenantID orders the results by the tenant_id field.
 func ByTenantID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTenantID, opts...).ToFunc()
+}
+
+// ByEnvironmentID orders the results by the environment_id field.
+func ByEnvironmentID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEnvironmentID, opts...).ToFunc()
 }

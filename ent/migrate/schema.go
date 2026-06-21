@@ -22,6 +22,7 @@ var (
 		{Name: "virtual_key_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "resource_pool_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "environment_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// AgentsTable holds the schema information for the "agents" table.
 	AgentsTable = &schema.Table{
@@ -51,6 +52,7 @@ var (
 		{Name: "is_default", Type: field.TypeBool, Default: false},
 		{Name: "artifact_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "environment_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// AgentConfigsTable holds the schema information for the "agent_configs" table.
 	AgentConfigsTable = &schema.Table{
@@ -148,6 +150,7 @@ var (
 		{Name: "sha256", Type: field.TypeString, Nullable: true},
 		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "environment_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// ArtifactsTable holds the schema information for the "artifacts" table.
 	ArtifactsTable = &schema.Table{
@@ -206,6 +209,33 @@ var (
 		Name:       "departments",
 		Columns:    DepartmentsColumns,
 		PrimaryKey: []*schema.Column{DepartmentsColumns[0]},
+	}
+	// EnvironmentsColumns holds the columns for the "environments" table.
+	EnvironmentsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "tenant_id", Type: field.TypeUUID},
+		{Name: "name", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+	}
+	// EnvironmentsTable holds the schema information for the "environments" table.
+	EnvironmentsTable = &schema.Table{
+		Name:       "environments",
+		Columns:    EnvironmentsColumns,
+		PrimaryKey: []*schema.Column{EnvironmentsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "environment_tenant_id_name",
+				Unique:  true,
+				Columns: []*schema.Column{EnvironmentsColumns[3], EnvironmentsColumns[4]},
+			},
+			{
+				Name:    "environment_tenant_id",
+				Unique:  false,
+				Columns: []*schema.Column{EnvironmentsColumns[3]},
+			},
+		},
 	}
 	// GatewayConnectionsColumns holds the columns for the "gateway_connections" table.
 	GatewayConnectionsColumns = []*schema.Column{
@@ -307,6 +337,7 @@ var (
 		{Name: "tpm", Type: field.TypeInt, Nullable: true},
 		{Name: "enabled", Type: field.TypeBool, Default: false},
 		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "environment_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// RateLimitPoliciesTable holds the schema information for the "rate_limit_policies" table.
 	RateLimitPoliciesTable = &schema.Table{
@@ -366,6 +397,7 @@ var (
 		{Name: "host_count", Type: field.TypeInt, Default: 0},
 		{Name: "vm_count", Type: field.TypeInt, Default: 0},
 		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "environment_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// ResourcePoolsTable holds the schema information for the "resource_pools" table.
 	ResourcePoolsTable = &schema.Table{
@@ -490,6 +522,7 @@ var (
 		{Name: "cost", Type: field.TypeFloat64, Nullable: true, Default: 0},
 		{Name: "correlation_id", Type: field.TypeString, Nullable: true},
 		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "environment_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "department_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 	}
@@ -512,7 +545,7 @@ var (
 			{
 				Name:    "tokenusage_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{TokenUsagesColumns[10]},
+				Columns: []*schema.Column{TokenUsagesColumns[11]},
 			},
 		},
 	}
@@ -651,6 +684,7 @@ var (
 		ArtifactsTable,
 		AuditLogsTable,
 		DepartmentsTable,
+		EnvironmentsTable,
 		GatewayConnectionsTable,
 		ImagesTable,
 		MembershipsTable,

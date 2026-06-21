@@ -118,6 +118,26 @@ func (_u *AgentConfigUpdate) ClearTenantID() *AgentConfigUpdate {
 	return _u
 }
 
+// SetEnvironmentID sets the "environment_id" field.
+func (_u *AgentConfigUpdate) SetEnvironmentID(v uuid.UUID) *AgentConfigUpdate {
+	_u.mutation.SetEnvironmentID(v)
+	return _u
+}
+
+// SetNillableEnvironmentID sets the "environment_id" field if the given value is not nil.
+func (_u *AgentConfigUpdate) SetNillableEnvironmentID(v *uuid.UUID) *AgentConfigUpdate {
+	if v != nil {
+		_u.SetEnvironmentID(*v)
+	}
+	return _u
+}
+
+// ClearEnvironmentID clears the value of the "environment_id" field.
+func (_u *AgentConfigUpdate) ClearEnvironmentID() *AgentConfigUpdate {
+	_u.mutation.ClearEnvironmentID()
+	return _u
+}
+
 // Mutation returns the AgentConfigMutation object of the builder.
 func (_u *AgentConfigUpdate) Mutation() *AgentConfigMutation {
 	return _u.mutation
@@ -215,6 +235,12 @@ func (_u *AgentConfigUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	}
 	if _u.mutation.TenantIDCleared() {
 		_spec.ClearField(agentconfig.FieldTenantID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.EnvironmentID(); ok {
+		_spec.SetField(agentconfig.FieldEnvironmentID, field.TypeUUID, value)
+	}
+	if _u.mutation.EnvironmentIDCleared() {
+		_spec.ClearField(agentconfig.FieldEnvironmentID, field.TypeUUID)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
@@ -323,6 +349,26 @@ func (_u *AgentConfigUpdateOne) SetNillableTenantID(v *uuid.UUID) *AgentConfigUp
 // ClearTenantID clears the value of the "tenant_id" field.
 func (_u *AgentConfigUpdateOne) ClearTenantID() *AgentConfigUpdateOne {
 	_u.mutation.ClearTenantID()
+	return _u
+}
+
+// SetEnvironmentID sets the "environment_id" field.
+func (_u *AgentConfigUpdateOne) SetEnvironmentID(v uuid.UUID) *AgentConfigUpdateOne {
+	_u.mutation.SetEnvironmentID(v)
+	return _u
+}
+
+// SetNillableEnvironmentID sets the "environment_id" field if the given value is not nil.
+func (_u *AgentConfigUpdateOne) SetNillableEnvironmentID(v *uuid.UUID) *AgentConfigUpdateOne {
+	if v != nil {
+		_u.SetEnvironmentID(*v)
+	}
+	return _u
+}
+
+// ClearEnvironmentID clears the value of the "environment_id" field.
+func (_u *AgentConfigUpdateOne) ClearEnvironmentID() *AgentConfigUpdateOne {
+	_u.mutation.ClearEnvironmentID()
 	return _u
 }
 
@@ -453,6 +499,12 @@ func (_u *AgentConfigUpdateOne) sqlSave(ctx context.Context) (_node *AgentConfig
 	}
 	if _u.mutation.TenantIDCleared() {
 		_spec.ClearField(agentconfig.FieldTenantID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.EnvironmentID(); ok {
+		_spec.SetField(agentconfig.FieldEnvironmentID, field.TypeUUID, value)
+	}
+	if _u.mutation.EnvironmentIDCleared() {
+		_spec.ClearField(agentconfig.FieldEnvironmentID, field.TypeUUID)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &AgentConfig{config: _u.config}

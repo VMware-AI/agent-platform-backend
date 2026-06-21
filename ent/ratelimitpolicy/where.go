@@ -90,6 +90,11 @@ func TenantID(v uuid.UUID) predicate.RateLimitPolicy {
 	return predicate.RateLimitPolicy(sql.FieldEQ(FieldTenantID, v))
 }
 
+// EnvironmentID applies equality check predicate on the "environment_id" field. It's identical to EnvironmentIDEQ.
+func EnvironmentID(v uuid.UUID) predicate.RateLimitPolicy {
+	return predicate.RateLimitPolicy(sql.FieldEQ(FieldEnvironmentID, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.RateLimitPolicy {
 	return predicate.RateLimitPolicy(sql.FieldEQ(FieldCreatedAt, v))
@@ -393,6 +398,56 @@ func TenantIDIsNil() predicate.RateLimitPolicy {
 // TenantIDNotNil applies the NotNil predicate on the "tenant_id" field.
 func TenantIDNotNil() predicate.RateLimitPolicy {
 	return predicate.RateLimitPolicy(sql.FieldNotNull(FieldTenantID))
+}
+
+// EnvironmentIDEQ applies the EQ predicate on the "environment_id" field.
+func EnvironmentIDEQ(v uuid.UUID) predicate.RateLimitPolicy {
+	return predicate.RateLimitPolicy(sql.FieldEQ(FieldEnvironmentID, v))
+}
+
+// EnvironmentIDNEQ applies the NEQ predicate on the "environment_id" field.
+func EnvironmentIDNEQ(v uuid.UUID) predicate.RateLimitPolicy {
+	return predicate.RateLimitPolicy(sql.FieldNEQ(FieldEnvironmentID, v))
+}
+
+// EnvironmentIDIn applies the In predicate on the "environment_id" field.
+func EnvironmentIDIn(vs ...uuid.UUID) predicate.RateLimitPolicy {
+	return predicate.RateLimitPolicy(sql.FieldIn(FieldEnvironmentID, vs...))
+}
+
+// EnvironmentIDNotIn applies the NotIn predicate on the "environment_id" field.
+func EnvironmentIDNotIn(vs ...uuid.UUID) predicate.RateLimitPolicy {
+	return predicate.RateLimitPolicy(sql.FieldNotIn(FieldEnvironmentID, vs...))
+}
+
+// EnvironmentIDGT applies the GT predicate on the "environment_id" field.
+func EnvironmentIDGT(v uuid.UUID) predicate.RateLimitPolicy {
+	return predicate.RateLimitPolicy(sql.FieldGT(FieldEnvironmentID, v))
+}
+
+// EnvironmentIDGTE applies the GTE predicate on the "environment_id" field.
+func EnvironmentIDGTE(v uuid.UUID) predicate.RateLimitPolicy {
+	return predicate.RateLimitPolicy(sql.FieldGTE(FieldEnvironmentID, v))
+}
+
+// EnvironmentIDLT applies the LT predicate on the "environment_id" field.
+func EnvironmentIDLT(v uuid.UUID) predicate.RateLimitPolicy {
+	return predicate.RateLimitPolicy(sql.FieldLT(FieldEnvironmentID, v))
+}
+
+// EnvironmentIDLTE applies the LTE predicate on the "environment_id" field.
+func EnvironmentIDLTE(v uuid.UUID) predicate.RateLimitPolicy {
+	return predicate.RateLimitPolicy(sql.FieldLTE(FieldEnvironmentID, v))
+}
+
+// EnvironmentIDIsNil applies the IsNil predicate on the "environment_id" field.
+func EnvironmentIDIsNil() predicate.RateLimitPolicy {
+	return predicate.RateLimitPolicy(sql.FieldIsNull(FieldEnvironmentID))
+}
+
+// EnvironmentIDNotNil applies the NotNil predicate on the "environment_id" field.
+func EnvironmentIDNotNil() predicate.RateLimitPolicy {
+	return predicate.RateLimitPolicy(sql.FieldNotNull(FieldEnvironmentID))
 }
 
 // And groups predicates with the AND operator between them.

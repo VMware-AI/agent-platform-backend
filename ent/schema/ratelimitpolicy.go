@@ -23,5 +23,6 @@ func (RateLimitPolicy) Fields() []ent.Field {
 		field.Int("tpm").Optional().Nillable(), // tokens per minute
 		field.Bool("enabled").Default(false),
 		field.UUID("tenant_id", uuid.UUID{}).Optional().Nillable(),
+		field.UUID("environment_id", uuid.UUID{}).Optional().Nillable(), // LLD-10 env_scope (default off)
 	}
 }
