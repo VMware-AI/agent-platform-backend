@@ -214,6 +214,19 @@ func (r *queryResolver) VirtualKeys(ctx context.Context, userID *string) ([]mode
 		}
 		q = q.Where(virtualkey.UserID(uid))
 	}
+	// Tenant isolation (LLD-10 B-class): a virtual key belongs to its user's
+	// tenant; a tenant-admin sees only keys of users in their tenant.
+	if d := tenantScopeFor(ctx); d.apply {
+		if d.denyAll {
+			q = q.Where(virtualkey.IDEQ(uuid.Nil))
+		} else {
+			ids, err := r.tenantMemberIDs(ctx, d.tenant)
+			if err != nil {
+				return nil, err
+			}
+			q = q.Where(virtualkey.UserIDIn(ids...))
+		}
+	}
 	keys, err := q.Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err

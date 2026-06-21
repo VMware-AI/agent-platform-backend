@@ -12,6 +12,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
+	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/catalog"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
@@ -73,6 +74,14 @@ func writeTenant(ctx context.Context) (*uuid.UUID, error) {
 		return nil, gqlerror.Errorf("invalid caller tenant")
 	}
 	return &id, nil
+}
+
+// tenantMemberIDs returns the user ids that belong to a tenant. Used to scope
+// B-class entities (VirtualKey/RequestLog/AuditLog) that have no tenant_id of
+// their own and must be confined via their owning user (LLD-10 §1.1 B-class).
+// An empty result naturally yields a fail-closed `... IN ()` (matches nothing).
+func (r *Resolver) tenantMemberIDs(ctx context.Context, tenant uuid.UUID) ([]uuid.UUID, error) {
+	return r.Ent.User.Query().Where(user.TenantID(tenant)).IDs(ctx)
 }
 
 // contentScopeFor confines a browsable resource to the caller's tenant PLUS

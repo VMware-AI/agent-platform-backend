@@ -292,6 +292,20 @@ func (r *queryResolver) AuditLogs(ctx context.Context, filter *model.AuditFilter
 			))
 		}
 	}
+	// Tenant isolation (LLD-10 §1.4 D-class): a tenant-admin sees only audit rows
+	// whose actor belongs to their tenant; platform-level actions (no actor tenant)
+	// stay admin-only. Applied before count + page so both share the scope.
+	if d := tenantScopeFor(ctx); d.apply {
+		if d.denyAll {
+			q = q.Where(auditlog.IDEQ(uuid.Nil))
+		} else {
+			ids, err := r.tenantMemberIDs(ctx, d.tenant)
+			if err != nil {
+				return nil, err
+			}
+			q = q.Where(auditlog.ActorUserIDIn(ids...))
+		}
+	}
 	total, err := q.Clone().Count(ctx)
 	if err != nil {
 		return nil, err

@@ -179,3 +179,53 @@ func TestCrossTenant_TokenUsage_Strict(t *testing.T) {
 		t.Fatalf("tenant-admin should see only their tenant's 1 usage row, got %d", len(got))
 	}
 }
+
+func TestCrossTenant_BClass_ViaParentUser(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := context.Background()
+	tA, tB := uuid.New(), uuid.New()
+
+	// a user in each tenant
+	uA := r.Ent.User.Create().SetUsername("ua").SetEmail("ua@x.io").
+		SetPasswordHash("h").SetTenantID(tA).SaveX(ctx)
+	uB := r.Ent.User.Create().SetUsername("ub").SetEmail("ub@x.io").
+		SetPasswordHash("h").SetTenantID(tB).SaveX(ctx)
+
+	// VirtualKey via user
+	r.Ent.VirtualKey.Create().SetLitellmKey("ka").SetUserID(uA.ID).SaveX(ctx)
+	r.Ent.VirtualKey.Create().SetLitellmKey("kb").SetUserID(uB.ID).SaveX(ctx)
+	// RequestLog via user
+	r.Ent.RequestLog.Create().SetRequestID("ra").SetUserID(uA.ID).SaveX(ctx)
+	r.Ent.RequestLog.Create().SetRequestID("rb").SetUserID(uB.ID).SaveX(ctx)
+	// AuditLog via actor
+	r.Ent.AuditLog.Create().SetAction("a.act").SetActorUserID(uA.ID).SaveX(ctx)
+	r.Ent.AuditLog.Create().SetAction("b.act").SetActorUserID(uB.ID).SaveX(ctx)
+
+	qr := &queryResolver{r}
+	taCtx := tenantAdminCtx(uuid.NewString(), tA.String())
+
+	keys, err := qr.VirtualKeys(taCtx, nil)
+	if err != nil {
+		t.Fatalf("VirtualKeys: %v", err)
+	}
+	if len(keys) != 1 || keys[0].UserID != uA.ID.String() {
+		t.Fatalf("tenant-admin should see only tenant A's key, got %d", len(keys))
+	}
+
+	logs, err := qr.RequestLogs(taCtx, nil, nil)
+	if err != nil {
+		t.Fatalf("RequestLogs: %v", err)
+	}
+	if len(logs) != 1 || logs[0].RequestID != "ra" {
+		t.Fatalf("tenant-admin should see only tenant A's request log, got %d", len(logs))
+	}
+
+	audit, err := qr.AuditLogs(taCtx, nil, nil)
+	if err != nil {
+		t.Fatalf("AuditLogs: %v", err)
+	}
+	if audit.Total != 1 || len(audit.Items) != 1 || audit.Items[0].Action != "a.act" {
+		t.Fatalf("tenant-admin should see only tenant A's audit (total=%d items=%d)", audit.Total, len(audit.Items))
+	}
+}

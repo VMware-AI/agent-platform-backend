@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
+	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/ratelimitpolicy"
 	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
@@ -125,6 +126,23 @@ func (r *queryResolver) RequestLogs(ctx context.Context, filter *model.RequestLo
 			if aid, err := uuid.Parse(*filter.AgentID); err == nil {
 				q = q.Where(requestlog.AgentID(aid))
 			}
+		}
+	}
+	// Tenant isolation (LLD-10 B-class): a request log belongs to its user's /
+	// agent's tenant; a tenant-admin sees only their tenant's traffic.
+	if d := tenantScopeFor(ctx); d.apply {
+		if d.denyAll {
+			q = q.Where(requestlog.IDEQ(uuid.Nil))
+		} else {
+			uids, err := r.tenantMemberIDs(ctx, d.tenant)
+			if err != nil {
+				return nil, err
+			}
+			aids, err := r.Ent.Agent.Query().Where(agent.TenantID(d.tenant)).IDs(ctx)
+			if err != nil {
+				return nil, err
+			}
+			q = q.Where(requestlog.Or(requestlog.UserIDIn(uids...), requestlog.AgentIDIn(aids...)))
 		}
 	}
 	limit, offset := pageBounds(page)
