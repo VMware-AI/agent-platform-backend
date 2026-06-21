@@ -2573,6 +2573,7 @@ type ArtifactMutation struct {
 	kind          *artifact.Kind
 	version       *string
 	uri           *string
+	content       *string
 	sha256        *string
 	metadata      *map[string]interface{}
 	tenant_id     *uuid.UUID
@@ -2902,6 +2903,55 @@ func (m *ArtifactMutation) ResetURI() {
 	m.uri = nil
 }
 
+// SetContent sets the "content" field.
+func (m *ArtifactMutation) SetContent(s string) {
+	m.content = &s
+}
+
+// Content returns the value of the "content" field in the mutation.
+func (m *ArtifactMutation) Content() (r string, exists bool) {
+	v := m.content
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldContent returns the old "content" field's value of the Artifact entity.
+// If the Artifact object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ArtifactMutation) OldContent(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldContent is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldContent requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldContent: %w", err)
+	}
+	return oldValue.Content, nil
+}
+
+// ClearContent clears the value of the "content" field.
+func (m *ArtifactMutation) ClearContent() {
+	m.content = nil
+	m.clearedFields[artifact.FieldContent] = struct{}{}
+}
+
+// ContentCleared returns if the "content" field was cleared in this mutation.
+func (m *ArtifactMutation) ContentCleared() bool {
+	_, ok := m.clearedFields[artifact.FieldContent]
+	return ok
+}
+
+// ResetContent resets all changes to the "content" field.
+func (m *ArtifactMutation) ResetContent() {
+	m.content = nil
+	delete(m.clearedFields, artifact.FieldContent)
+}
+
 // SetSha256 sets the "sha256" field.
 func (m *ArtifactMutation) SetSha256(s string) {
 	m.sha256 = &s
@@ -3083,7 +3133,7 @@ func (m *ArtifactMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ArtifactMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.created_at != nil {
 		fields = append(fields, artifact.FieldCreatedAt)
 	}
@@ -3101,6 +3151,9 @@ func (m *ArtifactMutation) Fields() []string {
 	}
 	if m.uri != nil {
 		fields = append(fields, artifact.FieldURI)
+	}
+	if m.content != nil {
+		fields = append(fields, artifact.FieldContent)
 	}
 	if m.sha256 != nil {
 		fields = append(fields, artifact.FieldSha256)
@@ -3131,6 +3184,8 @@ func (m *ArtifactMutation) Field(name string) (ent.Value, bool) {
 		return m.Version()
 	case artifact.FieldURI:
 		return m.URI()
+	case artifact.FieldContent:
+		return m.Content()
 	case artifact.FieldSha256:
 		return m.Sha256()
 	case artifact.FieldMetadata:
@@ -3158,6 +3213,8 @@ func (m *ArtifactMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldVersion(ctx)
 	case artifact.FieldURI:
 		return m.OldURI(ctx)
+	case artifact.FieldContent:
+		return m.OldContent(ctx)
 	case artifact.FieldSha256:
 		return m.OldSha256(ctx)
 	case artifact.FieldMetadata:
@@ -3215,6 +3272,13 @@ func (m *ArtifactMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetURI(v)
 		return nil
+	case artifact.FieldContent:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetContent(v)
+		return nil
 	case artifact.FieldSha256:
 		v, ok := value.(string)
 		if !ok {
@@ -3266,6 +3330,9 @@ func (m *ArtifactMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *ArtifactMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(artifact.FieldContent) {
+		fields = append(fields, artifact.FieldContent)
+	}
 	if m.FieldCleared(artifact.FieldSha256) {
 		fields = append(fields, artifact.FieldSha256)
 	}
@@ -3289,6 +3356,9 @@ func (m *ArtifactMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ArtifactMutation) ClearField(name string) error {
 	switch name {
+	case artifact.FieldContent:
+		m.ClearContent()
+		return nil
 	case artifact.FieldSha256:
 		m.ClearSha256()
 		return nil
@@ -3323,6 +3393,9 @@ func (m *ArtifactMutation) ResetField(name string) error {
 		return nil
 	case artifact.FieldURI:
 		m.ResetURI()
+		return nil
+	case artifact.FieldContent:
+		m.ResetContent()
 		return nil
 	case artifact.FieldSha256:
 		m.ResetSha256()

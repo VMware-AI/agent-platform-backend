@@ -61,15 +61,21 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		return nil, fmt.Errorf("connect vcenter: %w", err)
 	}
 
+	// Resolve the agent's inline default_config (agent→config→artifact.content)
+	// so it is embedded into cloud-init at deploy — no fetch from the VM (LLD-09).
+	defaultConfig, configPath := r.resolveAgentConfig(ctx, ag)
+
 	svc := &deploy.Service{Gateway: r.Gateway, VCenter: conn, GatewayURL: r.GatewayURL}
 	res, err := svc.Provision(ctx, deploy.Request{
-		AgentName:    ag.Name,
-		UserID:       ag.OwnerUserID.String(),
-		Template:     input.Template,
-		VMName:       input.VMName,
-		ResourcePool: derefString(input.TargetResourcePool),
-		Hostname:     derefString(input.Hostname),
-		MaxBudget:    input.MaxBudget,
+		AgentName:     ag.Name,
+		UserID:        ag.OwnerUserID.String(),
+		Template:      input.Template,
+		VMName:        input.VMName,
+		ResourcePool:  derefString(input.TargetResourcePool),
+		Hostname:      derefString(input.Hostname),
+		MaxBudget:     input.MaxBudget,
+		DefaultConfig: defaultConfig,
+		ConfigPath:    configPath,
 	})
 	if err != nil {
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)

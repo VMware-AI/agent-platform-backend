@@ -86,6 +86,7 @@ var (
 		{Name: "kind", Type: field.TypeEnum, Enums: []string{"script", "config", "package"}},
 		{Name: "version", Type: field.TypeString},
 		{Name: "uri", Type: field.TypeString},
+		{Name: "content", Type: field.TypeString, Nullable: true, Size: 65536},
 		{Name: "sha256", Type: field.TypeString, Nullable: true},
 		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},

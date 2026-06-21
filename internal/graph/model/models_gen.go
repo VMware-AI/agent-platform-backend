@@ -60,6 +60,7 @@ type Artifact struct {
 	Kind      ArtifactKind   `json:"kind"`
 	Version   string         `json:"version"`
 	URI       string         `json:"uri"`
+	Content   *string        `json:"content,omitempty"`
 	Sha256    *string        `json:"sha256,omitempty"`
 	Metadata  map[string]any `json:"metadata,omitempty"`
 	CreatedAt time.Time      `json:"createdAt"`
@@ -405,6 +406,7 @@ type UpsertArtifactInput struct {
 	Kind     ArtifactKind   `json:"kind"`
 	Version  string         `json:"version"`
 	URI      string         `json:"uri"`
+	Content  *string        `json:"content,omitempty"`
 	Sha256   *string        `json:"sha256,omitempty"`
 	Metadata map[string]any `json:"metadata,omitempty"`
 }

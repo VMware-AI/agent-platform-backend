@@ -27,6 +27,8 @@ const (
 	FieldVersion = "version"
 	// FieldURI holds the string denoting the uri field in the database.
 	FieldURI = "uri"
+	// FieldContent holds the string denoting the content field in the database.
+	FieldContent = "content"
 	// FieldSha256 holds the string denoting the sha256 field in the database.
 	FieldSha256 = "sha256"
 	// FieldMetadata holds the string denoting the metadata field in the database.
@@ -46,6 +48,7 @@ var Columns = []string{
 	FieldKind,
 	FieldVersion,
 	FieldURI,
+	FieldContent,
 	FieldSha256,
 	FieldMetadata,
 	FieldTenantID,
@@ -74,6 +77,8 @@ var (
 	VersionValidator func(string) error
 	// URIValidator is a validator for the "uri" field. It is called by the builders before save.
 	URIValidator func(string) error
+	// ContentValidator is a validator for the "content" field. It is called by the builders before save.
+	ContentValidator func(string) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -138,6 +143,11 @@ func ByVersion(opts ...sql.OrderTermOption) OrderOption {
 // ByURI orders the results by the uri field.
 func ByURI(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldURI, opts...).ToFunc()
+}
+
+// ByContent orders the results by the content field.
+func ByContent(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldContent, opts...).ToFunc()
 }
 
 // BySha256 orders the results by the sha256 field.

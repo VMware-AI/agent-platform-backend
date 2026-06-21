@@ -12,6 +12,8 @@ type Artifact {
   kind: ArtifactKind!
   version: String!
   uri: String!
+  # Inline content for small config/script artifacts (≤64K). Empty for packages.
+  content: String
   sha256: String
   metadata: Map
   createdAt: Time!
@@ -40,6 +42,9 @@ input UpsertArtifactInput {
   kind: ArtifactKind!
   version: String!
   uri: String!
+  # Inline text for config/script artifacts only (≤64K); embedded into the agent
+  # VM at deploy. Rejected for kind=package. sha256 is recomputed from content.
+  content: String
   sha256: String
   metadata: Map
 }

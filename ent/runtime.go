@@ -147,6 +147,10 @@ func init() {
 	artifactDescURI := artifactFields[4].Descriptor()
 	// artifact.URIValidator is a validator for the "uri" field. It is called by the builders before save.
 	artifact.URIValidator = artifactDescURI.Validators[0].(func(string) error)
+	// artifactDescContent is the schema descriptor for content field.
+	artifactDescContent := artifactFields[5].Descriptor()
+	// artifact.ContentValidator is a validator for the "content" field. It is called by the builders before save.
+	artifact.ContentValidator = artifactDescContent.Validators[0].(func(string) error)
 	// artifactDescID is the schema descriptor for id field.
 	artifactDescID := artifactFields[0].Descriptor()
 	// artifact.DefaultID holds the default value on creation for the id field.

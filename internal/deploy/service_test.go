@@ -223,3 +223,35 @@ func TestProvision_Validation(t *testing.T) {
 		t.Fatal("nil vcenter should error")
 	}
 }
+
+func TestProvision_EmbedsInlineDefaultConfig(t *testing.T) {
+	svc := &Service{Gateway: &fakeGateway{}, VCenter: &fakeVC{}, GatewayURL: "https://gw.internal"}
+	res, err := svc.Provision(context.Background(), Request{
+		UserID: "u1", Template: "tpl", VMName: "vm1",
+		DefaultConfig: "model: smart\nlog: debug", ConfigPath: "/etc/agent/config.yaml",
+	})
+	if err != nil {
+		t.Fatalf("Provision: %v", err)
+	}
+	if !strings.Contains(res.Userdata, "path: /etc/agent/config.yaml") {
+		t.Fatalf("config path not embedded:\n%s", res.Userdata)
+	}
+	if !strings.Contains(res.Userdata, "model: smart") || !strings.Contains(res.Userdata, "log: debug") {
+		t.Fatalf("config content not embedded:\n%s", res.Userdata)
+	}
+	// gateway env must still be present
+	if !strings.Contains(res.Userdata, "OPENAI_API_KEY=") {
+		t.Fatalf("gateway env missing:\n%s", res.Userdata)
+	}
+}
+
+func TestProvision_NoConfig_GatewayEnvOnly(t *testing.T) {
+	svc := &Service{Gateway: &fakeGateway{}, VCenter: &fakeVC{}, GatewayURL: "https://gw.internal"}
+	res, err := svc.Provision(context.Background(), Request{UserID: "u1", Template: "t", VMName: "vm"})
+	if err != nil {
+		t.Fatalf("Provision: %v", err)
+	}
+	if strings.Contains(res.Userdata, "/etc/agent/config") {
+		t.Fatalf("no config should be injected when none provided:\n%s", res.Userdata)
+	}
+}

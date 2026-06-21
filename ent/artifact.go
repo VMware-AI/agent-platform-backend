@@ -31,6 +31,8 @@ type Artifact struct {
 	Version string `json:"version,omitempty"`
 	// URI holds the value of the "uri" field.
 	URI string `json:"uri,omitempty"`
+	// Content holds the value of the "content" field.
+	Content string `json:"content,omitempty"`
 	// Sha256 holds the value of the "sha256" field.
 	Sha256 string `json:"sha256,omitempty"`
 	// Metadata holds the value of the "metadata" field.
@@ -49,7 +51,7 @@ func (*Artifact) scanValues(columns []string) ([]any, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case artifact.FieldMetadata:
 			values[i] = new([]byte)
-		case artifact.FieldName, artifact.FieldKind, artifact.FieldVersion, artifact.FieldURI, artifact.FieldSha256:
+		case artifact.FieldName, artifact.FieldKind, artifact.FieldVersion, artifact.FieldURI, artifact.FieldContent, artifact.FieldSha256:
 			values[i] = new(sql.NullString)
 		case artifact.FieldCreatedAt, artifact.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -111,6 +113,12 @@ func (_m *Artifact) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field uri", values[i])
 			} else if value.Valid {
 				_m.URI = value.String
+			}
+		case artifact.FieldContent:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field content", values[i])
+			} else if value.Valid {
+				_m.Content = value.String
 			}
 		case artifact.FieldSha256:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -186,6 +194,9 @@ func (_m *Artifact) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("uri=")
 	builder.WriteString(_m.URI)
+	builder.WriteString(", ")
+	builder.WriteString("content=")
+	builder.WriteString(_m.Content)
 	builder.WriteString(", ")
 	builder.WriteString("sha256=")
 	builder.WriteString(_m.Sha256)

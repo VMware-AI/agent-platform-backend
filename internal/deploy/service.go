@@ -43,6 +43,10 @@ type Request struct {
 	Hostname     string
 	Models       []string
 	MaxBudget    *float64
+	// DefaultConfig is the agent's inline default_config (LLD-09); when set it is
+	// embedded into cloud-init at ConfigPath so the VM never fetches it.
+	DefaultConfig string
+	ConfigPath    string
 }
 
 // Result carries the issued secret (returned once), the rendered userdata, and
@@ -96,7 +100,7 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 	}
 
 	// 3) Inject per-VM cloud-init via guestinfo.
-	userdata := buildUserdata(s.GatewayURL, key.Key, req.Hostname)
+	userdata := buildUserdata(s.GatewayURL, key.Key, req.Hostname, req.DefaultConfig, req.ConfigPath)
 	gi := map[string]string{"userdata": userdata}
 	if req.Hostname != "" {
 		gi["metadata"] = buildMetadata(req.Hostname)
@@ -135,8 +139,10 @@ func (s *Service) revokeKey(ctx context.Context, key string) {
 	}
 }
 
-// buildUserdata renders the cloud-init that drops the gateway env (LLD-05 §3).
-func buildUserdata(gatewayURL, key, hostname string) string {
+// buildUserdata renders the cloud-init that drops the gateway env (LLD-05 §3)
+// and, when an inline default_config is present, embeds it as a second
+// write_files entry so the VM gets its config without any network fetch (LLD-09).
+func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string) string {
 	base := strings.TrimRight(gatewayURL, "/")
 	var b strings.Builder
 	b.WriteString("#cloud-config\n")
@@ -150,6 +156,20 @@ func buildUserdata(gatewayURL, key, hostname string) string {
 	b.WriteString("    content: |\n")
 	fmt.Fprintf(&b, "      OPENAI_BASE_URL=%s/v1\n", base)
 	fmt.Fprintf(&b, "      OPENAI_API_KEY=%s\n", key)
+	if defaultConfig != "" && configPath != "" {
+		b.WriteString("  - path: ")
+		b.WriteString(configPath)
+		b.WriteString("\n")
+		b.WriteString("    permissions: \"0640\"\n")
+		b.WriteString("    owner: root:agent\n")
+		b.WriteString("    content: |\n")
+		// Indent each line by 6 spaces under the cloud-init block scalar.
+		for _, line := range strings.Split(defaultConfig, "\n") {
+			b.WriteString("      ")
+			b.WriteString(line)
+			b.WriteString("\n")
+		}
+	}
 	return b.String()
 }
 

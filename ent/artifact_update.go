@@ -92,6 +92,26 @@ func (_u *ArtifactUpdate) SetNillableURI(v *string) *ArtifactUpdate {
 	return _u
 }
 
+// SetContent sets the "content" field.
+func (_u *ArtifactUpdate) SetContent(v string) *ArtifactUpdate {
+	_u.mutation.SetContent(v)
+	return _u
+}
+
+// SetNillableContent sets the "content" field if the given value is not nil.
+func (_u *ArtifactUpdate) SetNillableContent(v *string) *ArtifactUpdate {
+	if v != nil {
+		_u.SetContent(*v)
+	}
+	return _u
+}
+
+// ClearContent clears the value of the "content" field.
+func (_u *ArtifactUpdate) ClearContent() *ArtifactUpdate {
+	_u.mutation.ClearContent()
+	return _u
+}
+
 // SetSha256 sets the "sha256" field.
 func (_u *ArtifactUpdate) SetSha256(v string) *ArtifactUpdate {
 	_u.mutation.SetSha256(v)
@@ -207,6 +227,11 @@ func (_u *ArtifactUpdate) check() error {
 			return &ValidationError{Name: "uri", err: fmt.Errorf(`ent: validator failed for field "Artifact.uri": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Content(); ok {
+		if err := artifact.ContentValidator(v); err != nil {
+			return &ValidationError{Name: "content", err: fmt.Errorf(`ent: validator failed for field "Artifact.content": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -242,6 +267,12 @@ func (_u *ArtifactUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.URI(); ok {
 		_spec.SetField(artifact.FieldURI, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Content(); ok {
+		_spec.SetField(artifact.FieldContent, field.TypeString, value)
+	}
+	if _u.mutation.ContentCleared() {
+		_spec.ClearField(artifact.FieldContent, field.TypeString)
 	}
 	if value, ok := _u.mutation.Sha256(); ok {
 		_spec.SetField(artifact.FieldSha256, field.TypeString, value)
@@ -342,6 +373,26 @@ func (_u *ArtifactUpdateOne) SetNillableURI(v *string) *ArtifactUpdateOne {
 	if v != nil {
 		_u.SetURI(*v)
 	}
+	return _u
+}
+
+// SetContent sets the "content" field.
+func (_u *ArtifactUpdateOne) SetContent(v string) *ArtifactUpdateOne {
+	_u.mutation.SetContent(v)
+	return _u
+}
+
+// SetNillableContent sets the "content" field if the given value is not nil.
+func (_u *ArtifactUpdateOne) SetNillableContent(v *string) *ArtifactUpdateOne {
+	if v != nil {
+		_u.SetContent(*v)
+	}
+	return _u
+}
+
+// ClearContent clears the value of the "content" field.
+func (_u *ArtifactUpdateOne) ClearContent() *ArtifactUpdateOne {
+	_u.mutation.ClearContent()
 	return _u
 }
 
@@ -473,6 +524,11 @@ func (_u *ArtifactUpdateOne) check() error {
 			return &ValidationError{Name: "uri", err: fmt.Errorf(`ent: validator failed for field "Artifact.uri": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Content(); ok {
+		if err := artifact.ContentValidator(v); err != nil {
+			return &ValidationError{Name: "content", err: fmt.Errorf(`ent: validator failed for field "Artifact.content": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -525,6 +581,12 @@ func (_u *ArtifactUpdateOne) sqlSave(ctx context.Context) (_node *Artifact, err 
 	}
 	if value, ok := _u.mutation.URI(); ok {
 		_spec.SetField(artifact.FieldURI, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Content(); ok {
+		_spec.SetField(artifact.FieldContent, field.TypeString, value)
+	}
+	if _u.mutation.ContentCleared() {
+		_spec.ClearField(artifact.FieldContent, field.TypeString)
 	}
 	if value, ok := _u.mutation.Sha256(); ok {
 		_spec.SetField(artifact.FieldSha256, field.TypeString, value)

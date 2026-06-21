@@ -22,6 +22,10 @@ func (Artifact) Fields() []ent.Field {
 		field.Enum("kind").Values("script", "config", "package"),
 		field.String("version").NotEmpty(),
 		field.String("uri").NotEmpty(),
+		// Inline content for small text artifacts (config/script, ≤64K). Air-gap
+		// path: the backend embeds it into cloud-init at deploy so the VM never
+		// fetches it (LLD-09). Large packages keep content empty and use uri.
+		field.String("content").Optional().MaxLen(65536),
 		field.String("sha256").Optional(),
 		field.JSON("metadata", map[string]any{}).Optional(),
 		field.UUID("tenant_id", uuid.UUID{}).Optional().Nillable(),

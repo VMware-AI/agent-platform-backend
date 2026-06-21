@@ -7,6 +7,8 @@ package graph
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
@@ -18,8 +20,27 @@ import (
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
+// maxArtifactContent caps inline artifact content (matches the ent MaxLen).
+const maxArtifactContent = 65536
+
 // UpsertArtifact is the resolver for the upsertArtifact field.
 func (r *mutationResolver) UpsertArtifact(ctx context.Context, input model.UpsertArtifactInput) (*model.Artifact, error) {
+	// Inline content is for small text artifacts only (config/script); packages
+	// reference a uri. When present we recompute sha256 from the bytes so the
+	// stored digest always matches the stored content (LLD-09).
+	var content, contentSHA string
+	if input.Content != nil && *input.Content != "" {
+		if input.Kind == model.ArtifactKindPackage {
+			return nil, gqlerror.Errorf("inline content is not allowed for package artifacts; use uri")
+		}
+		if len(*input.Content) > maxArtifactContent {
+			return nil, gqlerror.Errorf("inline content exceeds %d-byte limit", maxArtifactContent)
+		}
+		content = *input.Content
+		sum := sha256.Sum256([]byte(content))
+		contentSHA = hex.EncodeToString(sum[:])
+	}
+
 	existing, err := r.Ent.Artifact.Query().
 		Where(artifact.Name(input.Name), artifact.Version(input.Version)).Only(ctx)
 	var a *ent.Artifact
@@ -28,7 +49,9 @@ func (r *mutationResolver) UpsertArtifact(ctx context.Context, input model.Upser
 		c := r.Ent.Artifact.Create().
 			SetName(input.Name).SetKind(artifact.Kind(input.Kind)).
 			SetVersion(input.Version).SetURI(input.URI)
-		if input.Sha256 != nil {
+		if content != "" {
+			c.SetContent(content).SetSha256(contentSHA)
+		} else if input.Sha256 != nil {
 			c.SetSha256(*input.Sha256)
 		}
 		if input.Metadata != nil {
@@ -39,7 +62,9 @@ func (r *mutationResolver) UpsertArtifact(ctx context.Context, input model.Upser
 		return nil, err
 	default:
 		u := existing.Update().SetKind(artifact.Kind(input.Kind)).SetURI(input.URI)
-		if input.Sha256 != nil {
+		if content != "" {
+			u.SetContent(content).SetSha256(contentSHA)
+		} else if input.Sha256 != nil {
 			u.SetSha256(*input.Sha256)
 		}
 		if input.Metadata != nil {

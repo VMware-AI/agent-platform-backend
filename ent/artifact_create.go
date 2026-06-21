@@ -73,6 +73,20 @@ func (_c *ArtifactCreate) SetURI(v string) *ArtifactCreate {
 	return _c
 }
 
+// SetContent sets the "content" field.
+func (_c *ArtifactCreate) SetContent(v string) *ArtifactCreate {
+	_c.mutation.SetContent(v)
+	return _c
+}
+
+// SetNillableContent sets the "content" field if the given value is not nil.
+func (_c *ArtifactCreate) SetNillableContent(v *string) *ArtifactCreate {
+	if v != nil {
+		_c.SetContent(*v)
+	}
+	return _c
+}
+
 // SetSha256 sets the "sha256" field.
 func (_c *ArtifactCreate) SetSha256(v string) *ArtifactCreate {
 	_c.mutation.SetSha256(v)
@@ -210,6 +224,11 @@ func (_c *ArtifactCreate) check() error {
 			return &ValidationError{Name: "uri", err: fmt.Errorf(`ent: validator failed for field "Artifact.uri": %w`, err)}
 		}
 	}
+	if v, ok := _c.mutation.Content(); ok {
+		if err := artifact.ContentValidator(v); err != nil {
+			return &ValidationError{Name: "content", err: fmt.Errorf(`ent: validator failed for field "Artifact.content": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -268,6 +287,10 @@ func (_c *ArtifactCreate) createSpec() (*Artifact, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.URI(); ok {
 		_spec.SetField(artifact.FieldURI, field.TypeString, value)
 		_node.URI = value
+	}
+	if value, ok := _c.mutation.Content(); ok {
+		_spec.SetField(artifact.FieldContent, field.TypeString, value)
+		_node.Content = value
 	}
 	if value, ok := _c.mutation.Sha256(); ok {
 		_spec.SetField(artifact.FieldSha256, field.TypeString, value)

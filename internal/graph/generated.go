@@ -84,6 +84,7 @@ type ComplexityRoot struct {
 	}
 
 	Artifact struct {
+		Content   func(childComplexity int) int
 		CreatedAt func(childComplexity int) int
 		ID        func(childComplexity int) int
 		Kind      func(childComplexity int) int
@@ -701,6 +702,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.AgentUsage.OutputTokens(childComplexity), true
 
+	case "Artifact.content":
+		if e.ComplexityRoot.Artifact.Content == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Artifact.Content(childComplexity), true
 	case "Artifact.createdAt":
 		if e.ComplexityRoot.Artifact.CreatedAt == nil {
 			break
@@ -2720,6 +2727,8 @@ type Artifact {
   kind: ArtifactKind!
   version: String!
   uri: String!
+  # Inline content for small config/script artifacts (≤64K). Empty for packages.
+  content: String
   sha256: String
   metadata: Map
   createdAt: Time!
@@ -2748,6 +2757,9 @@ input UpsertArtifactInput {
   kind: ArtifactKind!
   version: String!
   uri: String!
+  # Inline text for config/script artifacts only (≤64K); embedded into the agent
+  # VM at deploy. Rejected for kind=package. sha256 is recomputed from content.
+  content: String
   sha256: String
   metadata: Map
 }
@@ -3497,6 +3509,8 @@ func (ec *executionContext) childFields_Artifact(ctx context.Context, field grap
 		return ec.fieldContext_Artifact_version(ctx, field)
 	case "uri":
 		return ec.fieldContext_Artifact_uri(ctx, field)
+	case "content":
+		return ec.fieldContext_Artifact_content(ctx, field)
 	case "sha256":
 		return ec.fieldContext_Artifact_sha256(ctx, field)
 	case "metadata":
@@ -6076,6 +6090,29 @@ func (ec *executionContext) _Artifact_uri(ctx context.Context, field graphql.Col
 	)
 }
 func (ec *executionContext) fieldContext_Artifact_uri(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Artifact", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Artifact_content(ctx context.Context, field graphql.CollectedField, obj *model.Artifact) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Artifact_content(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Content, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Artifact_content(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Artifact", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
@@ -16404,7 +16441,7 @@ func (ec *executionContext) unmarshalInputUpsertArtifactInput(ctx context.Contex
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "kind", "version", "uri", "sha256", "metadata"}
+	fieldsInOrder := [...]string{"name", "kind", "version", "uri", "content", "sha256", "metadata"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -16439,6 +16476,13 @@ func (ec *executionContext) unmarshalInputUpsertArtifactInput(ctx context.Contex
 				return it, err
 			}
 			it.URI = data
+		case "content":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("content"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Content = data
 		case "sha256":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sha256"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -17098,6 +17142,11 @@ func (ec *executionContext) _Artifact(ctx context.Context, sel ast.SelectionSet,
 		case "uri":
 			out.Values[i] = ec._Artifact_uri(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "content":
+			out.Values[i] = ec._Artifact_content(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
 		case "sha256":

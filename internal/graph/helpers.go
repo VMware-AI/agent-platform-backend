@@ -383,6 +383,10 @@ func toModelArtifact(a *ent.Artifact) *model.Artifact {
 		ID: a.ID.String(), Name: a.Name, Kind: model.ArtifactKind(string(a.Kind)),
 		Version: a.Version, URI: a.URI, CreatedAt: a.CreatedAt,
 	}
+	if a.Content != "" {
+		c := a.Content
+		m.Content = &c
+	}
 	if a.Sha256 != "" {
 		s := a.Sha256
 		m.Sha256 = &s
@@ -610,6 +614,34 @@ func (r *Resolver) connectAgentVM(ctx context.Context, cu *auth.CurrentUser, age
 		return nil, "", fmt.Errorf("connect vcenter: %w", err)
 	}
 	return conn, ag.VMRef, nil
+}
+
+// defaultAgentConfigPath is where an agent's inline default_config lands in the
+// VM when the artifact doesn't override it via metadata["config_path"].
+const defaultAgentConfigPath = "/etc/agent/config"
+
+// resolveAgentConfig loads the agent's inline default_config via
+// agent.config_id → AgentConfig.artifact_id → Artifact.content, returning the
+// content and the VM path to write it to (LLD-09). Empty content means "no
+// config" — deploy then degrades to gateway-env only. Best-effort: a missing or
+// unreadable config never fails deploy.
+func (r *Resolver) resolveAgentConfig(ctx context.Context, ag *ent.Agent) (content, path string) {
+	if ag.ConfigID == nil {
+		return "", ""
+	}
+	cfg, err := r.Ent.AgentConfig.Get(ctx, *ag.ConfigID)
+	if err != nil || cfg.ArtifactID == nil {
+		return "", ""
+	}
+	art, err := r.Ent.Artifact.Get(ctx, *cfg.ArtifactID)
+	if err != nil || art.Content == "" {
+		return "", ""
+	}
+	path = defaultAgentConfigPath
+	if p, ok := art.Metadata["config_path"].(string); ok && p != "" {
+		path = p
+	}
+	return art.Content, path
 }
 
 // toModelAgentSnapshot maps a vcenter snapshot to its GraphQL model.
