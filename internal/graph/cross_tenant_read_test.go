@@ -258,3 +258,21 @@ func TestCrossTenant_SameNameAcrossTenants(t *testing.T) {
 		t.Fatalf("re-upsert within tenant should not add a row, got %d", n)
 	}
 }
+
+// TestCClassStaysGlobal (AC-11): platform-global catalog (C-class, no tenant_id)
+// is NOT tenant-filtered — a tenant-admin sees all of it.
+func TestCClassStaysGlobal(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	seedActiveTemplate(t, r, "goose")
+	seedActiveTemplate(t, r, "xiaoguai")
+
+	qr := &queryResolver{r}
+	got, err := qr.AgentTemplates(tenantAdminCtx(uuid.NewString(), uuid.NewString()))
+	if err != nil {
+		t.Fatalf("AgentTemplates: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("C-class catalog must be global (tenant-admin sees all), got %d", len(got))
+	}
+}

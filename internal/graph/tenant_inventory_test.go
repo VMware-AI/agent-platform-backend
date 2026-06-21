@@ -37,15 +37,39 @@ func TestTenantedEntityInventory(t *testing.T) {
 			}
 		}
 	}
+	unregistered, stale := tenantedInventoryDiff(got, tenantedTables)
+	for _, name := range unregistered {
+		t.Errorf("table %q has a tenant_id column but is not in tenantedTables; "+
+			"wire its tenant scoping + cross-tenant isolation test (LLD-10 §3.2)", name)
+	}
+	for _, name := range stale {
+		t.Errorf("table %q is in tenantedTables but no longer has a tenant_id column", name)
+	}
+}
+
+// tenantedInventoryDiff returns tables that carry tenant_id but are unregistered,
+// and registry entries that no longer carry tenant_id.
+func tenantedInventoryDiff(got, registry map[string]bool) (unregistered, stale []string) {
 	for name := range got {
-		if !tenantedTables[name] {
-			t.Errorf("table %q has a tenant_id column but is not in tenantedTables; "+
-				"wire its tenant scoping + cross-tenant isolation test (LLD-10 §3.2)", name)
+		if !registry[name] {
+			unregistered = append(unregistered, name)
 		}
 	}
-	for name := range tenantedTables {
+	for name := range registry {
 		if !got[name] {
-			t.Errorf("table %q is in tenantedTables but no longer has a tenant_id column", name)
+			stale = append(stale, name)
 		}
+	}
+	return unregistered, stale
+}
+
+// TestTenantedInventory_DetectsUnregistered proves the guard CATCHES a new
+// tenant_id entity that wasn't registered (AC-10).
+func TestTenantedInventory_DetectsUnregistered(t *testing.T) {
+	got := map[string]bool{"users": true, "sneaky_new_tenanted_table": true}
+	registry := map[string]bool{"users": true}
+	unregistered, _ := tenantedInventoryDiff(got, registry)
+	if len(unregistered) != 1 || unregistered[0] != "sneaky_new_tenanted_table" {
+		t.Fatalf("guard must flag the unregistered tenanted table, got %v", unregistered)
 	}
 }

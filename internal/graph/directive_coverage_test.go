@@ -47,33 +47,41 @@ var authExemptFields = map[string]string{
 	"images": "C-class global catalog",
 }
 
+// fieldGuarded is the single source of truth for the fail-closed contract: a
+// root field is OK iff it carries an authz directive OR is an explicit exemption.
+func fieldGuarded(f fieldInfo) bool {
+	for _, d := range f.directives {
+		if d == "hasRole" || d == "hasPermission" {
+			return true
+		}
+	}
+	_, ok := authExemptFields[f.name]
+	return ok
+}
+
 // TestDirectiveCoverage asserts every root Query/Mutation field is either gated
 // by an authz directive or explicitly exempted above (LLD-10 §3.1 fail-closed).
 func TestDirectiveCoverage(t *testing.T) {
-	hasAuthDirective := func(directives []string) bool {
-		for _, d := range directives {
-			if d == "hasRole" || d == "hasPermission" {
-				return true
+	for _, typeName := range []string{"Query", "Mutation"} {
+		for _, f := range rootFields(typeName) {
+			if !fieldGuarded(f) {
+				t.Errorf("%s.%s has no @hasRole/@hasPermission and is not in authExemptFields "+
+					"(fail-closed: add a directive or exempt it deliberately)", typeName, f.name)
 			}
 		}
-		return false
 	}
+}
 
-	check := func(typeName string, fields fieldList) {
-		for _, f := range fields {
-			if hasAuthDirective(f.directives) {
-				continue
-			}
-			if _, ok := authExemptFields[f.name]; ok {
-				continue
-			}
-			t.Errorf("%s.%s has no @hasRole/@hasPermission and is not in authExemptFields "+
-				"(fail-closed: add a directive or exempt it deliberately)", typeName, f.name)
-		}
+// TestDirectiveCoverage_DetectsGap proves the guard CATCHES a violation (AC-10):
+// a fabricated mutation with neither directive nor exemption must be flagged,
+// while a directive-bearing one passes.
+func TestDirectiveCoverage_DetectsGap(t *testing.T) {
+	if fieldGuarded(fieldInfo{name: "brandNewUnguardedMutation"}) {
+		t.Fatal("an unguarded, unexempted field must NOT be considered guarded")
 	}
-
-	check("Query", rootFields("Query"))
-	check("Mutation", rootFields("Mutation"))
+	if !fieldGuarded(fieldInfo{name: "x", directives: []string{"hasRole"}}) {
+		t.Fatal("a directive-bearing field must be considered guarded")
+	}
 }
 
 type fieldInfo struct {
