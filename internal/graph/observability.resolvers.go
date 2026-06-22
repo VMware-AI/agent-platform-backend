@@ -12,6 +12,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/ratelimitpolicy"
 	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
+	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/google/uuid"
@@ -114,6 +115,40 @@ func (r *mutationResolver) SetRateLimitPolicyEnabled(ctx context.Context, id str
 	}
 	r.audit(ctx, "rate_limit.set_enabled", "rate_limit_policy", id, true, actorID(auth.FromContext(ctx)))
 	return toModelRateLimitPolicy(p), nil
+}
+
+// DeleteRateLimitPolicy deletes a policy (模块⑤ 限流). Tenant-safe (a tenant-admin
+// can only delete their own tenant's policy) and refused while any non-revoked
+// virtual key still references it, so bound keys never silently lose their limits.
+func (r *mutationResolver) DeleteRateLimitPolicy(ctx context.Context, id string) (bool, error) {
+	pid, err := uuid.Parse(id)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid id")
+	}
+	pol, err := r.Ent.RateLimitPolicy.Get(ctx, pid)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return false, notFoundErr("rate-limit policy")
+		}
+		return false, err
+	}
+	if !writeAllowed(ctx, pol.TenantID) {
+		return false, notFoundErr("rate-limit policy") // no cross-tenant oracle
+	}
+	inUse, err := r.Ent.VirtualKey.Query().
+		Where(virtualkey.RateLimitPolicyID(pid), virtualkey.StatusNEQ(virtualkey.StatusRevoked)).
+		Count(ctx)
+	if err != nil {
+		return false, err
+	}
+	if inUse > 0 {
+		return false, gqlerror.Errorf("policy is in use by %d virtual key(s); reassign or revoke them first", inUse)
+	}
+	if err := r.Ent.RateLimitPolicy.DeleteOneID(pid).Exec(ctx); err != nil {
+		return false, err
+	}
+	r.audit(ctx, "rate_limit.delete", "rate_limit_policy", id, true, actorID(auth.FromContext(ctx)))
+	return true, nil
 }
 
 // RequestLogs lists gateway request logs with optional filters (0619 第11页).

@@ -28,6 +28,25 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		return nil, gqlerror.Errorf("invalid userId")
 	}
 
+	// 1:1 agent↔key (会议 0622: 智能体只绑定一个独立虚拟 K,计费一对一). Reject if the
+	// agent already holds a non-revoked key — a revoked key frees the agent to be
+	// re-issued. Checked BEFORE minting at the gateway so we never orphan a key.
+	if input.AgentID != nil {
+		aid, err := uuid.Parse(*input.AgentID)
+		if err != nil {
+			return nil, gqlerror.Errorf("invalid agentId")
+		}
+		bound, err := r.Ent.VirtualKey.Query().
+			Where(virtualkey.AgentID(aid), virtualkey.StatusNEQ(virtualkey.StatusRevoked)).
+			Exist(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if bound {
+			return nil, gqlerror.Errorf("agent already has a virtual key (one key per agent)")
+		}
+	}
+
 	req := gateway.GenerateKeyRequest{
 		UserID:    input.UserID,
 		MaxBudget: input.MaxBudget,

@@ -58,4 +58,7 @@ extend type Mutation {
   recordRequestLog(input: RecordRequestLogInput!): RequestLog! @hasRole(any: [admin])
   upsertRateLimitPolicy(input: UpsertRateLimitPolicyInput!): RateLimitPolicy! @hasPermission(perm: "route:manage")
   setRateLimitPolicyEnabled(id: ID!, enabled: Boolean!): RateLimitPolicy! @hasPermission(perm: "route:manage")
+  # Delete a policy. Refused while any non-revoked virtual key still references it
+  # (reassign/revoke those keys first) so bound keys never silently lose their limits.
+  deleteRateLimitPolicy(id: ID!): Boolean! @hasPermission(perm: "route:manage")
 }

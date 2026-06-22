@@ -238,6 +238,7 @@ type ComplexityRoot struct {
 		DeleteGatewayConnection    func(childComplexity int, id string) int
 		DeleteImage                func(childComplexity int, id string) int
 		DeleteModelRoute           func(childComplexity int, id string) int
+		DeleteRateLimitPolicy      func(childComplexity int, id string) int
 		DeleteResourcePool         func(childComplexity int, id string) int
 		DeleteSkill                func(childComplexity int, id string) int
 		DeleteUpstream             func(childComplexity int, id string) int
@@ -508,6 +509,7 @@ type MutationResolver interface {
 	RecordRequestLog(ctx context.Context, input model.RecordRequestLogInput) (*model.RequestLog, error)
 	UpsertRateLimitPolicy(ctx context.Context, input model.UpsertRateLimitPolicyInput) (*model.RateLimitPolicy, error)
 	SetRateLimitPolicyEnabled(ctx context.Context, id string, enabled bool) (*model.RateLimitPolicy, error)
+	DeleteRateLimitPolicy(ctx context.Context, id string) (bool, error)
 	CreateCustomRole(ctx context.Context, input model.CreateCustomRoleInput) (*model.CustomRole, error)
 	DeleteCustomRole(ctx context.Context, id string) (bool, error)
 	UpsertPermission(ctx context.Context, key string, description *string) (*model.Permission, error)
@@ -1447,6 +1449,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.DeleteModelRoute(childComplexity, args["id"].(string)), true
+	case "Mutation.deleteRateLimitPolicy":
+		if e.ComplexityRoot.Mutation.DeleteRateLimitPolicy == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteRateLimitPolicy_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.DeleteRateLimitPolicy(childComplexity, args["id"].(string)), true
 	case "Mutation.deleteResourcePool":
 		if e.ComplexityRoot.Mutation.DeleteResourcePool == nil {
 			break
@@ -3466,6 +3479,9 @@ extend type Mutation {
   recordRequestLog(input: RecordRequestLogInput!): RequestLog! @hasRole(any: [admin])
   upsertRateLimitPolicy(input: UpsertRateLimitPolicyInput!): RateLimitPolicy! @hasPermission(perm: "route:manage")
   setRateLimitPolicyEnabled(id: ID!, enabled: Boolean!): RateLimitPolicy! @hasPermission(perm: "route:manage")
+  # Delete a policy. Refused while any non-revoked virtual key still references it
+  # (reassign/revoke those keys first) so bound keys never silently lose their limits.
+  deleteRateLimitPolicy(id: ID!): Boolean! @hasPermission(perm: "route:manage")
 }
 `, BuiltIn: false},
 	{Name: "../../schema/rbac.graphql", Input: `# Fine-grained custom roles & permissions (角色与权限页). See LLD-01 §1.2/§4.2.
@@ -4765,6 +4781,20 @@ func (ec *executionContext) field_Mutation_deleteImage_args(ctx context.Context,
 }
 
 func (ec *executionContext) field_Mutation_deleteModelRoute_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteRateLimitPolicy_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
@@ -11093,6 +11123,68 @@ func (ec *executionContext) fieldContext_Mutation_setRateLimitPolicyEnabled(ctx 
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_setRateLimitPolicyEnabled_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteRateLimitPolicy(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_deleteRateLimitPolicy(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().DeleteRateLimitPolicy(ctx, fc.Args["id"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				perm, err := ec.unmarshalNString2string(ctx, "route:manage")
+				if err != nil {
+					var zeroVal bool
+					return zeroVal, err
+				}
+				if ec.Directives.HasPermission == nil {
+					var zeroVal bool
+					return zeroVal, errors.New("directive hasPermission is not implemented")
+				}
+				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_deleteRateLimitPolicy(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteRateLimitPolicy_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -20035,6 +20127,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "setRateLimitPolicyEnabled":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_setRateLimitPolicyEnabled(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deleteRateLimitPolicy":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteRateLimitPolicy(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
