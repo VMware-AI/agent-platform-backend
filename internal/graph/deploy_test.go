@@ -94,8 +94,8 @@ func TestDeployAgent_EndToEnd(t *testing.T) {
 	if dep.Agent.Status != model.AgentStatusRunning {
 		t.Fatalf("agent status = %v, want running", dep.Agent.Status)
 	}
-	if dep.Agent.VMRef == nil || *dep.Agent.VMRef != "agent-alice-deployed" {
-		t.Fatalf("vm_ref not set: %+v", dep.Agent.VMRef)
+	if dep.Agent.Endpoint == nil || *dep.Agent.Endpoint != "agent-alice-deployed" {
+		t.Fatalf("endpoint (vm_ref) not set: %+v", dep.Agent.Endpoint)
 	}
 
 	// a virtual key row was persisted for the owner

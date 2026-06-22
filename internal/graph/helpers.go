@@ -8,12 +8,15 @@ import (
 	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 
+	"entgo.io/ent/dialect/sql"
+
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
+	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/catalog"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
@@ -392,18 +395,21 @@ func toModelAgentConfig(c *ent.AgentConfig) *model.AgentConfig {
 	}
 }
 
+// toModelAgent maps the scalar Agent fields. type→agent_type, endpoint→vm_ref.
+// typeLabel/owner/apiKey are populated lazily by agentResolver field resolvers
+// (前后端整合契约).
 func toModelAgent(a *ent.Agent) *model.Agent {
 	m := &model.Agent{
-		ID:          a.ID.String(),
-		Name:        a.Name,
-		AgentType:   a.AgentType,
-		Status:      model.AgentStatus(string(a.Status)),
-		OwnerUserID: a.OwnerUserID.String(),
-		CreatedAt:   a.CreatedAt,
+		ID:        a.ID.String(),
+		Name:      a.Name,
+		Type:      a.AgentType,
+		Status:    model.AgentStatus(string(a.Status)),
+		CreatedAt: a.CreatedAt,
+		UpdatedAt: a.UpdatedAt,
 	}
 	if a.VMRef != "" {
 		v := a.VMRef
-		m.VMRef = &v
+		m.Endpoint = &v
 	}
 	return m
 }
@@ -846,6 +852,71 @@ func (r *Resolver) resolveAgentKnowledge(ctx context.Context, ag *ent.Agent) []s
 		ids = append(ids, a.ID.String())
 	}
 	return ids
+}
+
+// agentForField reloads the ent.Agent backing a resolved Agent field (owner/apiKey
+// need its FK columns, which are not GraphQL fields). Returns nil (no error) if the
+// row vanished between the list query and the field resolution.
+func (r *agentResolver) agentForField(ctx context.Context, id string) (*ent.Agent, error) {
+	aid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, nil
+	}
+	ag, err := r.Ent.Agent.Get(ctx, aid)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return ag, nil
+}
+
+// applyAgentSort orders the agent query per the requested field (前后端整合契约),
+// with id as a stable tiebreaker for deterministic pagination. Native columns sort
+// in SQL; OWNER / API_KEY_NAME sort via a LEFT JOIN on the related display column.
+func applyAgentSort(q *ent.AgentQuery, sort *model.AgentSort) *ent.AgentQuery {
+	if sort == nil {
+		return q.Order(orderNewest)
+	}
+	desc := sort.Direction == model.SortDirectionDesc
+	col := ""
+	switch sort.Field {
+	case model.AgentSortFieldName:
+		col = agent.FieldName
+	case model.AgentSortFieldType:
+		col = agent.FieldAgentType
+	case model.AgentSortFieldStatus:
+		col = agent.FieldStatus
+	case model.AgentSortFieldCreatedAt:
+		col = agent.FieldCreatedAt
+	case model.AgentSortFieldUpdatedAt:
+		col = agent.FieldUpdatedAt
+	case model.AgentSortFieldOwner:
+		return q.Order(joinOrder("users", agent.FieldOwnerUserID, user.FieldUsername, desc))
+	case model.AgentSortFieldAPIKeyName:
+		return q.Order(joinOrder("virtual_keys", agent.FieldVirtualKeyID, virtualkey.FieldAlias, desc))
+	default:
+		return q.Order(orderNewest)
+	}
+	if desc {
+		return q.Order(ent.Desc(col), ent.Desc(agent.FieldID))
+	}
+	return q.Order(ent.Asc(col), ent.Asc(agent.FieldID))
+}
+
+// joinOrder orders agents by a column on a related table (owner username / key
+// alias). LEFT JOIN keeps agents with no owner/key; id is the stable tiebreaker.
+func joinOrder(table, fk, col string, desc bool) func(*sql.Selector) {
+	return func(s *sql.Selector) {
+		t := sql.Table(table)
+		s.LeftJoin(t).On(s.C(fk), t.C("id"))
+		if desc {
+			s.OrderBy(sql.Desc(t.C(col)), sql.Desc(s.C(agent.FieldID)))
+		} else {
+			s.OrderBy(sql.Asc(t.C(col)), sql.Asc(s.C(agent.FieldID)))
+		}
+	}
 }
 
 // resolveKnowledgeRoot returns the VM path the daemon should unpack the agent's

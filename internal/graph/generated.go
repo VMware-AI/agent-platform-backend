@@ -29,9 +29,11 @@ func NewExecutableSchema(cfg Config) graphql.ExecutableSchema {
 type Config = graphql.Config[ResolverRoot, DirectiveRoot, ComplexityRoot]
 
 type ResolverRoot interface {
+	Agent() AgentResolver
 	AgentConfig() AgentConfigResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
+	User() UserResolver
 }
 
 type DirectiveRoot struct {
@@ -41,13 +43,21 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Agent struct {
-		AgentType   func(childComplexity int) int
-		CreatedAt   func(childComplexity int) int
-		ID          func(childComplexity int) int
-		Name        func(childComplexity int) int
-		OwnerUserID func(childComplexity int) int
-		Status      func(childComplexity int) int
-		VMRef       func(childComplexity int) int
+		APIKey    func(childComplexity int) int
+		CreatedAt func(childComplexity int) int
+		Endpoint  func(childComplexity int) int
+		ID        func(childComplexity int) int
+		Name      func(childComplexity int) int
+		Owner     func(childComplexity int) int
+		Status    func(childComplexity int) int
+		Type      func(childComplexity int) int
+		TypeLabel func(childComplexity int) int
+		UpdatedAt func(childComplexity int) int
+	}
+
+	AgentApiKey struct {
+		ID   func(childComplexity int) int
+		Name func(childComplexity int) int
 	}
 
 	AgentConfig struct {
@@ -57,6 +67,12 @@ type ComplexityRoot struct {
 		IsDefault func(childComplexity int) int
 		Knowledge func(childComplexity int) int
 		Name      func(childComplexity int) int
+	}
+
+	AgentConnection struct {
+		Nodes      func(childComplexity int) int
+		PageInfo   func(childComplexity int) int
+		TotalCount func(childComplexity int) int
 	}
 
 	AgentSnapshot struct {
@@ -269,6 +285,12 @@ type ComplexityRoot struct {
 		UpsertUpstream             func(childComplexity int, input model.UpsertUpstreamInput) int
 	}
 
+	PageInfo struct {
+		Page       func(childComplexity int) int
+		PageSize   func(childComplexity int) int
+		TotalPages func(childComplexity int) int
+	}
+
 	Permission struct {
 		Description func(childComplexity int) int
 		ID          func(childComplexity int) int
@@ -279,7 +301,7 @@ type ComplexityRoot struct {
 		AgentConfigs       func(childComplexity int, agentType *string) int
 		AgentSnapshots     func(childComplexity int, agentID string) int
 		AgentTemplates     func(childComplexity int) int
-		Agents             func(childComplexity int) int
+		Agents             func(childComplexity int, filter *model.AgentFilter, pagination *model.Pagination, sort *model.AgentSort) int
 		ArtifactVersions   func(childComplexity int, name string) int
 		Artifacts          func(childComplexity int) int
 		AuditLogs          func(childComplexity int, filter *model.AuditFilter, page *model.PageInput) int
@@ -384,6 +406,7 @@ type ComplexityRoot struct {
 
 	User struct {
 		CreatedAt          func(childComplexity int) int
+		DisplayName        func(childComplexity int) int
 		Email              func(childComplexity int) int
 		ID                 func(childComplexity int) int
 		IsActive           func(childComplexity int) int
@@ -423,6 +446,12 @@ type ComplexityRoot struct {
 
 // region    ************************** generated!.gotpl **************************
 
+type AgentResolver interface {
+	TypeLabel(ctx context.Context, obj *model.Agent) (string, error)
+
+	APIKey(ctx context.Context, obj *model.Agent) (*model.AgentAPIKey, error)
+	Owner(ctx context.Context, obj *model.Agent) (*model.User, error)
+}
 type AgentConfigResolver interface {
 	Knowledge(ctx context.Context, obj *model.AgentConfig) ([]model.Artifact, error)
 }
@@ -494,7 +523,7 @@ type QueryResolver interface {
 	AuditLogs(ctx context.Context, filter *model.AuditFilter, page *model.PageInput) (*model.AuditConnection, error)
 	AgentTemplates(ctx context.Context) ([]model.AgentTemplate, error)
 	AgentConfigs(ctx context.Context, agentType *string) ([]model.AgentConfig, error)
-	Agents(ctx context.Context) ([]model.Agent, error)
+	Agents(ctx context.Context, filter *model.AgentFilter, pagination *model.Pagination, sort *model.AgentSort) (*model.AgentConnection, error)
 	Artifacts(ctx context.Context) ([]model.Artifact, error)
 	ArtifactVersions(ctx context.Context, name string) ([]model.Artifact, error)
 	Skills(ctx context.Context) ([]model.Skill, error)
@@ -517,6 +546,9 @@ type QueryResolver interface {
 	ResourcePools(ctx context.Context) ([]model.ResourcePool, error)
 	VirtualKeys(ctx context.Context, userID *string) ([]model.VirtualKey, error)
 }
+type UserResolver interface {
+	DisplayName(ctx context.Context, obj *model.User) (string, error)
+}
 
 // endregion ************************** generated!.gotpl **************************
 
@@ -536,18 +568,24 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 	_ = ec
 	switch typeName + "." + field {
 
-	case "Agent.agentType":
-		if e.ComplexityRoot.Agent.AgentType == nil {
+	case "Agent.apiKey":
+		if e.ComplexityRoot.Agent.APIKey == nil {
 			break
 		}
 
-		return e.ComplexityRoot.Agent.AgentType(childComplexity), true
+		return e.ComplexityRoot.Agent.APIKey(childComplexity), true
 	case "Agent.createdAt":
 		if e.ComplexityRoot.Agent.CreatedAt == nil {
 			break
 		}
 
 		return e.ComplexityRoot.Agent.CreatedAt(childComplexity), true
+	case "Agent.endpoint":
+		if e.ComplexityRoot.Agent.Endpoint == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Agent.Endpoint(childComplexity), true
 	case "Agent.id":
 		if e.ComplexityRoot.Agent.ID == nil {
 			break
@@ -560,24 +598,49 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Agent.Name(childComplexity), true
-	case "Agent.ownerUserId":
-		if e.ComplexityRoot.Agent.OwnerUserID == nil {
+	case "Agent.owner":
+		if e.ComplexityRoot.Agent.Owner == nil {
 			break
 		}
 
-		return e.ComplexityRoot.Agent.OwnerUserID(childComplexity), true
+		return e.ComplexityRoot.Agent.Owner(childComplexity), true
 	case "Agent.status":
 		if e.ComplexityRoot.Agent.Status == nil {
 			break
 		}
 
 		return e.ComplexityRoot.Agent.Status(childComplexity), true
-	case "Agent.vmRef":
-		if e.ComplexityRoot.Agent.VMRef == nil {
+	case "Agent.type":
+		if e.ComplexityRoot.Agent.Type == nil {
 			break
 		}
 
-		return e.ComplexityRoot.Agent.VMRef(childComplexity), true
+		return e.ComplexityRoot.Agent.Type(childComplexity), true
+	case "Agent.typeLabel":
+		if e.ComplexityRoot.Agent.TypeLabel == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Agent.TypeLabel(childComplexity), true
+	case "Agent.updatedAt":
+		if e.ComplexityRoot.Agent.UpdatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Agent.UpdatedAt(childComplexity), true
+
+	case "AgentApiKey.id":
+		if e.ComplexityRoot.AgentApiKey.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentApiKey.ID(childComplexity), true
+	case "AgentApiKey.name":
+		if e.ComplexityRoot.AgentApiKey.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentApiKey.Name(childComplexity), true
 
 	case "AgentConfig.agentType":
 		if e.ComplexityRoot.AgentConfig.AgentType == nil {
@@ -615,6 +678,25 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.AgentConfig.Name(childComplexity), true
+
+	case "AgentConnection.nodes":
+		if e.ComplexityRoot.AgentConnection.Nodes == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentConnection.Nodes(childComplexity), true
+	case "AgentConnection.pageInfo":
+		if e.ComplexityRoot.AgentConnection.PageInfo == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentConnection.PageInfo(childComplexity), true
+	case "AgentConnection.totalCount":
+		if e.ComplexityRoot.AgentConnection.TotalCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentConnection.TotalCount(childComplexity), true
 
 	case "AgentSnapshot.createdAt":
 		if e.ComplexityRoot.AgentSnapshot.CreatedAt == nil {
@@ -1848,6 +1930,25 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Mutation.UpsertUpstream(childComplexity, args["input"].(model.UpsertUpstreamInput)), true
 
+	case "PageInfo.page":
+		if e.ComplexityRoot.PageInfo.Page == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PageInfo.Page(childComplexity), true
+	case "PageInfo.pageSize":
+		if e.ComplexityRoot.PageInfo.PageSize == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PageInfo.PageSize(childComplexity), true
+	case "PageInfo.totalPages":
+		if e.ComplexityRoot.PageInfo.TotalPages == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PageInfo.TotalPages(childComplexity), true
+
 	case "Permission.description":
 		if e.ComplexityRoot.Permission.Description == nil {
 			break
@@ -1900,7 +2001,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			break
 		}
 
-		return e.ComplexityRoot.Query.Agents(childComplexity), true
+		args, err := ec.field_Query_agents_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.Agents(childComplexity, args["filter"].(*model.AgentFilter), args["pagination"].(*model.Pagination), args["sort"].(*model.AgentSort)), true
 	case "Query.artifactVersions":
 		if e.ComplexityRoot.Query.ArtifactVersions == nil {
 			break
@@ -2423,6 +2529,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.User.CreatedAt(childComplexity), true
+	case "User.displayName":
+		if e.ComplexityRoot.User.DisplayName == nil {
+			break
+		}
+
+		return e.ComplexityRoot.User.DisplayName(childComplexity), true
 	case "User.email":
 		if e.ComplexityRoot.User.Email == nil {
 			break
@@ -2573,6 +2685,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	opCtx := graphql.GetOperationContext(ctx)
 	ec := newExecutionContext(opCtx, e, make(chan graphql.DeferredResult))
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
+		ec.unmarshalInputAgentFilter,
+		ec.unmarshalInputAgentSort,
 		ec.unmarshalInputAuditFilter,
 		ec.unmarshalInputCreateAgentConfigInput,
 		ec.unmarshalInputCreateAgentInput,
@@ -2582,6 +2696,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputDeployAgentInput,
 		ec.unmarshalInputIssueVirtualKeyInput,
 		ec.unmarshalInputPageInput,
+		ec.unmarshalInputPagination,
 		ec.unmarshalInputRecordRequestLogInput,
 		ec.unmarshalInputRecordTokenUsageInput,
 		ec.unmarshalInputRecycleAgentInput,
@@ -2728,11 +2843,70 @@ type AgentConfig {
 type Agent {
   id: ID!
   name: String!
-  agentType: String!
+  # type = the agent's catalog kind (goose/xiaoguai/…); typeLabel = the template's
+  # display name for that kind (前后端整合契约). type replaces the old agentType.
+  type: String!
+  typeLabel: String! @goField(forceResolver: true)
   status: AgentStatus!
-  ownerUserId: ID!
-  vmRef: String
+  # apiKey/owner are resolved lazily from the agent's virtual_key_id / owner_user_id.
+  apiKey: AgentApiKey @goField(forceResolver: true)
+  owner: User @goField(forceResolver: true)
+  # endpoint = the VM ref (moRef/name); null until deployed.
+  endpoint: String
   createdAt: Time!
+  updatedAt: Time!
+}
+
+# A virtual gateway key as shown on the agent list (id + display alias).
+type AgentApiKey {
+  id: ID!
+  name: String!
+}
+
+# Connection wrapper for the paged/filtered/sorted agent list (前后端整合契约).
+type AgentConnection {
+  nodes: [Agent!]!
+  totalCount: Int!
+  pageInfo: PageInfo!
+}
+
+type PageInfo {
+  page: Int!
+  pageSize: Int!
+  totalPages: Int!
+}
+
+input Pagination {
+  page: Int! = 1
+  pageSize: Int! = 10
+}
+
+input AgentFilter {
+  status: AgentStatus
+  type: String # = agent kind
+  nameKeyword: String # substring match on name
+  keyKeyword: String # substring match on apiKey.name (virtual_key alias)
+  ownerKeyword: String # substring match on owner.username / owner.email
+}
+
+enum AgentSortField {
+  NAME
+  TYPE
+  STATUS
+  API_KEY_NAME
+  OWNER
+  CREATED_AT
+  UPDATED_AT
+}
+
+enum SortDirection {
+  ASC
+  DESC
+}
+
+input AgentSort {
+  field: AgentSortField!
+  direction: SortDirection!
 }
 
 input UpsertAgentTemplateInput {
@@ -2770,8 +2944,9 @@ extend type Query {
   # Catalog and configs are browsable by any authenticated user.
   agentTemplates: [AgentTemplate!]!
   agentConfigs(agentType: String): [AgentConfig!]!
-  # Admin sees all agents; a regular user sees only their own (owner scope).
-  agents: [Agent!]!
+  # Admin sees all agents; tenant-admin their tenant; a regular user only their own
+  # (owner scope). Paged/filtered/sorted connection (前后端整合契约).
+  agents(filter: AgentFilter, pagination: Pagination, sort: AgentSort): AgentConnection!
 }
 
 extend type Mutation {
@@ -3355,6 +3530,9 @@ enum Role {
 type User {
   id: ID!
   username: String!
+  # Human-friendly name for display (前后端整合契约). Defaults to username until a
+  # dedicated display-name field exists.
+  displayName: String! @goField(forceResolver: true)
   email: String!
   role: Role!
   tenantId: ID
@@ -3518,18 +3696,34 @@ func (ec *executionContext) childFields_Agent(ctx context.Context, field graphql
 		return ec.fieldContext_Agent_id(ctx, field)
 	case "name":
 		return ec.fieldContext_Agent_name(ctx, field)
-	case "agentType":
-		return ec.fieldContext_Agent_agentType(ctx, field)
+	case "type":
+		return ec.fieldContext_Agent_type(ctx, field)
+	case "typeLabel":
+		return ec.fieldContext_Agent_typeLabel(ctx, field)
 	case "status":
 		return ec.fieldContext_Agent_status(ctx, field)
-	case "ownerUserId":
-		return ec.fieldContext_Agent_ownerUserId(ctx, field)
-	case "vmRef":
-		return ec.fieldContext_Agent_vmRef(ctx, field)
+	case "apiKey":
+		return ec.fieldContext_Agent_apiKey(ctx, field)
+	case "owner":
+		return ec.fieldContext_Agent_owner(ctx, field)
+	case "endpoint":
+		return ec.fieldContext_Agent_endpoint(ctx, field)
 	case "createdAt":
 		return ec.fieldContext_Agent_createdAt(ctx, field)
+	case "updatedAt":
+		return ec.fieldContext_Agent_updatedAt(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Agent", field.Name)
+}
+
+func (ec *executionContext) childFields_AgentApiKey(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_AgentApiKey_id(ctx, field)
+	case "name":
+		return ec.fieldContext_AgentApiKey_name(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type AgentApiKey", field.Name)
 }
 
 func (ec *executionContext) childFields_AgentConfig(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -3548,6 +3742,18 @@ func (ec *executionContext) childFields_AgentConfig(ctx context.Context, field g
 		return ec.fieldContext_AgentConfig_createdAt(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type AgentConfig", field.Name)
+}
+
+func (ec *executionContext) childFields_AgentConnection(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "nodes":
+		return ec.fieldContext_AgentConnection_nodes(ctx, field)
+	case "totalCount":
+		return ec.fieldContext_AgentConnection_totalCount(ctx, field)
+	case "pageInfo":
+		return ec.fieldContext_AgentConnection_pageInfo(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type AgentConnection", field.Name)
 }
 
 func (ec *executionContext) childFields_AgentSnapshot(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -3844,6 +4050,18 @@ func (ec *executionContext) childFields_ModelUsage(ctx context.Context, field gr
 	return nil, fmt.Errorf("no field named %q was found under type ModelUsage", field.Name)
 }
 
+func (ec *executionContext) childFields_PageInfo(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "page":
+		return ec.fieldContext_PageInfo_page(ctx, field)
+	case "pageSize":
+		return ec.fieldContext_PageInfo_pageSize(ctx, field)
+	case "totalPages":
+		return ec.fieldContext_PageInfo_totalPages(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
+}
+
 func (ec *executionContext) childFields_Permission(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -4016,6 +4234,8 @@ func (ec *executionContext) childFields_User(ctx context.Context, field graphql.
 		return ec.fieldContext_User_id(ctx, field)
 	case "username":
 		return ec.fieldContext_User_username(ctx, field)
+	case "displayName":
+		return ec.fieldContext_User_displayName(ctx, field)
 	case "email":
 		return ec.fieldContext_User_email(ctx, field)
 	case "role":
@@ -5254,6 +5474,36 @@ func (ec *executionContext) field_Query_agentSnapshots_args(ctx context.Context,
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_agents_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
+		func(ctx context.Context, v any) (*model.AgentFilter, error) {
+			return ec.unmarshalOAgentFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentFilter(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["filter"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "pagination",
+		func(ctx context.Context, v any) (*model.Pagination, error) {
+			return ec.unmarshalOPagination2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPagination(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["pagination"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
+		func(ctx context.Context, v any) (*model.AgentSort, error) {
+			return ec.unmarshalOAgentSort2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentSort(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["sort"] = arg2
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_artifactVersions_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -5524,16 +5774,16 @@ func (ec *executionContext) fieldContext_Agent_name(_ context.Context, field gra
 	return graphql.NewScalarFieldContext("Agent", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
-func (ec *executionContext) _Agent_agentType(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
+func (ec *executionContext) _Agent_type(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Agent_agentType(ctx, field)
+			return ec.fieldContext_Agent_type(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return obj.AgentType, nil
+			return obj.Type, nil
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
@@ -5543,8 +5793,31 @@ func (ec *executionContext) _Agent_agentType(ctx context.Context, field graphql.
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_Agent_agentType(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Agent_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Agent", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Agent_typeLabel(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Agent_typeLabel(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Agent().TypeLabel(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Agent_typeLabel(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Agent", field, true, true, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _Agent_status(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
@@ -5570,39 +5843,80 @@ func (ec *executionContext) fieldContext_Agent_status(_ context.Context, field g
 	return graphql.NewScalarFieldContext("Agent", field, false, false, errors.New("field of type AgentStatus does not have child fields"))
 }
 
-func (ec *executionContext) _Agent_ownerUserId(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
+func (ec *executionContext) _Agent_apiKey(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Agent_ownerUserId(ctx, field)
+			return ec.fieldContext_Agent_apiKey(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return obj.OwnerUserID, nil
+			return ec.Resolvers.Agent().APIKey(ctx, obj)
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNID2string(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.AgentAPIKey) graphql.Marshaler {
+			return ec.marshalOAgentApiKey2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentAPIKey(ctx, selections, v)
 		},
 		true,
-		true,
+		false,
 	)
 }
-func (ec *executionContext) fieldContext_Agent_ownerUserId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Agent", field, false, false, errors.New("field of type ID does not have child fields"))
+func (ec *executionContext) fieldContext_Agent_apiKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Agent",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_AgentApiKey(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
-func (ec *executionContext) _Agent_vmRef(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
+func (ec *executionContext) _Agent_owner(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Agent_vmRef(ctx, field)
+			return ec.fieldContext_Agent_owner(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return obj.VMRef, nil
+			return ec.Resolvers.Agent().Owner(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.User) graphql.Marshaler {
+			return ec.marshalOUser2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUser(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Agent_owner(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Agent",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_User(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Agent_endpoint(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Agent_endpoint(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Endpoint, nil
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
@@ -5612,7 +5926,7 @@ func (ec *executionContext) _Agent_vmRef(ctx context.Context, field graphql.Coll
 		false,
 	)
 }
-func (ec *executionContext) fieldContext_Agent_vmRef(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Agent_endpoint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Agent", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
@@ -5637,6 +5951,75 @@ func (ec *executionContext) _Agent_createdAt(ctx context.Context, field graphql.
 }
 func (ec *executionContext) fieldContext_Agent_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Agent", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _Agent_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Agent_updatedAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.UpdatedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Agent_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Agent", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _AgentApiKey_id(ctx context.Context, field graphql.CollectedField, obj *model.AgentAPIKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentApiKey_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentApiKey_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentApiKey", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _AgentApiKey_name(ctx context.Context, field graphql.CollectedField, obj *model.AgentAPIKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentApiKey_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentApiKey_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentApiKey", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _AgentConfig_id(ctx context.Context, field graphql.CollectedField, obj *model.AgentConfig) (ret graphql.Marshaler) {
@@ -5784,6 +6167,93 @@ func (ec *executionContext) _AgentConfig_createdAt(ctx context.Context, field gr
 }
 func (ec *executionContext) fieldContext_AgentConfig_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("AgentConfig", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _AgentConnection_nodes(ctx context.Context, field graphql.CollectedField, obj *model.AgentConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentConnection_nodes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Nodes, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.Agent) graphql.Marshaler {
+			return ec.marshalNAgent2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentConnection_nodes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AgentConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Agent(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AgentConnection_totalCount(ctx context.Context, field graphql.CollectedField, obj *model.AgentConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentConnection_totalCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentConnection_totalCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentConnection", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _AgentConnection_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.AgentConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentConnection_pageInfo(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.PageInfo, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.PageInfo) graphql.Marshaler {
+			return ec.marshalNPageInfo2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPageInfo(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentConnection_pageInfo(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AgentConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PageInfo(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _AgentSnapshot_name(ctx context.Context, field graphql.CollectedField, obj *model.AgentSnapshot) (ret graphql.Marshaler) {
@@ -11453,6 +11923,75 @@ func (ec *executionContext) fieldContext_Mutation_setVirtualKeyEnabled(ctx conte
 	return fc, nil
 }
 
+func (ec *executionContext) _PageInfo_page(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PageInfo_page(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Page, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_PageInfo_page(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PageInfo", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _PageInfo_pageSize(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PageInfo_pageSize(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.PageSize, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_PageInfo_pageSize(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PageInfo", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _PageInfo_totalPages(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PageInfo_totalPages(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalPages, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_PageInfo_totalPages(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PageInfo", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
 func (ec *executionContext) _Permission_id(ctx context.Context, field graphql.CollectedField, obj *model.Permission) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -11763,25 +12302,37 @@ func (ec *executionContext) _Query_agents(ctx context.Context, field graphql.Col
 			return ec.fieldContext_Query_agents(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Query().Agents(ctx)
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().Agents(ctx, fc.Args["filter"].(*model.AgentFilter), fc.Args["pagination"].(*model.Pagination), fc.Args["sort"].(*model.AgentSort))
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v []model.Agent) graphql.Marshaler {
-			return ec.marshalNAgent2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentᚄ(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.AgentConnection) graphql.Marshaler {
+			return ec.marshalNAgentConnection2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentConnection(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_Query_agents(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_agents(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Agent(ctx, field)
+			return ec.childFields_AgentConnection(ctx, field)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_agents_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -14159,6 +14710,29 @@ func (ec *executionContext) fieldContext_User_username(_ context.Context, field 
 	return graphql.NewScalarFieldContext("User", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _User_displayName(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_User_displayName(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.User().DisplayName(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_User_displayName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("User", field, true, true, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _User_email(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -15733,6 +16307,101 @@ func (ec *executionContext) fieldContext___Type_isOneOf(_ context.Context, field
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputAgentFilter(ctx context.Context, obj any) (model.AgentFilter, error) {
+	var it model.AgentFilter
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"status", "type", "nameKeyword", "keyKeyword", "ownerKeyword"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "status":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
+			data, err := ec.unmarshalOAgentStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentStatus(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Status = data
+		case "type":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("type"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Type = data
+		case "nameKeyword":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nameKeyword"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.NameKeyword = data
+		case "keyKeyword":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyKeyword"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.KeyKeyword = data
+		case "ownerKeyword":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ownerKeyword"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.OwnerKeyword = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputAgentSort(ctx context.Context, obj any) (model.AgentSort, error) {
+	var it model.AgentSort
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"field", "direction"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "field":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			data, err := ec.unmarshalNAgentSortField2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentSortField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Field = data
+		case "direction":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			data, err := ec.unmarshalNSortDirection2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSortDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Direction = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputAuditFilter(ctx context.Context, obj any) (model.AuditFilter, error) {
 	var it model.AuditFilter
 	if obj == nil {
@@ -16208,6 +16877,50 @@ func (ec *executionContext) unmarshalInputPageInput(ctx context.Context, obj any
 				return it, err
 			}
 			it.Offset = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputPagination(ctx context.Context, obj any) (model.Pagination, error) {
+	var it model.Pagination
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	if _, present := asMap["page"]; !present {
+		asMap["page"] = 1
+	}
+	if _, present := asMap["pageSize"]; !present {
+		asMap["pageSize"] = 10
+	}
+
+	fieldsInOrder := [...]string{"page", "pageSize"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "page":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("page"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Page = data
+		case "pageSize":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pageSize"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PageSize = data
 		}
 	}
 	return it, nil
@@ -17216,35 +17929,187 @@ func (ec *executionContext) _Agent(ctx context.Context, sel ast.SelectionSet, ob
 		case "id":
 			out.Values[i] = ec._Agent_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "name":
 			out.Values[i] = ec._Agent_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
-		case "agentType":
-			out.Values[i] = ec._Agent_agentType(ctx, field, obj)
+		case "type":
+			out.Values[i] = ec._Agent_type(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "typeLabel":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Agent_typeLabel(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "status":
 			out.Values[i] = ec._Agent_status(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
-		case "ownerUserId":
-			out.Values[i] = ec._Agent_ownerUserId(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
+		case "apiKey":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Agent_apiKey(ctx, field, obj)
+				if res == graphql.RequiredNull {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
 			}
-		case "vmRef":
-			out.Values[i] = ec._Agent_vmRef(ctx, field, obj)
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "owner":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Agent_owner(ctx, field, obj)
+				if res == graphql.RequiredNull {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "endpoint":
+			out.Values[i] = ec._Agent_endpoint(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "createdAt":
 			out.Values[i] = ec._Agent_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "updatedAt":
+			out.Values[i] = ec._Agent_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var agentApiKeyImplementors = []string{"AgentApiKey"}
+
+func (ec *executionContext) _AgentApiKey(ctx context.Context, sel ast.SelectionSet, obj *model.AgentAPIKey) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, agentApiKeyImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AgentApiKey")
+		case "id":
+			out.Values[i] = ec._AgentApiKey_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._AgentApiKey_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -17342,6 +18207,55 @@ func (ec *executionContext) _AgentConfig(ctx context.Context, sel ast.SelectionS
 			out.Values[i] = ec._AgentConfig_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var agentConnectionImplementors = []string{"AgentConnection"}
+
+func (ec *executionContext) _AgentConnection(ctx context.Context, sel ast.SelectionSet, obj *model.AgentConnection) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, agentConnectionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AgentConnection")
+		case "nodes":
+			out.Values[i] = ec._AgentConnection_nodes(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalCount":
+			out.Values[i] = ec._AgentConnection_totalCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pageInfo":
+			out.Values[i] = ec._AgentConnection_pageInfo(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -18905,6 +19819,55 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 	return out
 }
 
+var pageInfoImplementors = []string{"PageInfo"}
+
+func (ec *executionContext) _PageInfo(ctx context.Context, sel ast.SelectionSet, obj *model.PageInfo) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, pageInfoImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PageInfo")
+		case "page":
+			out.Values[i] = ec._PageInfo_page(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pageSize":
+			out.Values[i] = ec._PageInfo_pageSize(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalPages":
+			out.Values[i] = ec._PageInfo_totalPages(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var permissionImplementors = []string{"Permission"}
 
 func (ec *executionContext) _Permission(ctx context.Context, sel ast.SelectionSet, obj *model.Permission) graphql.Marshaler {
@@ -20155,47 +21118,83 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 		case "id":
 			out.Values[i] = ec._User_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "username":
 			out.Values[i] = ec._User_username(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "displayName":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_displayName(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "email":
 			out.Values[i] = ec._User_email(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "role":
 			out.Values[i] = ec._User_role(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "tenantId":
 			out.Values[i] = ec._User_tenantId(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "mustChangePassword":
 			out.Values[i] = ec._User_mustChangePassword(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "isActive":
 			out.Values[i] = ec._User_isActive(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "lastLoginAt":
 			out.Values[i] = ec._User_lastLoginAt(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "createdAt":
 			out.Values[i] = ec._User_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -20855,6 +21854,20 @@ func (ec *executionContext) marshalNAgentConfig2ᚖgithubᚗcomᚋVMwareᚑAIᚋ
 	return ec._AgentConfig(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNAgentConnection2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentConnection(ctx context.Context, sel ast.SelectionSet, v model.AgentConnection) graphql.Marshaler {
+	return ec._AgentConnection(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNAgentConnection2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentConnection(ctx context.Context, sel ast.SelectionSet, v *model.AgentConnection) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._AgentConnection(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNAgentSnapshot2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentSnapshot(ctx context.Context, sel ast.SelectionSet, v model.AgentSnapshot) graphql.Marshaler {
 	return ec._AgentSnapshot(ctx, sel, &v)
 }
@@ -20883,6 +21896,16 @@ func (ec *executionContext) marshalNAgentSnapshot2ᚖgithubᚗcomᚋVMwareᚑAI�
 		return graphql.Null
 	}
 	return ec._AgentSnapshot(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNAgentSortField2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentSortField(ctx context.Context, v any) (model.AgentSortField, error) {
+	var res model.AgentSortField
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNAgentSortField2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentSortField(ctx context.Context, sel ast.SelectionSet, v model.AgentSortField) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) unmarshalNAgentStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentStatus(ctx context.Context, v any) (model.AgentStatus, error) {
@@ -21474,6 +22497,16 @@ func (ec *executionContext) marshalNModelUsage2ᚕgithubᚗcomᚋVMwareᚑAIᚋa
 	return ret
 }
 
+func (ec *executionContext) marshalNPageInfo2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPageInfo(ctx context.Context, sel ast.SelectionSet, v *model.PageInfo) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PageInfo(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNPermission2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPermission(ctx context.Context, sel ast.SelectionSet, v model.Permission) graphql.Marshaler {
 	return ec._Permission(ctx, sel, &v)
 }
@@ -21758,6 +22791,16 @@ func (ec *executionContext) marshalNSkill2ᚖgithubᚗcomᚋVMwareᚑAIᚋagent�
 func (ec *executionContext) unmarshalNSnapshotAgentInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSnapshotAgentInput(ctx context.Context, v any) (model.SnapshotAgentInput, error) {
 	res, err := ec.unmarshalInputSnapshotAgentInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNSortDirection2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSortDirection(ctx context.Context, v any) (model.SortDirection, error) {
+	var res model.SortDirection
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNSortDirection2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSortDirection(ctx context.Context, sel ast.SelectionSet, v model.SortDirection) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v any) (string, error) {
@@ -22201,6 +23244,45 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 	return res
 }
 
+func (ec *executionContext) marshalOAgentApiKey2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentAPIKey(ctx context.Context, sel ast.SelectionSet, v *model.AgentAPIKey) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._AgentApiKey(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOAgentFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentFilter(ctx context.Context, v any) (*model.AgentFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputAgentFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOAgentSort2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentSort(ctx context.Context, v any) (*model.AgentSort, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputAgentSort(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOAgentStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentStatus(ctx context.Context, v any) (*model.AgentStatus, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.AgentStatus)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOAgentStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentStatus(ctx context.Context, sel ast.SelectionSet, v *model.AgentStatus) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
 func (ec *executionContext) unmarshalOAuditFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAuditFilter(ctx context.Context, v any) (*model.AuditFilter, error) {
 	if v == nil {
 		return nil, nil
@@ -22350,6 +23432,14 @@ func (ec *executionContext) unmarshalOPageInput2ᚖgithubᚗcomᚋVMwareᚑAIᚋ
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalOPagination2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPagination(ctx context.Context, v any) (*model.Pagination, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputPagination(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalORequestLogFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestLogFilter(ctx context.Context, v any) (*model.RequestLogFilter, error) {
 	if v == nil {
 		return nil, nil
@@ -22444,6 +23534,13 @@ func (ec *executionContext) marshalOTime2ᚖtimeᚐTime(ctx context.Context, sel
 	_ = ctx
 	res := graphql.MarshalTime(*v)
 	return res
+}
+
+func (ec *executionContext) marshalOUser2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUser(ctx context.Context, sel ast.SelectionSet, v *model.User) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._User(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

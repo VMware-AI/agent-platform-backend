@@ -15,6 +15,9 @@ enum Role {
 type User {
   id: ID!
   username: String!
+  # Human-friendly name for display (前后端整合契约). Defaults to username until a
+  # dedicated display-name field exists.
+  displayName: String! @goField(forceResolver: true)
   email: String!
   role: Role!
   tenantId: ID

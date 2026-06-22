@@ -151,13 +151,13 @@ func TestCrossTenant_Agents_TenantAdminSeesTenantWide(t *testing.T) {
 	r.Ent.Agent.Create().SetName("b1").SetAgentType("goose").SetOwnerUserID(uuid.New()).SetTenantID(tB).SaveX(ctx)
 
 	qr := &queryResolver{r}
-	got, err := qr.Agents(tenantAdminCtx(uuid.NewString(), tA.String()))
+	got, err := qr.Agents(tenantAdminCtx(uuid.NewString(), tA.String()), nil, nil, nil)
 	if err != nil {
 		t.Fatalf("Agents: %v", err)
 	}
 	// tenant-admin sees BOTH of tenant A's agents (tenant-wide, not just owned),
 	// and none of tenant B's.
-	assertNames(t, names(got, func(a model.Agent) string { return a.Name }), "a1", "a2")
+	assertNames(t, names(got.Nodes, func(a model.Agent) string { return a.Name }), "a1", "a2")
 }
 
 func TestCrossTenant_TokenUsage_Strict(t *testing.T) {

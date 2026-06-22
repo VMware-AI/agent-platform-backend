@@ -11,13 +11,21 @@ import (
 )
 
 type Agent struct {
-	ID          string      `json:"id"`
-	Name        string      `json:"name"`
-	AgentType   string      `json:"agentType"`
-	Status      AgentStatus `json:"status"`
-	OwnerUserID string      `json:"ownerUserId"`
-	VMRef       *string     `json:"vmRef,omitempty"`
-	CreatedAt   time.Time   `json:"createdAt"`
+	ID        string       `json:"id"`
+	Name      string       `json:"name"`
+	Type      string       `json:"type"`
+	TypeLabel string       `json:"typeLabel"`
+	Status    AgentStatus  `json:"status"`
+	APIKey    *AgentAPIKey `json:"apiKey,omitempty"`
+	Owner     *User        `json:"owner,omitempty"`
+	Endpoint  *string      `json:"endpoint,omitempty"`
+	CreatedAt time.Time    `json:"createdAt"`
+	UpdatedAt time.Time    `json:"updatedAt"`
+}
+
+type AgentAPIKey struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type AgentConfig struct {
@@ -29,11 +37,30 @@ type AgentConfig struct {
 	CreatedAt time.Time  `json:"createdAt"`
 }
 
+type AgentConnection struct {
+	Nodes      []Agent   `json:"nodes"`
+	TotalCount int       `json:"totalCount"`
+	PageInfo   *PageInfo `json:"pageInfo"`
+}
+
+type AgentFilter struct {
+	Status       *AgentStatus `json:"status,omitempty"`
+	Type         *string      `json:"type,omitempty"`
+	NameKeyword  *string      `json:"nameKeyword,omitempty"`
+	KeyKeyword   *string      `json:"keyKeyword,omitempty"`
+	OwnerKeyword *string      `json:"ownerKeyword,omitempty"`
+}
+
 type AgentSnapshot struct {
 	Name        string    `json:"name"`
 	Description *string   `json:"description,omitempty"`
 	State       string    `json:"state"`
 	CreatedAt   time.Time `json:"createdAt"`
+}
+
+type AgentSort struct {
+	Field     AgentSortField `json:"field"`
+	Direction SortDirection  `json:"direction"`
 }
 
 type AgentTemplate struct {
@@ -239,9 +266,20 @@ type ModelUsage struct {
 type Mutation struct {
 }
 
+type PageInfo struct {
+	Page       int `json:"page"`
+	PageSize   int `json:"pageSize"`
+	TotalPages int `json:"totalPages"`
+}
+
 type PageInput struct {
 	Limit  *int `json:"limit,omitempty"`
 	Offset *int `json:"offset,omitempty"`
+}
+
+type Pagination struct {
+	Page     int `json:"page"`
+	PageSize int `json:"pageSize"`
 }
 
 type Permission struct {
@@ -468,6 +506,7 @@ type Upstream struct {
 type User struct {
 	ID                 string     `json:"id"`
 	Username           string     `json:"username"`
+	DisplayName        string     `json:"displayName"`
 	Email              string     `json:"email"`
 	Role               Role       `json:"role"`
 	TenantID           *string    `json:"tenantId,omitempty"`
@@ -499,6 +538,71 @@ type VirtualKey struct {
 	Status            VirtualKeyStatus `json:"status"`
 	ExpiresAt         *time.Time       `json:"expiresAt,omitempty"`
 	CreatedAt         time.Time        `json:"createdAt"`
+}
+
+type AgentSortField string
+
+const (
+	AgentSortFieldName       AgentSortField = "NAME"
+	AgentSortFieldType       AgentSortField = "TYPE"
+	AgentSortFieldStatus     AgentSortField = "STATUS"
+	AgentSortFieldAPIKeyName AgentSortField = "API_KEY_NAME"
+	AgentSortFieldOwner      AgentSortField = "OWNER"
+	AgentSortFieldCreatedAt  AgentSortField = "CREATED_AT"
+	AgentSortFieldUpdatedAt  AgentSortField = "UPDATED_AT"
+)
+
+var AllAgentSortField = []AgentSortField{
+	AgentSortFieldName,
+	AgentSortFieldType,
+	AgentSortFieldStatus,
+	AgentSortFieldAPIKeyName,
+	AgentSortFieldOwner,
+	AgentSortFieldCreatedAt,
+	AgentSortFieldUpdatedAt,
+}
+
+func (e AgentSortField) IsValid() bool {
+	switch e {
+	case AgentSortFieldName, AgentSortFieldType, AgentSortFieldStatus, AgentSortFieldAPIKeyName, AgentSortFieldOwner, AgentSortFieldCreatedAt, AgentSortFieldUpdatedAt:
+		return true
+	}
+	return false
+}
+
+func (e AgentSortField) String() string {
+	return string(e)
+}
+
+func (e *AgentSortField) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = AgentSortField(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid AgentSortField", str)
+	}
+	return nil
+}
+
+func (e AgentSortField) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *AgentSortField) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e AgentSortField) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }
 
 type AgentStatus string
@@ -1129,6 +1233,61 @@ func (e *RouterTierLevel) UnmarshalJSON(b []byte) error {
 }
 
 func (e RouterTierLevel) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type SortDirection string
+
+const (
+	SortDirectionAsc  SortDirection = "ASC"
+	SortDirectionDesc SortDirection = "DESC"
+)
+
+var AllSortDirection = []SortDirection{
+	SortDirectionAsc,
+	SortDirectionDesc,
+}
+
+func (e SortDirection) IsValid() bool {
+	switch e {
+	case SortDirectionAsc, SortDirectionDesc:
+		return true
+	}
+	return false
+}
+
+func (e SortDirection) String() string {
+	return string(e)
+}
+
+func (e *SortDirection) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = SortDirection(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid SortDirection", str)
+	}
+	return nil
+}
+
+func (e SortDirection) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *SortDirection) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e SortDirection) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

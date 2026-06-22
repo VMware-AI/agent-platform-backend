@@ -13,11 +13,57 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/agentconfig"
 	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
 	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
+	"github.com/VMware-AI/agent-platform-backend/ent/user"
+	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
+
+// TypeLabel resolves the human-friendly label for the agent's kind = the catalog
+// AgentTemplate.display; falls back to the kind itself when no template exists.
+func (r *agentResolver) TypeLabel(ctx context.Context, obj *model.Agent) (string, error) {
+	t, err := r.Ent.AgentTemplate.Query().Where(agenttemplate.Kind(obj.Type)).Only(ctx)
+	if err == nil && t.Display != "" {
+		return t.Display, nil
+	}
+	return obj.Type, nil
+}
+
+// APIKey resolves the agent's gateway virtual key (id + display alias), or nil
+// when the agent has none (not yet deployed). The parent agent was already
+// authorized by the Agents query, so we load by the agent's own id.
+func (r *agentResolver) APIKey(ctx context.Context, obj *model.Agent) (*model.AgentAPIKey, error) {
+	ag, err := r.agentForField(ctx, obj.ID)
+	if err != nil || ag == nil || ag.VirtualKeyID == nil {
+		return nil, err
+	}
+	vk, err := r.Ent.VirtualKey.Get(ctx, *ag.VirtualKeyID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &model.AgentAPIKey{ID: vk.ID.String(), Name: vk.Alias}, nil
+}
+
+// Owner resolves the agent's owner User, or nil if the owning user is gone.
+func (r *agentResolver) Owner(ctx context.Context, obj *model.Agent) (*model.User, error) {
+	ag, err := r.agentForField(ctx, obj.ID)
+	if err != nil || ag == nil {
+		return nil, err
+	}
+	u, err := r.Ent.User.Get(ctx, ag.OwnerUserID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return toModelUser(u), nil
+}
 
 // Knowledge is the resolver for the knowledge field. Lazily loads the config's
 // mounted OKF knowledge packs (LLD-11 K2). The parent AgentConfig was already
@@ -345,7 +391,7 @@ func (r *queryResolver) AgentConfigs(ctx context.Context, agentType *string) ([]
 }
 
 // Agents lists agents (admin: all; user: own — owner scope, LLD-01 §4.1).
-func (r *queryResolver) Agents(ctx context.Context) ([]model.Agent, error) {
+func (r *queryResolver) Agents(ctx context.Context, filter *model.AgentFilter, pagination *model.Pagination, sort *model.AgentSort) (*model.AgentConnection, error) {
 	cu := auth.FromContext(ctx)
 	if cu == nil {
 		return nil, gqlerror.Errorf("unauthenticated")
@@ -372,18 +418,72 @@ func (r *queryResolver) Agents(ctx context.Context) ([]model.Agent, error) {
 	if env, ok := r.envScopeFor(ctx); ok { // soft env filter, after tenant (LLD-10 §2.3)
 		q = q.Where(agent.Or(agent.EnvironmentID(env), agent.EnvironmentIDIsNil()))
 	}
-	as, err := q.Order(orderNewest).All(ctx)
+
+	// Apply the UI filters on top of the visibility scope (前后端整合契约). Cross-
+	// entity keywords (owner/key) resolve matching ids first, then constrain by FK.
+	if filter != nil {
+		if filter.Status != nil {
+			q = q.Where(agent.StatusEQ(agent.Status(string(*filter.Status))))
+		}
+		if v := derefString(filter.Type); v != "" {
+			q = q.Where(agent.AgentTypeEQ(v))
+		}
+		if v := derefString(filter.NameKeyword); v != "" {
+			q = q.Where(agent.NameContainsFold(v))
+		}
+		if v := derefString(filter.OwnerKeyword); v != "" {
+			ids, err := r.Ent.User.Query().
+				Where(user.Or(user.UsernameContainsFold(v), user.EmailContainsFold(v))).IDs(ctx)
+			if err != nil {
+				return nil, err
+			}
+			q = q.Where(agent.OwnerUserIDIn(ids...)) // empty → matches nothing (fail-closed)
+		}
+		if v := derefString(filter.KeyKeyword); v != "" {
+			ids, err := r.Ent.VirtualKey.Query().Where(virtualkey.AliasContainsFold(v)).IDs(ctx)
+			if err != nil {
+				return nil, err
+			}
+			q = q.Where(agent.VirtualKeyIDIn(ids...))
+		}
+	}
+
+	total, err := q.Clone().Count(ctx)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.Agent, 0, len(as))
-	for _, a := range as {
-		out = append(out, *toModelAgent(a))
+
+	page, pageSize := 1, 10
+	if pagination != nil {
+		if pagination.Page > 0 {
+			page = pagination.Page
+		}
+		if pagination.PageSize > 0 {
+			pageSize = pagination.PageSize
+		}
 	}
-	return out, nil
+	as, err := applyAgentSort(q, sort).
+		Offset((page - 1) * pageSize).Limit(pageSize).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	nodes := make([]model.Agent, 0, len(as))
+	for _, a := range as {
+		nodes = append(nodes, *toModelAgent(a))
+	}
+	totalPages := (total + pageSize - 1) / pageSize
+	return &model.AgentConnection{
+		Nodes:      nodes,
+		TotalCount: total,
+		PageInfo:   &model.PageInfo{Page: page, PageSize: pageSize, TotalPages: totalPages},
+	}, nil
 }
+
+// Agent returns AgentResolver implementation.
+func (r *Resolver) Agent() AgentResolver { return &agentResolver{r} }
 
 // AgentConfig returns AgentConfigResolver implementation.
 func (r *Resolver) AgentConfig() AgentConfigResolver { return &agentConfigResolver{r} }
 
+type agentResolver struct{ *Resolver }
 type agentConfigResolver struct{ *Resolver }

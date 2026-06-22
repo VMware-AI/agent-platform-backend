@@ -116,14 +116,14 @@ func TestCreateAgent_OwnerScoping(t *testing.T) {
 	}
 
 	// alice sees only her own
-	aList, _ := qr.Agents(alice)
-	if len(aList) != 1 || aList[0].Name != "a1" {
+	aList, _ := qr.Agents(alice, nil, nil, nil)
+	if aList.TotalCount != 1 || len(aList.Nodes) != 1 || aList.Nodes[0].Name != "a1" {
 		t.Fatalf("alice should see only her agent: %+v", aList)
 	}
 	// admin sees all
-	adminList, _ := qr.Agents(admin)
-	if len(adminList) != 2 {
-		t.Fatalf("admin should see all agents, got %d", len(adminList))
+	adminList, _ := qr.Agents(admin, nil, nil, nil)
+	if adminList.TotalCount != 2 || len(adminList.Nodes) != 2 {
+		t.Fatalf("admin should see all agents, got %d", adminList.TotalCount)
 	}
 }
 
