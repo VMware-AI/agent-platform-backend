@@ -21,11 +21,12 @@ type Agent struct {
 }
 
 type AgentConfig struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	AgentType string    `json:"agentType"`
-	IsDefault bool      `json:"isDefault"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID        string     `json:"id"`
+	Name      string     `json:"name"`
+	AgentType string     `json:"agentType"`
+	IsDefault bool       `json:"isDefault"`
+	Knowledge []Artifact `json:"knowledge"`
+	CreatedAt time.Time  `json:"createdAt"`
 }
 
 type AgentSnapshot struct {

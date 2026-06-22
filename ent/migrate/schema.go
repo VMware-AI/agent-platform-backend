@@ -672,6 +672,31 @@ var (
 			},
 		},
 	}
+	// AgentConfigKnowledgeColumns holds the columns for the "agent_config_knowledge" table.
+	AgentConfigKnowledgeColumns = []*schema.Column{
+		{Name: "agent_config_id", Type: field.TypeUUID},
+		{Name: "artifact_id", Type: field.TypeUUID},
+	}
+	// AgentConfigKnowledgeTable holds the schema information for the "agent_config_knowledge" table.
+	AgentConfigKnowledgeTable = &schema.Table{
+		Name:       "agent_config_knowledge",
+		Columns:    AgentConfigKnowledgeColumns,
+		PrimaryKey: []*schema.Column{AgentConfigKnowledgeColumns[0], AgentConfigKnowledgeColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "agent_config_knowledge_agent_config_id",
+				Columns:    []*schema.Column{AgentConfigKnowledgeColumns[0]},
+				RefColumns: []*schema.Column{AgentConfigsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "agent_config_knowledge_artifact_id",
+				Columns:    []*schema.Column{AgentConfigKnowledgeColumns[1]},
+				RefColumns: []*schema.Column{ArtifactsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// RolePermissionsColumns holds the columns for the "role_permissions" table.
 	RolePermissionsColumns = []*schema.Column{
 		{Name: "role_id", Type: field.TypeUUID},
@@ -750,12 +775,15 @@ var (
 		UpstreamsTable,
 		UsersTable,
 		VirtualKeysTable,
+		AgentConfigKnowledgeTable,
 		RolePermissionsTable,
 		UserRolesTable,
 	}
 )
 
 func init() {
+	AgentConfigKnowledgeTable.ForeignKeys[0].RefTable = AgentConfigsTable
+	AgentConfigKnowledgeTable.ForeignKeys[1].RefTable = ArtifactsTable
 	RolePermissionsTable.ForeignKeys[0].RefTable = RolesTable
 	RolePermissionsTable.ForeignKeys[1].RefTable = PermissionsTable
 	UserRolesTable.ForeignKeys[0].RefTable = UsersTable

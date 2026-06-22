@@ -2,6 +2,7 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 )
@@ -23,5 +24,15 @@ func (AgentConfig) Fields() []ent.Field {
 		field.UUID("artifact_id", uuid.UUID{}).Optional().Nillable(), // -> Artifact default_config
 		field.UUID("tenant_id", uuid.UUID{}).Optional().Nillable(),
 		field.UUID("environment_id", uuid.UUID{}).Optional().Nillable(), // LLD-10 env_scope (default off)
+	}
+}
+
+// Edges: a config may mount N OKF knowledge packs (LLD-11 K2, N:M). At deploy the
+// backend resolves these and hands the VM their references; the daemon pulls each
+// over the §6 control-plane channel. Only kind=knowledge artifacts are linked
+// (enforced in the resolver, not the schema).
+func (AgentConfig) Edges() []ent.Edge {
+	return []ent.Edge{
+		edge.To("knowledge", Artifact.Type),
 	}
 }

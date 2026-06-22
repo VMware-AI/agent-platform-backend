@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -30,8 +31,15 @@ const (
 	FieldTenantID = "tenant_id"
 	// FieldEnvironmentID holds the string denoting the environment_id field in the database.
 	FieldEnvironmentID = "environment_id"
+	// EdgeKnowledge holds the string denoting the knowledge edge name in mutations.
+	EdgeKnowledge = "knowledge"
 	// Table holds the table name of the agentconfig in the database.
 	Table = "agent_configs"
+	// KnowledgeTable is the table that holds the knowledge relation/edge. The primary key declared below.
+	KnowledgeTable = "agent_config_knowledge"
+	// KnowledgeInverseTable is the table name for the Artifact entity.
+	// It exists in this package in order to avoid circular dependency with the "artifact" package.
+	KnowledgeInverseTable = "artifacts"
 )
 
 // Columns holds all SQL columns for agentconfig fields.
@@ -46,6 +54,12 @@ var Columns = []string{
 	FieldTenantID,
 	FieldEnvironmentID,
 }
+
+var (
+	// KnowledgePrimaryKey and KnowledgeColumn2 are the table columns denoting the
+	// primary key for the knowledge relation (M2M).
+	KnowledgePrimaryKey = []string{"agent_config_id", "artifact_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -120,4 +134,25 @@ func ByTenantID(opts ...sql.OrderTermOption) OrderOption {
 // ByEnvironmentID orders the results by the environment_id field.
 func ByEnvironmentID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEnvironmentID, opts...).ToFunc()
+}
+
+// ByKnowledgeCount orders the results by knowledge count.
+func ByKnowledgeCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newKnowledgeStep(), opts...)
+	}
+}
+
+// ByKnowledge orders the results by knowledge terms.
+func ByKnowledge(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newKnowledgeStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newKnowledgeStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(KnowledgeInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, KnowledgeTable, KnowledgePrimaryKey...),
+	)
 }

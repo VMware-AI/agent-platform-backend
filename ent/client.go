@@ -655,6 +655,22 @@ func (c *AgentConfigClient) GetX(ctx context.Context, id uuid.UUID) *AgentConfig
 	return obj
 }
 
+// QueryKnowledge queries the knowledge edge of a AgentConfig.
+func (c *AgentConfigClient) QueryKnowledge(_m *AgentConfig) *ArtifactQuery {
+	query := (&ArtifactClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agentconfig.Table, agentconfig.FieldID, id),
+			sqlgraph.To(artifact.Table, artifact.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, agentconfig.KnowledgeTable, agentconfig.KnowledgePrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *AgentConfigClient) Hooks() []Hook {
 	return c.hooks.AgentConfig
@@ -1185,6 +1201,22 @@ func (c *ArtifactClient) GetX(ctx context.Context, id uuid.UUID) *Artifact {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryConfigs queries the configs edge of a Artifact.
+func (c *ArtifactClient) QueryConfigs(_m *Artifact) *AgentConfigQuery {
+	query := (&AgentConfigClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artifact.Table, artifact.FieldID, id),
+			sqlgraph.To(agentconfig.Table, agentconfig.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, artifact.ConfigsTable, artifact.ConfigsPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.

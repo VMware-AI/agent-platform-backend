@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
 	"github.com/google/uuid"
 )
@@ -463,6 +464,29 @@ func EnvironmentIDIsNil() predicate.AgentConfig {
 // EnvironmentIDNotNil applies the NotNil predicate on the "environment_id" field.
 func EnvironmentIDNotNil() predicate.AgentConfig {
 	return predicate.AgentConfig(sql.FieldNotNull(FieldEnvironmentID))
+}
+
+// HasKnowledge applies the HasEdge predicate on the "knowledge" edge.
+func HasKnowledge() predicate.AgentConfig {
+	return predicate.AgentConfig(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, KnowledgeTable, KnowledgePrimaryKey...),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasKnowledgeWith applies the HasEdge predicate on the "knowledge" edge with a given conditions (other predicates).
+func HasKnowledgeWith(preds ...predicate.Artifact) predicate.AgentConfig {
+	return predicate.AgentConfig(func(s *sql.Selector) {
+		step := newKnowledgeStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

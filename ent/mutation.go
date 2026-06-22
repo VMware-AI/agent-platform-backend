@@ -1124,21 +1124,24 @@ func (m *AgentMutation) ResetEdge(name string) error {
 // AgentConfigMutation represents an operation that mutates the AgentConfig nodes in the graph.
 type AgentConfigMutation struct {
 	config
-	op             Op
-	typ            string
-	id             *uuid.UUID
-	created_at     *time.Time
-	updated_at     *time.Time
-	name           *string
-	agent_type     *string
-	is_default     *bool
-	artifact_id    *uuid.UUID
-	tenant_id      *uuid.UUID
-	environment_id *uuid.UUID
-	clearedFields  map[string]struct{}
-	done           bool
-	oldValue       func(context.Context) (*AgentConfig, error)
-	predicates     []predicate.AgentConfig
+	op               Op
+	typ              string
+	id               *uuid.UUID
+	created_at       *time.Time
+	updated_at       *time.Time
+	name             *string
+	agent_type       *string
+	is_default       *bool
+	artifact_id      *uuid.UUID
+	tenant_id        *uuid.UUID
+	environment_id   *uuid.UUID
+	clearedFields    map[string]struct{}
+	knowledge        map[uuid.UUID]struct{}
+	removedknowledge map[uuid.UUID]struct{}
+	clearedknowledge bool
+	done             bool
+	oldValue         func(context.Context) (*AgentConfig, error)
+	predicates       []predicate.AgentConfig
 }
 
 var _ ent.Mutation = (*AgentConfigMutation)(nil)
@@ -1572,6 +1575,60 @@ func (m *AgentConfigMutation) ResetEnvironmentID() {
 	delete(m.clearedFields, agentconfig.FieldEnvironmentID)
 }
 
+// AddKnowledgeIDs adds the "knowledge" edge to the Artifact entity by ids.
+func (m *AgentConfigMutation) AddKnowledgeIDs(ids ...uuid.UUID) {
+	if m.knowledge == nil {
+		m.knowledge = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.knowledge[ids[i]] = struct{}{}
+	}
+}
+
+// ClearKnowledge clears the "knowledge" edge to the Artifact entity.
+func (m *AgentConfigMutation) ClearKnowledge() {
+	m.clearedknowledge = true
+}
+
+// KnowledgeCleared reports if the "knowledge" edge to the Artifact entity was cleared.
+func (m *AgentConfigMutation) KnowledgeCleared() bool {
+	return m.clearedknowledge
+}
+
+// RemoveKnowledgeIDs removes the "knowledge" edge to the Artifact entity by IDs.
+func (m *AgentConfigMutation) RemoveKnowledgeIDs(ids ...uuid.UUID) {
+	if m.removedknowledge == nil {
+		m.removedknowledge = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.knowledge, ids[i])
+		m.removedknowledge[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedKnowledge returns the removed IDs of the "knowledge" edge to the Artifact entity.
+func (m *AgentConfigMutation) RemovedKnowledgeIDs() (ids []uuid.UUID) {
+	for id := range m.removedknowledge {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// KnowledgeIDs returns the "knowledge" edge IDs in the mutation.
+func (m *AgentConfigMutation) KnowledgeIDs() (ids []uuid.UUID) {
+	for id := range m.knowledge {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetKnowledge resets all changes to the "knowledge" edge.
+func (m *AgentConfigMutation) ResetKnowledge() {
+	m.knowledge = nil
+	m.clearedknowledge = false
+	m.removedknowledge = nil
+}
+
 // Where appends a list predicates to the AgentConfigMutation builder.
 func (m *AgentConfigMutation) Where(ps ...predicate.AgentConfig) {
 	m.predicates = append(m.predicates, ps...)
@@ -1845,49 +1902,85 @@ func (m *AgentConfigMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *AgentConfigMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.knowledge != nil {
+		edges = append(edges, agentconfig.EdgeKnowledge)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *AgentConfigMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case agentconfig.EdgeKnowledge:
+		ids := make([]ent.Value, 0, len(m.knowledge))
+		for id := range m.knowledge {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *AgentConfigMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.removedknowledge != nil {
+		edges = append(edges, agentconfig.EdgeKnowledge)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *AgentConfigMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case agentconfig.EdgeKnowledge:
+		ids := make([]ent.Value, 0, len(m.removedknowledge))
+		for id := range m.removedknowledge {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *AgentConfigMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedknowledge {
+		edges = append(edges, agentconfig.EdgeKnowledge)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *AgentConfigMutation) EdgeCleared(name string) bool {
+	switch name {
+	case agentconfig.EdgeKnowledge:
+		return m.clearedknowledge
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *AgentConfigMutation) ClearEdge(name string) error {
+	switch name {
+	}
 	return fmt.Errorf("unknown AgentConfig unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *AgentConfigMutation) ResetEdge(name string) error {
+	switch name {
+	case agentconfig.EdgeKnowledge:
+		m.ResetKnowledge()
+		return nil
+	}
 	return fmt.Errorf("unknown AgentConfig edge %s", name)
 }
 
@@ -4492,6 +4585,9 @@ type ArtifactMutation struct {
 	tenant_id      *uuid.UUID
 	environment_id *uuid.UUID
 	clearedFields  map[string]struct{}
+	configs        map[uuid.UUID]struct{}
+	removedconfigs map[uuid.UUID]struct{}
+	clearedconfigs bool
 	done           bool
 	oldValue       func(context.Context) (*Artifact, error)
 	predicates     []predicate.Artifact
@@ -5062,6 +5158,60 @@ func (m *ArtifactMutation) ResetEnvironmentID() {
 	delete(m.clearedFields, artifact.FieldEnvironmentID)
 }
 
+// AddConfigIDs adds the "configs" edge to the AgentConfig entity by ids.
+func (m *ArtifactMutation) AddConfigIDs(ids ...uuid.UUID) {
+	if m.configs == nil {
+		m.configs = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.configs[ids[i]] = struct{}{}
+	}
+}
+
+// ClearConfigs clears the "configs" edge to the AgentConfig entity.
+func (m *ArtifactMutation) ClearConfigs() {
+	m.clearedconfigs = true
+}
+
+// ConfigsCleared reports if the "configs" edge to the AgentConfig entity was cleared.
+func (m *ArtifactMutation) ConfigsCleared() bool {
+	return m.clearedconfigs
+}
+
+// RemoveConfigIDs removes the "configs" edge to the AgentConfig entity by IDs.
+func (m *ArtifactMutation) RemoveConfigIDs(ids ...uuid.UUID) {
+	if m.removedconfigs == nil {
+		m.removedconfigs = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.configs, ids[i])
+		m.removedconfigs[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedConfigs returns the removed IDs of the "configs" edge to the AgentConfig entity.
+func (m *ArtifactMutation) RemovedConfigsIDs() (ids []uuid.UUID) {
+	for id := range m.removedconfigs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ConfigsIDs returns the "configs" edge IDs in the mutation.
+func (m *ArtifactMutation) ConfigsIDs() (ids []uuid.UUID) {
+	for id := range m.configs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetConfigs resets all changes to the "configs" edge.
+func (m *ArtifactMutation) ResetConfigs() {
+	m.configs = nil
+	m.clearedconfigs = false
+	m.removedconfigs = nil
+}
+
 // Where appends a list predicates to the ArtifactMutation builder.
 func (m *ArtifactMutation) Where(ps ...predicate.Artifact) {
 	m.predicates = append(m.predicates, ps...)
@@ -5398,49 +5548,85 @@ func (m *ArtifactMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ArtifactMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.configs != nil {
+		edges = append(edges, artifact.EdgeConfigs)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *ArtifactMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case artifact.EdgeConfigs:
+		ids := make([]ent.Value, 0, len(m.configs))
+		for id := range m.configs {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ArtifactMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.removedconfigs != nil {
+		edges = append(edges, artifact.EdgeConfigs)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *ArtifactMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case artifact.EdgeConfigs:
+		ids := make([]ent.Value, 0, len(m.removedconfigs))
+		for id := range m.removedconfigs {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ArtifactMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedconfigs {
+		edges = append(edges, artifact.EdgeConfigs)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *ArtifactMutation) EdgeCleared(name string) bool {
+	switch name {
+	case artifact.EdgeConfigs:
+		return m.clearedconfigs
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *ArtifactMutation) ClearEdge(name string) error {
+	switch name {
+	}
 	return fmt.Errorf("unknown Artifact unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *ArtifactMutation) ResetEdge(name string) error {
+	switch name {
+	case artifact.EdgeConfigs:
+		m.ResetConfigs()
+		return nil
+	}
 	return fmt.Errorf("unknown Artifact edge %s", name)
 }
 

@@ -1,0 +1,2 @@
+-- Create "agent_config_knowledge" table
+CREATE TABLE "agent_config_knowledge" ("agent_config_id" uuid NOT NULL, "artifact_id" uuid NOT NULL, PRIMARY KEY ("agent_config_id", "artifact_id"), CONSTRAINT "agent_config_knowledge_agent_config_id" FOREIGN KEY ("agent_config_id") REFERENCES "agent_configs" ("id") ON UPDATE NO ACTION ON DELETE CASCADE, CONSTRAINT "agent_config_knowledge_artifact_id" FOREIGN KEY ("artifact_id") REFERENCES "artifacts" ("id") ON UPDATE NO ACTION ON DELETE CASCADE);

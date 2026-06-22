@@ -29,6 +29,7 @@ func NewExecutableSchema(cfg Config) graphql.ExecutableSchema {
 type Config = graphql.Config[ResolverRoot, DirectiveRoot, ComplexityRoot]
 
 type ResolverRoot interface {
+	AgentConfig() AgentConfigResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
 }
@@ -54,6 +55,7 @@ type ComplexityRoot struct {
 		CreatedAt func(childComplexity int) int
 		ID        func(childComplexity int) int
 		IsDefault func(childComplexity int) int
+		Knowledge func(childComplexity int) int
 		Name      func(childComplexity int) int
 	}
 
@@ -239,6 +241,7 @@ type ComplexityRoot struct {
 		RevertAgentSnapshot        func(childComplexity int, input model.RevertAgentSnapshotInput) int
 		RevokeAgentEnrollment      func(childComplexity int, agentID string) int
 		RevokeVirtualKey           func(childComplexity int, id string) int
+		SetAgentConfigKnowledge    func(childComplexity int, configID string, knowledgeArtifactIds []string) int
 		SetAgentStatus             func(childComplexity int, id string, status model.AgentStatus) int
 		SetDefaultAgentConfig      func(childComplexity int, id string) int
 		SetModelRouteEnabled       func(childComplexity int, id string, enabled bool) int
@@ -418,6 +421,9 @@ type ComplexityRoot struct {
 
 // region    ************************** generated!.gotpl **************************
 
+type AgentConfigResolver interface {
+	Knowledge(ctx context.Context, obj *model.AgentConfig) ([]model.Artifact, error)
+}
 type MutationResolver interface {
 	Login(ctx context.Context, username string, password string) (*model.AuthPayload, error)
 	Logout(ctx context.Context) (bool, error)
@@ -434,6 +440,7 @@ type MutationResolver interface {
 	UpdateAgentConfig(ctx context.Context, id string, input model.UpdateAgentConfigInput) (*model.AgentConfig, error)
 	DeleteAgentConfig(ctx context.Context, id string) (bool, error)
 	SetDefaultAgentConfig(ctx context.Context, id string) (*model.AgentConfig, error)
+	SetAgentConfigKnowledge(ctx context.Context, configID string, knowledgeArtifactIds []string) (*model.AgentConfig, error)
 	UpsertArtifact(ctx context.Context, input model.UpsertArtifactInput) (*model.Artifact, error)
 	DeleteArtifact(ctx context.Context, id string) (bool, error)
 	UpsertSkill(ctx context.Context, input model.UpsertSkillInput) (*model.Skill, error)
@@ -594,6 +601,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.AgentConfig.IsDefault(childComplexity), true
+	case "AgentConfig.knowledge":
+		if e.ComplexityRoot.AgentConfig.Knowledge == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentConfig.Knowledge(childComplexity), true
 	case "AgentConfig.name":
 		if e.ComplexityRoot.AgentConfig.Name == nil {
 			break
@@ -1556,6 +1569,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.RevokeVirtualKey(childComplexity, args["id"].(string)), true
+	case "Mutation.setAgentConfigKnowledge":
+		if e.ComplexityRoot.Mutation.SetAgentConfigKnowledge == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setAgentConfigKnowledge_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.SetAgentConfigKnowledge(childComplexity, args["configId"].(string), args["knowledgeArtifactIds"].([]string)), true
 	case "Mutation.setAgentStatus":
 		if e.ComplexityRoot.Mutation.SetAgentStatus == nil {
 			break
@@ -2675,6 +2699,10 @@ type AgentConfig {
   name: String!
   agentType: String!
   isDefault: Boolean!
+  # OKF knowledge packs mounted on this config (N:M, LLD-11 K2). Sent to the agent
+  # VM at deploy; the daemon pulls each over the control-plane channel (非 RAG).
+  # Lazily resolved (loads the edge only when selected).
+  knowledge: [Artifact!]! @goField(forceResolver: true)
   createdAt: Time!
 }
 
@@ -2737,6 +2765,10 @@ extend type Mutation {
   deleteAgentConfig(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
   # Mark this config the default for its agent type (unsets others of that type).
   setDefaultAgentConfig(id: ID!): AgentConfig! @hasRole(any: [admin, tenant_admin])
+  # Replace the config's mounted OKF knowledge packs (LLD-11 K2). Each id must be a
+  # kind=knowledge artifact visible to the caller's tenant; the set is replaced wholesale.
+  setAgentConfigKnowledge(configId: ID!, knowledgeArtifactIds: [ID!]!): AgentConfig!
+    @hasRole(any: [admin, tenant_admin])
 }
 `, BuiltIn: false},
 	{Name: "../../schema/content.graphql", Input: `# Content lib (制品库) / Skill hub / Harbor (镜像仓) CRUD. See LLD-06.
@@ -3388,6 +3420,13 @@ type Mutation {
 
 directive @hasRole(any: [Role!]!) on FIELD_DEFINITION
 directive @hasPermission(perm: String!) on FIELD_DEFINITION
+# gqlgen codegen directive (not auto-injected in this version): forces a field to
+# be a resolver method instead of a plain model field — used for lazy edge loads.
+directive @goField(
+  forceResolver: Boolean
+  name: String
+  omittable: Boolean
+) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
 `, BuiltIn: false},
 	{Name: "../../schema/virtualkey.graphql", Input: `# Per-user LiteLLM virtual keys. See LLD-04 / LLD-07 §8. Secret returned ONCE on issue.
 
@@ -3481,6 +3520,8 @@ func (ec *executionContext) childFields_AgentConfig(ctx context.Context, field g
 		return ec.fieldContext_AgentConfig_agentType(ctx, field)
 	case "isDefault":
 		return ec.fieldContext_AgentConfig_isDefault(ctx, field)
+	case "knowledge":
+		return ec.fieldContext_AgentConfig_knowledge(ctx, field)
 	case "createdAt":
 		return ec.fieldContext_AgentConfig_createdAt(ctx, field)
 	}
@@ -4713,6 +4754,28 @@ func (ec *executionContext) field_Mutation_revokeVirtualKey_args(ctx context.Con
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_setAgentConfigKnowledge_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "configId",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["configId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "knowledgeArtifactIds",
+		func(ctx context.Context, v any) ([]string, error) {
+			return ec.unmarshalNID2ᚕstringᚄ(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["knowledgeArtifactIds"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_setAgentStatus_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -5640,6 +5703,38 @@ func (ec *executionContext) _AgentConfig_isDefault(ctx context.Context, field gr
 }
 func (ec *executionContext) fieldContext_AgentConfig_isDefault(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("AgentConfig", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _AgentConfig_knowledge(ctx context.Context, field graphql.CollectedField, obj *model.AgentConfig) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentConfig_knowledge(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.AgentConfig().Knowledge(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.Artifact) graphql.Marshaler {
+			return ec.marshalNArtifact2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐArtifactᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentConfig_knowledge(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AgentConfig",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Artifact(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _AgentConfig_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.AgentConfig) (ret graphql.Marshaler) {
@@ -8634,6 +8729,68 @@ func (ec *executionContext) fieldContext_Mutation_setDefaultAgentConfig(ctx cont
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_setDefaultAgentConfig_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_setAgentConfigKnowledge(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_setAgentConfigKnowledge(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().SetAgentConfigKnowledge(ctx, fc.Args["configId"].(string), fc.Args["knowledgeArtifactIds"].([]string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
+				if err != nil {
+					var zeroVal *model.AgentConfig
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.AgentConfig
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.AgentConfig) graphql.Marshaler {
+			return ec.marshalNAgentConfig2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentConfig(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_setAgentConfigKnowledge(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_AgentConfig(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_setAgentConfigKnowledge_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -17042,27 +17199,63 @@ func (ec *executionContext) _AgentConfig(ctx context.Context, sel ast.SelectionS
 		case "id":
 			out.Values[i] = ec._AgentConfig_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "name":
 			out.Values[i] = ec._AgentConfig_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "agentType":
 			out.Values[i] = ec._AgentConfig_agentType(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "isDefault":
 			out.Values[i] = ec._AgentConfig_isDefault(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "knowledge":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AgentConfig_knowledge(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "createdAt":
 			out.Values[i] = ec._AgentConfig_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -18274,6 +18467,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "setDefaultAgentConfig":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_setDefaultAgentConfig(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "setAgentConfigKnowledge":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_setAgentConfigKnowledge(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -20957,6 +21157,36 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNID2ᚕstringᚄ(ctx context.Context, v any) ([]string, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNID2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNID2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNID2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalNImage2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐImage(ctx context.Context, sel ast.SelectionSet, v model.Image) graphql.Marshaler {

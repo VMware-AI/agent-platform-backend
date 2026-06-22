@@ -102,3 +102,10 @@ type Mutation {
 
 directive @hasRole(any: [Role!]!) on FIELD_DEFINITION
 directive @hasPermission(perm: String!) on FIELD_DEFINITION
+# gqlgen codegen directive (not auto-injected in this version): forces a field to
+# be a resolver method instead of a plain model field — used for lazy edge loads.
+directive @goField(
+  forceResolver: Boolean
+  name: String
+  omittable: Boolean
+) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION

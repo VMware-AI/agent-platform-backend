@@ -53,6 +53,11 @@ type Request struct {
 	VMID            string
 	EnrollToken     string
 	ControlPlaneURL string
+	// KnowledgePackIDs are the OKF knowledge artifacts mounted on the agent's
+	// config (LLD-11 K2). Their ids are handed to the VM via guestinfo; the daemon
+	// pulls each bundle over the control-plane channel (§6). Requires the
+	// agent-manager channel (EnrollToken) — without it there is no way to fetch.
+	KnowledgePackIDs []string
 }
 
 // Result carries the issued secret (returned once), the rendered userdata, and
@@ -119,6 +124,11 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 		gi["agentmgr.vm_id"] = req.VMID
 		if req.ControlPlaneURL != "" {
 			gi["agentmgr.control_plane_url"] = req.ControlPlaneURL
+		}
+		// LLD-11 §6: tell the daemon which knowledge packs to pull (by id) over the
+		// same authenticated channel. Only meaningful with the agent-manager channel.
+		if len(req.KnowledgePackIDs) > 0 {
+			gi["agentmgr.knowledge_packs"] = strings.Join(req.KnowledgePackIDs, ",")
 		}
 	}
 	if err := s.VCenter.SetGuestinfo(ctx, req.VMName, gi); err != nil {

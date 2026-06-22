@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/VMware-AI/agent-platform-backend/ent/agentconfig"
+	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
 	"github.com/google/uuid"
 )
@@ -138,9 +139,45 @@ func (_u *AgentConfigUpdate) ClearEnvironmentID() *AgentConfigUpdate {
 	return _u
 }
 
+// AddKnowledgeIDs adds the "knowledge" edge to the Artifact entity by IDs.
+func (_u *AgentConfigUpdate) AddKnowledgeIDs(ids ...uuid.UUID) *AgentConfigUpdate {
+	_u.mutation.AddKnowledgeIDs(ids...)
+	return _u
+}
+
+// AddKnowledge adds the "knowledge" edges to the Artifact entity.
+func (_u *AgentConfigUpdate) AddKnowledge(v ...*Artifact) *AgentConfigUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddKnowledgeIDs(ids...)
+}
+
 // Mutation returns the AgentConfigMutation object of the builder.
 func (_u *AgentConfigUpdate) Mutation() *AgentConfigMutation {
 	return _u.mutation
+}
+
+// ClearKnowledge clears all "knowledge" edges to the Artifact entity.
+func (_u *AgentConfigUpdate) ClearKnowledge() *AgentConfigUpdate {
+	_u.mutation.ClearKnowledge()
+	return _u
+}
+
+// RemoveKnowledgeIDs removes the "knowledge" edge to Artifact entities by IDs.
+func (_u *AgentConfigUpdate) RemoveKnowledgeIDs(ids ...uuid.UUID) *AgentConfigUpdate {
+	_u.mutation.RemoveKnowledgeIDs(ids...)
+	return _u
+}
+
+// RemoveKnowledge removes "knowledge" edges to Artifact entities.
+func (_u *AgentConfigUpdate) RemoveKnowledge(v ...*Artifact) *AgentConfigUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveKnowledgeIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -241,6 +278,51 @@ func (_u *AgentConfigUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	}
 	if _u.mutation.EnvironmentIDCleared() {
 		_spec.ClearField(agentconfig.FieldEnvironmentID, field.TypeUUID)
+	}
+	if _u.mutation.KnowledgeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   agentconfig.KnowledgeTable,
+			Columns: agentconfig.KnowledgePrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artifact.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedKnowledgeIDs(); len(nodes) > 0 && !_u.mutation.KnowledgeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   agentconfig.KnowledgeTable,
+			Columns: agentconfig.KnowledgePrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artifact.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.KnowledgeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   agentconfig.KnowledgeTable,
+			Columns: agentconfig.KnowledgePrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artifact.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
@@ -372,9 +454,45 @@ func (_u *AgentConfigUpdateOne) ClearEnvironmentID() *AgentConfigUpdateOne {
 	return _u
 }
 
+// AddKnowledgeIDs adds the "knowledge" edge to the Artifact entity by IDs.
+func (_u *AgentConfigUpdateOne) AddKnowledgeIDs(ids ...uuid.UUID) *AgentConfigUpdateOne {
+	_u.mutation.AddKnowledgeIDs(ids...)
+	return _u
+}
+
+// AddKnowledge adds the "knowledge" edges to the Artifact entity.
+func (_u *AgentConfigUpdateOne) AddKnowledge(v ...*Artifact) *AgentConfigUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddKnowledgeIDs(ids...)
+}
+
 // Mutation returns the AgentConfigMutation object of the builder.
 func (_u *AgentConfigUpdateOne) Mutation() *AgentConfigMutation {
 	return _u.mutation
+}
+
+// ClearKnowledge clears all "knowledge" edges to the Artifact entity.
+func (_u *AgentConfigUpdateOne) ClearKnowledge() *AgentConfigUpdateOne {
+	_u.mutation.ClearKnowledge()
+	return _u
+}
+
+// RemoveKnowledgeIDs removes the "knowledge" edge to Artifact entities by IDs.
+func (_u *AgentConfigUpdateOne) RemoveKnowledgeIDs(ids ...uuid.UUID) *AgentConfigUpdateOne {
+	_u.mutation.RemoveKnowledgeIDs(ids...)
+	return _u
+}
+
+// RemoveKnowledge removes "knowledge" edges to Artifact entities.
+func (_u *AgentConfigUpdateOne) RemoveKnowledge(v ...*Artifact) *AgentConfigUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveKnowledgeIDs(ids...)
 }
 
 // Where appends a list predicates to the AgentConfigUpdate builder.
@@ -505,6 +623,51 @@ func (_u *AgentConfigUpdateOne) sqlSave(ctx context.Context) (_node *AgentConfig
 	}
 	if _u.mutation.EnvironmentIDCleared() {
 		_spec.ClearField(agentconfig.FieldEnvironmentID, field.TypeUUID)
+	}
+	if _u.mutation.KnowledgeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   agentconfig.KnowledgeTable,
+			Columns: agentconfig.KnowledgePrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artifact.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedKnowledgeIDs(); len(nodes) > 0 && !_u.mutation.KnowledgeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   agentconfig.KnowledgeTable,
+			Columns: agentconfig.KnowledgePrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artifact.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.KnowledgeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   agentconfig.KnowledgeTable,
+			Columns: agentconfig.KnowledgePrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artifact.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &AgentConfig{config: _u.config}

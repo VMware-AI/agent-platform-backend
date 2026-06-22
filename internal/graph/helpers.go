@@ -810,6 +810,29 @@ func (r *Resolver) resolveAgentConfig(ctx context.Context, ag *ent.Agent) (conte
 	return art.Content, path
 }
 
+// resolveAgentKnowledge returns the ids of the OKF knowledge packs mounted on an
+// agent's config (LLD-11 K2), for 下发 via guestinfo at deploy — the daemon pulls
+// each over the control-plane channel (§6). Best-effort: a config-less agent or a
+// load error yields no packs (knowledge never blocks deploy).
+func (r *Resolver) resolveAgentKnowledge(ctx context.Context, ag *ent.Agent) []string {
+	if ag.ConfigID == nil {
+		return nil
+	}
+	cfg, err := r.Ent.AgentConfig.Get(ctx, *ag.ConfigID)
+	if err != nil {
+		return nil
+	}
+	arts, err := cfg.QueryKnowledge().Order(orderNewest).All(ctx)
+	if err != nil {
+		return nil
+	}
+	ids := make([]string, 0, len(arts))
+	for _, a := range arts {
+		ids = append(ids, a.ID.String())
+	}
+	return ids
+}
+
 // toModelAgentSnapshot maps a vcenter snapshot to its GraphQL model.
 func toModelAgentSnapshot(s vcenter.SnapshotInfo) *model.AgentSnapshot {
 	m := &model.AgentSnapshot{Name: s.Name, State: s.State, CreatedAt: s.CreatedAt}

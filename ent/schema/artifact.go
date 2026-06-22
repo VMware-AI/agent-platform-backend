@@ -3,6 +3,7 @@ package schema
 import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -15,6 +16,15 @@ type Artifact struct {
 }
 
 func (Artifact) Mixin() []ent.Mixin { return []ent.Mixin{TimeMixin{}} }
+
+// Edges: the inverse of AgentConfig.knowledge. Declaring this (non-unique on both
+// ends) makes the relation many-to-many — a knowledge pack may be mounted on
+// several configs (LLD-11 K2, N:M) via a join table, not stolen by an FK column.
+func (Artifact) Edges() []ent.Edge {
+	return []ent.Edge{
+		edge.From("configs", AgentConfig.Type).Ref("knowledge"),
+	}
+}
 
 func (Artifact) Fields() []ent.Field {
 	return []ent.Field{

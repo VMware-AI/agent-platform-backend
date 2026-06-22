@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -11,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/VMware-AI/agent-platform-backend/ent/agentconfig"
 	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
 	"github.com/google/uuid"
@@ -19,11 +21,12 @@ import (
 // ArtifactQuery is the builder for querying Artifact entities.
 type ArtifactQuery struct {
 	config
-	ctx        *QueryContext
-	order      []artifact.OrderOption
-	inters     []Interceptor
-	predicates []predicate.Artifact
-	modifiers  []func(*sql.Selector)
+	ctx         *QueryContext
+	order       []artifact.OrderOption
+	inters      []Interceptor
+	predicates  []predicate.Artifact
+	withConfigs *AgentConfigQuery
+	modifiers   []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -58,6 +61,28 @@ func (_q *ArtifactQuery) Unique(unique bool) *ArtifactQuery {
 func (_q *ArtifactQuery) Order(o ...artifact.OrderOption) *ArtifactQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryConfigs chains the current query on the "configs" edge.
+func (_q *ArtifactQuery) QueryConfigs() *AgentConfigQuery {
+	query := (&AgentConfigClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artifact.Table, artifact.FieldID, selector),
+			sqlgraph.To(agentconfig.Table, agentconfig.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, artifact.ConfigsTable, artifact.ConfigsPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Artifact entity from the query.
@@ -247,16 +272,28 @@ func (_q *ArtifactQuery) Clone() *ArtifactQuery {
 		return nil
 	}
 	return &ArtifactQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]artifact.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.Artifact{}, _q.predicates...),
+		config:      _q.config,
+		ctx:         _q.ctx.Clone(),
+		order:       append([]artifact.OrderOption{}, _q.order...),
+		inters:      append([]Interceptor{}, _q.inters...),
+		predicates:  append([]predicate.Artifact{}, _q.predicates...),
+		withConfigs: _q.withConfigs.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
 		modifiers: append([]func(*sql.Selector){}, _q.modifiers...),
 	}
+}
+
+// WithConfigs tells the query-builder to eager-load the nodes that are connected to
+// the "configs" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ArtifactQuery) WithConfigs(opts ...func(*AgentConfigQuery)) *ArtifactQuery {
+	query := (&AgentConfigClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withConfigs = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -335,8 +372,11 @@ func (_q *ArtifactQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *ArtifactQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Artifact, error) {
 	var (
-		nodes = []*Artifact{}
-		_spec = _q.querySpec()
+		nodes       = []*Artifact{}
+		_spec       = _q.querySpec()
+		loadedTypes = [1]bool{
+			_q.withConfigs != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Artifact).scanValues(nil, columns)
@@ -344,6 +384,7 @@ func (_q *ArtifactQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Art
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Artifact{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	if len(_q.modifiers) > 0 {
@@ -358,7 +399,76 @@ func (_q *ArtifactQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Art
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withConfigs; query != nil {
+		if err := _q.loadConfigs(ctx, query, nodes,
+			func(n *Artifact) { n.Edges.Configs = []*AgentConfig{} },
+			func(n *Artifact, e *AgentConfig) { n.Edges.Configs = append(n.Edges.Configs, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *ArtifactQuery) loadConfigs(ctx context.Context, query *AgentConfigQuery, nodes []*Artifact, init func(*Artifact), assign func(*Artifact, *AgentConfig)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[uuid.UUID]*Artifact)
+	nids := make(map[uuid.UUID]map[*Artifact]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
+		}
+	}
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(artifact.ConfigsTable)
+		s.Join(joinT).On(s.C(agentconfig.FieldID), joinT.C(artifact.ConfigsPrimaryKey[0]))
+		s.Where(sql.InValues(joinT.C(artifact.ConfigsPrimaryKey[1]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(artifact.ConfigsPrimaryKey[1]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(uuid.UUID)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := *values[0].(*uuid.UUID)
+				inValue := *values[1].(*uuid.UUID)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*Artifact]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*AgentConfig](ctx, query, qr, query.inters)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected "configs" node returned %v`, n.ID)
+		}
+		for kn := range nodes {
+			assign(kn, n)
+		}
+	}
+	return nil
 }
 
 func (_q *ArtifactQuery) sqlCount(ctx context.Context) (int, error) {

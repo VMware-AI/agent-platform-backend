@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -37,8 +38,15 @@ const (
 	FieldTenantID = "tenant_id"
 	// FieldEnvironmentID holds the string denoting the environment_id field in the database.
 	FieldEnvironmentID = "environment_id"
+	// EdgeConfigs holds the string denoting the configs edge name in mutations.
+	EdgeConfigs = "configs"
 	// Table holds the table name of the artifact in the database.
 	Table = "artifacts"
+	// ConfigsTable is the table that holds the configs relation/edge. The primary key declared below.
+	ConfigsTable = "agent_config_knowledge"
+	// ConfigsInverseTable is the table name for the AgentConfig entity.
+	// It exists in this package in order to avoid circular dependency with the "agentconfig" package.
+	ConfigsInverseTable = "agent_configs"
 )
 
 // Columns holds all SQL columns for artifact fields.
@@ -56,6 +64,12 @@ var Columns = []string{
 	FieldTenantID,
 	FieldEnvironmentID,
 }
+
+var (
+	// ConfigsPrimaryKey and ConfigsColumn2 are the table columns denoting the
+	// primary key for the configs relation (M2M).
+	ConfigsPrimaryKey = []string{"agent_config_id", "artifact_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -167,4 +181,25 @@ func ByTenantID(opts ...sql.OrderTermOption) OrderOption {
 // ByEnvironmentID orders the results by the environment_id field.
 func ByEnvironmentID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEnvironmentID, opts...).ToFunc()
+}
+
+// ByConfigsCount orders the results by configs count.
+func ByConfigsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newConfigsStep(), opts...)
+	}
+}
+
+// ByConfigs orders the results by configs terms.
+func ByConfigs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newConfigsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newConfigsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ConfigsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, ConfigsTable, ConfigsPrimaryKey...),
+	)
 }

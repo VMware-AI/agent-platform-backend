@@ -36,6 +36,10 @@ type AgentConfig {
   name: String!
   agentType: String!
   isDefault: Boolean!
+  # OKF knowledge packs mounted on this config (N:M, LLD-11 K2). Sent to the agent
+  # VM at deploy; the daemon pulls each over the control-plane channel (非 RAG).
+  # Lazily resolved (loads the edge only when selected).
+  knowledge: [Artifact!]! @goField(forceResolver: true)
   createdAt: Time!
 }
 
@@ -98,4 +102,8 @@ extend type Mutation {
   deleteAgentConfig(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
   # Mark this config the default for its agent type (unsets others of that type).
   setDefaultAgentConfig(id: ID!): AgentConfig! @hasRole(any: [admin, tenant_admin])
+  # Replace the config's mounted OKF knowledge packs (LLD-11 K2). Each id must be a
+  # kind=knowledge artifact visible to the caller's tenant; the set is replaced wholesale.
+  setAgentConfigKnowledge(configId: ID!, knowledgeArtifactIds: [ID!]!): AgentConfig!
+    @hasRole(any: [admin, tenant_admin])
 }

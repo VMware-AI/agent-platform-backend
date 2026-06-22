@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/VMware-AI/agent-platform-backend/ent/agentconfig"
+	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
 	"github.com/google/uuid"
 )
 
@@ -129,6 +130,21 @@ func (_c *AgentConfigCreate) SetNillableID(v *uuid.UUID) *AgentConfigCreate {
 		_c.SetID(*v)
 	}
 	return _c
+}
+
+// AddKnowledgeIDs adds the "knowledge" edge to the Artifact entity by IDs.
+func (_c *AgentConfigCreate) AddKnowledgeIDs(ids ...uuid.UUID) *AgentConfigCreate {
+	_c.mutation.AddKnowledgeIDs(ids...)
+	return _c
+}
+
+// AddKnowledge adds the "knowledge" edges to the Artifact entity.
+func (_c *AgentConfigCreate) AddKnowledge(v ...*Artifact) *AgentConfigCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddKnowledgeIDs(ids...)
 }
 
 // Mutation returns the AgentConfigMutation object of the builder.
@@ -277,6 +293,22 @@ func (_c *AgentConfigCreate) createSpec() (*AgentConfig, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.EnvironmentID(); ok {
 		_spec.SetField(agentconfig.FieldEnvironmentID, field.TypeUUID, value)
 		_node.EnvironmentID = &value
+	}
+	if nodes := _c.mutation.KnowledgeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   agentconfig.KnowledgeTable,
+			Columns: agentconfig.KnowledgePrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artifact.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

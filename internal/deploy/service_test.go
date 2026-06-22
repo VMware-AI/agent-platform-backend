@@ -43,6 +43,7 @@ func (f *fakeGateway) ListTeams(context.Context) ([]gateway.TeamInfo, error) {
 type fakeVC struct {
 	cloned    []string
 	guestinfo []string
+	lastGI    map[string]string // last guestinfo kv injected
 	poweredOn []string
 	destroyed []string
 	failAt    string // "", "clone", "guestinfo", "poweron"
@@ -55,11 +56,12 @@ func (f *fakeVC) CloneFromTemplate(_ context.Context, spec vcenter.CloneSpec) (*
 	f.cloned = append(f.cloned, spec.Name)
 	return &vcenter.VMInfo{Name: spec.Name, PowerState: "poweredOff"}, nil
 }
-func (f *fakeVC) SetGuestinfo(_ context.Context, vm string, _ map[string]string) error {
+func (f *fakeVC) SetGuestinfo(_ context.Context, vm string, kv map[string]string) error {
 	if f.failAt == "guestinfo" {
 		return context.Canceled
 	}
 	f.guestinfo = append(f.guestinfo, vm)
+	f.lastGI = kv
 	return nil
 }
 func (f *fakeVC) PowerOn(_ context.Context, vm string) error {
@@ -95,6 +97,37 @@ func TestProvision_FullLifecycle(t *testing.T) {
 	}
 	if res.VMName != "agent-01" || res.VirtualKey != "sk-deploy-xyz" {
 		t.Fatalf("unexpected result: %+v", res)
+	}
+}
+
+// LLD-11 K2: knowledge pack ids ride in guestinfo alongside the agent-manager
+// channel, so the daemon can pull each bundle over the §6 control-plane endpoint.
+func TestProvision_InjectsKnowledgePacks(t *testing.T) {
+	fg := &fakeGateway{}
+	vc := &fakeVC{}
+	svc := &Service{Gateway: fg, VCenter: vc, GatewayURL: "https://gw"}
+	if _, err := svc.Provision(context.Background(), Request{
+		UserID: "u", Template: "ova", VMName: "vm1",
+		VMID: "vm1", EnrollToken: "enr-tok", ControlPlaneURL: "https://cp",
+		KnowledgePackIDs: []string{"id-a", "id-b"},
+	}); err != nil {
+		t.Fatalf("Provision: %v", err)
+	}
+	if got := vc.lastGI["agentmgr.knowledge_packs"]; got != "id-a,id-b" {
+		t.Fatalf("knowledge_packs guestinfo = %q, want \"id-a,id-b\"", got)
+	}
+
+	// Without the agent-manager channel there is no way to pull, so no packs key.
+	vc2 := &fakeVC{}
+	svc2 := &Service{Gateway: fg, VCenter: vc2, GatewayURL: "https://gw"}
+	if _, err := svc2.Provision(context.Background(), Request{
+		UserID: "u", Template: "ova", VMName: "vm2",
+		KnowledgePackIDs: []string{"id-a"},
+	}); err != nil {
+		t.Fatalf("Provision: %v", err)
+	}
+	if _, ok := vc2.lastGI["agentmgr.knowledge_packs"]; ok {
+		t.Fatal("knowledge_packs should be absent without the agent-manager channel")
 	}
 }
 

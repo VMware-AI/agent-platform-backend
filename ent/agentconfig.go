@@ -34,7 +34,28 @@ type AgentConfig struct {
 	TenantID *uuid.UUID `json:"tenant_id,omitempty"`
 	// EnvironmentID holds the value of the "environment_id" field.
 	EnvironmentID *uuid.UUID `json:"environment_id,omitempty"`
-	selectValues  sql.SelectValues
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the AgentConfigQuery when eager-loading is set.
+	Edges        AgentConfigEdges `json:"edges"`
+	selectValues sql.SelectValues
+}
+
+// AgentConfigEdges holds the relations/edges for other nodes in the graph.
+type AgentConfigEdges struct {
+	// Knowledge holds the value of the knowledge edge.
+	Knowledge []*Artifact `json:"knowledge,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// KnowledgeOrErr returns the Knowledge value or an error if the edge
+// was not loaded in eager-loading.
+func (e AgentConfigEdges) KnowledgeOrErr() ([]*Artifact, error) {
+	if e.loadedTypes[0] {
+		return e.Knowledge, nil
+	}
+	return nil, &NotLoadedError{edge: "knowledge"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -135,6 +156,11 @@ func (_m *AgentConfig) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *AgentConfig) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryKnowledge queries the "knowledge" edge of the AgentConfig entity.
+func (_m *AgentConfig) QueryKnowledge() *ArtifactQuery {
+	return NewAgentConfigClient(_m.config).QueryKnowledge(_m)
 }
 
 // Update returns a builder for updating this AgentConfig.

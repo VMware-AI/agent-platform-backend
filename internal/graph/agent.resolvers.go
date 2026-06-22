@@ -12,11 +12,38 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agentconfig"
 	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
+	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
+
+// Knowledge is the resolver for the knowledge field. Lazily loads the config's
+// mounted OKF knowledge packs (LLD-11 K2). The parent AgentConfig was already
+// tenant-authorized before this field resolves, so no extra scope guard here.
+func (r *agentConfigResolver) Knowledge(ctx context.Context, obj *model.AgentConfig) ([]model.Artifact, error) {
+	cfgID, err := uuid.Parse(obj.ID)
+	if err != nil {
+		return nil, err
+	}
+	cfg, err := r.Ent.AgentConfig.Get(ctx, cfgID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return []model.Artifact{}, nil
+		}
+		return nil, err
+	}
+	arts, err := cfg.QueryKnowledge().Order(orderNewest).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.Artifact, 0, len(arts))
+	for _, a := range arts {
+		out = append(out, *toModelArtifact(a))
+	}
+	return out, nil
+}
 
 // UpsertAgentTemplate creates or updates a catalog entry keyed by kind.
 func (r *mutationResolver) UpsertAgentTemplate(ctx context.Context, input model.UpsertAgentTemplateInput) (*model.AgentTemplate, error) {
@@ -229,6 +256,51 @@ func (r *mutationResolver) SetDefaultAgentConfig(ctx context.Context, id string)
 	return toModelAgentConfig(cfg), nil
 }
 
+// SetAgentConfigKnowledge replaces the OKF knowledge packs mounted on a config
+// (LLD-11 K2). Each id must be an existing kind=knowledge artifact visible to the
+// caller's tenant (本租户 + 平台公共); a non-knowledge or cross-tenant id resolves
+// to notFound (no existence oracle). The set is replaced wholesale (idempotent).
+func (r *mutationResolver) SetAgentConfigKnowledge(ctx context.Context, configID string, knowledgeArtifactIds []string) (*model.AgentConfig, error) {
+	cfgID, err := uuid.Parse(configID)
+	if err != nil {
+		return nil, notFoundErr("agent config")
+	}
+	if err := r.assertAgentConfigWritable(ctx, cfgID); err != nil {
+		return nil, err
+	}
+	ids := make([]uuid.UUID, 0, len(knowledgeArtifactIds))
+	for _, s := range knowledgeArtifactIds {
+		aid, err := uuid.Parse(s)
+		if err != nil {
+			return nil, notFoundErr("knowledge artifact")
+		}
+		q := r.Ent.Artifact.Query().
+			Where(artifact.IDEQ(aid), artifact.KindEQ(artifact.KindKnowledge))
+		if d := contentScopeFor(ctx); d.apply {
+			if d.denyAll {
+				q = q.Where(artifact.IDEQ(uuid.Nil))
+			} else {
+				q = q.Where(artifact.Or(artifact.TenantID(d.tenant), artifact.TenantIDIsNil()))
+			}
+		}
+		ok, err := q.Exist(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, notFoundErr("knowledge artifact")
+		}
+		ids = append(ids, aid)
+	}
+	cfg, err := r.Ent.AgentConfig.UpdateOneID(cfgID).
+		ClearKnowledge().AddKnowledgeIDs(ids...).Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	r.audit(ctx, "agent_config.set_knowledge", "agent_config", configID, true, actorID(auth.FromContext(ctx)))
+	return toModelAgentConfig(cfg), nil
+}
+
 // AgentTemplates lists the catalog.
 func (r *queryResolver) AgentTemplates(ctx context.Context) ([]model.AgentTemplate, error) {
 	ts, err := r.Ent.AgentTemplate.Query().Order(orderNewest).All(ctx)
@@ -310,3 +382,8 @@ func (r *queryResolver) Agents(ctx context.Context) ([]model.Agent, error) {
 	}
 	return out, nil
 }
+
+// AgentConfig returns AgentConfigResolver implementation.
+func (r *Resolver) AgentConfig() AgentConfigResolver { return &agentConfigResolver{r} }
+
+type agentConfigResolver struct{ *Resolver }

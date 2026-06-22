@@ -82,18 +82,19 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 
 	svc := &deploy.Service{Gateway: r.Gateway, VCenter: conn, GatewayURL: r.GatewayURL}
 	res, err := svc.Provision(ctx, deploy.Request{
-		AgentName:       ag.Name,
-		UserID:          ag.OwnerUserID.String(),
-		Template:        input.Template,
-		VMName:          input.VMName,
-		ResourcePool:    derefString(input.TargetResourcePool),
-		Hostname:        derefString(input.Hostname),
-		MaxBudget:       input.MaxBudget,
-		DefaultConfig:   defaultConfig,
-		ConfigPath:      configPath,
-		VMID:            input.VMName,
-		EnrollToken:     enrollToken,
-		ControlPlaneURL: r.ControlPlaneURL,
+		AgentName:        ag.Name,
+		UserID:           ag.OwnerUserID.String(),
+		Template:         input.Template,
+		VMName:           input.VMName,
+		ResourcePool:     derefString(input.TargetResourcePool),
+		Hostname:         derefString(input.Hostname),
+		MaxBudget:        input.MaxBudget,
+		DefaultConfig:    defaultConfig,
+		ConfigPath:       configPath,
+		VMID:             input.VMName,
+		EnrollToken:      enrollToken,
+		ControlPlaneURL:  r.ControlPlaneURL,
+		KnowledgePackIDs: r.resolveAgentKnowledge(ctx, ag), // LLD-11 K2: 下发知识包引用
 	})
 	if err != nil {
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)

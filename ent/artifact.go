@@ -41,7 +41,28 @@ type Artifact struct {
 	TenantID *uuid.UUID `json:"tenant_id,omitempty"`
 	// EnvironmentID holds the value of the "environment_id" field.
 	EnvironmentID *uuid.UUID `json:"environment_id,omitempty"`
-	selectValues  sql.SelectValues
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the ArtifactQuery when eager-loading is set.
+	Edges        ArtifactEdges `json:"edges"`
+	selectValues sql.SelectValues
+}
+
+// ArtifactEdges holds the relations/edges for other nodes in the graph.
+type ArtifactEdges struct {
+	// Configs holds the value of the configs edge.
+	Configs []*AgentConfig `json:"configs,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// ConfigsOrErr returns the Configs value or an error if the edge
+// was not loaded in eager-loading.
+func (e ArtifactEdges) ConfigsOrErr() ([]*AgentConfig, error) {
+	if e.loadedTypes[0] {
+		return e.Configs, nil
+	}
+	return nil, &NotLoadedError{edge: "configs"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -161,6 +182,11 @@ func (_m *Artifact) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *Artifact) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryConfigs queries the "configs" edge of the Artifact entity.
+func (_m *Artifact) QueryConfigs() *AgentConfigQuery {
+	return NewArtifactClient(_m.config).QueryConfigs(_m)
 }
 
 // Update returns a builder for updating this Artifact.
