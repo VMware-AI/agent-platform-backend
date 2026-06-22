@@ -30,20 +30,20 @@ func TestEnvScope_Filtering(t *testing.T) {
 
 	// enabled + X-Environment=A → envA + envNULL (not envB)
 	r.EnvScopeEnabled = true
-	got, err := qr.Artifacts(httpx.WithEnvironment(adminCtx(), envA))
+	got, err := qr.Artifacts(httpx.WithEnvironment(adminCtx(), envA), nil)
 	if err != nil {
 		t.Fatalf("Artifacts: %v", err)
 	}
 	assertNames(t, nm(got), "ea", "enull")
 
 	// enabled but NO X-Environment → no env filter (all 3)
-	if all, _ := qr.Artifacts(adminCtx()); len(all) != 3 {
+	if all, _ := qr.Artifacts(adminCtx(), nil); len(all) != 3 {
 		t.Fatalf("no X-Environment should not filter, got %d", len(all))
 	}
 
 	// disabled flag → no env filter even with header (all 3)
 	r.EnvScopeEnabled = false
-	if all, _ := qr.Artifacts(httpx.WithEnvironment(adminCtx(), envA)); len(all) != 3 {
+	if all, _ := qr.Artifacts(httpx.WithEnvironment(adminCtx(), envA), nil); len(all) != 3 {
 		t.Fatalf("env_scope disabled should not filter, got %d", len(all))
 	}
 }
@@ -65,7 +65,7 @@ func TestEnvScope_TenantHardBeforeEnvSoft(t *testing.T) {
 	r.Ent.Artifact.Create().SetName("a-in-env").SetKind("config").SetVersion("1").SetURI("u").
 		SetTenantID(tA).SetEnvironmentID(env).SaveX(ctx)
 
-	got, err := (&queryResolver{r}).Artifacts(httpx.WithEnvironment(tenantUserCtx(uuid.NewString(), tA.String()), env))
+	got, err := (&queryResolver{r}).Artifacts(httpx.WithEnvironment(tenantUserCtx(uuid.NewString(), tA.String()), env), nil)
 	if err != nil {
 		t.Fatalf("Artifacts: %v", err)
 	}

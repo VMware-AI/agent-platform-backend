@@ -44,7 +44,7 @@ func TestCrossTenant_Artifacts(t *testing.T) {
 	r.Ent.Artifact.Create().SetName("platform-art").SetKind("config").SetVersion("1").SetURI("u").SaveX(ctx)
 
 	qr := &queryResolver{r}
-	got, err := qr.Artifacts(tenantUserCtx(uuid.NewString(), tA.String()))
+	got, err := qr.Artifacts(tenantUserCtx(uuid.NewString(), tA.String()), nil)
 	if err != nil {
 		t.Fatalf("Artifacts: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestCrossTenant_Artifacts(t *testing.T) {
 		"a-art", "platform-art")
 
 	// platform admin sees all three
-	all, _ := qr.Artifacts(adminCtx())
+	all, _ := qr.Artifacts(adminCtx(), nil)
 	if len(all) != 3 {
 		t.Fatalf("admin should see all 3 artifacts, got %d", len(all))
 	}
@@ -105,7 +105,7 @@ func TestCrossTenant_MisconfiguredTenant_DenyAll(t *testing.T) {
 	// a caller whose tenant id is malformed must see NOTHING (fail closed), never
 	// the platform/untenanted rows.
 	badCtx := tenantUserCtx(uuid.NewString(), "not-a-uuid")
-	got, err := (&queryResolver{r}).Artifacts(badCtx)
+	got, err := (&queryResolver{r}).Artifacts(badCtx, nil)
 	if err != nil {
 		t.Fatalf("Artifacts: %v", err)
 	}

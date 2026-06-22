@@ -64,7 +64,9 @@ input UpsertImageInput {
 }
 
 extend type Query {
-  artifacts: [Artifact!]!
+  # Optional kind filter — e.g. artifacts(kind: knowledge) drives the 智能体配置
+  # 知识包选择器 (LLD-11 K2).
+  artifacts(kind: ArtifactKind): [Artifact!]!
   # All versions of a named artifact, newest first (制品库版本列表, LLD-06 §3).
   artifactVersions(name: String!): [Artifact!]!
   skills: [Skill!]!

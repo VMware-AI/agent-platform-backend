@@ -56,7 +56,7 @@ func TestUpsertArtifact_Knowledge(t *testing.T) {
 
 	// AC-1: knowledge shows up in the content-lib listing and version list.
 	qr := &queryResolver{r}
-	all, err := qr.Artifacts(ctx)
+	all, err := qr.Artifacts(ctx, nil)
 	if err != nil {
 		t.Fatalf("Artifacts: %v", err)
 	}

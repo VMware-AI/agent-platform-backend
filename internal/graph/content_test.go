@@ -75,7 +75,7 @@ func TestContentCRUD(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("re-upsert: %v", err)
 	}
-	arts, _ := qr.Artifacts(ctx)
+	arts, _ := qr.Artifacts(ctx, nil)
 	if len(arts) != 1 || arts[0].URI != "u2" {
 		t.Fatalf("artifact not updated/duplicated: %+v", arts)
 	}
@@ -103,7 +103,7 @@ func TestContentCRUD(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("DeleteArtifact: %v", err)
 	}
-	if arts2, _ := qr.Artifacts(ctx); len(arts2) != 0 {
+	if arts2, _ := qr.Artifacts(ctx, nil); len(arts2) != 0 {
 		t.Fatalf("artifact not deleted: %d", len(arts2))
 	}
 }

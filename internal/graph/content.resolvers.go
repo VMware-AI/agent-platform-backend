@@ -201,8 +201,11 @@ func (r *mutationResolver) DeleteImage(ctx context.Context, id string) (bool, er
 }
 
 // Artifacts is the resolver for the artifacts field.
-func (r *queryResolver) Artifacts(ctx context.Context) ([]model.Artifact, error) {
+func (r *queryResolver) Artifacts(ctx context.Context, kind *model.ArtifactKind) ([]model.Artifact, error) {
 	q := r.Ent.Artifact.Query()
+	if kind != nil {
+		q = q.Where(artifact.KindEQ(artifact.Kind(string(*kind)))) // e.g. knowledge picker (LLD-11 K2)
+	}
 	// Tenant isolation (LLD-10 §9): a caller with a tenant sees their tenant's +
 	// platform-global (NULL) artifacts; admin sees all; malformed tenant → none.
 	if d := contentScopeFor(ctx); d.apply {

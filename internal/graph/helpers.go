@@ -387,13 +387,18 @@ func toModelAgentTemplate(t *ent.AgentTemplate, installVars map[string]string) *
 }
 
 func toModelAgentConfig(c *ent.AgentConfig) *model.AgentConfig {
-	return &model.AgentConfig{
+	m := &model.AgentConfig{
 		ID:        c.ID.String(),
 		Name:      c.Name,
 		AgentType: c.AgentType,
 		IsDefault: c.IsDefault,
 		CreatedAt: c.CreatedAt,
 	}
+	if c.ArtifactID != nil {
+		a := c.ArtifactID.String()
+		m.ArtifactID = &a
+	}
+	return m
 }
 
 // toModelAgent maps the scalar Agent fields. type→agent_type, endpoint→vm_ref.

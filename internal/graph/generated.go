@@ -61,12 +61,13 @@ type ComplexityRoot struct {
 	}
 
 	AgentConfig struct {
-		AgentType func(childComplexity int) int
-		CreatedAt func(childComplexity int) int
-		ID        func(childComplexity int) int
-		IsDefault func(childComplexity int) int
-		Knowledge func(childComplexity int) int
-		Name      func(childComplexity int) int
+		AgentType  func(childComplexity int) int
+		ArtifactID func(childComplexity int) int
+		CreatedAt  func(childComplexity int) int
+		ID         func(childComplexity int) int
+		IsDefault  func(childComplexity int) int
+		Knowledge  func(childComplexity int) int
+		Name       func(childComplexity int) int
 	}
 
 	AgentConnection struct {
@@ -304,7 +305,7 @@ type ComplexityRoot struct {
 		AgentTemplates     func(childComplexity int) int
 		Agents             func(childComplexity int, filter *model.AgentFilter, pagination *model.Pagination, sort *model.AgentSort) int
 		ArtifactVersions   func(childComplexity int, name string) int
-		Artifacts          func(childComplexity int) int
+		Artifacts          func(childComplexity int, kind *model.ArtifactKind) int
 		AuditLogs          func(childComplexity int, filter *model.AuditFilter, page *model.PageInput) int
 		CustomRoles        func(childComplexity int) int
 		DepartmentMembers  func(childComplexity int, departmentID string) int
@@ -534,7 +535,7 @@ type QueryResolver interface {
 	AgentTemplates(ctx context.Context) ([]model.AgentTemplate, error)
 	AgentConfigs(ctx context.Context, agentType *string) ([]model.AgentConfig, error)
 	Agents(ctx context.Context, filter *model.AgentFilter, pagination *model.Pagination, sort *model.AgentSort) (*model.AgentConnection, error)
-	Artifacts(ctx context.Context) ([]model.Artifact, error)
+	Artifacts(ctx context.Context, kind *model.ArtifactKind) ([]model.Artifact, error)
 	ArtifactVersions(ctx context.Context, name string) ([]model.Artifact, error)
 	Skills(ctx context.Context) ([]model.Skill, error)
 	Images(ctx context.Context) ([]model.Image, error)
@@ -658,6 +659,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.AgentConfig.AgentType(childComplexity), true
+	case "AgentConfig.artifactId":
+		if e.ComplexityRoot.AgentConfig.ArtifactID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentConfig.ArtifactID(childComplexity), true
 	case "AgentConfig.createdAt":
 		if e.ComplexityRoot.AgentConfig.CreatedAt == nil {
 			break
@@ -2044,7 +2051,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			break
 		}
 
-		return e.ComplexityRoot.Query.Artifacts(childComplexity), true
+		args, err := ec.field_Query_artifacts_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.Artifacts(childComplexity, args["kind"].(*model.ArtifactKind)), true
 	case "Query.auditLogs":
 		if e.ComplexityRoot.Query.AuditLogs == nil {
 			break
@@ -2881,6 +2893,9 @@ type AgentConfig {
   name: String!
   agentType: String!
   isDefault: Boolean!
+  # The default_config artifact this config pulls (LLD-09 inline content); lets the
+  # 智能体配置 edit form preselect the current artifact. Null when none is set.
+  artifactId: ID
   # OKF knowledge packs mounted on this config (N:M, LLD-11 K2). Sent to the agent
   # VM at deploy; the daemon pulls each over the control-plane channel (非 RAG).
   # Lazily resolved (loads the edge only when selected).
@@ -3082,7 +3097,9 @@ input UpsertImageInput {
 }
 
 extend type Query {
-  artifacts: [Artifact!]!
+  # Optional kind filter — e.g. artifacts(kind: knowledge) drives the 智能体配置
+  # 知识包选择器 (LLD-11 K2).
+  artifacts(kind: ArtifactKind): [Artifact!]!
   # All versions of a named artifact, newest first (制品库版本列表, LLD-06 §3).
   artifactVersions(name: String!): [Artifact!]!
   skills: [Skill!]!
@@ -3830,6 +3847,8 @@ func (ec *executionContext) childFields_AgentConfig(ctx context.Context, field g
 		return ec.fieldContext_AgentConfig_agentType(ctx, field)
 	case "isDefault":
 		return ec.fieldContext_AgentConfig_isDefault(ctx, field)
+	case "artifactId":
+		return ec.fieldContext_AgentConfig_artifactId(ctx, field)
 	case "knowledge":
 		return ec.fieldContext_AgentConfig_knowledge(ctx, field)
 	case "createdAt":
@@ -5638,6 +5657,20 @@ func (ec *executionContext) field_Query_artifactVersions_args(ctx context.Contex
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_artifacts_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "kind",
+		func(ctx context.Context, v any) (*model.ArtifactKind, error) {
+			return ec.unmarshalOArtifactKind2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐArtifactKind(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["kind"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_auditLogs_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -6248,6 +6281,29 @@ func (ec *executionContext) _AgentConfig_isDefault(ctx context.Context, field gr
 }
 func (ec *executionContext) fieldContext_AgentConfig_isDefault(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("AgentConfig", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _AgentConfig_artifactId(ctx context.Context, field graphql.CollectedField, obj *model.AgentConfig) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentConfig_artifactId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ArtifactID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOID2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_AgentConfig_artifactId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentConfig", field, false, false, errors.New("field of type ID does not have child fields"))
 }
 
 func (ec *executionContext) _AgentConfig_knowledge(ctx context.Context, field graphql.CollectedField, obj *model.AgentConfig) (ret graphql.Marshaler) {
@@ -12594,7 +12650,8 @@ func (ec *executionContext) _Query_artifacts(ctx context.Context, field graphql.
 			return ec.fieldContext_Query_artifacts(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Query().Artifacts(ctx)
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().Artifacts(ctx, fc.Args["kind"].(*model.ArtifactKind))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []model.Artifact) graphql.Marshaler {
@@ -12604,7 +12661,7 @@ func (ec *executionContext) _Query_artifacts(ctx context.Context, field graphql.
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_Query_artifacts(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_artifacts(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -12613,6 +12670,17 @@ func (ec *executionContext) fieldContext_Query_artifacts(_ context.Context, fiel
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_Artifact(ctx, field)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_artifacts_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -18607,6 +18675,11 @@ func (ec *executionContext) _AgentConfig(ctx context.Context, sel ast.SelectionS
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "artifactId":
+			out.Values[i] = ec._AgentConfig_artifactId(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "knowledge":
 			field := field
 
@@ -23825,6 +23898,22 @@ func (ec *executionContext) unmarshalOAgentStatus2ᚖgithubᚗcomᚋVMwareᚑAI�
 }
 
 func (ec *executionContext) marshalOAgentStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentStatus(ctx context.Context, sel ast.SelectionSet, v *model.AgentStatus) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
+func (ec *executionContext) unmarshalOArtifactKind2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐArtifactKind(ctx context.Context, v any) (*model.ArtifactKind, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.ArtifactKind)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOArtifactKind2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐArtifactKind(ctx context.Context, sel ast.SelectionSet, v *model.ArtifactKind) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}

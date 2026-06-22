@@ -41,6 +41,9 @@ type AgentConfig {
   name: String!
   agentType: String!
   isDefault: Boolean!
+  # The default_config artifact this config pulls (LLD-09 inline content); lets the
+  # 智能体配置 edit form preselect the current artifact. Null when none is set.
+  artifactId: ID
   # OKF knowledge packs mounted on this config (N:M, LLD-11 K2). Sent to the agent
   # VM at deploy; the daemon pulls each over the control-plane channel (非 RAG).
   # Lazily resolved (loads the edge only when selected).
