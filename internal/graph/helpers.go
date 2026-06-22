@@ -893,9 +893,9 @@ func applyAgentSort(q *ent.AgentQuery, sort *model.AgentSort) *ent.AgentQuery {
 	case model.AgentSortFieldUpdatedAt:
 		col = agent.FieldUpdatedAt
 	case model.AgentSortFieldOwner:
-		return q.Order(joinOrder("users", agent.FieldOwnerUserID, user.FieldUsername, desc))
+		return q.Order(joinOrder(user.Table, agent.FieldOwnerUserID, user.FieldUsername, desc))
 	case model.AgentSortFieldAPIKeyName:
-		return q.Order(joinOrder("virtual_keys", agent.FieldVirtualKeyID, virtualkey.FieldAlias, desc))
+		return q.Order(joinOrder(virtualkey.Table, agent.FieldVirtualKeyID, virtualkey.FieldAlias, desc))
 	default:
 		return q.Order(orderNewest)
 	}
