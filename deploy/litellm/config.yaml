@@ -1,0 +1,21 @@
+# Minimal LiteLLM config — the control plane (Go backend) manages the model list
+# at runtime via /model/new, so we only declare the master key + DB here. You can
+# optionally pre-seed a minimax model below instead of pushing it from the backend.
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: os.environ/DATABASE_URL
+
+litellm_settings:
+  drop_params: true # tolerate provider param differences
+
+# Optional: pre-seed minimax instead of pushing via the backend's 上游 form.
+# minimax exposes an OpenAI-compatible API, so use the `openai/` prefix with its
+# base URL. Adjust model + api_base to your minimax account, then `docker compose
+# up -d` again. (Or leave commented and add it from the backend UI.)
+#
+# model_list:
+#   - model_name: minimax-chat              # alias used by virtual keys / agents
+#     litellm_params:
+#       model: openai/abab6.5s-chat         # your minimax model id
+#       api_base: https://api.minimaxi.com/v1
+#       api_key: os.environ/MINIMAX_API_KEY

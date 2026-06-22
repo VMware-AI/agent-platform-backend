@@ -16,3 +16,6 @@ vendor/
 .idea/
 .vscode/
 .DS_Store
+
+# local litellm secrets
+deploy/litellm/.env
