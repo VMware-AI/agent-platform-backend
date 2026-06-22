@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
+	"github.com/VMware-AI/agent-platform-backend/ent/agentenrollment"
 	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
 )
 
@@ -30,6 +31,45 @@ func enrolledTenant(t *testing.T, svc *Service, tenantID *uuid.UUID) (vmID, vmTo
 		t.Fatalf("Enroll: %v", err)
 	}
 	return vmID, vmToken
+}
+
+// Redeploy must refresh the enrollment's tenant scope: knowledgeScope keys
+// authorization entirely off enr.TenantID, so a stale tenant_id on re-issue would
+// be a cross-tenant isolation gap. Re-tenant → updated; re-issue untenanted → cleared.
+func TestIssueEnrollment_RefreshesTenantOnRedeploy(t *testing.T) {
+	svc, _, done := newTestService(t)
+	defer done()
+	ctx := context.Background()
+
+	agentID := uuid.New()
+	tenantA := uuid.New()
+	tenantB := uuid.New()
+
+	if _, err := svc.IssueEnrollment(ctx, agentID, "vm-x", &tenantA); err != nil {
+		t.Fatalf("issue A: %v", err)
+	}
+	enr := svc.Ent.AgentEnrollment.Query().Where(agentenrollment.AgentID(agentID)).OnlyX(ctx)
+	if enr.TenantID == nil || *enr.TenantID != tenantA {
+		t.Fatalf("initial tenant = %v, want A", enr.TenantID)
+	}
+
+	// Redeploy re-tenanted to B → tenant_id must update.
+	if _, err := svc.IssueEnrollment(ctx, agentID, "vm-x", &tenantB); err != nil {
+		t.Fatalf("issue B: %v", err)
+	}
+	enr = svc.Ent.AgentEnrollment.Query().Where(agentenrollment.AgentID(agentID)).OnlyX(ctx)
+	if enr.TenantID == nil || *enr.TenantID != tenantB {
+		t.Fatalf("after re-tenant: tenant = %v, want B", enr.TenantID)
+	}
+
+	// Redeploy as a platform (untenanted) agent → tenant_id must clear.
+	if _, err := svc.IssueEnrollment(ctx, agentID, "vm-x", nil); err != nil {
+		t.Fatalf("issue nil: %v", err)
+	}
+	enr = svc.Ent.AgentEnrollment.Query().Where(agentenrollment.AgentID(agentID)).OnlyX(ctx)
+	if enr.TenantID != nil {
+		t.Fatalf("after untenanted redeploy: tenant = %v, want nil", enr.TenantID)
+	}
 }
 
 func mkKnowledge(t *testing.T, client *ent.Client, name, body string, tenant *uuid.UUID) *ent.Artifact {

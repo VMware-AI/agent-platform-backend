@@ -856,6 +856,12 @@ func (r *Resolver) resolveKnowledgeRoot(ctx context.Context, ag *ent.Agent) stri
 	if err == nil && t.KnowledgeRoot != "" {
 		return t.KnowledgeRoot
 	}
+	// A genuine DB fault (not just a missing template) silently downgrades a custom
+	// root to the default — packs would unpack where the prompt doesn't look. Surface
+	// it so the degradation isn't invisible; deploy still proceeds with the default.
+	if err != nil && !ent.IsNotFound(err) {
+		log.Printf("resolveKnowledgeRoot: kind %q template lookup failed, using default: %v", ag.AgentType, err)
+	}
 	return catalog.DefaultKnowledgeRoot
 }
 

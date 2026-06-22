@@ -100,13 +100,20 @@ func (s *Service) IssueEnrollment(ctx context.Context, agentID uuid.UUID, vmID s
 	case err != nil:
 		return "", err
 	default:
-		// Redeploy: reset to pending, clear any old VM token.
-		_, err := existing.Update().
+		// Redeploy: reset to pending, clear any old VM token, and REFRESH the tenant
+		// scope. knowledgeScope (LLD-11 §6/§7) authorizes knowledge fetches entirely
+		// off enr.TenantID, so a stale tenant_id here would be a cross-tenant gap —
+		// always set it from the current deploy (clear when untenanted/platform).
+		upd := existing.Update().
 			SetVMID(vmID).SetStatus(agentenrollment.StatusPending).
 			SetEnrollTokenHash(hash).SetEnrollExpiresAt(exp).
-			ClearVMTokenHash().ClearVMTokenIssuedAt().ClearVMTokenExpiresAt().
-			Save(ctx)
-		if err != nil {
+			ClearVMTokenHash().ClearVMTokenIssuedAt().ClearVMTokenExpiresAt()
+		if tenantID != nil {
+			upd.SetTenantID(*tenantID)
+		} else {
+			upd.ClearTenantID()
+		}
+		if _, err := upd.Save(ctx); err != nil {
 			return "", err
 		}
 	}
