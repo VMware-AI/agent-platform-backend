@@ -123,6 +123,27 @@ func (r *mutationResolver) ChangePassword(ctx context.Context, oldPassword strin
 	if _, err := r.Ent.User.UpdateOne(u).SetPasswordHash(hash).SetMustChangePassword(false).Save(ctx); err != nil {
 		return false, err
 	}
+	// Refresh the live session so must_change_password clears immediately (no
+	// re-login needed after the first-login change) and rotate the session id
+	// (defense against fixation across a credential change). Best-effort.
+	if req := httpx.Request(ctx); req != nil {
+		if c, cerr := req.Cookie(auth.SessionCookie); cerr == nil {
+			if data, gerr := r.Sessions.Get(c.Value); gerr == nil {
+				_ = r.Sessions.Delete(c.Value)
+				data.MustChange = false
+				data.ExpiresAt = time.Now().Add(r.SessionTTL)
+				if sid, serr := r.Sessions.Create(data); serr == nil {
+					if w := httpx.Writer(ctx); w != nil {
+						http.SetCookie(w, &http.Cookie{
+							Name: auth.SessionCookie, Value: sid, Path: "/",
+							HttpOnly: true, Secure: r.SecureCookies, SameSite: http.SameSiteLaxMode,
+							MaxAge: int(r.SessionTTL.Seconds()),
+						})
+					}
+				}
+			}
+		}
+	}
 	r.audit(ctx, "user.change_password", "user", u.ID.String(), true, cu.ID)
 	return true, nil
 }

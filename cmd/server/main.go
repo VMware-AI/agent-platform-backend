@@ -93,8 +93,12 @@ func main() {
 		sec = secrets.NewVaultwardenResolver(vw)
 		log.Printf("secrets: vaultwarden (%s)", vw)
 	} else {
-		sec = secrets.EnvResolver{}
-		log.Printf("secrets: env:// resolver (dev)")
+		// Dev: an in-memory store that supports BOTH resolve and write (Put), so the
+		// credential-intake flows (resource-pool / upstream / gateway 接入表单填账号密码)
+		// work locally without Vaultwarden. Plaintext lives only in process memory and
+		// is lost on restart. Prod must set VAULTWARDEN_URL.
+		sec = secrets.NewStaticResolver(nil)
+		log.Printf("secrets: in-memory static store (dev; supports credential write)")
 	}
 	vcConnect := func(ctx context.Context, endpoint, user, pass string, insecure bool) (graph.VCenterClient, error) {
 		return vcenter.Connect(ctx, endpoint, user, pass, insecure)
