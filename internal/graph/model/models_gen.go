@@ -613,20 +613,22 @@ func (e AgentTemplateStatus) MarshalJSON() ([]byte, error) {
 type ArtifactKind string
 
 const (
-	ArtifactKindScript  ArtifactKind = "script"
-	ArtifactKindConfig  ArtifactKind = "config"
-	ArtifactKindPackage ArtifactKind = "package"
+	ArtifactKindScript    ArtifactKind = "script"
+	ArtifactKindConfig    ArtifactKind = "config"
+	ArtifactKindPackage   ArtifactKind = "package"
+	ArtifactKindKnowledge ArtifactKind = "knowledge"
 )
 
 var AllArtifactKind = []ArtifactKind{
 	ArtifactKindScript,
 	ArtifactKindConfig,
 	ArtifactKindPackage,
+	ArtifactKindKnowledge,
 }
 
 func (e ArtifactKind) IsValid() bool {
 	switch e {
-	case ArtifactKindScript, ArtifactKindConfig, ArtifactKindPackage:
+	case ArtifactKindScript, ArtifactKindConfig, ArtifactKindPackage, ArtifactKindKnowledge:
 		return true
 	}
 	return false

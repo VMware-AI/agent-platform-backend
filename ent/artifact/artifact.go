@@ -91,9 +91,10 @@ type Kind string
 
 // Kind values.
 const (
-	KindScript  Kind = "script"
-	KindConfig  Kind = "config"
-	KindPackage Kind = "package"
+	KindScript    Kind = "script"
+	KindConfig    Kind = "config"
+	KindPackage   Kind = "package"
+	KindKnowledge Kind = "knowledge"
 )
 
 func (k Kind) String() string {
@@ -103,7 +104,7 @@ func (k Kind) String() string {
 // KindValidator is a validator for the "kind" field enum values. It is called by the builders before save.
 func KindValidator(k Kind) error {
 	switch k {
-	case KindScript, KindConfig, KindPackage:
+	case KindScript, KindConfig, KindPackage, KindKnowledge:
 		return nil
 	default:
 		return fmt.Errorf("artifact: invalid enum value for kind field: %q", k)

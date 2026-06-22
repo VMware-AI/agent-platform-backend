@@ -2745,6 +2745,8 @@ enum ArtifactKind {
   script
   config
   package
+  # OKF knowledge pack (互链 markdown bundle) for agent grounding, non-RAG (LLD-11).
+  knowledge
 }
 
 type Artifact {
@@ -2783,8 +2785,8 @@ input UpsertArtifactInput {
   kind: ArtifactKind!
   version: String!
   uri: String!
-  # Inline text for config/script artifacts only (≤64K); embedded into the agent
-  # VM at deploy. Rejected for kind=package. sha256 is recomputed from content.
+  # Inline text for config/script/knowledge artifacts (≤64K); embedded into the
+  # agent VM at deploy. Rejected for kind=package. sha256 is recomputed from content.
   content: String
   sha256: String
   metadata: Map

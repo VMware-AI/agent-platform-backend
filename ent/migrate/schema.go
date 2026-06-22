@@ -144,7 +144,7 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "name", Type: field.TypeString},
-		{Name: "kind", Type: field.TypeEnum, Enums: []string{"script", "config", "package"}},
+		{Name: "kind", Type: field.TypeEnum, Enums: []string{"script", "config", "package", "knowledge"}},
 		{Name: "version", Type: field.TypeString},
 		{Name: "uri", Type: field.TypeString},
 		{Name: "content", Type: field.TypeString, Nullable: true, Size: 65536},

@@ -20,7 +20,10 @@ func (Artifact) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		field.String("name").NotEmpty(),
-		field.Enum("kind").Values("script", "config", "package"),
+		// knowledge = OKF bundle (互链 markdown 知识包, LLD-11). Read-only knowledge
+		// for agent grounding (non-RAG); small single-file packs go inline like
+		// config, larger bundles reference a uri.
+		field.Enum("kind").Values("script", "config", "package", "knowledge"),
 		field.String("version").NotEmpty(),
 		field.String("uri").NotEmpty(),
 		// Inline content for small text artifacts (config/script, ≤64K). Air-gap
