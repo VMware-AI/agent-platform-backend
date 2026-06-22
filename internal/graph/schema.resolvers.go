@@ -30,7 +30,10 @@ func (r *mutationResolver) Login(ctx context.Context, username string, password 
 	if r.LoginLimiter != nil && r.LoginLimiter.Blocked(ctx, limitKey) {
 		return nil, gqlerror.Errorf("too many failed login attempts; try again later")
 	}
-	u, err := r.Ent.User.Query().Where(user.Username(username)).Only(ctx)
+	// Accept either the username or the email as the login identifier — the console
+	// login form collects an email, while seeded/service accounts use a username.
+	u, err := r.Ent.User.Query().
+		Where(user.Or(user.Username(username), user.Email(username))).Only(ctx)
 	if err != nil {
 		if r.LoginLimiter != nil {
 			r.LoginLimiter.Fail(ctx, limitKey)

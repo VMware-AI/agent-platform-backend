@@ -175,7 +175,9 @@ func main() {
 	srv.SetRecoverFunc(graph.RecoverFunc)
 
 	mux := http.NewServeMux()
-	mux.Handle("/query", httpx.CSRF(cfg.AllowedOrigins)(auth.SessionMiddleware(sessions)(httpx.Environment(srv))))
+	// CORS (outermost) so the split-origin dev console (:5173 → :8080) can call with
+	// cookies; preflight is handled before CSRF/session. Allowlist = ALLOWED_ORIGINS.
+	mux.Handle("/query", httpx.CORS(cfg.AllowedOrigins)(httpx.CSRF(cfg.AllowedOrigins)(auth.SessionMiddleware(sessions)(httpx.Environment(srv)))))
 	// Daemon-facing REST (LLD-08): bearer-authenticated, mounted OUTSIDE the CSRF +
 	// session middleware (machine client, no cookies/Origin). Still inside the
 	// RequestLogger wrap below.

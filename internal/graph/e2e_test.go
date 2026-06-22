@@ -148,4 +148,19 @@ func TestE2E_LoginFlowSetsCookie(t *testing.T) {
 	if resp.Login.User.Username != "loginuser" {
 		t.Fatalf("login failed: %+v", resp.Login)
 	}
+
+	// The console login form collects an email — login must accept the email as the
+	// identifier too (not just the username).
+	var byEmail struct {
+		Login struct {
+			User struct{ Username string }
+		}
+	}
+	e.gql.MustPost(
+		`mutation { login(username:"l@x.io", password:"KnownPass1234"){ user{ username } } }`,
+		&byEmail,
+	)
+	if byEmail.Login.User.Username != "loginuser" {
+		t.Fatalf("login by email failed: %+v", byEmail.Login)
+	}
 }
