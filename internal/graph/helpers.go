@@ -931,6 +931,30 @@ func (r *Resolver) resolvePoolSecretRef(ctx context.Context, label string, usern
 	return "", false, nil
 }
 
+// resolveKeySecretRef turns a single raw API/master key submission into a stored
+// secret reference (模块③ 路由 / 网关接入). Mirrors resolvePoolSecretRef but for a
+// one-field key: the form sends a raw key, the backend writes it to the secret
+// store and persists ONLY the ref — plaintext never lands in the DB. An explicit
+// existing ref is the alternative; set=false when neither is given. label = the
+// secret-store item name (caller-qualified, e.g. "upstream/<name>").
+func (r *Resolver) resolveKeySecretRef(ctx context.Context, label string, rawKey, existingRef *string) (ref string, set bool, err error) {
+	if k := derefString(rawKey); k != "" {
+		store, ok := r.Secrets.(secrets.Store)
+		if !ok {
+			return "", false, gqlerror.Errorf("secret store not configured; cannot accept credentials")
+		}
+		ref, err := store.Put(ctx, label, secrets.Credential{APIKey: k})
+		if err != nil {
+			return "", false, fmt.Errorf("store credential: %w", err)
+		}
+		return ref, true, nil
+	}
+	if existingRef != nil && *existingRef != "" {
+		return *existingRef, true, nil
+	}
+	return "", false, nil
+}
+
 // applyUserSort orders the user query per the requested field (模块① 用户与权限),
 // id as a stable tiebreaker. All columns are native to users — no joins needed.
 func applyUserSort(q *ent.UserQuery, sort *model.UserSort) *ent.UserQuery {

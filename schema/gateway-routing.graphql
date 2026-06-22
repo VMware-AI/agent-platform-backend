@@ -66,6 +66,9 @@ type RouterTier {
 input RegisterGatewayConnectionInput {
   name: String!
   endpoint: String!
+  # litellm master key(接入表单填写)→ 后端写 secret store,只存引用,明文不落库;
+  # 优先于 masterKeyRef。
+  masterKey: String
   masterKeyRef: String
   loadBalanceStrategy: LoadBalanceStrategy
 }
@@ -73,6 +76,9 @@ input UpsertUpstreamInput {
   name: String!
   provider: UpstreamProvider!
   apiBase: String
+  # 上游 API key(上游表单填写)→ 后端写 secret store,只存引用,明文不落库;
+  # 优先于 apiKeyRef。
+  apiKey: String
   apiKeyRef: String
   model: String!
   enabled: Boolean

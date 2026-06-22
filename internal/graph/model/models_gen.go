@@ -329,6 +329,7 @@ type RecycleAgentInput struct {
 type RegisterGatewayConnectionInput struct {
 	Name                string               `json:"name"`
 	Endpoint            string               `json:"endpoint"`
+	MasterKey           *string              `json:"masterKey,omitempty"`
 	MasterKeyRef        *string              `json:"masterKeyRef,omitempty"`
 	LoadBalanceStrategy *LoadBalanceStrategy `json:"loadBalanceStrategy,omitempty"`
 }
@@ -498,6 +499,7 @@ type UpsertUpstreamInput struct {
 	Name      string           `json:"name"`
 	Provider  UpstreamProvider `json:"provider"`
 	APIBase   *string          `json:"apiBase,omitempty"`
+	APIKey    *string          `json:"apiKey,omitempty"`
 	APIKeyRef *string          `json:"apiKeyRef,omitempty"`
 	Model     string           `json:"model"`
 	Enabled   *bool            `json:"enabled,omitempty"`

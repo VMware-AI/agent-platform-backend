@@ -3294,6 +3294,9 @@ type RouterTier {
 input RegisterGatewayConnectionInput {
   name: String!
   endpoint: String!
+  # litellm master key(接入表单填写)→ 后端写 secret store,只存引用,明文不落库;
+  # 优先于 masterKeyRef。
+  masterKey: String
   masterKeyRef: String
   loadBalanceStrategy: LoadBalanceStrategy
 }
@@ -3301,6 +3304,9 @@ input UpsertUpstreamInput {
   name: String!
   provider: UpstreamProvider!
   apiBase: String
+  # 上游 API key(上游表单填写)→ 后端写 secret store,只存引用,明文不落库;
+  # 优先于 apiKeyRef。
+  apiKey: String
   apiKeyRef: String
   model: String!
   enabled: Boolean
@@ -17344,7 +17350,7 @@ func (ec *executionContext) unmarshalInputRegisterGatewayConnectionInput(ctx con
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "endpoint", "masterKeyRef", "loadBalanceStrategy"}
+	fieldsInOrder := [...]string{"name", "endpoint", "masterKey", "masterKeyRef", "loadBalanceStrategy"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -17365,6 +17371,13 @@ func (ec *executionContext) unmarshalInputRegisterGatewayConnectionInput(ctx con
 				return it, err
 			}
 			it.Endpoint = data
+		case "masterKey":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("masterKey"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.MasterKey = data
 		case "masterKeyRef":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("masterKeyRef"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -18100,7 +18113,7 @@ func (ec *executionContext) unmarshalInputUpsertUpstreamInput(ctx context.Contex
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "provider", "apiBase", "apiKeyRef", "model", "enabled"}
+	fieldsInOrder := [...]string{"name", "provider", "apiBase", "apiKey", "apiKeyRef", "model", "enabled"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -18128,6 +18141,13 @@ func (ec *executionContext) unmarshalInputUpsertUpstreamInput(ctx context.Contex
 				return it, err
 			}
 			it.APIBase = data
+		case "apiKey":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("apiKey"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.APIKey = data
 		case "apiKeyRef":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("apiKeyRef"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)

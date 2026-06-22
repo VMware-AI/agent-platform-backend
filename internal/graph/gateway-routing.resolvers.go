@@ -23,6 +23,12 @@ import (
 
 // RegisterGatewayConnection is the resolver for the registerGatewayConnection field.
 func (r *mutationResolver) RegisterGatewayConnection(ctx context.Context, input model.RegisterGatewayConnectionInput) (*model.GatewayConnection, error) {
+	// Raw master key from the form → secret store; downstream uses the ref (明文不落库).
+	if ref, set, err := r.resolveKeySecretRef(ctx, "gateway/"+input.Name, input.MasterKey, input.MasterKeyRef); err != nil {
+		return nil, err
+	} else if set {
+		input.MasterKeyRef = &ref
+	}
 	c := r.Ent.GatewayConnection.Create().SetName(input.Name).SetEndpoint(input.Endpoint)
 	if input.MasterKeyRef != nil {
 		c.SetMasterKeyRef(*input.MasterKeyRef)
@@ -79,6 +85,13 @@ func (r *mutationResolver) DeleteGatewayConnection(ctx context.Context, id strin
 
 // UpsertUpstream is the resolver for the upsertUpstream field.
 func (r *mutationResolver) UpsertUpstream(ctx context.Context, input model.UpsertUpstreamInput) (*model.Upstream, error) {
+	// Raw upstream apiKey from the form → secret store; the rest of the flow (DB +
+	// litellm sync) consumes the ref (明文不落库).
+	if ref, set, err := r.resolveKeySecretRef(ctx, "upstream/"+input.Name, input.APIKey, input.APIKeyRef); err != nil {
+		return nil, err
+	} else if set {
+		input.APIKeyRef = &ref
+	}
 	enabled := true
 	if input.Enabled != nil {
 		enabled = *input.Enabled
