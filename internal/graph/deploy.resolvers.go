@@ -95,6 +95,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		EnrollToken:      enrollToken,
 		ControlPlaneURL:  r.ControlPlaneURL,
 		KnowledgePackIDs: r.resolveAgentKnowledge(ctx, ag), // LLD-11 K2: 下发知识包引用
+		KnowledgeRoot:    r.resolveKnowledgeRoot(ctx, ag),  // LLD-11 K4: 按 kind 的解包根
 	})
 	if err != nil {
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)

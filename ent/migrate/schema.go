@@ -131,6 +131,8 @@ var (
 		{Name: "install_command", Type: field.TypeString, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "deferred"}, Default: "deferred"},
 		{Name: "version", Type: field.TypeString, Nullable: true},
+		{Name: "knowledge_root", Type: field.TypeString, Nullable: true},
+		{Name: "knowledge_prompt", Type: field.TypeString, Nullable: true},
 	}
 	// AgentTemplatesTable holds the schema information for the "agent_templates" table.
 	AgentTemplatesTable = &schema.Table{

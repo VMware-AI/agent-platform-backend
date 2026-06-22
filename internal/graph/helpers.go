@@ -10,6 +10,7 @@ import (
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
+	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
@@ -370,6 +371,14 @@ func toModelAgentTemplate(t *ent.AgentTemplate, installVars map[string]string) *
 		v := t.Version
 		m.Version = &v
 	}
+	if t.KnowledgeRoot != "" {
+		kr := t.KnowledgeRoot
+		m.KnowledgeRoot = &kr
+	}
+	if t.KnowledgePrompt != "" {
+		kp := t.KnowledgePrompt
+		m.KnowledgePrompt = &kp
+	}
 	return m
 }
 
@@ -409,6 +418,12 @@ func applyTemplateOptionals(m *ent.AgentTemplateMutation, input model.UpsertAgen
 	}
 	if input.Version != nil {
 		m.SetVersion(*input.Version)
+	}
+	if input.KnowledgeRoot != nil {
+		m.SetKnowledgeRoot(*input.KnowledgeRoot)
+	}
+	if input.KnowledgePrompt != nil {
+		m.SetKnowledgePrompt(*input.KnowledgePrompt)
 	}
 }
 
@@ -831,6 +846,17 @@ func (r *Resolver) resolveAgentKnowledge(ctx context.Context, ag *ent.Agent) []s
 		ids = append(ids, a.ID.String())
 	}
 	return ids
+}
+
+// resolveKnowledgeRoot returns the VM path the daemon should unpack the agent's
+// knowledge packs to (LLD-11 K4). It is the agent kind's AgentTemplate
+// knowledge_root, or the platform default when unset/unknown.
+func (r *Resolver) resolveKnowledgeRoot(ctx context.Context, ag *ent.Agent) string {
+	t, err := r.Ent.AgentTemplate.Query().Where(agenttemplate.Kind(ag.AgentType)).Only(ctx)
+	if err == nil && t.KnowledgeRoot != "" {
+		return t.KnowledgeRoot
+	}
+	return catalog.DefaultKnowledgeRoot
 }
 
 // toModelAgentSnapshot maps a vcenter snapshot to its GraphQL model.

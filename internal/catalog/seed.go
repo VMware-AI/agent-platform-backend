@@ -13,6 +13,11 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
 )
 
+// DefaultKnowledgeRoot is where the daemon unpacks an agent's OKF knowledge packs
+// inside the VM (LLD-11 K3/K4). Per-kind entries may override it; the daemon falls
+// back to this when a template carries no knowledge_root.
+const DefaultKnowledgeRoot = "/etc/agent/knowledge"
+
 // entry is one built-in catalog definition.
 type entry struct {
 	kind           string
@@ -21,6 +26,18 @@ type entry struct {
 	installMethod  agenttemplate.InstallMethod
 	installCommand string
 	version        string
+	// OKF grounding convention (LLD-11 K4, OQ-3): where packs land + the
+	// system-prompt snippet that points the agent at the local knowledge index.
+	knowledgeRoot   string
+	knowledgePrompt string
+}
+
+// knowledgePromptFor builds the per-kind "consult local knowledge first" snippet
+// (非 RAG: read index.md and follow links, no retrieval service).
+func knowledgePromptFor(name, root string) string {
+	return "你可以访问离线知识库(挂载于 " + root + ")。在回答前,先阅读各知识包的 " +
+		"index.md 作为导航入口,顺其中的链接按需翻阅相关页面。这是本地文件,直接读取,不要" +
+		"做任何向量检索。(" + name + ")"
 }
 
 // builtins are the M1 active agents (LLD-05 §1: active = goose/xiaoguai/qoder).
@@ -32,25 +49,31 @@ type entry struct {
 // user). These are starting definitions; operators may refine via upsert.
 var builtins = []entry{
 	{
-		kind:           "goose",
-		display:        "Goose",
-		description:    "开源 AI agent;离线 tar 安装(内网镜像,air-gap 可用)。",
-		installMethod:  agenttemplate.InstallMethodOfflineTar,
-		installCommand: "curl -fsSL {{AGENT_PKG_BASE_URL}}/goose.tar.gz | tar -xz -C /opt/agent && su {{AGENT_USER}} -c /opt/agent/goose/install.sh",
+		kind:            "goose",
+		display:         "Goose",
+		description:     "开源 AI agent;离线 tar 安装(内网镜像,air-gap 可用)。",
+		installMethod:   agenttemplate.InstallMethodOfflineTar,
+		installCommand:  "curl -fsSL {{AGENT_PKG_BASE_URL}}/goose.tar.gz | tar -xz -C /opt/agent && su {{AGENT_USER}} -c /opt/agent/goose/install.sh",
+		knowledgeRoot:   DefaultKnowledgeRoot,
+		knowledgePrompt: knowledgePromptFor("Goose", DefaultKnowledgeRoot),
 	},
 	{
-		kind:           "xiaoguai",
-		display:        "小怪 (Xiaoguai)",
-		description:    "Rust agent 平台;离线 tar 安装(内网镜像,air-gap 可用)。",
-		installMethod:  agenttemplate.InstallMethodOfflineTar,
-		installCommand: "curl -fsSL {{AGENT_PKG_BASE_URL}}/xiaoguai.tar.gz | tar -xz -C /opt/agent && su {{AGENT_USER}} -c /opt/agent/xiaoguai/install.sh",
+		kind:            "xiaoguai",
+		display:         "小怪 (Xiaoguai)",
+		description:     "Rust agent 平台;离线 tar 安装(内网镜像,air-gap 可用)。",
+		installMethod:   agenttemplate.InstallMethodOfflineTar,
+		installCommand:  "curl -fsSL {{AGENT_PKG_BASE_URL}}/xiaoguai.tar.gz | tar -xz -C /opt/agent && su {{AGENT_USER}} -c /opt/agent/xiaoguai/install.sh",
+		knowledgeRoot:   DefaultKnowledgeRoot,
+		knowledgePrompt: knowledgePromptFor("小怪", DefaultKnowledgeRoot),
 	},
 	{
-		kind:           "qoder",
-		display:        "Qoder",
-		description:    "在线 agent;curl 安装,需外联(air-gap 不可用)。",
-		installMethod:  agenttemplate.InstallMethodCurl,
-		installCommand: "curl -fsSL https://qoder.sh/install.sh | sh",
+		kind:            "qoder",
+		display:         "Qoder",
+		description:     "在线 agent;curl 安装,需外联(air-gap 不可用)。",
+		installMethod:   agenttemplate.InstallMethodCurl,
+		installCommand:  "curl -fsSL https://qoder.sh/install.sh | sh",
+		knowledgeRoot:   DefaultKnowledgeRoot,
+		knowledgePrompt: knowledgePromptFor("Qoder", DefaultKnowledgeRoot),
 	},
 }
 
@@ -92,6 +115,12 @@ func Seed(ctx context.Context, client *ent.Client) error {
 		}
 		if e.version != "" {
 			b.SetVersion(e.version)
+		}
+		if e.knowledgeRoot != "" {
+			b.SetKnowledgeRoot(e.knowledgeRoot)
+		}
+		if e.knowledgePrompt != "" {
+			b.SetKnowledgePrompt(e.knowledgePrompt)
 		}
 		if _, err := b.Save(ctx); err != nil {
 			return fmt.Errorf("seed catalog kind %q: %w", e.kind, err)

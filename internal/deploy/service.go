@@ -58,6 +58,9 @@ type Request struct {
 	// pulls each bundle over the control-plane channel (§6). Requires the
 	// agent-manager channel (EnrollToken) — without it there is no way to fetch.
 	KnowledgePackIDs []string
+	// KnowledgeRoot is the VM dir the daemon unpacks knowledge packs to (LLD-11 K4,
+	// per-kind via AgentTemplate). Only injected when packs are present.
+	KnowledgeRoot string
 }
 
 // Result carries the issued secret (returned once), the rendered userdata, and
@@ -129,6 +132,9 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 		// same authenticated channel. Only meaningful with the agent-manager channel.
 		if len(req.KnowledgePackIDs) > 0 {
 			gi["agentmgr.knowledge_packs"] = strings.Join(req.KnowledgePackIDs, ",")
+			if req.KnowledgeRoot != "" {
+				gi["agentmgr.knowledge_root"] = req.KnowledgeRoot // LLD-11 K4 per-kind unpack dir
+			}
 		}
 	}
 	if err := s.VCenter.SetGuestinfo(ctx, req.VMName, gi); err != nil {

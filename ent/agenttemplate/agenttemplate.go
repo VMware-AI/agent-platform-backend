@@ -33,6 +33,10 @@ const (
 	FieldStatus = "status"
 	// FieldVersion holds the string denoting the version field in the database.
 	FieldVersion = "version"
+	// FieldKnowledgeRoot holds the string denoting the knowledge_root field in the database.
+	FieldKnowledgeRoot = "knowledge_root"
+	// FieldKnowledgePrompt holds the string denoting the knowledge_prompt field in the database.
+	FieldKnowledgePrompt = "knowledge_prompt"
 	// Table holds the table name of the agenttemplate in the database.
 	Table = "agent_templates"
 )
@@ -49,6 +53,8 @@ var Columns = []string{
 	FieldInstallCommand,
 	FieldStatus,
 	FieldVersion,
+	FieldKnowledgeRoot,
+	FieldKnowledgePrompt,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -180,4 +186,14 @@ func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 // ByVersion orders the results by the version field.
 func ByVersion(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldVersion, opts...).ToFunc()
+}
+
+// ByKnowledgeRoot orders the results by the knowledge_root field.
+func ByKnowledgeRoot(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKnowledgeRoot, opts...).ToFunc()
+}
+
+// ByKnowledgePrompt orders the results by the knowledge_prompt field.
+func ByKnowledgePrompt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKnowledgePrompt, opts...).ToFunc()
 }

@@ -109,12 +109,16 @@ func TestProvision_InjectsKnowledgePacks(t *testing.T) {
 	if _, err := svc.Provision(context.Background(), Request{
 		UserID: "u", Template: "ova", VMName: "vm1",
 		VMID: "vm1", EnrollToken: "enr-tok", ControlPlaneURL: "https://cp",
-		KnowledgePackIDs: []string{"id-a", "id-b"},
+		KnowledgePackIDs: []string{"id-a", "id-b"}, KnowledgeRoot: "/etc/agent/knowledge",
 	}); err != nil {
 		t.Fatalf("Provision: %v", err)
 	}
 	if got := vc.lastGI["agentmgr.knowledge_packs"]; got != "id-a,id-b" {
 		t.Fatalf("knowledge_packs guestinfo = %q, want \"id-a,id-b\"", got)
+	}
+	// K4: the per-kind unpack root rides alongside (daemon unpacks here).
+	if got := vc.lastGI["agentmgr.knowledge_root"]; got != "/etc/agent/knowledge" {
+		t.Fatalf("knowledge_root guestinfo = %q", got)
 	}
 
 	// Without the agent-manager channel there is no way to pull, so no packs key.

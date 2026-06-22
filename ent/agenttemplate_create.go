@@ -131,6 +131,34 @@ func (_c *AgentTemplateCreate) SetNillableVersion(v *string) *AgentTemplateCreat
 	return _c
 }
 
+// SetKnowledgeRoot sets the "knowledge_root" field.
+func (_c *AgentTemplateCreate) SetKnowledgeRoot(v string) *AgentTemplateCreate {
+	_c.mutation.SetKnowledgeRoot(v)
+	return _c
+}
+
+// SetNillableKnowledgeRoot sets the "knowledge_root" field if the given value is not nil.
+func (_c *AgentTemplateCreate) SetNillableKnowledgeRoot(v *string) *AgentTemplateCreate {
+	if v != nil {
+		_c.SetKnowledgeRoot(*v)
+	}
+	return _c
+}
+
+// SetKnowledgePrompt sets the "knowledge_prompt" field.
+func (_c *AgentTemplateCreate) SetKnowledgePrompt(v string) *AgentTemplateCreate {
+	_c.mutation.SetKnowledgePrompt(v)
+	return _c
+}
+
+// SetNillableKnowledgePrompt sets the "knowledge_prompt" field if the given value is not nil.
+func (_c *AgentTemplateCreate) SetNillableKnowledgePrompt(v *string) *AgentTemplateCreate {
+	if v != nil {
+		_c.SetKnowledgePrompt(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *AgentTemplateCreate) SetID(v uuid.UUID) *AgentTemplateCreate {
 	_c.mutation.SetID(v)
@@ -312,6 +340,14 @@ func (_c *AgentTemplateCreate) createSpec() (*AgentTemplate, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.Version(); ok {
 		_spec.SetField(agenttemplate.FieldVersion, field.TypeString, value)
 		_node.Version = value
+	}
+	if value, ok := _c.mutation.KnowledgeRoot(); ok {
+		_spec.SetField(agenttemplate.FieldKnowledgeRoot, field.TypeString, value)
+		_node.KnowledgeRoot = value
+	}
+	if value, ok := _c.mutation.KnowledgePrompt(); ok {
+		_spec.SetField(agenttemplate.FieldKnowledgePrompt, field.TypeString, value)
+		_node.KnowledgePrompt = value
 	}
 	return _node, _spec
 }

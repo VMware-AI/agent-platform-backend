@@ -28,6 +28,11 @@ type AgentTemplate {
   installCommand: String
   status: AgentTemplateStatus!
   version: String
+  # OKF knowledge-grounding convention per kind (LLD-11 K4). knowledgeRoot = VM
+  # unpack dir for mounted packs; knowledgePrompt = the "consult local knowledge
+  # index.md first" system-prompt snippet (非 RAG).
+  knowledgeRoot: String
+  knowledgePrompt: String
   createdAt: Time!
 }
 
@@ -61,6 +66,9 @@ input UpsertAgentTemplateInput {
   installCommand: String
   status: AgentTemplateStatus!
   version: String
+  # OKF grounding convention (LLD-11 K4); operators may override the seeded defaults.
+  knowledgeRoot: String
+  knowledgePrompt: String
 }
 
 input CreateAgentInput {

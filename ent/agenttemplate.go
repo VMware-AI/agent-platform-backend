@@ -35,8 +35,12 @@ type AgentTemplate struct {
 	// Status holds the value of the "status" field.
 	Status agenttemplate.Status `json:"status,omitempty"`
 	// Version holds the value of the "version" field.
-	Version      string `json:"version,omitempty"`
-	selectValues sql.SelectValues
+	Version string `json:"version,omitempty"`
+	// KnowledgeRoot holds the value of the "knowledge_root" field.
+	KnowledgeRoot string `json:"knowledge_root,omitempty"`
+	// KnowledgePrompt holds the value of the "knowledge_prompt" field.
+	KnowledgePrompt string `json:"knowledge_prompt,omitempty"`
+	selectValues    sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -44,7 +48,7 @@ func (*AgentTemplate) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case agenttemplate.FieldKind, agenttemplate.FieldDisplay, agenttemplate.FieldDescription, agenttemplate.FieldInstallMethod, agenttemplate.FieldInstallCommand, agenttemplate.FieldStatus, agenttemplate.FieldVersion:
+		case agenttemplate.FieldKind, agenttemplate.FieldDisplay, agenttemplate.FieldDescription, agenttemplate.FieldInstallMethod, agenttemplate.FieldInstallCommand, agenttemplate.FieldStatus, agenttemplate.FieldVersion, agenttemplate.FieldKnowledgeRoot, agenttemplate.FieldKnowledgePrompt:
 			values[i] = new(sql.NullString)
 		case agenttemplate.FieldCreatedAt, agenttemplate.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -125,6 +129,18 @@ func (_m *AgentTemplate) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Version = value.String
 			}
+		case agenttemplate.FieldKnowledgeRoot:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field knowledge_root", values[i])
+			} else if value.Valid {
+				_m.KnowledgeRoot = value.String
+			}
+		case agenttemplate.FieldKnowledgePrompt:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field knowledge_prompt", values[i])
+			} else if value.Valid {
+				_m.KnowledgePrompt = value.String
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -187,6 +203,12 @@ func (_m *AgentTemplate) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("version=")
 	builder.WriteString(_m.Version)
+	builder.WriteString(", ")
+	builder.WriteString("knowledge_root=")
+	builder.WriteString(_m.KnowledgeRoot)
+	builder.WriteString(", ")
+	builder.WriteString("knowledge_prompt=")
+	builder.WriteString(_m.KnowledgePrompt)
 	builder.WriteByte(')')
 	return builder.String()
 }

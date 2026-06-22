@@ -90,6 +90,16 @@ func Version(v string) predicate.AgentTemplate {
 	return predicate.AgentTemplate(sql.FieldEQ(FieldVersion, v))
 }
 
+// KnowledgeRoot applies equality check predicate on the "knowledge_root" field. It's identical to KnowledgeRootEQ.
+func KnowledgeRoot(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldEQ(FieldKnowledgeRoot, v))
+}
+
+// KnowledgePrompt applies equality check predicate on the "knowledge_prompt" field. It's identical to KnowledgePromptEQ.
+func KnowledgePrompt(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldEQ(FieldKnowledgePrompt, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.AgentTemplate {
 	return predicate.AgentTemplate(sql.FieldEQ(FieldCreatedAt, v))
@@ -563,6 +573,156 @@ func VersionEqualFold(v string) predicate.AgentTemplate {
 // VersionContainsFold applies the ContainsFold predicate on the "version" field.
 func VersionContainsFold(v string) predicate.AgentTemplate {
 	return predicate.AgentTemplate(sql.FieldContainsFold(FieldVersion, v))
+}
+
+// KnowledgeRootEQ applies the EQ predicate on the "knowledge_root" field.
+func KnowledgeRootEQ(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldEQ(FieldKnowledgeRoot, v))
+}
+
+// KnowledgeRootNEQ applies the NEQ predicate on the "knowledge_root" field.
+func KnowledgeRootNEQ(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldNEQ(FieldKnowledgeRoot, v))
+}
+
+// KnowledgeRootIn applies the In predicate on the "knowledge_root" field.
+func KnowledgeRootIn(vs ...string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldIn(FieldKnowledgeRoot, vs...))
+}
+
+// KnowledgeRootNotIn applies the NotIn predicate on the "knowledge_root" field.
+func KnowledgeRootNotIn(vs ...string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldNotIn(FieldKnowledgeRoot, vs...))
+}
+
+// KnowledgeRootGT applies the GT predicate on the "knowledge_root" field.
+func KnowledgeRootGT(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldGT(FieldKnowledgeRoot, v))
+}
+
+// KnowledgeRootGTE applies the GTE predicate on the "knowledge_root" field.
+func KnowledgeRootGTE(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldGTE(FieldKnowledgeRoot, v))
+}
+
+// KnowledgeRootLT applies the LT predicate on the "knowledge_root" field.
+func KnowledgeRootLT(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldLT(FieldKnowledgeRoot, v))
+}
+
+// KnowledgeRootLTE applies the LTE predicate on the "knowledge_root" field.
+func KnowledgeRootLTE(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldLTE(FieldKnowledgeRoot, v))
+}
+
+// KnowledgeRootContains applies the Contains predicate on the "knowledge_root" field.
+func KnowledgeRootContains(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldContains(FieldKnowledgeRoot, v))
+}
+
+// KnowledgeRootHasPrefix applies the HasPrefix predicate on the "knowledge_root" field.
+func KnowledgeRootHasPrefix(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldHasPrefix(FieldKnowledgeRoot, v))
+}
+
+// KnowledgeRootHasSuffix applies the HasSuffix predicate on the "knowledge_root" field.
+func KnowledgeRootHasSuffix(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldHasSuffix(FieldKnowledgeRoot, v))
+}
+
+// KnowledgeRootIsNil applies the IsNil predicate on the "knowledge_root" field.
+func KnowledgeRootIsNil() predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldIsNull(FieldKnowledgeRoot))
+}
+
+// KnowledgeRootNotNil applies the NotNil predicate on the "knowledge_root" field.
+func KnowledgeRootNotNil() predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldNotNull(FieldKnowledgeRoot))
+}
+
+// KnowledgeRootEqualFold applies the EqualFold predicate on the "knowledge_root" field.
+func KnowledgeRootEqualFold(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldEqualFold(FieldKnowledgeRoot, v))
+}
+
+// KnowledgeRootContainsFold applies the ContainsFold predicate on the "knowledge_root" field.
+func KnowledgeRootContainsFold(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldContainsFold(FieldKnowledgeRoot, v))
+}
+
+// KnowledgePromptEQ applies the EQ predicate on the "knowledge_prompt" field.
+func KnowledgePromptEQ(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldEQ(FieldKnowledgePrompt, v))
+}
+
+// KnowledgePromptNEQ applies the NEQ predicate on the "knowledge_prompt" field.
+func KnowledgePromptNEQ(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldNEQ(FieldKnowledgePrompt, v))
+}
+
+// KnowledgePromptIn applies the In predicate on the "knowledge_prompt" field.
+func KnowledgePromptIn(vs ...string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldIn(FieldKnowledgePrompt, vs...))
+}
+
+// KnowledgePromptNotIn applies the NotIn predicate on the "knowledge_prompt" field.
+func KnowledgePromptNotIn(vs ...string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldNotIn(FieldKnowledgePrompt, vs...))
+}
+
+// KnowledgePromptGT applies the GT predicate on the "knowledge_prompt" field.
+func KnowledgePromptGT(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldGT(FieldKnowledgePrompt, v))
+}
+
+// KnowledgePromptGTE applies the GTE predicate on the "knowledge_prompt" field.
+func KnowledgePromptGTE(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldGTE(FieldKnowledgePrompt, v))
+}
+
+// KnowledgePromptLT applies the LT predicate on the "knowledge_prompt" field.
+func KnowledgePromptLT(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldLT(FieldKnowledgePrompt, v))
+}
+
+// KnowledgePromptLTE applies the LTE predicate on the "knowledge_prompt" field.
+func KnowledgePromptLTE(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldLTE(FieldKnowledgePrompt, v))
+}
+
+// KnowledgePromptContains applies the Contains predicate on the "knowledge_prompt" field.
+func KnowledgePromptContains(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldContains(FieldKnowledgePrompt, v))
+}
+
+// KnowledgePromptHasPrefix applies the HasPrefix predicate on the "knowledge_prompt" field.
+func KnowledgePromptHasPrefix(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldHasPrefix(FieldKnowledgePrompt, v))
+}
+
+// KnowledgePromptHasSuffix applies the HasSuffix predicate on the "knowledge_prompt" field.
+func KnowledgePromptHasSuffix(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldHasSuffix(FieldKnowledgePrompt, v))
+}
+
+// KnowledgePromptIsNil applies the IsNil predicate on the "knowledge_prompt" field.
+func KnowledgePromptIsNil() predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldIsNull(FieldKnowledgePrompt))
+}
+
+// KnowledgePromptNotNil applies the NotNil predicate on the "knowledge_prompt" field.
+func KnowledgePromptNotNil() predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldNotNull(FieldKnowledgePrompt))
+}
+
+// KnowledgePromptEqualFold applies the EqualFold predicate on the "knowledge_prompt" field.
+func KnowledgePromptEqualFold(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldEqualFold(FieldKnowledgePrompt, v))
+}
+
+// KnowledgePromptContainsFold applies the ContainsFold predicate on the "knowledge_prompt" field.
+func KnowledgePromptContainsFold(v string) predicate.AgentTemplate {
+	return predicate.AgentTemplate(sql.FieldContainsFold(FieldKnowledgePrompt, v))
 }
 
 // And groups predicates with the AND operator between them.

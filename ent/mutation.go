@@ -3746,22 +3746,24 @@ func (m *AgentHeartbeatMutation) ResetEdge(name string) error {
 // AgentTemplateMutation represents an operation that mutates the AgentTemplate nodes in the graph.
 type AgentTemplateMutation struct {
 	config
-	op              Op
-	typ             string
-	id              *uuid.UUID
-	created_at      *time.Time
-	updated_at      *time.Time
-	kind            *string
-	display         *string
-	description     *string
-	install_method  *agenttemplate.InstallMethod
-	install_command *string
-	status          *agenttemplate.Status
-	version         *string
-	clearedFields   map[string]struct{}
-	done            bool
-	oldValue        func(context.Context) (*AgentTemplate, error)
-	predicates      []predicate.AgentTemplate
+	op               Op
+	typ              string
+	id               *uuid.UUID
+	created_at       *time.Time
+	updated_at       *time.Time
+	kind             *string
+	display          *string
+	description      *string
+	install_method   *agenttemplate.InstallMethod
+	install_command  *string
+	status           *agenttemplate.Status
+	version          *string
+	knowledge_root   *string
+	knowledge_prompt *string
+	clearedFields    map[string]struct{}
+	done             bool
+	oldValue         func(context.Context) (*AgentTemplate, error)
+	predicates       []predicate.AgentTemplate
 }
 
 var _ ent.Mutation = (*AgentTemplateMutation)(nil)
@@ -4231,6 +4233,104 @@ func (m *AgentTemplateMutation) ResetVersion() {
 	delete(m.clearedFields, agenttemplate.FieldVersion)
 }
 
+// SetKnowledgeRoot sets the "knowledge_root" field.
+func (m *AgentTemplateMutation) SetKnowledgeRoot(s string) {
+	m.knowledge_root = &s
+}
+
+// KnowledgeRoot returns the value of the "knowledge_root" field in the mutation.
+func (m *AgentTemplateMutation) KnowledgeRoot() (r string, exists bool) {
+	v := m.knowledge_root
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKnowledgeRoot returns the old "knowledge_root" field's value of the AgentTemplate entity.
+// If the AgentTemplate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentTemplateMutation) OldKnowledgeRoot(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKnowledgeRoot is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKnowledgeRoot requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKnowledgeRoot: %w", err)
+	}
+	return oldValue.KnowledgeRoot, nil
+}
+
+// ClearKnowledgeRoot clears the value of the "knowledge_root" field.
+func (m *AgentTemplateMutation) ClearKnowledgeRoot() {
+	m.knowledge_root = nil
+	m.clearedFields[agenttemplate.FieldKnowledgeRoot] = struct{}{}
+}
+
+// KnowledgeRootCleared returns if the "knowledge_root" field was cleared in this mutation.
+func (m *AgentTemplateMutation) KnowledgeRootCleared() bool {
+	_, ok := m.clearedFields[agenttemplate.FieldKnowledgeRoot]
+	return ok
+}
+
+// ResetKnowledgeRoot resets all changes to the "knowledge_root" field.
+func (m *AgentTemplateMutation) ResetKnowledgeRoot() {
+	m.knowledge_root = nil
+	delete(m.clearedFields, agenttemplate.FieldKnowledgeRoot)
+}
+
+// SetKnowledgePrompt sets the "knowledge_prompt" field.
+func (m *AgentTemplateMutation) SetKnowledgePrompt(s string) {
+	m.knowledge_prompt = &s
+}
+
+// KnowledgePrompt returns the value of the "knowledge_prompt" field in the mutation.
+func (m *AgentTemplateMutation) KnowledgePrompt() (r string, exists bool) {
+	v := m.knowledge_prompt
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKnowledgePrompt returns the old "knowledge_prompt" field's value of the AgentTemplate entity.
+// If the AgentTemplate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentTemplateMutation) OldKnowledgePrompt(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKnowledgePrompt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKnowledgePrompt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKnowledgePrompt: %w", err)
+	}
+	return oldValue.KnowledgePrompt, nil
+}
+
+// ClearKnowledgePrompt clears the value of the "knowledge_prompt" field.
+func (m *AgentTemplateMutation) ClearKnowledgePrompt() {
+	m.knowledge_prompt = nil
+	m.clearedFields[agenttemplate.FieldKnowledgePrompt] = struct{}{}
+}
+
+// KnowledgePromptCleared returns if the "knowledge_prompt" field was cleared in this mutation.
+func (m *AgentTemplateMutation) KnowledgePromptCleared() bool {
+	_, ok := m.clearedFields[agenttemplate.FieldKnowledgePrompt]
+	return ok
+}
+
+// ResetKnowledgePrompt resets all changes to the "knowledge_prompt" field.
+func (m *AgentTemplateMutation) ResetKnowledgePrompt() {
+	m.knowledge_prompt = nil
+	delete(m.clearedFields, agenttemplate.FieldKnowledgePrompt)
+}
+
 // Where appends a list predicates to the AgentTemplateMutation builder.
 func (m *AgentTemplateMutation) Where(ps ...predicate.AgentTemplate) {
 	m.predicates = append(m.predicates, ps...)
@@ -4265,7 +4365,7 @@ func (m *AgentTemplateMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AgentTemplateMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 11)
 	if m.created_at != nil {
 		fields = append(fields, agenttemplate.FieldCreatedAt)
 	}
@@ -4293,6 +4393,12 @@ func (m *AgentTemplateMutation) Fields() []string {
 	if m.version != nil {
 		fields = append(fields, agenttemplate.FieldVersion)
 	}
+	if m.knowledge_root != nil {
+		fields = append(fields, agenttemplate.FieldKnowledgeRoot)
+	}
+	if m.knowledge_prompt != nil {
+		fields = append(fields, agenttemplate.FieldKnowledgePrompt)
+	}
 	return fields
 }
 
@@ -4319,6 +4425,10 @@ func (m *AgentTemplateMutation) Field(name string) (ent.Value, bool) {
 		return m.Status()
 	case agenttemplate.FieldVersion:
 		return m.Version()
+	case agenttemplate.FieldKnowledgeRoot:
+		return m.KnowledgeRoot()
+	case agenttemplate.FieldKnowledgePrompt:
+		return m.KnowledgePrompt()
 	}
 	return nil, false
 }
@@ -4346,6 +4456,10 @@ func (m *AgentTemplateMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldStatus(ctx)
 	case agenttemplate.FieldVersion:
 		return m.OldVersion(ctx)
+	case agenttemplate.FieldKnowledgeRoot:
+		return m.OldKnowledgeRoot(ctx)
+	case agenttemplate.FieldKnowledgePrompt:
+		return m.OldKnowledgePrompt(ctx)
 	}
 	return nil, fmt.Errorf("unknown AgentTemplate field %s", name)
 }
@@ -4418,6 +4532,20 @@ func (m *AgentTemplateMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetVersion(v)
 		return nil
+	case agenttemplate.FieldKnowledgeRoot:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKnowledgeRoot(v)
+		return nil
+	case agenttemplate.FieldKnowledgePrompt:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKnowledgePrompt(v)
+		return nil
 	}
 	return fmt.Errorf("unknown AgentTemplate field %s", name)
 }
@@ -4457,6 +4585,12 @@ func (m *AgentTemplateMutation) ClearedFields() []string {
 	if m.FieldCleared(agenttemplate.FieldVersion) {
 		fields = append(fields, agenttemplate.FieldVersion)
 	}
+	if m.FieldCleared(agenttemplate.FieldKnowledgeRoot) {
+		fields = append(fields, agenttemplate.FieldKnowledgeRoot)
+	}
+	if m.FieldCleared(agenttemplate.FieldKnowledgePrompt) {
+		fields = append(fields, agenttemplate.FieldKnowledgePrompt)
+	}
 	return fields
 }
 
@@ -4479,6 +4613,12 @@ func (m *AgentTemplateMutation) ClearField(name string) error {
 		return nil
 	case agenttemplate.FieldVersion:
 		m.ClearVersion()
+		return nil
+	case agenttemplate.FieldKnowledgeRoot:
+		m.ClearKnowledgeRoot()
+		return nil
+	case agenttemplate.FieldKnowledgePrompt:
+		m.ClearKnowledgePrompt()
 		return nil
 	}
 	return fmt.Errorf("unknown AgentTemplate nullable field %s", name)
@@ -4514,6 +4654,12 @@ func (m *AgentTemplateMutation) ResetField(name string) error {
 		return nil
 	case agenttemplate.FieldVersion:
 		m.ResetVersion()
+		return nil
+	case agenttemplate.FieldKnowledgeRoot:
+		m.ResetKnowledgeRoot()
+		return nil
+	case agenttemplate.FieldKnowledgePrompt:
+		m.ResetKnowledgePrompt()
 		return nil
 	}
 	return fmt.Errorf("unknown AgentTemplate field %s", name)

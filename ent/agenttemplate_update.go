@@ -151,6 +151,46 @@ func (_u *AgentTemplateUpdate) ClearVersion() *AgentTemplateUpdate {
 	return _u
 }
 
+// SetKnowledgeRoot sets the "knowledge_root" field.
+func (_u *AgentTemplateUpdate) SetKnowledgeRoot(v string) *AgentTemplateUpdate {
+	_u.mutation.SetKnowledgeRoot(v)
+	return _u
+}
+
+// SetNillableKnowledgeRoot sets the "knowledge_root" field if the given value is not nil.
+func (_u *AgentTemplateUpdate) SetNillableKnowledgeRoot(v *string) *AgentTemplateUpdate {
+	if v != nil {
+		_u.SetKnowledgeRoot(*v)
+	}
+	return _u
+}
+
+// ClearKnowledgeRoot clears the value of the "knowledge_root" field.
+func (_u *AgentTemplateUpdate) ClearKnowledgeRoot() *AgentTemplateUpdate {
+	_u.mutation.ClearKnowledgeRoot()
+	return _u
+}
+
+// SetKnowledgePrompt sets the "knowledge_prompt" field.
+func (_u *AgentTemplateUpdate) SetKnowledgePrompt(v string) *AgentTemplateUpdate {
+	_u.mutation.SetKnowledgePrompt(v)
+	return _u
+}
+
+// SetNillableKnowledgePrompt sets the "knowledge_prompt" field if the given value is not nil.
+func (_u *AgentTemplateUpdate) SetNillableKnowledgePrompt(v *string) *AgentTemplateUpdate {
+	if v != nil {
+		_u.SetKnowledgePrompt(*v)
+	}
+	return _u
+}
+
+// ClearKnowledgePrompt clears the value of the "knowledge_prompt" field.
+func (_u *AgentTemplateUpdate) ClearKnowledgePrompt() *AgentTemplateUpdate {
+	_u.mutation.ClearKnowledgePrompt()
+	return _u
+}
+
 // Mutation returns the AgentTemplateMutation object of the builder.
 func (_u *AgentTemplateUpdate) Mutation() *AgentTemplateMutation {
 	return _u.mutation
@@ -267,6 +307,18 @@ func (_u *AgentTemplateUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	}
 	if _u.mutation.VersionCleared() {
 		_spec.ClearField(agenttemplate.FieldVersion, field.TypeString)
+	}
+	if value, ok := _u.mutation.KnowledgeRoot(); ok {
+		_spec.SetField(agenttemplate.FieldKnowledgeRoot, field.TypeString, value)
+	}
+	if _u.mutation.KnowledgeRootCleared() {
+		_spec.ClearField(agenttemplate.FieldKnowledgeRoot, field.TypeString)
+	}
+	if value, ok := _u.mutation.KnowledgePrompt(); ok {
+		_spec.SetField(agenttemplate.FieldKnowledgePrompt, field.TypeString, value)
+	}
+	if _u.mutation.KnowledgePromptCleared() {
+		_spec.ClearField(agenttemplate.FieldKnowledgePrompt, field.TypeString)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
@@ -409,6 +461,46 @@ func (_u *AgentTemplateUpdateOne) SetNillableVersion(v *string) *AgentTemplateUp
 // ClearVersion clears the value of the "version" field.
 func (_u *AgentTemplateUpdateOne) ClearVersion() *AgentTemplateUpdateOne {
 	_u.mutation.ClearVersion()
+	return _u
+}
+
+// SetKnowledgeRoot sets the "knowledge_root" field.
+func (_u *AgentTemplateUpdateOne) SetKnowledgeRoot(v string) *AgentTemplateUpdateOne {
+	_u.mutation.SetKnowledgeRoot(v)
+	return _u
+}
+
+// SetNillableKnowledgeRoot sets the "knowledge_root" field if the given value is not nil.
+func (_u *AgentTemplateUpdateOne) SetNillableKnowledgeRoot(v *string) *AgentTemplateUpdateOne {
+	if v != nil {
+		_u.SetKnowledgeRoot(*v)
+	}
+	return _u
+}
+
+// ClearKnowledgeRoot clears the value of the "knowledge_root" field.
+func (_u *AgentTemplateUpdateOne) ClearKnowledgeRoot() *AgentTemplateUpdateOne {
+	_u.mutation.ClearKnowledgeRoot()
+	return _u
+}
+
+// SetKnowledgePrompt sets the "knowledge_prompt" field.
+func (_u *AgentTemplateUpdateOne) SetKnowledgePrompt(v string) *AgentTemplateUpdateOne {
+	_u.mutation.SetKnowledgePrompt(v)
+	return _u
+}
+
+// SetNillableKnowledgePrompt sets the "knowledge_prompt" field if the given value is not nil.
+func (_u *AgentTemplateUpdateOne) SetNillableKnowledgePrompt(v *string) *AgentTemplateUpdateOne {
+	if v != nil {
+		_u.SetKnowledgePrompt(*v)
+	}
+	return _u
+}
+
+// ClearKnowledgePrompt clears the value of the "knowledge_prompt" field.
+func (_u *AgentTemplateUpdateOne) ClearKnowledgePrompt() *AgentTemplateUpdateOne {
+	_u.mutation.ClearKnowledgePrompt()
 	return _u
 }
 
@@ -558,6 +650,18 @@ func (_u *AgentTemplateUpdateOne) sqlSave(ctx context.Context) (_node *AgentTemp
 	}
 	if _u.mutation.VersionCleared() {
 		_spec.ClearField(agenttemplate.FieldVersion, field.TypeString)
+	}
+	if value, ok := _u.mutation.KnowledgeRoot(); ok {
+		_spec.SetField(agenttemplate.FieldKnowledgeRoot, field.TypeString, value)
+	}
+	if _u.mutation.KnowledgeRootCleared() {
+		_spec.ClearField(agenttemplate.FieldKnowledgeRoot, field.TypeString)
+	}
+	if value, ok := _u.mutation.KnowledgePrompt(); ok {
+		_spec.SetField(agenttemplate.FieldKnowledgePrompt, field.TypeString, value)
+	}
+	if _u.mutation.KnowledgePromptCleared() {
+		_spec.ClearField(agenttemplate.FieldKnowledgePrompt, field.TypeString)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &AgentTemplate{config: _u.config}

@@ -67,15 +67,17 @@ type ComplexityRoot struct {
 	}
 
 	AgentTemplate struct {
-		CreatedAt      func(childComplexity int) int
-		Description    func(childComplexity int) int
-		Display        func(childComplexity int) int
-		ID             func(childComplexity int) int
-		InstallCommand func(childComplexity int) int
-		InstallMethod  func(childComplexity int) int
-		Kind           func(childComplexity int) int
-		Status         func(childComplexity int) int
-		Version        func(childComplexity int) int
+		CreatedAt       func(childComplexity int) int
+		Description     func(childComplexity int) int
+		Display         func(childComplexity int) int
+		ID              func(childComplexity int) int
+		InstallCommand  func(childComplexity int) int
+		InstallMethod   func(childComplexity int) int
+		Kind            func(childComplexity int) int
+		KnowledgePrompt func(childComplexity int) int
+		KnowledgeRoot   func(childComplexity int) int
+		Status          func(childComplexity int) int
+		Version         func(childComplexity int) int
 	}
 
 	AgentUsage struct {
@@ -681,6 +683,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.AgentTemplate.Kind(childComplexity), true
+	case "AgentTemplate.knowledgePrompt":
+		if e.ComplexityRoot.AgentTemplate.KnowledgePrompt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentTemplate.KnowledgePrompt(childComplexity), true
+	case "AgentTemplate.knowledgeRoot":
+		if e.ComplexityRoot.AgentTemplate.KnowledgeRoot == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentTemplate.KnowledgeRoot(childComplexity), true
 	case "AgentTemplate.status":
 		if e.ComplexityRoot.AgentTemplate.Status == nil {
 			break
@@ -2691,6 +2705,11 @@ type AgentTemplate {
   installCommand: String
   status: AgentTemplateStatus!
   version: String
+  # OKF knowledge-grounding convention per kind (LLD-11 K4). knowledgeRoot = VM
+  # unpack dir for mounted packs; knowledgePrompt = the "consult local knowledge
+  # index.md first" system-prompt snippet (非 RAG).
+  knowledgeRoot: String
+  knowledgePrompt: String
   createdAt: Time!
 }
 
@@ -2724,6 +2743,9 @@ input UpsertAgentTemplateInput {
   installCommand: String
   status: AgentTemplateStatus!
   version: String
+  # OKF grounding convention (LLD-11 K4); operators may override the seeded defaults.
+  knowledgeRoot: String
+  knowledgePrompt: String
 }
 
 input CreateAgentInput {
@@ -3560,6 +3582,10 @@ func (ec *executionContext) childFields_AgentTemplate(ctx context.Context, field
 		return ec.fieldContext_AgentTemplate_status(ctx, field)
 	case "version":
 		return ec.fieldContext_AgentTemplate_version(ctx, field)
+	case "knowledgeRoot":
+		return ec.fieldContext_AgentTemplate_knowledgeRoot(ctx, field)
+	case "knowledgePrompt":
+		return ec.fieldContext_AgentTemplate_knowledgePrompt(ctx, field)
 	case "createdAt":
 		return ec.fieldContext_AgentTemplate_createdAt(ctx, field)
 	}
@@ -6033,6 +6059,52 @@ func (ec *executionContext) _AgentTemplate_version(ctx context.Context, field gr
 	)
 }
 func (ec *executionContext) fieldContext_AgentTemplate_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentTemplate", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _AgentTemplate_knowledgeRoot(ctx context.Context, field graphql.CollectedField, obj *model.AgentTemplate) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentTemplate_knowledgeRoot(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.KnowledgeRoot, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_AgentTemplate_knowledgeRoot(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentTemplate", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _AgentTemplate_knowledgePrompt(ctx context.Context, field graphql.CollectedField, obj *model.AgentTemplate) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentTemplate_knowledgePrompt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.KnowledgePrompt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_AgentTemplate_knowledgePrompt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("AgentTemplate", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
@@ -16692,7 +16764,7 @@ func (ec *executionContext) unmarshalInputUpsertAgentTemplateInput(ctx context.C
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"kind", "display", "description", "installMethod", "installCommand", "status", "version"}
+	fieldsInOrder := [...]string{"kind", "display", "description", "installMethod", "installCommand", "status", "version", "knowledgeRoot", "knowledgePrompt"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -16748,6 +16820,20 @@ func (ec *executionContext) unmarshalInputUpsertAgentTemplateInput(ctx context.C
 				return it, err
 			}
 			it.Version = data
+		case "knowledgeRoot":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("knowledgeRoot"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.KnowledgeRoot = data
+		case "knowledgePrompt":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("knowledgePrompt"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.KnowledgePrompt = data
 		}
 	}
 	return it, nil
@@ -17382,6 +17468,16 @@ func (ec *executionContext) _AgentTemplate(ctx context.Context, sel ast.Selectio
 			}
 		case "version":
 			out.Values[i] = ec._AgentTemplate_version(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "knowledgeRoot":
+			out.Values[i] = ec._AgentTemplate_knowledgeRoot(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "knowledgePrompt":
+			out.Values[i] = ec._AgentTemplate_knowledgePrompt(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}

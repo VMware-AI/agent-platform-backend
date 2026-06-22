@@ -2,6 +2,7 @@ package catalog
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
@@ -47,6 +48,18 @@ func TestSeed_PopulatesActiveCatalog(t *testing.T) {
 	g, _ := db.AgentTemplate.Query().Where(agenttemplate.Kind("goose")).Only(ctx)
 	if g.InstallMethod != agenttemplate.InstallMethodOfflineTar {
 		t.Errorf("goose install_method = %s, want offline_tar", g.InstallMethod)
+	}
+
+	// LLD-11 K4: each active kind seeds its OKF grounding convention — an unpack
+	// root and a "consult local knowledge index.md first" (非 RAG) prompt.
+	for _, kind := range []string{"goose", "xiaoguai", "qoder"} {
+		got, _ := db.AgentTemplate.Query().Where(agenttemplate.Kind(kind)).Only(ctx)
+		if got.KnowledgeRoot != DefaultKnowledgeRoot {
+			t.Errorf("%s knowledge_root = %q, want %q", kind, got.KnowledgeRoot, DefaultKnowledgeRoot)
+		}
+		if !strings.Contains(got.KnowledgePrompt, "index.md") {
+			t.Errorf("%s knowledge_prompt should point at index.md, got %q", kind, got.KnowledgePrompt)
+		}
 	}
 }
 

@@ -37,15 +37,17 @@ type AgentSnapshot struct {
 }
 
 type AgentTemplate struct {
-	ID             string              `json:"id"`
-	Kind           string              `json:"kind"`
-	Display        string              `json:"display"`
-	Description    *string             `json:"description,omitempty"`
-	InstallMethod  InstallMethod       `json:"installMethod"`
-	InstallCommand *string             `json:"installCommand,omitempty"`
-	Status         AgentTemplateStatus `json:"status"`
-	Version        *string             `json:"version,omitempty"`
-	CreatedAt      time.Time           `json:"createdAt"`
+	ID              string              `json:"id"`
+	Kind            string              `json:"kind"`
+	Display         string              `json:"display"`
+	Description     *string             `json:"description,omitempty"`
+	InstallMethod   InstallMethod       `json:"installMethod"`
+	InstallCommand  *string             `json:"installCommand,omitempty"`
+	Status          AgentTemplateStatus `json:"status"`
+	Version         *string             `json:"version,omitempty"`
+	KnowledgeRoot   *string             `json:"knowledgeRoot,omitempty"`
+	KnowledgePrompt *string             `json:"knowledgePrompt,omitempty"`
+	CreatedAt       time.Time           `json:"createdAt"`
 }
 
 type AgentUsage struct {
@@ -393,13 +395,15 @@ type UpdateUserInput struct {
 }
 
 type UpsertAgentTemplateInput struct {
-	Kind           string              `json:"kind"`
-	Display        string              `json:"display"`
-	Description    *string             `json:"description,omitempty"`
-	InstallMethod  InstallMethod       `json:"installMethod"`
-	InstallCommand *string             `json:"installCommand,omitempty"`
-	Status         AgentTemplateStatus `json:"status"`
-	Version        *string             `json:"version,omitempty"`
+	Kind            string              `json:"kind"`
+	Display         string              `json:"display"`
+	Description     *string             `json:"description,omitempty"`
+	InstallMethod   InstallMethod       `json:"installMethod"`
+	InstallCommand  *string             `json:"installCommand,omitempty"`
+	Status          AgentTemplateStatus `json:"status"`
+	Version         *string             `json:"version,omitempty"`
+	KnowledgeRoot   *string             `json:"knowledgeRoot,omitempty"`
+	KnowledgePrompt *string             `json:"knowledgePrompt,omitempty"`
 }
 
 type UpsertArtifactInput struct {

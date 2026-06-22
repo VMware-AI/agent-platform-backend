@@ -24,5 +24,11 @@ func (AgentTemplate) Fields() []ent.Field {
 		field.String("install_command").Optional(),
 		field.Enum("status").Values("active", "deferred").Default("deferred"),
 		field.String("version").Optional(),
+		// OKF knowledge-grounding convention per agent kind (LLD-11 K4, OQ-3).
+		// knowledge_root = where the daemon unpacks mounted packs in the VM;
+		// knowledge_prompt = the system-prompt snippet telling the agent to consult
+		// the local knowledge index.md first (非 RAG: file navigation, not retrieval).
+		field.String("knowledge_root").Optional(),
+		field.String("knowledge_prompt").Optional(),
 	}
 }
