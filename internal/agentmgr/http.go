@@ -16,6 +16,9 @@ func Handler(svc *Service) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /v1/agents/{vm_id}/enroll", svc.handleEnroll)
 	mux.HandleFunc("POST /v1/agents/{vm_id}/heartbeat", svc.handleHeartbeat)
+	// LLD-11 §6: knowledge-pack delivery over the same authenticated channel.
+	mux.HandleFunc("GET /v1/agents/{vm_id}/knowledge", svc.handleKnowledgeList)
+	mux.HandleFunc("GET /v1/agents/{vm_id}/knowledge/{artifact_id}", svc.handleKnowledgeGet)
 	return mux
 }
 
