@@ -905,6 +905,34 @@ func applyAgentSort(q *ent.AgentQuery, sort *model.AgentSort) *ent.AgentQuery {
 	return q.Order(ent.Asc(col), ent.Asc(agent.FieldID))
 }
 
+// applyUserSort orders the user query per the requested field (模块① 用户与权限),
+// id as a stable tiebreaker. All columns are native to users — no joins needed.
+func applyUserSort(q *ent.UserQuery, sort *model.UserSort) *ent.UserQuery {
+	if sort == nil {
+		return q.Order(orderNewest)
+	}
+	desc := sort.Direction == model.SortDirectionDesc
+	col := ""
+	switch sort.Field {
+	case model.UserSortFieldUsername:
+		col = user.FieldUsername
+	case model.UserSortFieldEmail:
+		col = user.FieldEmail
+	case model.UserSortFieldRole:
+		col = user.FieldRole
+	case model.UserSortFieldCreatedAt:
+		col = user.FieldCreatedAt
+	case model.UserSortFieldLastLogin:
+		col = user.FieldLastLoginAt
+	default:
+		return q.Order(orderNewest)
+	}
+	if desc {
+		return q.Order(ent.Desc(col), ent.Desc(user.FieldID))
+	}
+	return q.Order(ent.Asc(col), ent.Asc(user.FieldID))
+}
+
 // joinOrder orders agents by a column on a related table (owner username / key
 // alias). LEFT JOIN keeps agents with no owner/key; id is the stable tiebreaker.
 func joinOrder(table, fk, col string, desc bool) func(*sql.Selector) {

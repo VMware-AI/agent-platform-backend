@@ -68,13 +68,13 @@ func TestUsers_TenantScoped(t *testing.T) {
 	}
 
 	// platform admin sees both
-	all, err := qr.Users(admin, nil)
+	all, err := qr.Users(admin, nil, nil, nil)
 	if err != nil || all.Total != 2 || len(all.Items) != 2 {
 		t.Fatalf("admin should see all users: total=%d items=%d err=%v", all.Total, len(all.Items), err)
 	}
 
 	// tenant-admin of t1 sees only u1 (both total and items scoped)
-	scoped, err := qr.Users(tenantAdminCtx("11111111-1111-1111-1111-111111111111", t1), nil)
+	scoped, err := qr.Users(tenantAdminCtx("11111111-1111-1111-1111-111111111111", t1), nil, nil, nil)
 	if err != nil {
 		t.Fatalf("t1 admin users: %v", err)
 	}

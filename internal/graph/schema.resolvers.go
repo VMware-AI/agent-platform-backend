@@ -262,7 +262,7 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 }
 
 // Users is the resolver for the users field.
-func (r *queryResolver) Users(ctx context.Context, page *model.PageInput) (*model.UserConnection, error) {
+func (r *queryResolver) Users(ctx context.Context, page *model.PageInput, filter *model.UserFilter, sort *model.UserSort) (*model.UserConnection, error) {
 	limit, offset := pageBounds(page)
 	// Tenant isolation (C1): a tenant-admin sees only their tenant's users; both
 	// the count and the page must use the same scope or totals/pages disagree.
@@ -274,11 +274,24 @@ func (r *queryResolver) Users(ctx context.Context, page *model.PageInput) (*mode
 			base = base.Where(user.TenantID(d.tenant))
 		}
 	}
+	// UI filters on top of the tenant scope (模块① 用户与权限). Count + page share
+	// the same scoped+filtered base so totals/pages stay consistent.
+	if filter != nil {
+		if v := derefString(filter.Search); v != "" {
+			base = base.Where(user.Or(user.UsernameContainsFold(v), user.EmailContainsFold(v)))
+		}
+		if filter.Role != nil {
+			base = base.Where(user.RoleEQ(user.Role(gqlRoleToEnt(*filter.Role))))
+		}
+		if filter.Active != nil {
+			base = base.Where(user.IsActiveEQ(*filter.Active))
+		}
+	}
 	total, err := base.Clone().Count(ctx)
 	if err != nil {
 		return nil, err
 	}
-	us, err := base.Clone().Order(orderNewest).Limit(limit).Offset(offset).All(ctx)
+	us, err := applyUserSort(base.Clone(), sort).Limit(limit).Offset(offset).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -287,6 +300,17 @@ func (r *queryResolver) Users(ctx context.Context, page *model.PageInput) (*mode
 		items = append(items, *toModelUser(u))
 	}
 	return &model.UserConnection{Items: items, Total: total}, nil
+}
+
+// Roles lists the built-in assignable roles for the user-form picker (模块①). The
+// set is fixed (no custom roles this phase); labels are zh-first for the UI.
+func (r *queryResolver) Roles(ctx context.Context) ([]model.RoleInfo, error) {
+	return []model.RoleInfo{
+		{Value: model.RoleAdmin, Label: "管理员", Description: "平台全局管理权限"},
+		{Value: model.RoleTenantAdmin, Label: "租户管理员", Description: "管理本租户的用户与资源"},
+		{Value: model.RoleUser, Label: "普通用户", Description: "自助创建与管理自己的智能体"},
+		{Value: model.RoleObservability, Label: "可观测", Description: "查看计量、日志与审计(只读)"},
+	}, nil
 }
 
 // AuditLogs is the resolver for the auditLogs field.

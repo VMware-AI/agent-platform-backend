@@ -379,6 +379,12 @@ type RevertAgentSnapshotInput struct {
 	Confirm      bool   `json:"confirm"`
 }
 
+type RoleInfo struct {
+	Value       Role   `json:"value"`
+	Label       string `json:"label"`
+	Description string `json:"description"`
+}
+
 type RouterTier struct {
 	ID         string          `json:"id"`
 	Tier       RouterTierLevel `json:"tier"`
@@ -519,6 +525,17 @@ type User struct {
 type UserConnection struct {
 	Items []User `json:"items"`
 	Total int    `json:"total"`
+}
+
+type UserFilter struct {
+	Search *string `json:"search,omitempty"`
+	Role   *Role   `json:"role,omitempty"`
+	Active *bool   `json:"active,omitempty"`
+}
+
+type UserSort struct {
+	Field     UserSortField `json:"field"`
+	Direction SortDirection `json:"direction"`
 }
 
 type VMTemplate struct {
@@ -1349,6 +1366,67 @@ func (e *UpstreamProvider) UnmarshalJSON(b []byte) error {
 }
 
 func (e UpstreamProvider) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type UserSortField string
+
+const (
+	UserSortFieldUsername  UserSortField = "USERNAME"
+	UserSortFieldEmail     UserSortField = "EMAIL"
+	UserSortFieldRole      UserSortField = "ROLE"
+	UserSortFieldCreatedAt UserSortField = "CREATED_AT"
+	UserSortFieldLastLogin UserSortField = "LAST_LOGIN"
+)
+
+var AllUserSortField = []UserSortField{
+	UserSortFieldUsername,
+	UserSortFieldEmail,
+	UserSortFieldRole,
+	UserSortFieldCreatedAt,
+	UserSortFieldLastLogin,
+}
+
+func (e UserSortField) IsValid() bool {
+	switch e {
+	case UserSortFieldUsername, UserSortFieldEmail, UserSortFieldRole, UserSortFieldCreatedAt, UserSortFieldLastLogin:
+		return true
+	}
+	return false
+}
+
+func (e UserSortField) String() string {
+	return string(e)
+}
+
+func (e *UserSortField) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = UserSortField(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid UserSortField", str)
+	}
+	return nil
+}
+
+func (e UserSortField) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *UserSortField) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e UserSortField) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

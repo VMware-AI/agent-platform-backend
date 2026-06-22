@@ -317,12 +317,13 @@ type ComplexityRoot struct {
 		RateLimitPolicies  func(childComplexity int) int
 		RequestLogs        func(childComplexity int, filter *model.RequestLogFilter, page *model.PageInput) int
 		ResourcePools      func(childComplexity int) int
+		Roles              func(childComplexity int) int
 		RouterTiers        func(childComplexity int) int
 		Skills             func(childComplexity int) int
 		TokenUsage         func(childComplexity int, userID *string, page *model.PageInput) int
 		Upstreams          func(childComplexity int) int
 		UserRoles          func(childComplexity int, userID string) int
-		Users              func(childComplexity int, page *model.PageInput) int
+		Users              func(childComplexity int, page *model.PageInput, filter *model.UserFilter, sort *model.UserSort) int
 		VMTemplates        func(childComplexity int, resourcePoolID string) int
 		VirtualKeys        func(childComplexity int, userID *string) int
 	}
@@ -361,6 +362,12 @@ type ComplexityRoot struct {
 		Name            func(childComplexity int) int
 		Status          func(childComplexity int) int
 		VMCount         func(childComplexity int) int
+	}
+
+	RoleInfo struct {
+		Description func(childComplexity int) int
+		Label       func(childComplexity int) int
+		Value       func(childComplexity int) int
 	}
 
 	RouterTier struct {
@@ -519,7 +526,8 @@ type MutationResolver interface {
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
-	Users(ctx context.Context, page *model.PageInput) (*model.UserConnection, error)
+	Users(ctx context.Context, page *model.PageInput, filter *model.UserFilter, sort *model.UserSort) (*model.UserConnection, error)
+	Roles(ctx context.Context) ([]model.RoleInfo, error)
 	AuditLogs(ctx context.Context, filter *model.AuditFilter, page *model.PageInput) (*model.AuditConnection, error)
 	AgentTemplates(ctx context.Context) ([]model.AgentTemplate, error)
 	AgentConfigs(ctx context.Context, agentType *string) ([]model.AgentConfig, error)
@@ -2123,6 +2131,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.ResourcePools(childComplexity), true
+	case "Query.roles":
+		if e.ComplexityRoot.Query.Roles == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.Roles(childComplexity), true
 	case "Query.routerTiers":
 		if e.ComplexityRoot.Query.RouterTiers == nil {
 			break
@@ -2173,7 +2187,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Query.Users(childComplexity, args["page"].(*model.PageInput)), true
+		return e.ComplexityRoot.Query.Users(childComplexity, args["page"].(*model.PageInput), args["filter"].(*model.UserFilter), args["sort"].(*model.UserSort)), true
 	case "Query.vmTemplates":
 		if e.ComplexityRoot.Query.VMTemplates == nil {
 			break
@@ -2361,6 +2375,25 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ResourcePool.VMCount(childComplexity), true
+
+	case "RoleInfo.description":
+		if e.ComplexityRoot.RoleInfo.Description == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RoleInfo.Description(childComplexity), true
+	case "RoleInfo.label":
+		if e.ComplexityRoot.RoleInfo.Label == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RoleInfo.Label(childComplexity), true
+	case "RoleInfo.value":
+		if e.ComplexityRoot.RoleInfo.Value == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RoleInfo.Value(childComplexity), true
 
 	case "RouterTier.id":
 		if e.ComplexityRoot.RouterTier.ID == nil {
@@ -2715,6 +2748,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputUpsertRateLimitPolicyInput,
 		ec.unmarshalInputUpsertSkillInput,
 		ec.unmarshalInputUpsertUpstreamInput,
+		ec.unmarshalInputUserFilter,
+		ec.unmarshalInputUserSort,
 	)
 	first := true
 
@@ -3585,6 +3620,34 @@ input UpdateUserInput {
   role: Role
 }
 
+# Built-in assignable role with a display label, for the user-form role picker
+# (模块① 用户与权限). 本期用内置角色,不支持自定义角色 UI.
+type RoleInfo {
+  value: Role!
+  label: String!
+  description: String!
+}
+
+input UserFilter {
+  # substring match on username / email
+  search: String
+  role: Role
+  active: Boolean
+}
+
+enum UserSortField {
+  USERNAME
+  EMAIL
+  ROLE
+  CREATED_AT
+  LAST_LOGIN
+}
+
+input UserSort {
+  field: UserSortField!
+  direction: SortDirection!
+}
+
 input PageInput {
   limit: Int = 50
   offset: Int = 0
@@ -3602,7 +3665,9 @@ type AuditConnection {
 
 type Query {
   me: User!
-  users(page: PageInput): UserConnection! @hasRole(any: [admin, tenant_admin])
+  users(page: PageInput, filter: UserFilter, sort: UserSort): UserConnection! @hasRole(any: [admin, tenant_admin])
+  # Built-in assignable roles for user-form pickers (模块① 用户与权限).
+  roles: [RoleInfo!]! @hasRole(any: [admin, tenant_admin])
   auditLogs(filter: AuditFilter, page: PageInput): AuditConnection! @hasPermission(perm: "audit:view")
 }
 
@@ -4144,6 +4209,18 @@ func (ec *executionContext) childFields_ResourcePool(ctx context.Context, field 
 		return ec.fieldContext_ResourcePool_createdAt(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type ResourcePool", field.Name)
+}
+
+func (ec *executionContext) childFields_RoleInfo(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "value":
+		return ec.fieldContext_RoleInfo_value(ctx, field)
+	case "label":
+		return ec.fieldContext_RoleInfo_label(ctx, field)
+	case "description":
+		return ec.fieldContext_RoleInfo_description(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type RoleInfo", field.Name)
 }
 
 func (ec *executionContext) childFields_RouterTier(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -5637,6 +5714,22 @@ func (ec *executionContext) field_Query_users_args(ctx context.Context, rawArgs 
 		return nil, err
 	}
 	args["page"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
+		func(ctx context.Context, v any) (*model.UserFilter, error) {
+			return ec.unmarshalOUserFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUserFilter(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["filter"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
+		func(ctx context.Context, v any) (*model.UserSort, error) {
+			return ec.unmarshalOUserSort2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUserSort(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["sort"] = arg2
 	return args, nil
 }
 
@@ -12103,7 +12196,7 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().Users(ctx, fc.Args["page"].(*model.PageInput))
+			return ec.Resolvers.Query().Users(ctx, fc.Args["page"].(*model.PageInput), fc.Args["filter"].(*model.UserFilter), fc.Args["sort"].(*model.UserSort))
 		},
 		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
 			directive0 := next
@@ -12151,6 +12244,56 @@ func (ec *executionContext) fieldContext_Query_users(ctx context.Context, field 
 	if fc.Args, err = ec.field_Query_users_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_roles(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_roles(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().Roles(ctx)
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleᚄ(ctx, []any{"admin", "tenant_admin"})
+				if err != nil {
+					var zeroVal []model.RoleInfo
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal []model.RoleInfo
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v []model.RoleInfo) graphql.Marshaler {
+			return ec.marshalNRoleInfo2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleInfoᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_roles(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_RoleInfo(ctx, field)
+		},
 	}
 	return fc, nil
 }
@@ -14064,6 +14207,75 @@ func (ec *executionContext) _ResourcePool_createdAt(ctx context.Context, field g
 }
 func (ec *executionContext) fieldContext_ResourcePool_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _RoleInfo_value(ctx context.Context, field graphql.CollectedField, obj *model.RoleInfo) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RoleInfo_value(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Value, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.Role) graphql.Marshaler {
+			return ec.marshalNRole2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRole(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RoleInfo_value(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RoleInfo", field, false, false, errors.New("field of type Role does not have child fields"))
+}
+
+func (ec *executionContext) _RoleInfo_label(ctx context.Context, field graphql.CollectedField, obj *model.RoleInfo) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RoleInfo_label(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Label, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RoleInfo_label(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RoleInfo", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _RoleInfo_description(ctx context.Context, field graphql.CollectedField, obj *model.RoleInfo) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RoleInfo_description(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Description, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RoleInfo_description(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RoleInfo", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _RouterTier_id(ctx context.Context, field graphql.CollectedField, obj *model.RouterTier) (ret graphql.Marshaler) {
@@ -17907,6 +18119,87 @@ func (ec *executionContext) unmarshalInputUpsertUpstreamInput(ctx context.Contex
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputUserFilter(ctx context.Context, obj any) (model.UserFilter, error) {
+	var it model.UserFilter
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"search", "role", "active"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "search":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("search"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Search = data
+		case "role":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("role"))
+			data, err := ec.unmarshalORole2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRole(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Role = data
+		case "active":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("active"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Active = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUserSort(ctx context.Context, obj any) (model.UserSort, error) {
+	var it model.UserSort
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"field", "direction"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "field":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			data, err := ec.unmarshalNUserSortField2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUserSortField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Field = data
+		case "direction":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			data, err := ec.unmarshalNSortDirection2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSortDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Direction = data
+		}
+	}
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -19980,6 +20273,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "roles":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_roles(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "auditLogs":
 			field := field
 
@@ -20778,6 +21093,55 @@ func (ec *executionContext) _ResourcePool(ctx context.Context, sel ast.Selection
 			}
 		case "createdAt":
 			out.Values[i] = ec._ResourcePool_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var roleInfoImplementors = []string{"RoleInfo"}
+
+func (ec *executionContext) _RoleInfo(ctx context.Context, sel ast.SelectionSet, obj *model.RoleInfo) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, roleInfoImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RoleInfo")
+		case "value":
+			out.Values[i] = ec._RoleInfo_value(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "label":
+			out.Values[i] = ec._RoleInfo_label(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "description":
+			out.Values[i] = ec._RoleInfo_description(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -22708,6 +23072,26 @@ func (ec *executionContext) marshalNRole2ᚕgithubᚗcomᚋVMwareᚑAIᚋagent�
 	return ret
 }
 
+func (ec *executionContext) marshalNRoleInfo2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleInfo(ctx context.Context, sel ast.SelectionSet, v model.RoleInfo) graphql.Marshaler {
+	return ec._RoleInfo(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNRoleInfo2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleInfoᚄ(ctx context.Context, sel ast.SelectionSet, v []model.RoleInfo) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNRoleInfo2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleInfo(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) unmarshalNRotationKind2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRotationKind(ctx context.Context, v any) (model.RotationKind, error) {
 	var res model.RotationKind
 	err := res.UnmarshalGQL(v)
@@ -23041,6 +23425,16 @@ func (ec *executionContext) marshalNUserConnection2ᚖgithubᚗcomᚋVMwareᚑAI
 		return graphql.Null
 	}
 	return ec._UserConnection(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNUserSortField2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUserSortField(ctx context.Context, v any) (model.UserSortField, error) {
+	var res model.UserSortField
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNUserSortField2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUserSortField(ctx context.Context, sel ast.SelectionSet, v model.UserSortField) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) marshalNVMTemplate2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVMTemplate(ctx context.Context, sel ast.SelectionSet, v model.VMTemplate) graphql.Marshaler {
@@ -23541,6 +23935,22 @@ func (ec *executionContext) marshalOUser2ᚖgithubᚗcomᚋVMwareᚑAIᚋagent�
 		return graphql.Null
 	}
 	return ec._User(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOUserFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUserFilter(ctx context.Context, v any) (*model.UserFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputUserFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOUserSort2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUserSort(ctx context.Context, v any) (*model.UserSort, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputUserSort(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {
