@@ -3524,13 +3524,20 @@ type ResourcePool {
 input RegisterResourcePoolInput {
   name: String!
   endpoint: String!
-  # Reference into the secret store (Vaultwarden); never a plaintext credential.
+  # vCenter (JVC) 用户名/密码(接入表单填写)。后端写入 secret store(Vaultwarden)
+  # 并只存返回的引用,明文不落库;优先于 secretRef。
+  username: String
+  password: String
+  # 已有 secret store 引用(高级/预置);与 username/password 二选一。
   secretRef: String
 }
 
 input UpdateResourcePoolInput {
   name: String
   endpoint: String
+  # 重填凭据(轮换):同 register,写 secret store 后只存引用。
+  username: String
+  password: String
   secretRef: String
 }
 
@@ -17388,7 +17395,7 @@ func (ec *executionContext) unmarshalInputRegisterResourcePoolInput(ctx context.
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "endpoint", "secretRef"}
+	fieldsInOrder := [...]string{"name", "endpoint", "username", "password", "secretRef"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -17409,6 +17416,20 @@ func (ec *executionContext) unmarshalInputRegisterResourcePoolInput(ctx context.
 				return it, err
 			}
 			it.Endpoint = data
+		case "username":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("username"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Username = data
+		case "password":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("password"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Password = data
 		case "secretRef":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretRef"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -17608,7 +17629,7 @@ func (ec *executionContext) unmarshalInputUpdateResourcePoolInput(ctx context.Co
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "endpoint", "secretRef"}
+	fieldsInOrder := [...]string{"name", "endpoint", "username", "password", "secretRef"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -17629,6 +17650,20 @@ func (ec *executionContext) unmarshalInputUpdateResourcePoolInput(ctx context.Co
 				return it, err
 			}
 			it.Endpoint = data
+		case "username":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("username"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Username = data
+		case "password":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("password"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Password = data
 		case "secretRef":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretRef"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)

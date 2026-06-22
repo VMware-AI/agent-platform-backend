@@ -18,11 +18,16 @@ import (
 
 // RegisterResourcePool is the resolver for the registerResourcePool field.
 func (r *mutationResolver) RegisterResourcePool(ctx context.Context, input model.RegisterResourcePoolInput) (*model.ResourcePool, error) {
+	// 接入表单的 vCenter 用户名/密码 → secret store(明文不落库),或既有 secretRef。
+	ref, set, err := r.resolvePoolSecretRef(ctx, input.Name, input.Username, input.Password, input.SecretRef)
+	if err != nil {
+		return nil, err
+	}
 	create := r.Ent.ResourcePool.Create().
 		SetName(input.Name).
 		SetEndpoint(input.Endpoint)
-	if input.SecretRef != nil {
-		create.SetSecretRef(*input.SecretRef)
+	if set {
+		create.SetSecretRef(ref)
 	}
 	p, err := create.Save(ctx)
 	if err != nil {
@@ -45,8 +50,14 @@ func (r *mutationResolver) UpdateResourcePool(ctx context.Context, id string, in
 	if input.Endpoint != nil {
 		u.SetEndpoint(*input.Endpoint)
 	}
-	if input.SecretRef != nil {
-		u.SetSecretRef(*input.SecretRef)
+	// Credential rotation: re-submitted username/password → secret store; or a new
+	// explicit secretRef. Untouched when none provided.
+	ref, set, err := r.resolvePoolSecretRef(ctx, id, input.Username, input.Password, input.SecretRef)
+	if err != nil {
+		return nil, err
+	}
+	if set {
+		u.SetSecretRef(ref)
 	}
 	p, err := u.Save(ctx)
 	if err != nil {

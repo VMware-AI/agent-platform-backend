@@ -21,6 +21,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/catalog"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/VMware-AI/agent-platform-backend/internal/httpx"
+	"github.com/VMware-AI/agent-platform-backend/internal/secrets"
 	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 )
 
@@ -903,6 +904,31 @@ func applyAgentSort(q *ent.AgentQuery, sort *model.AgentSort) *ent.AgentQuery {
 		return q.Order(ent.Desc(col), ent.Desc(agent.FieldID))
 	}
 	return q.Order(ent.Asc(col), ent.Asc(agent.FieldID))
+}
+
+// resolvePoolSecretRef turns a resource-pool credential submission into a stored
+// secret reference (模块② 接入). The 接入表单 sends a vCenter username/password;
+// the backend writes them to the secret store (Vaultwarden) and persists ONLY the
+// returned ref — plaintext never lands in the DB. An explicit secretRef (pre-existing
+// item) is accepted as an alternative. Returns set=false when no credential was given
+// (leave secret_ref untouched). label seeds the secret-store item name.
+func (r *Resolver) resolvePoolSecretRef(ctx context.Context, label string, username, password, secretRef *string) (ref string, set bool, err error) {
+	u, p := derefString(username), derefString(password)
+	if u != "" || p != "" {
+		store, ok := r.Secrets.(secrets.Store)
+		if !ok {
+			return "", false, gqlerror.Errorf("secret store not configured; cannot accept credentials")
+		}
+		ref, err := store.Put(ctx, "resourcepool/"+label, secrets.Credential{Username: u, Password: p})
+		if err != nil {
+			return "", false, fmt.Errorf("store pool credentials: %w", err)
+		}
+		return ref, true, nil
+	}
+	if secretRef != nil && *secretRef != "" {
+		return *secretRef, true, nil
+	}
+	return "", false, nil
 }
 
 // applyUserSort orders the user query per the requested field (模块① 用户与权限),

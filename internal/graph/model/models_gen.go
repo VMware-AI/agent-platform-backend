@@ -336,6 +336,8 @@ type RegisterGatewayConnectionInput struct {
 type RegisterResourcePoolInput struct {
 	Name      string  `json:"name"`
 	Endpoint  string  `json:"endpoint"`
+	Username  *string `json:"username,omitempty"`
+	Password  *string `json:"password,omitempty"`
 	SecretRef *string `json:"secretRef,omitempty"`
 }
 
@@ -430,6 +432,8 @@ type UpdateAgentConfigInput struct {
 type UpdateResourcePoolInput struct {
 	Name      *string `json:"name,omitempty"`
 	Endpoint  *string `json:"endpoint,omitempty"`
+	Username  *string `json:"username,omitempty"`
+	Password  *string `json:"password,omitempty"`
 	SecretRef *string `json:"secretRef,omitempty"`
 }
 
