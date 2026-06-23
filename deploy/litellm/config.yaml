@@ -4,6 +4,9 @@
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
   database_url: os.environ/DATABASE_URL
+  # Required so the control plane can add models at runtime via /model/new
+  # (persisted to the DB) instead of only via config.yaml.
+  store_model_in_db: true
 
 litellm_settings:
   drop_params: true # tolerate provider param differences
