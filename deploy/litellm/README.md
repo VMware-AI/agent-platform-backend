@@ -7,12 +7,27 @@ litellm's admin API. This stack lets you test that integration locally **without
 VM** (just Docker).
 
 ## 1. Start litellm
+
+**Quick start (recommended):**
 ```bash
 cd deploy/litellm
+./start.sh                          # auto-generates .env (master key) + brings it up
+# or seed your minimax key at the same time:
+MINIMAX_API_KEY=sk-... ./start.sh
+# ./start.sh down   (stop, keep pg)   |   ./start.sh nuke   (stop + wipe pg)
+```
+It prints the master key and the exact `make run` line for the backend.
+
+**Manual:**
+```bash
 cp .env.example .env        # set LITELLM_MASTER_KEY (sk-...), LITELLM_SALT_KEY, MINIMAX_API_KEY
 docker compose up -d
 curl -s http://localhost:4000/health/liveliness   # → "I'm alive!"
 ```
+
+> Verified end-to-end (2026-06-24): backend `upsertUpstream`→`/model/new`,
+> `issueVirtualKey`→`/key/generate`, then a virtual key → litellm → **a real
+> minimax completion** (`openai/MiniMax-Text-01` @ `api.minimaxi.com/v1`).
 litellm = `:4000`, its own postgres = `:5433` (won't clash with native pg on 5432).
 
 ## 2. Point the backend at it
