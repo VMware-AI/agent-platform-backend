@@ -13,7 +13,7 @@ import (
 func CSRF(allowedOrigins []string) func(http.Handler) http.Handler {
 	allowed := make(map[string]bool, len(allowedOrigins))
 	for _, o := range allowedOrigins {
-		if o = strings.TrimRight(strings.TrimSpace(o), "/"); o != "" {
+		if o = normalizeOrigin(o); o != "" {
 			allowed[o] = true
 		}
 	}
@@ -38,11 +38,19 @@ func CSRF(allowedOrigins []string) func(http.Handler) http.Handler {
 	}
 }
 
+// normalizeOrigin canonicalizes an origin / allowlist entry for comparison: trims
+// surrounding whitespace and a trailing slash. Shared by CSRF and CORS so their
+// allowlists agree (a "works server-side but the browser blocks it" mismatch
+// otherwise occurs when one trims and the other doesn't).
+func normalizeOrigin(o string) string {
+	return strings.TrimRight(strings.TrimSpace(o), "/")
+}
+
 // requestOrigin returns the scheme://host of the request's Origin header, or
 // derives it from Referer. Empty if neither is present/parseable.
 func requestOrigin(r *http.Request) string {
 	if o := r.Header.Get("Origin"); o != "" {
-		return strings.TrimRight(o, "/")
+		return normalizeOrigin(o)
 	}
 	if ref := r.Header.Get("Referer"); ref != "" {
 		if u, err := url.Parse(ref); err == nil && u.Scheme != "" && u.Host != "" {

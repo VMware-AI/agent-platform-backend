@@ -41,15 +41,18 @@ func (r *mutationResolver) Login(ctx context.Context, username string, password 
 		// Do not reveal whether the username exists.
 		return nil, gqlerror.Errorf("invalid credentials")
 	}
-	if !u.IsActive {
-		return nil, gqlerror.Errorf("account is disabled")
-	}
+	// Verify the password BEFORE revealing account state, so an unauthenticated
+	// caller can't probe which usernames/emails exist or are disabled (enumeration
+	// oracle). Disabled state is only disclosed to someone with the right password.
 	if err := auth.VerifyPassword(u.PasswordHash, password); err != nil {
 		if r.LoginLimiter != nil {
 			r.LoginLimiter.Fail(ctx, limitKey)
 		}
 		r.audit(ctx, "user.login", "user", u.ID.String(), false, u.ID.String())
 		return nil, gqlerror.Errorf("invalid credentials")
+	}
+	if !u.IsActive {
+		return nil, gqlerror.Errorf("account is disabled")
 	}
 	if r.LoginLimiter != nil {
 		r.LoginLimiter.Reset(ctx, limitKey) // clear failures on success
@@ -96,7 +99,12 @@ func (r *mutationResolver) Logout(ctx context.Context) (bool, error) {
 		}
 	}
 	if w := httpx.Writer(ctx); w != nil {
-		http.SetCookie(w, &http.Cookie{Name: auth.SessionCookie, Value: "", Path: "/", MaxAge: -1, HttpOnly: true})
+		// Mirror the attributes used when setting the cookie so the browser reliably
+		// matches and clears it.
+		http.SetCookie(w, &http.Cookie{
+			Name: auth.SessionCookie, Value: "", Path: "/", MaxAge: -1,
+			HttpOnly: true, Secure: r.SecureCookies, SameSite: http.SameSiteLaxMode,
+		})
 	}
 	return true, nil
 }
@@ -126,25 +134,32 @@ func (r *mutationResolver) ChangePassword(ctx context.Context, oldPassword strin
 	if _, err := r.Ent.User.UpdateOne(u).SetPasswordHash(hash).SetMustChangePassword(false).Save(ctx); err != nil {
 		return false, err
 	}
-	// Refresh the live session so must_change_password clears immediately (no
-	// re-login needed after the first-login change) and rotate the session id
-	// (defense against fixation across a credential change). Best-effort.
-	if req := httpx.Request(ctx); req != nil {
-		if c, cerr := req.Cookie(auth.SessionCookie); cerr == nil {
-			if data, gerr := r.Sessions.Get(c.Value); gerr == nil {
-				_ = r.Sessions.Delete(c.Value)
-				data.MustChange = false
-				data.ExpiresAt = time.Now().Add(r.SessionTTL)
-				if sid, serr := r.Sessions.Create(data); serr == nil {
-					if w := httpx.Writer(ctx); w != nil {
-						http.SetCookie(w, &http.Cookie{
-							Name: auth.SessionCookie, Value: sid, Path: "/",
-							HttpOnly: true, Secure: r.SecureCookies, SameSite: http.SameSiteLaxMode,
-							MaxAge: int(r.SessionTTL.Seconds()),
-						})
-					}
-				}
-			}
+	// Revoke ALL of the user's sessions (every device / any stale or hijacked
+	// session under the old password), then mint a fresh one for THIS request so
+	// the user isn't logged out and must_change_password clears immediately (no
+	// re-login). If Create fails the user simply logs in again — no stale session
+	// survives either way.
+	_ = r.Sessions.DeleteByUser(u.ID.String())
+	if w := httpx.Writer(ctx); w != nil {
+		tenant := ""
+		if u.TenantID != nil {
+			tenant = u.TenantID.String()
+		}
+		data := session.Data{
+			UserID:     u.ID.String(),
+			Username:   u.Username,
+			Role:       string(u.Role),
+			TenantID:   tenant,
+			MustChange: false,
+			IP:         clientIP(ctx),
+			ExpiresAt:  time.Now().Add(r.SessionTTL),
+		}
+		if sid, serr := r.Sessions.Create(data); serr == nil {
+			http.SetCookie(w, &http.Cookie{
+				Name: auth.SessionCookie, Value: sid, Path: "/",
+				HttpOnly: true, Secure: r.SecureCookies, SameSite: http.SameSiteLaxMode,
+				MaxAge: int(r.SessionTTL.Seconds()),
+			})
 		}
 	}
 	r.audit(ctx, "user.change_password", "user", u.ID.String(), true, cu.ID)
@@ -224,6 +239,9 @@ func (r *mutationResolver) SetUserActive(ctx context.Context, id string, active 
 	if err != nil {
 		return nil, err
 	}
+	if !active {
+		_ = r.Sessions.DeleteByUser(uid.String()) // disabling kicks out live sessions
+	}
 	r.audit(ctx, "user.set_active", "user", u.ID.String(), true, actorID(auth.FromContext(ctx)))
 	return toModelUser(u), nil
 }
@@ -248,6 +266,9 @@ func (r *mutationResolver) ResetPassword(ctx context.Context, userID string) (*m
 	if _, err := r.Ent.User.UpdateOneID(uid).SetPasswordHash(hash).SetMustChangePassword(true).Save(ctx); err != nil {
 		return nil, err
 	}
+	// Revoke the target's live sessions so the old password can't keep a session
+	// alive after an admin reset (they must log in with the temp password).
+	_ = r.Sessions.DeleteByUser(uid.String())
 	r.audit(ctx, "user.reset_password", "user", userID, true, actorID(auth.FromContext(ctx)))
 	return &model.TempPasswordPayload{UserID: userID, TempPassword: temp}, nil
 }
@@ -264,6 +285,7 @@ func (r *mutationResolver) DeleteUser(ctx context.Context, id string) (bool, err
 	if err := r.Ent.User.DeleteOneID(uid).Exec(ctx); err != nil {
 		return false, err
 	}
+	_ = r.Sessions.DeleteByUser(uid.String()) // a deleted user's sessions must die
 	r.audit(ctx, "user.delete", "user", id, true, actorID(auth.FromContext(ctx)))
 	return true, nil
 }

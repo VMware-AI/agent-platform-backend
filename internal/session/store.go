@@ -26,11 +26,14 @@ type Data struct {
 }
 
 // Store is the session persistence contract. Implemented by MemoryStore (dev/test)
-// and (later) a Redis store for production.
+// and a Redis store for production.
 type Store interface {
 	Create(data Data) (id string, err error)
 	Get(id string) (Data, error)
 	Delete(id string) error
+	// DeleteByUser revokes ALL of a user's sessions (every device). Used on a
+	// password change / admin reset so old credentials can't keep live sessions.
+	DeleteByUser(userID string) error
 }
 
 // NewID returns a cryptographically random 256-bit session id.
@@ -44,13 +47,17 @@ func NewID() (string, error) {
 
 // MemoryStore is a goroutine-safe in-memory Store for dev/test.
 type MemoryStore struct {
-	mu   sync.RWMutex
-	data map[string]Data
+	mu     sync.RWMutex
+	data   map[string]Data
+	byUser map[string]map[string]struct{} // userID → set of session ids
 }
 
 // NewMemoryStore returns an empty in-memory store.
 func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{data: make(map[string]Data)}
+	return &MemoryStore{
+		data:   make(map[string]Data),
+		byUser: make(map[string]map[string]struct{}),
+	}
 }
 
 func (m *MemoryStore) Create(d Data) (string, error) {
@@ -60,6 +67,12 @@ func (m *MemoryStore) Create(d Data) (string, error) {
 	}
 	m.mu.Lock()
 	m.data[id] = d
+	if d.UserID != "" {
+		if m.byUser[d.UserID] == nil {
+			m.byUser[d.UserID] = make(map[string]struct{})
+		}
+		m.byUser[d.UserID][id] = struct{}{}
+	}
 	m.mu.Unlock()
 	return id, nil
 }
@@ -80,7 +93,25 @@ func (m *MemoryStore) Get(id string) (Data, error) {
 
 func (m *MemoryStore) Delete(id string) error {
 	m.mu.Lock()
+	if d, ok := m.data[id]; ok {
+		if set := m.byUser[d.UserID]; set != nil {
+			delete(set, id)
+			if len(set) == 0 {
+				delete(m.byUser, d.UserID)
+			}
+		}
+	}
 	delete(m.data, id)
+	m.mu.Unlock()
+	return nil
+}
+
+func (m *MemoryStore) DeleteByUser(userID string) error {
+	m.mu.Lock()
+	for id := range m.byUser[userID] {
+		delete(m.data, id)
+	}
+	delete(m.byUser, userID)
 	m.mu.Unlock()
 	return nil
 }

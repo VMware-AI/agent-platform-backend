@@ -215,9 +215,13 @@ func main() {
 	}
 }
 
-// seedAdmin creates an initial admin user on an empty database. The bootstrap
-// password comes from ADMIN_BOOTSTRAP_PASSWORD; the admin must change it on
-// first login (must_change_password=true).
+// seedAdmin creates the initial super-admin (platform-global `admin` role) on an
+// empty database; all other users are created later via the UI. The bootstrap
+// password comes from ADMIN_BOOTSTRAP_PASSWORD.
+//
+// Forced first-login change applies ONLY to the insecure dev default: an operator
+// who set ADMIN_BOOTSTRAP_PASSWORD explicitly has already chosen a credential, so
+// the admin is usable immediately (must_change_password=false).
 func seedAdmin(ctx context.Context, client *ent.Client) error {
 	n, err := client.User.Query().Count(ctx)
 	if err != nil {
@@ -227,9 +231,11 @@ func seedAdmin(ctx context.Context, client *ent.Client) error {
 		return nil
 	}
 	pw := os.Getenv("ADMIN_BOOTSTRAP_PASSWORD")
+	mustChange := false
 	if pw == "" {
 		pw = "ChangeMe123!" // dev default; prod must set ADMIN_BOOTSTRAP_PASSWORD
-		log.Printf("WARNING: ADMIN_BOOTSTRAP_PASSWORD not set; using dev default")
+		mustChange = true   // insecure default → force a change on first login
+		log.Printf("WARNING: ADMIN_BOOTSTRAP_PASSWORD not set; using dev default (forced change on first login)")
 	}
 	hash, err := auth.HashPassword(pw)
 	if err != nil {
@@ -240,7 +246,7 @@ func seedAdmin(ctx context.Context, client *ent.Client) error {
 		SetEmail("admin@platform.local").
 		SetPasswordHash(hash).
 		SetRole(user.RoleAdmin).
-		SetMustChangePassword(true).
+		SetMustChangePassword(mustChange).
 		Save(ctx)
 	return err
 }

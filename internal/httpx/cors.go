@@ -15,12 +15,16 @@ import "net/http"
 func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
 	allowed := make(map[string]bool, len(allowedOrigins))
 	for _, o := range allowedOrigins {
-		allowed[o] = true
+		if o = normalizeOrigin(o); o != "" {
+			allowed[o] = true
+		}
 	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Echo the raw Origin back (browsers require an exact match), but compare
+			// using the shared normalization so the allowlist agrees with CSRF.
 			origin := r.Header.Get("Origin")
-			if origin != "" && allowed[origin] {
+			if origin != "" && allowed[normalizeOrigin(origin)] {
 				h := w.Header()
 				h.Set("Access-Control-Allow-Origin", origin)
 				h.Set("Access-Control-Allow-Credentials", "true")
