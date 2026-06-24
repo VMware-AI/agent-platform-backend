@@ -101,6 +101,8 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 	if input.Alias != nil {
 		create.SetAlias(*input.Alias)
 	}
+	// Optional expiry — no-op when the client omits it.
+	create.SetNillableExpiresAt(input.ExpiresAt)
 	if input.AgentID != nil {
 		if aid, err := uuid.Parse(*input.AgentID); err == nil {
 			create.SetAgentID(aid)

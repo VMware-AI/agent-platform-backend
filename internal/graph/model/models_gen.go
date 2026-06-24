@@ -277,15 +277,16 @@ type Image struct {
 }
 
 type IssueVirtualKeyInput struct {
-	UserID            string   `json:"userId"`
-	AgentID           *string  `json:"agentId,omitempty"`
-	RateLimitPolicyID *string  `json:"rateLimitPolicyId,omitempty"`
-	TeamID            *string  `json:"teamId,omitempty"`
-	Models            []string `json:"models,omitempty"`
-	MaxBudget         *float64 `json:"maxBudget,omitempty"`
-	RpmLimit          *int     `json:"rpmLimit,omitempty"`
-	TpmLimit          *int     `json:"tpmLimit,omitempty"`
-	Alias             *string  `json:"alias,omitempty"`
+	UserID            string     `json:"userId"`
+	AgentID           *string    `json:"agentId,omitempty"`
+	RateLimitPolicyID *string    `json:"rateLimitPolicyId,omitempty"`
+	TeamID            *string    `json:"teamId,omitempty"`
+	Models            []string   `json:"models,omitempty"`
+	MaxBudget         *float64   `json:"maxBudget,omitempty"`
+	RpmLimit          *int       `json:"rpmLimit,omitempty"`
+	TpmLimit          *int       `json:"tpmLimit,omitempty"`
+	Alias             *string    `json:"alias,omitempty"`
+	ExpiresAt         *time.Time `json:"expiresAt,omitempty"`
 }
 
 type IssuedVirtualKey struct {

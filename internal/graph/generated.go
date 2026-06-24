@@ -4716,6 +4716,8 @@ input IssueVirtualKeyInput {
   rpmLimit: Int
   tpmLimit: Int
   alias: String
+  # Optional expiry; when set, the key stops working at the gateway after this time.
+  expiresAt: Time
 }
 
 extend type Query {
@@ -20868,7 +20870,7 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"userId", "agentId", "rateLimitPolicyId", "teamId", "models", "maxBudget", "rpmLimit", "tpmLimit", "alias"}
+	fieldsInOrder := [...]string{"userId", "agentId", "rateLimitPolicyId", "teamId", "models", "maxBudget", "rpmLimit", "tpmLimit", "alias", "expiresAt"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -20938,6 +20940,13 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 				return it, err
 			}
 			it.Alias = data
+		case "expiresAt":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("expiresAt"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ExpiresAt = data
 		}
 	}
 	return it, nil
