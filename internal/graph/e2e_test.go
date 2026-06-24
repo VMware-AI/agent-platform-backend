@@ -137,27 +137,32 @@ func TestE2E_LoginFlowSetsCookie(t *testing.T) {
 	}
 	var resp struct {
 		Login struct {
+			Token              string
 			User               struct{ Username string }
 			MustChangePassword bool
 		}
 	}
 	e.gql.MustPost(
-		`mutation { login(username:"loginuser", password:"KnownPass1234"){ user{ username } mustChangePassword } }`,
+		`mutation { login(input:{email:"loginuser", password:"KnownPass1234"}){ token user{ username } mustChangePassword } }`,
 		&resp,
 	)
 	if resp.Login.User.Username != "loginuser" {
 		t.Fatalf("login failed: %+v", resp.Login)
+	}
+	if resp.Login.Token == "" {
+		t.Fatal("login must return a bearer token")
 	}
 
 	// The console login form collects an email — login must accept the email as the
 	// identifier too (not just the username).
 	var byEmail struct {
 		Login struct {
-			User struct{ Username string }
+			Token string
+			User  struct{ Username string }
 		}
 	}
 	e.gql.MustPost(
-		`mutation { login(username:"l@x.io", password:"KnownPass1234"){ user{ username } } }`,
+		`mutation { login(input:{email:"l@x.io", password:"KnownPass1234"}){ token user{ username } } }`,
 		&byEmail,
 	)
 	if byEmail.Login.User.Username != "loginuser" {

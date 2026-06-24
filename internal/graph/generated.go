@@ -135,6 +135,7 @@ type ComplexityRoot struct {
 
 	AuthPayload struct {
 		MustChangePassword func(childComplexity int) int
+		Token              func(childComplexity int) int
 		User               func(childComplexity int) int
 	}
 
@@ -246,7 +247,7 @@ type ComplexityRoot struct {
 		DeleteUser                 func(childComplexity int, id string) int
 		DeployAgent                func(childComplexity int, input model.DeployAgentInput) int
 		IssueVirtualKey            func(childComplexity int, input model.IssueVirtualKeyInput) int
-		Login                      func(childComplexity int, username string, password string) int
+		Login                      func(childComplexity int, input model.LoginInput) int
 		Logout                     func(childComplexity int) int
 		RecordRequestLog           func(childComplexity int, input model.RecordRequestLogInput) int
 		RecordTokenUsage           func(childComplexity int, input model.RecordTokenUsageInput) int
@@ -465,7 +466,7 @@ type AgentConfigResolver interface {
 	Knowledge(ctx context.Context, obj *model.AgentConfig) ([]model.Artifact, error)
 }
 type MutationResolver interface {
-	Login(ctx context.Context, username string, password string) (*model.AuthPayload, error)
+	Login(ctx context.Context, input model.LoginInput) (*model.AuthPayload, error)
 	Logout(ctx context.Context) (bool, error)
 	ChangePassword(ctx context.Context, oldPassword string, newPassword string) (bool, error)
 	CreateUser(ctx context.Context, input model.CreateUserInput) (*model.User, error)
@@ -961,6 +962,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.AuthPayload.MustChangePassword(childComplexity), true
+	case "AuthPayload.token":
+		if e.ComplexityRoot.AuthPayload.Token == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AuthPayload.Token(childComplexity), true
 	case "AuthPayload.user":
 		if e.ComplexityRoot.AuthPayload.User == nil {
 			break
@@ -1543,7 +1550,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Mutation.Login(childComplexity, args["username"].(string), args["password"].(string)), true
+		return e.ComplexityRoot.Mutation.Login(childComplexity, args["input"].(model.LoginInput)), true
 	case "Mutation.logout":
 		if e.ComplexityRoot.Mutation.Logout == nil {
 			break
@@ -2753,6 +2760,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCreateUserInput,
 		ec.unmarshalInputDeployAgentInput,
 		ec.unmarshalInputIssueVirtualKeyInput,
+		ec.unmarshalInputLoginInput,
 		ec.unmarshalInputPageInput,
 		ec.unmarshalInputPagination,
 		ec.unmarshalInputRecordRequestLogInput,
@@ -3624,8 +3632,17 @@ type User {
 }
 
 type AuthPayload {
+  # Bearer token (= session id). The client stores it and sends it as
+  # ` + "`" + `Authorization: Bearer <token>` + "`" + ` on subsequent requests (前后端整合:token 认证).
+  token: String!
   user: User!
   mustChangePassword: Boolean!
+}
+
+input LoginInput {
+  # The console login form collects an email; the backend accepts username or email.
+  email: String!
+  password: String!
 }
 
 type TempPasswordPayload {
@@ -3718,7 +3735,7 @@ type Query {
 }
 
 type Mutation {
-  login(username: String!, password: String!): AuthPayload!
+  login(input: LoginInput!): AuthPayload!
   logout: Boolean!
   changePassword(oldPassword: String!, newPassword: String!): Boolean!
 
@@ -3985,6 +4002,8 @@ func (ec *executionContext) childFields_AuditLog(ctx context.Context, field grap
 
 func (ec *executionContext) childFields_AuthPayload(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
+	case "token":
+		return ec.fieldContext_AuthPayload_token(ctx, field)
 	case "user":
 		return ec.fieldContext_AuthPayload_user(ctx, field)
 	case "mustChangePassword":
@@ -4914,22 +4933,14 @@ func (ec *executionContext) field_Mutation_issueVirtualKey_args(ctx context.Cont
 func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "username",
-		func(ctx context.Context, v any) (string, error) {
-			return ec.unmarshalNString2string(ctx, v)
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.LoginInput, error) {
+			return ec.unmarshalNLoginInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoginInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["username"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "password",
-		func(ctx context.Context, v any) (string, error) {
-			return ec.unmarshalNString2string(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["password"] = arg1
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -7354,6 +7365,29 @@ func (ec *executionContext) fieldContext_AuditLog_createdAt(_ context.Context, f
 	return graphql.NewScalarFieldContext("AuditLog", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
+func (ec *executionContext) _AuthPayload_token(ctx context.Context, field graphql.CollectedField, obj *model.AuthPayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AuthPayload_token(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Token, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AuthPayload_token(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AuthPayload", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _AuthPayload_user(ctx context.Context, field graphql.CollectedField, obj *model.AuthPayload) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -8660,7 +8694,7 @@ func (ec *executionContext) _Mutation_login(ctx context.Context, field graphql.C
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().Login(ctx, fc.Args["username"].(string), fc.Args["password"].(string))
+			return ec.Resolvers.Mutation().Login(ctx, fc.Args["input"].(model.LoginInput))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *model.AuthPayload) graphql.Marshaler {
@@ -17223,6 +17257,43 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputLoginInput(ctx context.Context, obj any) (model.LoginInput, error) {
+	var it model.LoginInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"email", "password"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "email":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Email = data
+		case "password":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("password"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Password = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputPageInput(ctx context.Context, obj any) (model.PageInput, error) {
 	var it model.PageInput
 	if obj == nil {
@@ -19203,6 +19274,11 @@ func (ec *executionContext) _AuthPayload(ctx context.Context, sel ast.SelectionS
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("AuthPayload")
+		case "token":
+			out.Values[i] = ec._AuthPayload_token(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "user":
 			out.Values[i] = ec._AuthPayload_user(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -22982,6 +23058,11 @@ func (ec *executionContext) unmarshalNLoadBalanceStrategy2githubᚗcomᚋVMware�
 
 func (ec *executionContext) marshalNLoadBalanceStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalanceStrategy(ctx context.Context, sel ast.SelectionSet, v model.LoadBalanceStrategy) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) unmarshalNLoginInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoginInput(ctx context.Context, v any) (model.LoginInput, error) {
+	res, err := ec.unmarshalInputLoginInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNMembership2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMembership(ctx context.Context, sel ast.SelectionSet, v model.Membership) graphql.Marshaler {

@@ -24,17 +24,18 @@ import (
 )
 
 // Login is the resolver for the login field.
-func (r *mutationResolver) Login(ctx context.Context, username string, password string) (*model.AuthPayload, error) {
+func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*model.AuthPayload, error) {
 	// Brute-force throttle, keyed by account+IP (so one attacker can't lock out
 	// a victim, and one IP can't grind an account).
-	limitKey := "login:" + username + "|" + clientIP(ctx)
+	ident := input.Email
+	limitKey := "login:" + ident + "|" + clientIP(ctx)
 	if r.LoginLimiter != nil && r.LoginLimiter.Blocked(ctx, limitKey) {
 		return nil, gqlerror.Errorf("too many failed login attempts; try again later")
 	}
 	// Accept either the username or the email as the login identifier — the console
 	// login form collects an email, while seeded/service accounts use a username.
 	u, err := r.Ent.User.Query().
-		Where(user.Or(user.Username(username), user.Email(username))).Only(ctx)
+		Where(user.Or(user.Username(ident), user.Email(ident))).Only(ctx)
 	if err != nil {
 		if r.LoginLimiter != nil {
 			r.LoginLimiter.Fail(ctx, limitKey)
@@ -45,7 +46,7 @@ func (r *mutationResolver) Login(ctx context.Context, username string, password 
 	// Verify the password BEFORE revealing account state, so an unauthenticated
 	// caller can't probe which usernames/emails exist or are disabled (enumeration
 	// oracle). Disabled state is only disclosed to someone with the right password.
-	if err := auth.VerifyPassword(u.PasswordHash, password); err != nil {
+	if err := auth.VerifyPassword(u.PasswordHash, input.Password); err != nil {
 		if r.LoginLimiter != nil {
 			r.LoginLimiter.Fail(ctx, limitKey)
 		}
@@ -89,7 +90,10 @@ func (r *mutationResolver) Login(ctx context.Context, username string, password 
 		return nil, err
 	}
 	r.audit(ctx, "user.login", "user", u.ID.String(), true, u.ID.String())
-	return &model.AuthPayload{User: toModelUser(u), MustChangePassword: u.MustChangePassword}, nil
+	// Return the session id as a Bearer token (the console stores it and sends it as
+	// `Authorization: Bearer <token>`); the cookie above is also set for browser
+	// same-origin use, so both transports work.
+	return &model.AuthPayload{Token: sid, User: toModelUser(u), MustChangePassword: u.MustChangePassword}, nil
 }
 
 // Logout is the resolver for the logout field.

@@ -35,12 +35,12 @@ func TestLogin_RateLimited(t *testing.T) {
 		t.Fatalf("CreateUser: %v", err)
 	}
 	for i := 0; i < 3; i++ {
-		if _, err := mr.Login(ctx, "victim", "wrongpass"); err == nil {
+		if _, err := mr.Login(ctx, model.LoginInput{Email: "victim", Password: "wrongpass"}); err == nil {
 			t.Fatalf("attempt %d: expected invalid credentials", i)
 		}
 	}
 	// 4th attempt is locked out even with the CORRECT password.
-	if _, err := mr.Login(ctx, "victim", "VictimPass12"); err == nil {
+	if _, err := mr.Login(ctx, model.LoginInput{Email: "victim", Password: "VictimPass12"}); err == nil {
 		t.Fatal("expected lockout after 3 failed attempts")
 	}
 }
@@ -99,10 +99,10 @@ func TestCreateUserAndLogin(t *testing.T) {
 		t.Fatalf("unexpected user: %+v", u)
 	}
 
-	if _, err := mr.Login(ctx, "alice", "WrongPassword9"); err == nil {
+	if _, err := mr.Login(ctx, model.LoginInput{Email: "alice", Password: "WrongPassword9"}); err == nil {
 		t.Fatal("login with wrong password should fail")
 	}
-	ap, err := mr.Login(ctx, "alice", "AlicePass123")
+	ap, err := mr.Login(ctx, model.LoginInput{Email: "alice", Password: "AlicePass123"})
 	if err != nil {
 		t.Fatalf("Login: %v", err)
 	}
@@ -152,10 +152,10 @@ func TestChangePasswordFlow(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("ChangePassword: ok=%v err=%v", ok, err)
 	}
-	if _, err := mr.Login(ctx, "bob", "BobPass12345"); err == nil {
+	if _, err := mr.Login(ctx, model.LoginInput{Email: "bob", Password: "BobPass12345"}); err == nil {
 		t.Fatal("old password should no longer work")
 	}
-	ap, err := mr.Login(ctx, "bob", "NewBobPass678")
+	ap, err := mr.Login(ctx, model.LoginInput{Email: "bob", Password: "NewBobPass678"})
 	if err != nil {
 		t.Fatalf("Login with new password: %v", err)
 	}
@@ -223,7 +223,7 @@ func TestResetPassword(t *testing.T) {
 		t.Fatal("temp password must be returned")
 	}
 	// the temp password should log the user in (login is unauthenticated)
-	if _, err := mr.Login(ctx, "carol", payload.TempPassword); err != nil {
+	if _, err := mr.Login(ctx, model.LoginInput{Email: "carol", Password: payload.TempPassword}); err != nil {
 		t.Fatalf("login with temp password: %v", err)
 	}
 }

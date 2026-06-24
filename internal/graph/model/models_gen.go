@@ -121,8 +121,9 @@ type AuditLog struct {
 }
 
 type AuthPayload struct {
-	User               *User `json:"user"`
-	MustChangePassword bool  `json:"mustChangePassword"`
+	Token              string `json:"token"`
+	User               *User  `json:"user"`
+	MustChangePassword bool   `json:"mustChangePassword"`
 }
 
 type CreateAgentConfigInput struct {
@@ -228,6 +229,11 @@ type IssueVirtualKeyInput struct {
 type IssuedVirtualKey struct {
 	VirtualKey *VirtualKey `json:"virtualKey"`
 	Secret     string      `json:"secret"`
+}
+
+type LoginInput struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 type Membership struct {

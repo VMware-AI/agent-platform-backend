@@ -28,8 +28,17 @@ type User {
 }
 
 type AuthPayload {
+  # Bearer token (= session id). The client stores it and sends it as
+  # `Authorization: Bearer <token>` on subsequent requests (前后端整合:token 认证).
+  token: String!
   user: User!
   mustChangePassword: Boolean!
+}
+
+input LoginInput {
+  # The console login form collects an email; the backend accepts username or email.
+  email: String!
+  password: String!
 }
 
 type TempPasswordPayload {
@@ -122,7 +131,7 @@ type Query {
 }
 
 type Mutation {
-  login(username: String!, password: String!): AuthPayload!
+  login(input: LoginInput!): AuthPayload!
   logout: Boolean!
   changePassword(oldPassword: String!, newPassword: String!): Boolean!
 
