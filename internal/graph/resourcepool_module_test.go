@@ -88,6 +88,16 @@ func TestResourcePools_Connection(t *testing.T) {
 	if asc.Nodes[0].ConnectionStatus != model.PoolConnectionStatusDisconnected {
 		t.Fatalf("fresh pool status = %v, want DISCONNECTED", asc.Nodes[0].ConnectionStatus)
 	}
+	// sort by NAME desc (covers the desc branch)
+	desc := mustPoolConn(t, qr, ctx, nil, &model.ResourcePoolSort{Field: model.ResourcePoolSortFieldName, Direction: model.SortDirectionDesc})
+	if desc.Nodes[0].Name != "gamma-prod" || desc.Nodes[2].Name != "alpha-dc" {
+		t.Fatalf("sort NAME desc: %s..%s", desc.Nodes[0].Name, desc.Nodes[2].Name)
+	}
+	// sort by a non-name field (endpoint asc)
+	epSort := mustPoolConn(t, qr, ctx, nil, &model.ResourcePoolSort{Field: model.ResourcePoolSortFieldEndpoint, Direction: model.SortDirectionAsc})
+	if epSort.Nodes[0].Endpoint > epSort.Nodes[2].Endpoint {
+		t.Fatalf("sort ENDPOINT asc not ordered: %s..%s", epSort.Nodes[0].Endpoint, epSort.Nodes[2].Endpoint)
+	}
 }
 
 // resourcePool(id) returns one pool, or nil for a missing id (no oracle).

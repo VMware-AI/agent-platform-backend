@@ -53,6 +53,10 @@ func TestResourcePool_SyncTestUpdate(t *testing.T) {
 	if synced.EsxiHostCount == 0 || synced.VMInstanceCount == 0 {
 		t.Fatalf("inventory counts not populated: hosts=%d vms=%d", synced.EsxiHostCount, synced.VMInstanceCount)
 	}
+	// a real sync stamps the column → projects to SYNCED + lastSyncedAt
+	if synced.LastSyncedAt == nil || synced.SyncStatus != model.ResourcePoolSyncStateSynced {
+		t.Fatalf("real sync should set lastSyncedAt + SYNCED: %v / %v", synced.LastSyncedAt, synced.SyncStatus)
+	}
 	if syncedPayload.SyncedAt.IsZero() {
 		t.Fatal("syncedAt not set")
 	}
