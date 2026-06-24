@@ -23,9 +23,7 @@ func TestCreateAgent_StampsCallerTenant(t *testing.T) {
 
 	tid := uuid.New()
 	// a regular user that belongs to a tenant
-	owner, _ := mr.CreateUser(ctx, model.CreateUserInput{
-		Username: "tu", Email: "tu@x.io", Password: "TenantPass12", Role: model.RoleUser,
-	})
+	owner := mkUser(t, mr, ctx, "tu", "tu@x.io", model.RoleNameUser)
 	tctx := tenantUserCtx(owner.ID, tid.String())
 
 	ag, err := mr.CreateAgent(tctx, model.CreateAgentInput{Name: "a", AgentType: "goose"})

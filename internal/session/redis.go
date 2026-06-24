@@ -89,3 +89,11 @@ func (s *RedisStore) DeleteByUser(userID string) error {
 	keys = append(keys, s.userKey(userID))
 	return s.rdb.Del(ctx, keys...).Err()
 }
+
+func (s *RedisStore) ActiveByUser(userID string) (bool, error) {
+	n, err := s.rdb.SCard(context.Background(), s.userKey(userID)).Result()
+	if err != nil && err != redis.Nil {
+		return false, err
+	}
+	return n > 0, nil
+}

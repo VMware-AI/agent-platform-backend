@@ -30,7 +30,12 @@ func newTestService(t *testing.T) (*Service, *time.Time, func()) {
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}
-	clk := time.Date(2026, 6, 21, 12, 0, 0, 0, time.UTC)
+	// Base the fake clock on real now: ent stamps enrollment created_at with the
+	// real wall clock (TimeMixin), and applyMaxAge compares it against this clock.
+	// A hardcoded past date becomes a time-bomb — once wall-clock passes it, a fresh
+	// enrollment's created_at sorts *after* the fake "now+maxAge" and the max-age
+	// rotation never fires. Tests only ever advance via relative *clk.Add(...).
+	clk := time.Now().UTC()
 	svc := &Service{
 		Ent:     client,
 		Secrets: secrets.NewStaticResolver(nil),

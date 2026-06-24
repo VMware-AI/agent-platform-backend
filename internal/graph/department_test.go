@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 )
@@ -169,20 +171,20 @@ func TestMembership_TenantAdminConfinedToTenant(t *testing.T) {
 		t.Fatalf("create d2: %v", err)
 	}
 
-	t1User, _ := mr.CreateUser(admin, model.CreateUserInput{Username: "t1u", Email: "t1u@x.io", Password: "T1UserPass12", Role: model.RoleUser, TenantID: &t1})
-	t2User, _ := mr.CreateUser(admin, model.CreateUserInput{Username: "t2u", Email: "t2u@x.io", Password: "T2UserPass12", Role: model.RoleUser, TenantID: &t2})
+	t1User := mkTenantUser(t, r, "t1u", "t1u@x.io", model.RoleNameUser, uuid.MustParse(t1))
+	t2User := mkTenantUser(t, r, "t2u", "t2u@x.io", model.RoleNameUser, uuid.MustParse(t2))
 	t1Admin := tenantAdminCtx("11111111-1111-1111-1111-111111111111", t1)
 
 	// tenant-admin of t1 manages t1's department with a t1 user
-	if _, err := mr.AddMembership(t1Admin, t1User.ID, d1.ID, nil); err != nil {
+	if _, err := mr.AddMembership(t1Admin, t1User.ID.String(), d1.ID, nil); err != nil {
 		t.Fatalf("t1 admin should add a t1 user to a t1 dept: %v", err)
 	}
 	// ...but may NOT pull a t2 user into the t1 dept (cross-tenant member)
-	if _, err := mr.AddMembership(t1Admin, t2User.ID, d1.ID, nil); err == nil {
+	if _, err := mr.AddMembership(t1Admin, t2User.ID.String(), d1.ID, nil); err == nil {
 		t.Fatal("tenant-admin must NOT add a foreign-tenant user")
 	}
 	// ...nor manage t2's department at all
-	if _, err := mr.AddMembership(t1Admin, t1User.ID, d2.ID, nil); err == nil {
+	if _, err := mr.AddMembership(t1Admin, t1User.ID.String(), d2.ID, nil); err == nil {
 		t.Fatal("tenant-admin must NOT manage another tenant's department")
 	}
 	if _, err := qr.DepartmentMembers(t1Admin, d2.ID); err == nil {
@@ -191,7 +193,7 @@ func TestMembership_TenantAdminConfinedToTenant(t *testing.T) {
 
 	// a tenant-admin with no tenant set manages nothing (fail closed)
 	noTenant := tenantAdminCtx("33333333-3333-3333-3333-333333333333", "")
-	if _, err := mr.AddMembership(noTenant, t1User.ID, d1.ID, nil); err == nil {
+	if _, err := mr.AddMembership(noTenant, t1User.ID.String(), d1.ID, nil); err == nil {
 		t.Fatal("tenant-admin without a tenant must manage nothing")
 	}
 }
@@ -222,7 +224,7 @@ func TestMembership_DeptAdminDelegation(t *testing.T) {
 	}
 	aliceCtx := userCtx(alice, "user") // platform role is plain user; delegation is via membership
 	// d1 is untenanted, so an untenanted user is in-tenant for the same-tenant rule.
-	bob, _ := mr.CreateUser(admin, model.CreateUserInput{Username: "bob", Email: "bob@x.io", Password: "BobPass123456", Role: model.RoleUser})
+	bob := mkUser(t, mr, admin, "bob", "bob@x.io", model.RoleNameUser)
 
 	// alice manages her own department
 	if _, err := mr.AddMembership(aliceCtx, bob.ID, d1.ID, nil); err != nil {

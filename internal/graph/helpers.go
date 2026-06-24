@@ -10,11 +10,15 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 
+	"strings"
+
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
+	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
+	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
@@ -106,7 +110,7 @@ func (r *Resolver) assertAgentConfigWritable(ctx context.Context, id uuid.UUID) 
 // against escalation (LLD-10 §1.5): a tenant-admin is confined to their own
 // tenant and may not mint admin/tenant-admin users; a platform admin may target
 // any tenant via explicit input (or none = untenanted platform user).
-func (r *Resolver) resolveUserWriteTenant(ctx context.Context, inputTenantID *string, role model.Role) (*uuid.UUID, error) {
+func (r *Resolver) resolveUserWriteTenant(ctx context.Context, inputTenantID *string, role model.RoleName) (*uuid.UUID, error) {
 	cu := auth.FromContext(ctx)
 	if cu != nil && cu.Role == auth.RoleTenantAdmin {
 		tid, err := uuid.Parse(cu.TenantID)
@@ -116,7 +120,7 @@ func (r *Resolver) resolveUserWriteTenant(ctx context.Context, inputTenantID *st
 		if inputTenantID != nil && *inputTenantID != tid.String() {
 			return nil, gqlerror.Errorf("forbidden: cannot create users in another tenant")
 		}
-		if role == model.RoleAdmin || role == model.RoleTenantAdmin {
+		if role == model.RoleNameAdmin || role == model.RoleNameTenantAdmin {
 			return nil, gqlerror.Errorf("forbidden: tenant-admin cannot grant admin roles")
 		}
 		return &tid, nil
@@ -300,17 +304,62 @@ func toModelUser(u *ent.User) *model.User {
 // (secret_ref is intentionally not exposed).
 func toModelResourcePool(p *ent.ResourcePool) *model.ResourcePool {
 	return &model.ResourcePool{
-		ID:              p.ID.String(),
-		Name:            p.Name,
-		Kind:            string(p.Kind),
-		Endpoint:        p.Endpoint,
-		Status:          model.ResourcePoolStatus(string(p.Status)),
-		DatacenterCount: p.DatacenterCount,
-		ClusterCount:    p.ClusterCount,
-		HostCount:       p.HostCount,
-		VMCount:         p.VMCount,
-		CreatedAt:       p.CreatedAt,
+		ID:               p.ID.String(),
+		Name:             p.Name,
+		Endpoint:         p.Endpoint,
+		ConnectionStatus: poolConnStatus(p.Status),
+		DatacenterCount:  p.DatacenterCount,
+		ClusterCount:     p.ClusterCount,
+		EsxiHostCount:    p.HostCount,
+		VMInstanceCount:  p.VMCount,
+		CreatedAt:        p.CreatedAt,
+		UpdatedAt:        p.UpdatedAt,
 	}
+}
+
+// poolConnStatus collapses the ent tri-state (connected/disconnected/error) into
+// the console's binary status: only "connected" reads as CONNECTED; everything
+// else (including error) reads as DISCONNECTED.
+func poolConnStatus(s resourcepool.Status) model.PoolConnectionStatus {
+	if s == resourcepool.StatusConnected {
+		return model.PoolConnectionStatusConnected
+	}
+	return model.PoolConnectionStatusDisconnected
+}
+
+// applyResourcePoolSort orders a pool query by the console's sort field, with a
+// stable id tiebreak. CONNECTION_STATUS sorts on the ent status column; the
+// default (CREATED_AT) and any unmapped field fall back to created_at.
+func applyResourcePoolSort(q *ent.ResourcePoolQuery, sort *model.ResourcePoolSort) *ent.ResourcePoolQuery {
+	if sort == nil {
+		return q.Order(ent.Desc(resourcepool.FieldCreatedAt))
+	}
+	desc := sort.Direction == model.SortDirectionDesc
+	col := ""
+	switch sort.Field {
+	case model.ResourcePoolSortFieldName:
+		col = resourcepool.FieldName
+	case model.ResourcePoolSortFieldEndpoint:
+		col = resourcepool.FieldEndpoint
+	case model.ResourcePoolSortFieldConnectionStatus:
+		col = resourcepool.FieldStatus
+	case model.ResourcePoolSortFieldDatacenterCount:
+		col = resourcepool.FieldDatacenterCount
+	case model.ResourcePoolSortFieldClusterCount:
+		col = resourcepool.FieldClusterCount
+	case model.ResourcePoolSortFieldEsxiHostCount:
+		col = resourcepool.FieldHostCount
+	case model.ResourcePoolSortFieldVMInstanceCount:
+		col = resourcepool.FieldVMCount
+	case model.ResourcePoolSortFieldUpdatedAt:
+		col = resourcepool.FieldUpdatedAt
+	default: // CREATED_AT
+		col = resourcepool.FieldCreatedAt
+	}
+	if desc {
+		return q.Order(ent.Desc(col), ent.Desc(resourcepool.FieldID))
+	}
+	return q.Order(ent.Asc(col), ent.Asc(resourcepool.FieldID))
 }
 
 // toModelVirtualKey maps an ent.VirtualKey to the GraphQL model (omits the secret).
@@ -521,6 +570,85 @@ func toModelGatewayConnection(g *ent.GatewayConnection) *model.GatewayConnection
 		LoadBalanceStrategy: model.LoadBalanceStrategy(string(g.LoadBalanceStrategy)),
 		CreatedAt:           g.CreatedAt,
 	}
+}
+
+// ---- 模型网关页 (P4): GatewayConnection façade helpers ----
+
+// modelGatewayStatus maps the ent connection status to the console status enum.
+func modelGatewayStatus(s gatewayconnection.Status) model.ModelGatewayStatus {
+	switch s {
+	case gatewayconnection.StatusConnected:
+		return model.ModelGatewayStatusConnected
+	case gatewayconnection.StatusError:
+		return model.ModelGatewayStatusError
+	default:
+		return model.ModelGatewayStatusDisconnected
+	}
+}
+
+// entGatewayStatus maps the console status enum back to the ent column (filter).
+func entGatewayStatus(s model.ModelGatewayStatus) gatewayconnection.Status {
+	switch s {
+	case model.ModelGatewayStatusConnected:
+		return gatewayconnection.StatusConnected
+	case model.ModelGatewayStatusError:
+		return gatewayconnection.StatusError
+	default:
+		return gatewayconnection.StatusDisconnected
+	}
+}
+
+// modelGatewaySyncState derives the sync state from the connection status — there
+// is no dedicated sync-tracking store yet: connected→SYNCED, error→FAILED,
+// disconnected→NEVER (never synced).
+func modelGatewaySyncState(s gatewayconnection.Status) model.ModelGatewaySyncState {
+	switch s {
+	case gatewayconnection.StatusConnected:
+		return model.ModelGatewaySyncStateSynced
+	case gatewayconnection.StatusError:
+		return model.ModelGatewaySyncStateFailed
+	default:
+		return model.ModelGatewaySyncStateNever
+	}
+}
+
+// toModelGateway projects a GatewayConnection (+ the live backend-model count) into
+// the console's ModelGateway aggregate. provider/strategy are the console's single
+// supported values; adminUrl is derived as <endpoint>/ui (litellm admin UI);
+// latencyMs is transient (only a live test sets it); lastSyncAt reflects the last
+// status change (updated_at) and is nil until the gateway has ever connected.
+//
+// TODO(reskin M2/M3/M4): these are interim approximations until a real sync-tracking
+// column exists — (M2/M3) sync state/time derive from connection status + updated_at,
+// so a previously-synced gateway that drops to disconnected reads as NEVER, and any
+// unrelated update bumps the apparent sync time; (M4) ModelGatewayInput.adminUrl is
+// not persisted (no column) — the value is always derived here. Mirrors the
+// displayName-in-CreateUserInput interim. Adding a last_synced_at / admin_url column
+// needs an Atlas migration (prod does not auto-migrate).
+func toModelGateway(g *ent.GatewayConnection, backendModelCount int) *model.ModelGateway {
+	adminURL := strings.TrimRight(g.Endpoint, "/") + "/ui"
+	gw := &model.ModelGateway{
+		ID:                    g.ID.String(),
+		Name:                  g.Name,
+		Provider:              model.ModelGatewayProviderLitellm,
+		Endpoint:              g.Endpoint,
+		Status:                modelGatewayStatus(g.Status),
+		BackendModelCount:     backendModelCount,
+		LoadBalancingStrategy: model.LoadBalancingStrategyRoundRobin,
+		AdminURL:              &adminURL,
+		LastSyncStatus:        modelGatewaySyncState(g.Status),
+	}
+	if g.Status != gatewayconnection.StatusDisconnected {
+		t := g.UpdatedAt
+		gw.LastSyncAt = &t
+	}
+	return gw
+}
+
+// backendModelCount is the number of registered upstreams the litellm gateway
+// fronts (real DB count, surfaced as ModelGateway.backendModelCount).
+func (r *Resolver) backendModelCount(ctx context.Context) (int, error) {
+	return r.Ent.Upstream.Query().Count(ctx)
 }
 
 func toModelUpstream(u *ent.Upstream) *model.Upstream {
@@ -977,15 +1105,97 @@ func applyUserSort(q *ent.UserQuery, sort *model.UserSort) *ent.UserQuery {
 		col = user.FieldRole
 	case model.UserSortFieldCreatedAt:
 		col = user.FieldCreatedAt
+	case model.UserSortFieldUpdatedAt:
+		col = user.FieldUpdatedAt
 	case model.UserSortFieldLastLogin:
 		col = user.FieldLastLoginAt
 	default:
+		// CONNECTION (online status) is derived, not a column — fall back to newest.
 		return q.Order(orderNewest)
 	}
 	if desc {
 		return q.Order(ent.Desc(col), ent.Desc(user.FieldID))
 	}
 	return q.Order(ent.Asc(col), ent.Asc(user.FieldID))
+}
+
+// ---- 用户与权限页 (P2) helpers: built-in roles surfaced as entities ----
+
+// builtinRoles are the assignable platform roles shown in the UI as entities.
+// id = the RoleName GraphQL enum value (underscored, e.g. tenant_admin). 本期不
+// 支持自定义角色 (LLD-01 §4.2 enforcement 渐进).
+var builtinRoles = []struct{ id, name, desc string }{
+	{"admin", "管理员", "平台全局管理权限"},
+	{"tenant_admin", "租户管理员", "管理本租户的用户与资源"},
+	{"user", "普通用户", "自助创建与管理自己的智能体"},
+	{"observability", "可观测", "查看计量、日志与审计(只读)"},
+}
+
+func builtinRole(id string) (name, desc string, ok bool) {
+	for _, r := range builtinRoles {
+		if r.id == id {
+			return r.name, r.desc, true
+		}
+	}
+	return "", "", false
+}
+
+// roleEntity builds the Role entity for a built-in role id.
+func roleEntity(id string, userCount int) *model.Role {
+	name, desc, _ := builtinRole(id)
+	return &model.Role{ID: id, Name: name, Description: desc, UserCount: userCount, BuiltIn: true}
+}
+
+// roleUserCount counts users holding a built-in role, within the caller's tenant
+// scope (tenant-admin sees only their tenant; admin sees all).
+func (r *Resolver) roleUserCount(ctx context.Context, roleID string) (int, error) {
+	q := r.Ent.User.Query().Where(user.RoleEQ(user.Role(gqlRoleToEnt(model.RoleName(roleID)))))
+	if d := tenantScopeFor(ctx); d.apply {
+		if d.denyAll {
+			return 0, nil
+		}
+		q = q.Where(user.TenantID(d.tenant))
+	}
+	return q.Count(ctx)
+}
+
+// matchRoleKeyword returns the ent role values whose id or 中文 label contains the
+// keyword (for the user-list roleKeyword filter). Empty result → matches nothing.
+func matchRoleKeyword(kw string) []user.Role {
+	low := strings.ToLower(kw)
+	var out []user.Role
+	for _, br := range builtinRoles {
+		if strings.Contains(strings.ToLower(br.id), low) || strings.Contains(br.name, kw) {
+			out = append(out, user.Role(gqlRoleToEnt(model.RoleName(br.id))))
+		}
+	}
+	return out
+}
+
+// toAccountUser maps an ent.User to the frontend AccountUser shape. online drives
+// the connection-status badge. displayName has no column yet → mirrors username.
+func toAccountUser(u *ent.User, online bool) *model.AccountUser {
+	roleID := string(entRoleToGQL(string(u.Role)))
+	name, _, _ := builtinRole(roleID)
+	cs := model.ConnectionStatusOffline
+	if online {
+		cs = model.ConnectionStatusOnline
+	}
+	m := &model.AccountUser{
+		ID:               u.ID.String(),
+		Username:         u.Username,
+		DisplayName:      u.Username,
+		Email:            u.Email,
+		Role:             &model.AccountRoleRef{ID: roleID, Name: name},
+		ConnectionStatus: cs,
+		Enabled:          u.IsActive,
+		CreatedAt:        u.CreatedAt,
+		UpdatedAt:        u.UpdatedAt,
+	}
+	if u.LastLoginAt != nil {
+		m.LastLoginAt = u.LastLoginAt
+	}
+	return m
 }
 
 // joinOrder orders agents by a column on a related table (owner username / key

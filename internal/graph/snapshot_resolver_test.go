@@ -34,16 +34,15 @@ func deployTestAgent(t *testing.T, r *Resolver) (context.Context, string) {
 	}
 	mr := &mutationResolver{r}
 
-	owner, _ := mr.CreateUser(ctx, model.CreateUserInput{
-		Username: "snapper", Email: "s@x.io", Password: "SnapPass1234", Role: model.RoleUser,
-	})
+	owner := mkUser(t, mr, ctx, "snapper", "s@x.io", model.RoleNameUser)
 	ownerCtx := userCtx(owner.ID, "user")
 	seedActiveTemplate(t, r, "goose")
 	ag, _ := mr.CreateAgent(ownerCtx, model.CreateAgentInput{Name: "snap-goose", AgentType: "goose"})
 	ref := "vault://oc"
-	pool, _ := mr.RegisterResourcePool(adminCtx(), model.RegisterResourcePoolInput{
+	createdPool, _ := mr.CreateResourcePool(adminCtx(), model.CreateResourcePoolInput{
 		Name: "oc1", Endpoint: vsrv.URL.String(), SecretRef: &ref,
 	})
+	pool := createdPool.Pool
 
 	vc, _ := vcenter.Connect(ctx, vsrv.URL.String(), "u", "p", true)
 	vms, _ := vc.ListVMs(ctx)

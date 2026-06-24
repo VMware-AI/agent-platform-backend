@@ -104,39 +104,36 @@ func TestCrossTenant_UserDepartmentWrites(t *testing.T) {
 	taCtx := tenantAdminCtx(uuid.NewString(), tA.String())
 
 	// create → stamped to caller's tenant
-	uA, err := mr.CreateUser(taCtx, model.CreateUserInput{Username: "ca", Email: "ca@x.io", Password: "PassWord1234", Role: model.RoleUser})
+	uA, err := mr.CreateUser(taCtx, model.CreateUserInput{Username: "ca", DisplayName: "ca", Email: "ca@x.io", RoleID: string(model.RoleNameUser), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("PassWord1234")})
 	if err != nil {
 		t.Fatalf("create user: %v", err)
 	}
-	if got := r.Ent.User.GetX(ctx, uuid.MustParse(uA.ID)).TenantID; got == nil || *got != tA {
+	if got := r.Ent.User.GetX(ctx, uuid.MustParse(uA.User.ID)).TenantID; got == nil || *got != tA {
 		t.Fatalf("created user tenant = %v, want %s", got, tA)
 	}
 
 	// escalation blocked: tenant-admin cannot mint an admin
-	if _, err := mr.CreateUser(taCtx, model.CreateUserInput{Username: "x", Email: "x@x.io", Password: "PassWord1234", Role: model.RoleAdmin}); err == nil {
+	if _, err := mr.CreateUser(taCtx, model.CreateUserInput{Username: "x", DisplayName: "x", Email: "x@x.io", RoleID: string(model.RoleNameAdmin), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("PassWord1234")}); err == nil {
 		t.Fatal("tenant-admin must not create an admin user")
 	}
-	// cross-tenant create blocked
-	tbStr := tB.String()
-	if _, err := mr.CreateUser(taCtx, model.CreateUserInput{Username: "y", Email: "y@x.io", Password: "PassWord1234", Role: model.RoleUser, TenantID: &tbStr}); err == nil {
-		t.Fatal("tenant-admin must not create a cross-tenant user")
-	}
+	// (cross-tenant create is structurally impossible now: CreateUserInput has no
+	// tenantId; the resolver always stamps the caller's tenant.)
 
 	// cross-tenant user is untouchable (delete/reset/update → fail)
 	uB := r.Ent.User.Create().SetUsername("ub3").SetEmail("ub3@x.io").SetPasswordHash("h").SetTenantID(tB).SaveX(ctx)
 	if _, err := mr.DeleteUser(taCtx, uB.ID.String()); err == nil {
 		t.Fatal("cross-tenant DeleteUser must fail")
 	}
-	if _, err := mr.ResetPassword(taCtx, uB.ID.String()); err == nil {
-		t.Fatal("cross-tenant ResetPassword must fail")
+	if _, err := mr.ResetUserPassword(taCtx, uB.ID.String()); err == nil {
+		t.Fatal("cross-tenant ResetUserPassword must fail")
 	}
 	if _, err := mr.UpdateUser(taCtx, uB.ID.String(), model.UpdateUserInput{}); err == nil {
 		t.Fatal("cross-tenant UpdateUser must fail")
 	}
 
 	// no self-tenant escalation via update
-	roleAdmin := model.RoleAdmin
-	if _, err := mr.UpdateUser(taCtx, uA.ID, model.UpdateUserInput{Role: &roleAdmin}); err == nil {
+	roleAdminID := string(model.RoleNameAdmin)
+	if _, err := mr.UpdateUser(taCtx, uA.User.ID, model.UpdateUserInput{RoleID: &roleAdminID}); err == nil {
 		t.Fatal("tenant-admin must not promote own user to admin")
 	}
 

@@ -33,23 +33,28 @@ func TestResourcePool_SyncTestUpdate(t *testing.T) {
 	ctx := adminCtx()
 	mr := &mutationResolver{r}
 	ref := "vault://oc"
-	pool, err := mr.RegisterResourcePool(ctx, model.RegisterResourcePoolInput{
+	created, err := mr.CreateResourcePool(ctx, model.CreateResourcePoolInput{
 		Name: "oc1", Endpoint: vsrv.URL.String(), SecretRef: &ref,
 	})
 	if err != nil {
-		t.Fatalf("register: %v", err)
+		t.Fatalf("create: %v", err)
 	}
+	pool := created.Pool
 
 	// sync inventory from vcsim
-	synced, err := mr.SyncResourcePool(ctx, pool.ID)
+	syncedPayload, err := mr.SyncResourcePool(ctx, pool.ID)
 	if err != nil {
 		t.Fatalf("sync: %v", err)
 	}
-	if synced.Status != model.ResourcePoolStatusConnected {
-		t.Fatalf("status = %v, want connected", synced.Status)
+	synced := syncedPayload.Pool
+	if synced.ConnectionStatus != model.PoolConnectionStatusConnected {
+		t.Fatalf("status = %v, want CONNECTED", synced.ConnectionStatus)
 	}
-	if synced.HostCount == 0 || synced.VMCount == 0 {
-		t.Fatalf("inventory counts not populated: hosts=%d vms=%d", synced.HostCount, synced.VMCount)
+	if synced.EsxiHostCount == 0 || synced.VMInstanceCount == 0 {
+		t.Fatalf("inventory counts not populated: hosts=%d vms=%d", synced.EsxiHostCount, synced.VMInstanceCount)
+	}
+	if syncedPayload.SyncedAt.IsZero() {
+		t.Fatal("syncedAt not set")
 	}
 
 	// test connection
@@ -57,8 +62,8 @@ func TestResourcePool_SyncTestUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("test connection: %v", err)
 	}
-	if tested.Status != model.ResourcePoolStatusConnected {
-		t.Fatalf("test status = %v", tested.Status)
+	if tested.ConnectionStatus != model.PoolConnectionStatusConnected {
+		t.Fatalf("test status = %v", tested.ConnectionStatus)
 	}
 
 	// update
@@ -67,7 +72,7 @@ func TestResourcePool_SyncTestUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
-	if upd.Name != "oc1-renamed" {
-		t.Fatalf("name not updated: %s", upd.Name)
+	if upd.Pool.Name != "oc1-renamed" {
+		t.Fatalf("name not updated: %s", upd.Pool.Name)
 	}
 }

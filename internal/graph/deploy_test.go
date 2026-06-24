@@ -54,9 +54,7 @@ func TestDeployAgent_EndToEnd(t *testing.T) {
 	mr := &mutationResolver{r}
 
 	// create owner + agent + pool (pool endpoint points at vcsim)
-	owner, _ := mr.CreateUser(ctx, model.CreateUserInput{
-		Username: "deployer", Email: "d@x.io", Password: "DeployPass12", Role: model.RoleUser,
-	})
+	owner := mkUser(t, mr, ctx, "deployer", "d@x.io", model.RoleNameUser)
 	ownerCtx := userCtx(owner.ID, "user")
 	seedActiveTemplate(t, mr.Resolver, "goose")
 
@@ -65,12 +63,13 @@ func TestDeployAgent_EndToEnd(t *testing.T) {
 		t.Fatalf("CreateAgent: %v", err)
 	}
 	ref := "vault://oc1"
-	pool, err := mr.RegisterResourcePool(adminCtx(), model.RegisterResourcePoolInput{
+	createdPool, err := mr.CreateResourcePool(adminCtx(), model.CreateResourcePoolInput{
 		Name: "oc1", Endpoint: vsrv.URL.String(), SecretRef: &ref,
 	})
 	if err != nil {
-		t.Fatalf("RegisterResourcePool: %v", err)
+		t.Fatalf("CreateResourcePool: %v", err)
 	}
+	pool := createdPool.Pool
 
 	// pick a vcsim VM to target
 	vc, _ := vcenter.Connect(ctx, vsrv.URL.String(), "svc", "pw", true)
@@ -131,12 +130,13 @@ func TestVMTemplates_VCSim(t *testing.T) {
 		return vcenter.Connect(ctx, endpoint, user, pass, insecure)
 	}
 	ref := "vault://oc"
-	pool, err := (&mutationResolver{r}).RegisterResourcePool(adminCtx(), model.RegisterResourcePoolInput{
+	createdPool, err := (&mutationResolver{r}).CreateResourcePool(adminCtx(), model.CreateResourcePoolInput{
 		Name: "oc1", Endpoint: vsrv.URL.String(), SecretRef: &ref,
 	})
 	if err != nil {
-		t.Fatalf("register: %v", err)
+		t.Fatalf("create: %v", err)
 	}
+	pool := createdPool.Pool
 	qr := &queryResolver{r}
 
 	// no templates until one is marked
@@ -198,16 +198,15 @@ func TestRecycleAgent_VCSim(t *testing.T) {
 	}
 	mr := &mutationResolver{r}
 
-	owner, _ := mr.CreateUser(ctx, model.CreateUserInput{
-		Username: "recycler", Email: "r@x.io", Password: "RecyclePass1", Role: model.RoleUser,
-	})
+	owner := mkUser(t, mr, ctx, "recycler", "r@x.io", model.RoleNameUser)
 	ownerCtx := userCtx(owner.ID, "user")
 	seedActiveTemplate(t, mr.Resolver, "goose")
 	ag, _ := mr.CreateAgent(ownerCtx, model.CreateAgentInput{Name: "bob-goose", AgentType: "goose"})
 	ref := "vault://oc"
-	pool, _ := mr.RegisterResourcePool(adminCtx(), model.RegisterResourcePoolInput{
+	createdPool, _ := mr.CreateResourcePool(adminCtx(), model.CreateResourcePoolInput{
 		Name: "oc1", Endpoint: vsrv.URL.String(), SecretRef: &ref,
 	})
+	pool := createdPool.Pool
 
 	vc, _ := vcenter.Connect(ctx, vsrv.URL.String(), "u", "p", true)
 	vms, _ := vc.ListVMs(ctx)

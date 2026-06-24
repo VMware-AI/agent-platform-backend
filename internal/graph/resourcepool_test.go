@@ -15,30 +15,31 @@ func TestRegisterAndListResourcePool(t *testing.T) {
 	qr := &queryResolver{r}
 
 	ref := "vault://pools/oc1"
-	p, err := mr.RegisterResourcePool(ctx, model.RegisterResourcePoolInput{
+	created, err := mr.CreateResourcePool(ctx, model.CreateResourcePoolInput{
 		Name: "vCenter_OC1", Endpoint: "https://vcenter.internal", SecretRef: &ref,
 	})
 	if err != nil {
-		t.Fatalf("RegisterResourcePool: %v", err)
+		t.Fatalf("CreateResourcePool: %v", err)
 	}
-	if p.Name != "vCenter_OC1" || p.Status != model.ResourcePoolStatusDisconnected {
+	p := created.Pool
+	if p.Name != "vCenter_OC1" || p.ConnectionStatus != model.PoolConnectionStatusDisconnected {
 		t.Fatalf("unexpected pool: %+v", p)
 	}
 
-	pools, err := qr.ResourcePools(ctx)
+	conn, err := qr.ResourcePools(ctx, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("ResourcePools: %v", err)
 	}
-	if len(pools) != 1 || pools[0].Endpoint != "https://vcenter.internal" {
-		t.Fatalf("unexpected list: %+v", pools)
+	if conn.TotalCount != 1 || len(conn.Nodes) != 1 || conn.Nodes[0].Endpoint != "https://vcenter.internal" {
+		t.Fatalf("unexpected list: %+v", conn.Nodes)
 	}
 
-	ok, err := mr.DeleteResourcePool(ctx, p.ID)
-	if err != nil || !ok {
-		t.Fatalf("DeleteResourcePool: ok=%v err=%v", ok, err)
+	del, err := mr.DeleteResourcePool(ctx, p.ID)
+	if err != nil || del.ID != p.ID || del.DeletedName != "vCenter_OC1" {
+		t.Fatalf("DeleteResourcePool: %+v err=%v", del, err)
 	}
-	pools, _ = qr.ResourcePools(ctx)
-	if len(pools) != 0 {
-		t.Fatalf("pool should be deleted, got %d", len(pools))
+	conn, _ = qr.ResourcePools(ctx, nil, nil, nil)
+	if conn.TotalCount != 0 {
+		t.Fatalf("pool should be deleted, got %d", conn.TotalCount)
 	}
 }

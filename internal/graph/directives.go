@@ -13,24 +13,24 @@ import (
 
 // gqlRoleToEnt maps the GraphQL enum (tenant_admin) to the storage/auth string
 // (tenant-admin). GraphQL enums cannot contain hyphens.
-func gqlRoleToEnt(r model.Role) string {
-	if r == model.RoleTenantAdmin {
+func gqlRoleToEnt(r model.RoleName) string {
+	if r == model.RoleNameTenantAdmin {
 		return "tenant-admin"
 	}
 	return string(r)
 }
 
 // entRoleToGQL is the inverse of gqlRoleToEnt.
-func entRoleToGQL(s string) model.Role {
+func entRoleToGQL(s string) model.RoleName {
 	if s == "tenant-admin" {
-		return model.RoleTenantAdmin
+		return model.RoleNameTenantAdmin
 	}
-	return model.Role(s)
+	return model.RoleName(s)
 }
 
 // HasRole implements the @hasRole directive: the caller's role must be one of
 // the allowed roles (platform/tenant level, 判权三轨不交叉 — LLD-01 §4.1).
-func HasRole(ctx context.Context, _ any, next graphql.Resolver, allowed []model.Role) (any, error) {
+func HasRole(ctx context.Context, _ any, next graphql.Resolver, allowed []model.RoleName) (any, error) {
 	u := auth.FromContext(ctx)
 	if u == nil {
 		return nil, gqlerror.Errorf("unauthenticated")

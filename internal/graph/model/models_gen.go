@@ -10,6 +10,24 @@ import (
 	"time"
 )
 
+type AccountRoleRef struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type AccountUser struct {
+	ID               string           `json:"id"`
+	Username         string           `json:"username"`
+	DisplayName      string           `json:"displayName"`
+	Email            string           `json:"email"`
+	Role             *AccountRoleRef  `json:"role"`
+	ConnectionStatus ConnectionStatus `json:"connectionStatus"`
+	LastLoginAt      *time.Time       `json:"lastLoginAt,omitempty"`
+	Enabled          bool             `json:"enabled"`
+	CreatedAt        time.Time        `json:"createdAt"`
+	UpdatedAt        time.Time        `json:"updatedAt"`
+}
+
 type Agent struct {
 	ID        string       `json:"id"`
 	Name      string       `json:"name"`
@@ -97,6 +115,16 @@ type Artifact struct {
 	CreatedAt time.Time      `json:"createdAt"`
 }
 
+type AssignUsersToRoleInput struct {
+	RoleID  string   `json:"roleId"`
+	UserIds []string `json:"userIds"`
+}
+
+type AssignUsersToRolePayload struct {
+	Role          *Role `json:"role"`
+	AssignedCount int   `json:"assignedCount"`
+}
+
 type AuditConnection struct {
 	Items []AuditLog `json:"items"`
 	Total int        `json:"total"`
@@ -150,12 +178,33 @@ type CreateDepartmentInput struct {
 	MaxBudget *float64 `json:"maxBudget,omitempty"`
 }
 
+type CreateResourcePoolInput struct {
+	Name            string  `json:"name"`
+	Endpoint        string  `json:"endpoint"`
+	DatacenterCount *int    `json:"datacenterCount,omitempty"`
+	ClusterCount    *int    `json:"clusterCount,omitempty"`
+	Username        *string `json:"username,omitempty"`
+	Password        *string `json:"password,omitempty"`
+	SecretRef       *string `json:"secretRef,omitempty"`
+}
+
+type CreateResourcePoolPayload struct {
+	Pool *ResourcePool `json:"pool"`
+}
+
 type CreateUserInput struct {
-	Username string  `json:"username"`
-	Email    string  `json:"email"`
-	Password string  `json:"password"`
-	Role     Role    `json:"role"`
-	TenantID *string `json:"tenantId,omitempty"`
+	Username       string       `json:"username"`
+	DisplayName    string       `json:"displayName"`
+	Email          string       `json:"email"`
+	RoleID         string       `json:"roleId"`
+	PasswordMode   PasswordMode `json:"passwordMode"`
+	CustomPassword *string      `json:"customPassword,omitempty"`
+	Enabled        *bool        `json:"enabled,omitempty"`
+}
+
+type CreateUserPayload struct {
+	User              *AccountUser `json:"user"`
+	GeneratedPassword *string      `json:"generatedPassword,omitempty"`
 }
 
 type CustomRole struct {
@@ -171,6 +220,19 @@ type DateUsage struct {
 	InputTokens  int     `json:"inputTokens"`
 	OutputTokens int     `json:"outputTokens"`
 	Cost         float64 `json:"cost"`
+}
+
+type DeleteModelGatewayPayload struct {
+	DeletedID string `json:"deletedID"`
+}
+
+type DeleteResourcePoolPayload struct {
+	ID          string `json:"id"`
+	DeletedName string `json:"deletedName"`
+}
+
+type DeleteUserPayload struct {
+	ID string `json:"id"`
 }
 
 type Department struct {
@@ -250,6 +312,57 @@ type MeteringSummary struct {
 	ByModel           []ModelUsage `json:"byModel"`
 	ByAgent           []AgentUsage `json:"byAgent"`
 	ByDate            []DateUsage  `json:"byDate"`
+}
+
+type ModelGateway struct {
+	ID                    string                `json:"id"`
+	Name                  string                `json:"name"`
+	Provider              ModelGatewayProvider  `json:"provider"`
+	Endpoint              string                `json:"endpoint"`
+	Status                ModelGatewayStatus    `json:"status"`
+	BackendModelCount     int                   `json:"backendModelCount"`
+	LoadBalancingStrategy LoadBalancingStrategy `json:"loadBalancingStrategy"`
+	LatencyMs             *int                  `json:"latencyMs,omitempty"`
+	AdminURL              *string               `json:"adminUrl,omitempty"`
+	LastSyncAt            *time.Time            `json:"lastSyncAt,omitempty"`
+	LastSyncStatus        ModelGatewaySyncState `json:"lastSyncStatus"`
+	LastSyncMessage       *string               `json:"lastSyncMessage,omitempty"`
+}
+
+type ModelGatewayConnection struct {
+	Nodes      []ModelGateway `json:"nodes"`
+	TotalCount int            `json:"totalCount"`
+}
+
+type ModelGatewayFilterInput struct {
+	Search *string             `json:"search,omitempty"`
+	Status *ModelGatewayStatus `json:"status,omitempty"`
+}
+
+type ModelGatewayInput struct {
+	Name                  string                `json:"name"`
+	Provider              ModelGatewayProvider  `json:"provider"`
+	Endpoint              string                `json:"endpoint"`
+	AdminURL              *string               `json:"adminUrl,omitempty"`
+	MasterKey             *string               `json:"masterKey,omitempty"`
+	LoadBalancingStrategy LoadBalancingStrategy `json:"loadBalancingStrategy"`
+}
+
+type ModelGatewaySyncSummary struct {
+	State        ModelGatewaySyncState `json:"state"`
+	LastSyncedAt *time.Time            `json:"lastSyncedAt,omitempty"`
+	SuccessCount int                   `json:"successCount"`
+	FailedCount  int                   `json:"failedCount"`
+	Message      *string               `json:"message,omitempty"`
+}
+
+type ModelGatewayTestResult struct {
+	Success   bool               `json:"success"`
+	Status    ModelGatewayStatus `json:"status"`
+	LatencyMs *int               `json:"latencyMs,omitempty"`
+	Message   string             `json:"message"`
+	TestedAt  time.Time          `json:"testedAt"`
+	Gateway   *ModelGateway      `json:"gateway"`
 }
 
 type ModelRoute struct {
@@ -341,14 +454,6 @@ type RegisterGatewayConnectionInput struct {
 	LoadBalanceStrategy *LoadBalanceStrategy `json:"loadBalanceStrategy,omitempty"`
 }
 
-type RegisterResourcePoolInput struct {
-	Name      string  `json:"name"`
-	Endpoint  string  `json:"endpoint"`
-	Username  *string `json:"username,omitempty"`
-	Password  *string `json:"password,omitempty"`
-	SecretRef *string `json:"secretRef,omitempty"`
-}
-
 type RequestLog struct {
 	ID           string    `json:"id"`
 	RequestID    string    `json:"requestId"`
@@ -370,17 +475,39 @@ type RequestLogFilter struct {
 	RequestID  *string `json:"requestId,omitempty"`
 }
 
+type ResetPasswordPayload struct {
+	User              *AccountUser `json:"user"`
+	GeneratedPassword string       `json:"generatedPassword"`
+}
+
 type ResourcePool struct {
-	ID              string             `json:"id"`
-	Name            string             `json:"name"`
-	Kind            string             `json:"kind"`
-	Endpoint        string             `json:"endpoint"`
-	Status          ResourcePoolStatus `json:"status"`
-	DatacenterCount int                `json:"datacenterCount"`
-	ClusterCount    int                `json:"clusterCount"`
-	HostCount       int                `json:"hostCount"`
-	VMCount         int                `json:"vmCount"`
-	CreatedAt       time.Time          `json:"createdAt"`
+	ID               string               `json:"id"`
+	Name             string               `json:"name"`
+	Endpoint         string               `json:"endpoint"`
+	ConnectionStatus PoolConnectionStatus `json:"connectionStatus"`
+	DatacenterCount  int                  `json:"datacenterCount"`
+	ClusterCount     int                  `json:"clusterCount"`
+	EsxiHostCount    int                  `json:"esxiHostCount"`
+	VMInstanceCount  int                  `json:"vmInstanceCount"`
+	CreatedAt        time.Time            `json:"createdAt"`
+	UpdatedAt        time.Time            `json:"updatedAt"`
+}
+
+type ResourcePoolConnection struct {
+	Nodes      []ResourcePool `json:"nodes"`
+	TotalCount int            `json:"totalCount"`
+	PageInfo   *PageInfo      `json:"pageInfo"`
+}
+
+type ResourcePoolFilter struct {
+	NameKeyword      *string               `json:"nameKeyword,omitempty"`
+	EndpointKeyword  *string               `json:"endpointKeyword,omitempty"`
+	ConnectionStatus *PoolConnectionStatus `json:"connectionStatus,omitempty"`
+}
+
+type ResourcePoolSort struct {
+	Field     ResourcePoolSortField `json:"field"`
+	Direction SortDirection         `json:"direction"`
 }
 
 type RevertAgentSnapshotInput struct {
@@ -389,10 +516,18 @@ type RevertAgentSnapshotInput struct {
 	Confirm      bool   `json:"confirm"`
 }
 
-type RoleInfo struct {
-	Value       Role   `json:"value"`
-	Label       string `json:"label"`
+type Role struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
 	Description string `json:"description"`
+	UserCount   int    `json:"userCount"`
+	BuiltIn     bool   `json:"builtIn"`
+}
+
+type RoleConnection struct {
+	Nodes      []Role    `json:"nodes"`
+	TotalCount int       `json:"totalCount"`
+	PageInfo   *PageInfo `json:"pageInfo"`
 }
 
 type RouterTier struct {
@@ -416,9 +551,13 @@ type SnapshotAgentInput struct {
 	Description *string `json:"description,omitempty"`
 }
 
-type TempPasswordPayload struct {
-	UserID       string `json:"userId"`
-	TempPassword string `json:"tempPassword"`
+type SyncResourcePoolPayload struct {
+	Pool     *ResourcePool `json:"pool"`
+	SyncedAt time.Time     `json:"syncedAt"`
+}
+
+type ToggleUserEnabledPayload struct {
+	User *AccountUser `json:"user"`
 }
 
 type TokenUsage struct {
@@ -438,16 +577,24 @@ type UpdateAgentConfigInput struct {
 }
 
 type UpdateResourcePoolInput struct {
-	Name      *string `json:"name,omitempty"`
-	Endpoint  *string `json:"endpoint,omitempty"`
-	Username  *string `json:"username,omitempty"`
-	Password  *string `json:"password,omitempty"`
-	SecretRef *string `json:"secretRef,omitempty"`
+	Name            *string `json:"name,omitempty"`
+	Endpoint        *string `json:"endpoint,omitempty"`
+	DatacenterCount *int    `json:"datacenterCount,omitempty"`
+	ClusterCount    *int    `json:"clusterCount,omitempty"`
+	Username        *string `json:"username,omitempty"`
+	Password        *string `json:"password,omitempty"`
+	SecretRef       *string `json:"secretRef,omitempty"`
+}
+
+type UpdateResourcePoolPayload struct {
+	Pool *ResourcePool `json:"pool"`
 }
 
 type UpdateUserInput struct {
-	Email *string `json:"email,omitempty"`
-	Role  *Role   `json:"role,omitempty"`
+	DisplayName *string `json:"displayName,omitempty"`
+	Email       *string `json:"email,omitempty"`
+	RoleID      *string `json:"roleId,omitempty"`
+	Enabled     *bool   `json:"enabled,omitempty"`
 }
 
 type UpsertAgentTemplateInput struct {
@@ -527,7 +674,7 @@ type User struct {
 	Username           string     `json:"username"`
 	DisplayName        string     `json:"displayName"`
 	Email              string     `json:"email"`
-	Role               Role       `json:"role"`
+	Role               RoleName   `json:"role"`
 	TenantID           *string    `json:"tenantId,omitempty"`
 	MustChangePassword bool       `json:"mustChangePassword"`
 	IsActive           bool       `json:"isActive"`
@@ -536,14 +683,17 @@ type User struct {
 }
 
 type UserConnection struct {
-	Items []User `json:"items"`
-	Total int    `json:"total"`
+	Nodes      []AccountUser `json:"nodes"`
+	TotalCount int           `json:"totalCount"`
+	PageInfo   *PageInfo     `json:"pageInfo"`
 }
 
 type UserFilter struct {
-	Search *string `json:"search,omitempty"`
-	Role   *Role   `json:"role,omitempty"`
-	Active *bool   `json:"active,omitempty"`
+	UsernameKeyword *string           `json:"usernameKeyword,omitempty"`
+	RoleKeyword     *string           `json:"roleKeyword,omitempty"`
+	EmailKeyword    *string           `json:"emailKeyword,omitempty"`
+	StatusKeyword   *ConnectionStatus `json:"statusKeyword,omitempty"`
+	RoleID          *string           `json:"roleId,omitempty"`
 }
 
 type UserSort struct {
@@ -808,6 +958,61 @@ func (e ArtifactKind) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type ConnectionStatus string
+
+const (
+	ConnectionStatusOnline  ConnectionStatus = "ONLINE"
+	ConnectionStatusOffline ConnectionStatus = "OFFLINE"
+)
+
+var AllConnectionStatus = []ConnectionStatus{
+	ConnectionStatusOnline,
+	ConnectionStatusOffline,
+}
+
+func (e ConnectionStatus) IsValid() bool {
+	switch e {
+	case ConnectionStatusOnline, ConnectionStatusOffline:
+		return true
+	}
+	return false
+}
+
+func (e ConnectionStatus) String() string {
+	return string(e)
+}
+
+func (e *ConnectionStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ConnectionStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ConnectionStatus", str)
+	}
+	return nil
+}
+
+func (e ConnectionStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *ConnectionStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e ConnectionStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type GatewayStatus string
 
 const (
@@ -983,6 +1188,59 @@ func (e LoadBalanceStrategy) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type LoadBalancingStrategy string
+
+const (
+	LoadBalancingStrategyRoundRobin LoadBalancingStrategy = "ROUND_ROBIN"
+)
+
+var AllLoadBalancingStrategy = []LoadBalancingStrategy{
+	LoadBalancingStrategyRoundRobin,
+}
+
+func (e LoadBalancingStrategy) IsValid() bool {
+	switch e {
+	case LoadBalancingStrategyRoundRobin:
+		return true
+	}
+	return false
+}
+
+func (e LoadBalancingStrategy) String() string {
+	return string(e)
+}
+
+func (e *LoadBalancingStrategy) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = LoadBalancingStrategy(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid LoadBalancingStrategy", str)
+	}
+	return nil
+}
+
+func (e LoadBalancingStrategy) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *LoadBalancingStrategy) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e LoadBalancingStrategy) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type MembershipRole string
 
 const (
@@ -1038,50 +1296,46 @@ func (e MembershipRole) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-type ResourcePoolStatus string
+type ModelGatewayProvider string
 
 const (
-	ResourcePoolStatusConnected    ResourcePoolStatus = "connected"
-	ResourcePoolStatusDisconnected ResourcePoolStatus = "disconnected"
-	ResourcePoolStatusError        ResourcePoolStatus = "error"
+	ModelGatewayProviderLitellm ModelGatewayProvider = "LITELLM"
 )
 
-var AllResourcePoolStatus = []ResourcePoolStatus{
-	ResourcePoolStatusConnected,
-	ResourcePoolStatusDisconnected,
-	ResourcePoolStatusError,
+var AllModelGatewayProvider = []ModelGatewayProvider{
+	ModelGatewayProviderLitellm,
 }
 
-func (e ResourcePoolStatus) IsValid() bool {
+func (e ModelGatewayProvider) IsValid() bool {
 	switch e {
-	case ResourcePoolStatusConnected, ResourcePoolStatusDisconnected, ResourcePoolStatusError:
+	case ModelGatewayProviderLitellm:
 		return true
 	}
 	return false
 }
 
-func (e ResourcePoolStatus) String() string {
+func (e ModelGatewayProvider) String() string {
 	return string(e)
 }
 
-func (e *ResourcePoolStatus) UnmarshalGQL(v any) error {
+func (e *ModelGatewayProvider) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
 	}
 
-	*e = ResourcePoolStatus(str)
+	*e = ModelGatewayProvider(str)
 	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid ResourcePoolStatus", str)
+		return fmt.Errorf("%s is not a valid ModelGatewayProvider", str)
 	}
 	return nil
 }
 
-func (e ResourcePoolStatus) MarshalGQL(w io.Writer) {
+func (e ModelGatewayProvider) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
-func (e *ResourcePoolStatus) UnmarshalJSON(b []byte) error {
+func (e *ModelGatewayProvider) UnmarshalJSON(b []byte) error {
 	s, err := strconv.Unquote(string(b))
 	if err != nil {
 		return err
@@ -1089,58 +1343,56 @@ func (e *ResourcePoolStatus) UnmarshalJSON(b []byte) error {
 	return e.UnmarshalGQL(s)
 }
 
-func (e ResourcePoolStatus) MarshalJSON() ([]byte, error) {
+func (e ModelGatewayProvider) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil
 }
 
-type Role string
+type ModelGatewayStatus string
 
 const (
-	RoleAdmin         Role = "admin"
-	RoleUser          Role = "user"
-	RoleObservability Role = "observability"
-	RoleTenantAdmin   Role = "tenant_admin"
+	ModelGatewayStatusConnected    ModelGatewayStatus = "CONNECTED"
+	ModelGatewayStatusDisconnected ModelGatewayStatus = "DISCONNECTED"
+	ModelGatewayStatusError        ModelGatewayStatus = "ERROR"
 )
 
-var AllRole = []Role{
-	RoleAdmin,
-	RoleUser,
-	RoleObservability,
-	RoleTenantAdmin,
+var AllModelGatewayStatus = []ModelGatewayStatus{
+	ModelGatewayStatusConnected,
+	ModelGatewayStatusDisconnected,
+	ModelGatewayStatusError,
 }
 
-func (e Role) IsValid() bool {
+func (e ModelGatewayStatus) IsValid() bool {
 	switch e {
-	case RoleAdmin, RoleUser, RoleObservability, RoleTenantAdmin:
+	case ModelGatewayStatusConnected, ModelGatewayStatusDisconnected, ModelGatewayStatusError:
 		return true
 	}
 	return false
 }
 
-func (e Role) String() string {
+func (e ModelGatewayStatus) String() string {
 	return string(e)
 }
 
-func (e *Role) UnmarshalGQL(v any) error {
+func (e *ModelGatewayStatus) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
 	}
 
-	*e = Role(str)
+	*e = ModelGatewayStatus(str)
 	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid Role", str)
+		return fmt.Errorf("%s is not a valid ModelGatewayStatus", str)
 	}
 	return nil
 }
 
-func (e Role) MarshalGQL(w io.Writer) {
+func (e ModelGatewayStatus) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
-func (e *Role) UnmarshalJSON(b []byte) error {
+func (e *ModelGatewayStatus) UnmarshalJSON(b []byte) error {
 	s, err := strconv.Unquote(string(b))
 	if err != nil {
 		return err
@@ -1148,7 +1400,306 @@ func (e *Role) UnmarshalJSON(b []byte) error {
 	return e.UnmarshalGQL(s)
 }
 
-func (e Role) MarshalJSON() ([]byte, error) {
+func (e ModelGatewayStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type ModelGatewaySyncState string
+
+const (
+	ModelGatewaySyncStateSynced  ModelGatewaySyncState = "SYNCED"
+	ModelGatewaySyncStateSyncing ModelGatewaySyncState = "SYNCING"
+	ModelGatewaySyncStatePartial ModelGatewaySyncState = "PARTIAL"
+	ModelGatewaySyncStateFailed  ModelGatewaySyncState = "FAILED"
+	ModelGatewaySyncStateNever   ModelGatewaySyncState = "NEVER"
+)
+
+var AllModelGatewaySyncState = []ModelGatewaySyncState{
+	ModelGatewaySyncStateSynced,
+	ModelGatewaySyncStateSyncing,
+	ModelGatewaySyncStatePartial,
+	ModelGatewaySyncStateFailed,
+	ModelGatewaySyncStateNever,
+}
+
+func (e ModelGatewaySyncState) IsValid() bool {
+	switch e {
+	case ModelGatewaySyncStateSynced, ModelGatewaySyncStateSyncing, ModelGatewaySyncStatePartial, ModelGatewaySyncStateFailed, ModelGatewaySyncStateNever:
+		return true
+	}
+	return false
+}
+
+func (e ModelGatewaySyncState) String() string {
+	return string(e)
+}
+
+func (e *ModelGatewaySyncState) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ModelGatewaySyncState(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ModelGatewaySyncState", str)
+	}
+	return nil
+}
+
+func (e ModelGatewaySyncState) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *ModelGatewaySyncState) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e ModelGatewaySyncState) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type PasswordMode string
+
+const (
+	PasswordModeAuto   PasswordMode = "AUTO"
+	PasswordModeCustom PasswordMode = "CUSTOM"
+)
+
+var AllPasswordMode = []PasswordMode{
+	PasswordModeAuto,
+	PasswordModeCustom,
+}
+
+func (e PasswordMode) IsValid() bool {
+	switch e {
+	case PasswordModeAuto, PasswordModeCustom:
+		return true
+	}
+	return false
+}
+
+func (e PasswordMode) String() string {
+	return string(e)
+}
+
+func (e *PasswordMode) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = PasswordMode(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid PasswordMode", str)
+	}
+	return nil
+}
+
+func (e PasswordMode) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *PasswordMode) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e PasswordMode) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type PoolConnectionStatus string
+
+const (
+	PoolConnectionStatusConnected    PoolConnectionStatus = "CONNECTED"
+	PoolConnectionStatusDisconnected PoolConnectionStatus = "DISCONNECTED"
+)
+
+var AllPoolConnectionStatus = []PoolConnectionStatus{
+	PoolConnectionStatusConnected,
+	PoolConnectionStatusDisconnected,
+}
+
+func (e PoolConnectionStatus) IsValid() bool {
+	switch e {
+	case PoolConnectionStatusConnected, PoolConnectionStatusDisconnected:
+		return true
+	}
+	return false
+}
+
+func (e PoolConnectionStatus) String() string {
+	return string(e)
+}
+
+func (e *PoolConnectionStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = PoolConnectionStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid PoolConnectionStatus", str)
+	}
+	return nil
+}
+
+func (e PoolConnectionStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *PoolConnectionStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e PoolConnectionStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type ResourcePoolSortField string
+
+const (
+	ResourcePoolSortFieldName             ResourcePoolSortField = "NAME"
+	ResourcePoolSortFieldEndpoint         ResourcePoolSortField = "ENDPOINT"
+	ResourcePoolSortFieldConnectionStatus ResourcePoolSortField = "CONNECTION_STATUS"
+	ResourcePoolSortFieldDatacenterCount  ResourcePoolSortField = "DATACENTER_COUNT"
+	ResourcePoolSortFieldClusterCount     ResourcePoolSortField = "CLUSTER_COUNT"
+	ResourcePoolSortFieldEsxiHostCount    ResourcePoolSortField = "ESXI_HOST_COUNT"
+	ResourcePoolSortFieldVMInstanceCount  ResourcePoolSortField = "VM_INSTANCE_COUNT"
+	ResourcePoolSortFieldCreatedAt        ResourcePoolSortField = "CREATED_AT"
+	ResourcePoolSortFieldUpdatedAt        ResourcePoolSortField = "UPDATED_AT"
+)
+
+var AllResourcePoolSortField = []ResourcePoolSortField{
+	ResourcePoolSortFieldName,
+	ResourcePoolSortFieldEndpoint,
+	ResourcePoolSortFieldConnectionStatus,
+	ResourcePoolSortFieldDatacenterCount,
+	ResourcePoolSortFieldClusterCount,
+	ResourcePoolSortFieldEsxiHostCount,
+	ResourcePoolSortFieldVMInstanceCount,
+	ResourcePoolSortFieldCreatedAt,
+	ResourcePoolSortFieldUpdatedAt,
+}
+
+func (e ResourcePoolSortField) IsValid() bool {
+	switch e {
+	case ResourcePoolSortFieldName, ResourcePoolSortFieldEndpoint, ResourcePoolSortFieldConnectionStatus, ResourcePoolSortFieldDatacenterCount, ResourcePoolSortFieldClusterCount, ResourcePoolSortFieldEsxiHostCount, ResourcePoolSortFieldVMInstanceCount, ResourcePoolSortFieldCreatedAt, ResourcePoolSortFieldUpdatedAt:
+		return true
+	}
+	return false
+}
+
+func (e ResourcePoolSortField) String() string {
+	return string(e)
+}
+
+func (e *ResourcePoolSortField) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ResourcePoolSortField(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ResourcePoolSortField", str)
+	}
+	return nil
+}
+
+func (e ResourcePoolSortField) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *ResourcePoolSortField) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e ResourcePoolSortField) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type RoleName string
+
+const (
+	RoleNameAdmin         RoleName = "admin"
+	RoleNameUser          RoleName = "user"
+	RoleNameObservability RoleName = "observability"
+	RoleNameTenantAdmin   RoleName = "tenant_admin"
+)
+
+var AllRoleName = []RoleName{
+	RoleNameAdmin,
+	RoleNameUser,
+	RoleNameObservability,
+	RoleNameTenantAdmin,
+}
+
+func (e RoleName) IsValid() bool {
+	switch e {
+	case RoleNameAdmin, RoleNameUser, RoleNameObservability, RoleNameTenantAdmin:
+		return true
+	}
+	return false
+}
+
+func (e RoleName) String() string {
+	return string(e)
+}
+
+func (e *RoleName) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = RoleName(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid RoleName", str)
+	}
+	return nil
+}
+
+func (e RoleName) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *RoleName) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e RoleName) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil
@@ -1387,24 +1938,28 @@ func (e UpstreamProvider) MarshalJSON() ([]byte, error) {
 type UserSortField string
 
 const (
-	UserSortFieldUsername  UserSortField = "USERNAME"
-	UserSortFieldEmail     UserSortField = "EMAIL"
-	UserSortFieldRole      UserSortField = "ROLE"
-	UserSortFieldCreatedAt UserSortField = "CREATED_AT"
-	UserSortFieldLastLogin UserSortField = "LAST_LOGIN"
+	UserSortFieldUsername   UserSortField = "USERNAME"
+	UserSortFieldRole       UserSortField = "ROLE"
+	UserSortFieldEmail      UserSortField = "EMAIL"
+	UserSortFieldConnection UserSortField = "CONNECTION"
+	UserSortFieldLastLogin  UserSortField = "LAST_LOGIN"
+	UserSortFieldCreatedAt  UserSortField = "CREATED_AT"
+	UserSortFieldUpdatedAt  UserSortField = "UPDATED_AT"
 )
 
 var AllUserSortField = []UserSortField{
 	UserSortFieldUsername,
-	UserSortFieldEmail,
 	UserSortFieldRole,
-	UserSortFieldCreatedAt,
+	UserSortFieldEmail,
+	UserSortFieldConnection,
 	UserSortFieldLastLogin,
+	UserSortFieldCreatedAt,
+	UserSortFieldUpdatedAt,
 }
 
 func (e UserSortField) IsValid() bool {
 	switch e {
-	case UserSortFieldUsername, UserSortFieldEmail, UserSortFieldRole, UserSortFieldCreatedAt, UserSortFieldLastLogin:
+	case UserSortFieldUsername, UserSortFieldRole, UserSortFieldEmail, UserSortFieldConnection, UserSortFieldLastLogin, UserSortFieldCreatedAt, UserSortFieldUpdatedAt:
 		return true
 	}
 	return false

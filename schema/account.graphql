@@ -1,0 +1,143 @@
+# 用户与权限页 (UserRoleView) — 前后端整合 P2: frontend-aligned schema.
+# Maps onto the backend User entity + the built-in RoleName enum (each built-in
+# role is surfaced as a first-class Role entity). Replaces the older
+# users{items,total} / roles:[RoleInfo] surface.
+
+enum ConnectionStatus {
+  ONLINE
+  OFFLINE
+}
+
+enum PasswordMode {
+  AUTO # backend generates a temp password, returned once in generatedPassword
+  CUSTOM # use customPassword
+}
+
+enum UserSortField {
+  USERNAME
+  ROLE
+  EMAIL
+  CONNECTION
+  LAST_LOGIN
+  CREATED_AT
+  UPDATED_AT
+}
+
+# The user's role as a lightweight reference (embedded in AccountUser).
+type AccountRoleRef {
+  id: ID!
+  name: String!
+}
+
+type AccountUser {
+  id: ID!
+  username: String!
+  displayName: String!
+  email: String!
+  role: AccountRoleRef!
+  # ONLINE when the user currently has at least one live session.
+  connectionStatus: ConnectionStatus!
+  lastLoginAt: Time
+  enabled: Boolean!
+  createdAt: Time!
+  updatedAt: Time!
+}
+
+type UserConnection {
+  nodes: [AccountUser!]!
+  totalCount: Int!
+  pageInfo: PageInfo!
+}
+
+# A built-in assignable role surfaced as an entity (id = the role key).
+type Role {
+  id: ID!
+  name: String!
+  description: String!
+  userCount: Int!
+  builtIn: Boolean!
+}
+
+type RoleConnection {
+  nodes: [Role!]!
+  totalCount: Int!
+  pageInfo: PageInfo!
+}
+
+input UserFilter {
+  usernameKeyword: String
+  roleKeyword: String
+  emailKeyword: String
+  statusKeyword: ConnectionStatus
+  roleId: ID
+}
+
+input UserSort {
+  field: UserSortField!
+  direction: SortDirection!
+}
+
+input CreateUserInput {
+  username: String!
+  displayName: String!
+  email: String!
+  roleId: ID!
+  passwordMode: PasswordMode!
+  customPassword: String
+  enabled: Boolean = true
+}
+
+input UpdateUserInput {
+  displayName: String
+  email: String
+  roleId: ID
+  enabled: Boolean
+}
+
+input AssignUsersToRoleInput {
+  roleId: ID!
+  userIds: [ID!]!
+}
+
+type CreateUserPayload {
+  user: AccountUser!
+  # Present only when passwordMode = AUTO (the generated temp password, shown once).
+  generatedPassword: String
+}
+
+type ResetPasswordPayload {
+  user: AccountUser!
+  generatedPassword: String!
+}
+
+type DeleteUserPayload {
+  id: ID!
+}
+
+type ToggleUserEnabledPayload {
+  user: AccountUser!
+}
+
+type AssignUsersToRolePayload {
+  role: Role!
+  assignedCount: Int!
+}
+
+extend type Query {
+  users(filter: UserFilter, pagination: Pagination, sort: UserSort): UserConnection!
+    @hasRole(any: [admin, tenant_admin])
+  roles(pagination: Pagination): RoleConnection! @hasRole(any: [admin, tenant_admin])
+  role(id: ID!): Role @hasRole(any: [admin, tenant_admin])
+  # Debounced dedupe check for the create-user form.
+  userExists(username: String, email: String): Boolean! @hasRole(any: [admin, tenant_admin])
+}
+
+extend type Mutation {
+  createUser(input: CreateUserInput!): CreateUserPayload! @hasRole(any: [admin, tenant_admin])
+  updateUser(id: ID!, input: UpdateUserInput!): AccountUser! @hasRole(any: [admin, tenant_admin])
+  deleteUser(id: ID!): DeleteUserPayload! @hasRole(any: [admin, tenant_admin])
+  resetUserPassword(id: ID!): ResetPasswordPayload! @hasRole(any: [admin, tenant_admin])
+  toggleUserEnabled(id: ID!): ToggleUserEnabledPayload! @hasRole(any: [admin, tenant_admin])
+  assignUsersToRole(input: AssignUsersToRoleInput!): AssignUsersToRolePayload!
+    @hasRole(any: [admin, tenant_admin])
+}

@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/VMware-AI/agent-platform-backend/internal/ratelimit"
@@ -29,9 +31,7 @@ func TestLogin_RateLimited(t *testing.T) {
 	ctx := context.Background()
 	mr := &mutationResolver{r}
 
-	if _, err := mr.CreateUser(adminCtx(), model.CreateUserInput{
-		Username: "victim", Email: "v@x.io", Password: "VictimPass12", Role: model.RoleUser,
-	}); err != nil {
+	if _, err := mr.CreateUser(adminCtx(), model.CreateUserInput{Username: "victim", DisplayName: "victim", Email: "v@x.io", RoleID: string(model.RoleNameUser), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("VictimPass12")}); err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
 	for i := 0; i < 3; i++ {
@@ -50,36 +50,26 @@ func TestLogin_RateLimited(t *testing.T) {
 func TestUsers_TenantScoped(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()
-	mr := &mutationResolver{r}
 	qr := &queryResolver{r}
-	admin := adminCtx()
 
 	t1 := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 	t2 := "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
-	if _, err := mr.CreateUser(admin, model.CreateUserInput{
-		Username: "u1", Email: "u1@x.io", Password: "U1Password123", Role: model.RoleUser, TenantID: &t1,
-	}); err != nil {
-		t.Fatalf("create u1: %v", err)
-	}
-	if _, err := mr.CreateUser(admin, model.CreateUserInput{
-		Username: "u2", Email: "u2@x.io", Password: "U2Password123", Role: model.RoleUser, TenantID: &t2,
-	}); err != nil {
-		t.Fatalf("create u2: %v", err)
-	}
+	mkTenantUser(t, r, "u1", "u1@x.io", model.RoleNameUser, uuid.MustParse(t1))
+	mkTenantUser(t, r, "u2", "u2@x.io", model.RoleNameUser, uuid.MustParse(t2))
 
 	// platform admin sees both
-	all, err := qr.Users(admin, nil, nil, nil)
-	if err != nil || all.Total != 2 || len(all.Items) != 2 {
-		t.Fatalf("admin should see all users: total=%d items=%d err=%v", all.Total, len(all.Items), err)
+	all, err := qr.Users(adminCtx(), nil, nil, nil)
+	if err != nil || all.TotalCount != 2 || len(all.Nodes) != 2 {
+		t.Fatalf("admin should see all users: total=%d nodes=%d err=%v", all.TotalCount, len(all.Nodes), err)
 	}
 
-	// tenant-admin of t1 sees only u1 (both total and items scoped)
+	// tenant-admin of t1 sees only u1 (both total and nodes scoped)
 	scoped, err := qr.Users(tenantAdminCtx("11111111-1111-1111-1111-111111111111", t1), nil, nil, nil)
 	if err != nil {
 		t.Fatalf("t1 admin users: %v", err)
 	}
-	if scoped.Total != 1 || len(scoped.Items) != 1 || scoped.Items[0].Username != "u1" {
-		t.Fatalf("tenant-admin must see only their tenant's users: total=%d items=%+v", scoped.Total, scoped.Items)
+	if scoped.TotalCount != 1 || len(scoped.Nodes) != 1 || scoped.Nodes[0].Username != "u1" {
+		t.Fatalf("tenant-admin must see only their tenant's users: total=%d nodes=%+v", scoped.TotalCount, scoped.Nodes)
 	}
 }
 
@@ -89,13 +79,12 @@ func TestCreateUserAndLogin(t *testing.T) {
 	ctx := context.Background()
 	mr := &mutationResolver{r}
 
-	u, err := mr.CreateUser(ctx, model.CreateUserInput{
-		Username: "alice", Email: "alice@x.io", Password: "AlicePass123", Role: model.RoleUser,
-	})
+	u, err := mr.CreateUser(ctx, model.CreateUserInput{Username: "alice", DisplayName: "alice", Email: "alice@x.io", RoleID: string(model.RoleNameUser), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("AlicePass123")})
 	if err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
-	if u.Username != "alice" || !u.MustChangePassword {
+	// CUSTOM password → no forced change, no generatedPassword.
+	if u.User.Username != "alice" || u.GeneratedPassword != nil {
 		t.Fatalf("unexpected user: %+v", u)
 	}
 
@@ -106,7 +95,7 @@ func TestCreateUserAndLogin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Login: %v", err)
 	}
-	if ap.User.Username != "alice" || !ap.MustChangePassword {
+	if ap.User.Username != "alice" || ap.Token == "" {
 		t.Fatalf("unexpected auth payload: %+v", ap)
 	}
 
@@ -125,7 +114,7 @@ func TestDuplicateUsernameRejected(t *testing.T) {
 	defer cleanup()
 	ctx := context.Background()
 	mr := &mutationResolver{r}
-	in := model.CreateUserInput{Username: "dup", Email: "dup@x.io", Password: "DupPass12345", Role: model.RoleUser}
+	in := model.CreateUserInput{Username: "dup", DisplayName: "dup", Email: "dup@x.io", RoleID: string(model.RoleNameUser), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("DupPass12345")}
 	if _, err := mr.CreateUser(ctx, in); err != nil {
 		t.Fatalf("first create: %v", err)
 	}
@@ -140,14 +129,12 @@ func TestChangePasswordFlow(t *testing.T) {
 	defer cleanup()
 	ctx := context.Background()
 	mr := &mutationResolver{r}
-	u, err := mr.CreateUser(ctx, model.CreateUserInput{
-		Username: "bob", Email: "bob@x.io", Password: "BobPass12345", Role: model.RoleUser,
-	})
+	u, err := mr.CreateUser(ctx, model.CreateUserInput{Username: "bob", DisplayName: "bob", Email: "bob@x.io", RoleID: string(model.RoleNameUser), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("BobPass12345")})
 	if err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
 
-	bobCtx := auth.WithCurrentUser(ctx, &auth.CurrentUser{ID: u.ID, Role: auth.RoleUser})
+	bobCtx := auth.WithCurrentUser(ctx, &auth.CurrentUser{ID: u.User.ID, Role: auth.RoleUser})
 	ok, err := mr.ChangePassword(bobCtx, "BobPass12345", "NewBobPass678")
 	if err != nil || !ok {
 		t.Fatalf("ChangePassword: ok=%v err=%v", ok, err)
@@ -168,22 +155,22 @@ func TestHasRoleDirective(t *testing.T) {
 	next := func(context.Context) (any, error) { return "ok", nil }
 
 	adminCtx := auth.WithCurrentUser(context.Background(), &auth.CurrentUser{Role: auth.RoleAdmin})
-	if res, err := HasRole(adminCtx, nil, next, []model.Role{model.RoleAdmin}); err != nil || res != "ok" {
+	if res, err := HasRole(adminCtx, nil, next, []model.RoleName{model.RoleNameAdmin}); err != nil || res != "ok" {
 		t.Fatalf("admin should pass: res=%v err=%v", res, err)
 	}
 
 	userCtx := auth.WithCurrentUser(context.Background(), &auth.CurrentUser{Role: auth.RoleUser})
-	if _, err := HasRole(userCtx, nil, next, []model.Role{model.RoleAdmin}); err == nil {
+	if _, err := HasRole(userCtx, nil, next, []model.RoleName{model.RoleNameAdmin}); err == nil {
 		t.Fatal("user should be denied admin-only field")
 	}
 
-	if _, err := HasRole(context.Background(), nil, next, []model.Role{model.RoleAdmin}); err == nil {
+	if _, err := HasRole(context.Background(), nil, next, []model.RoleName{model.RoleNameAdmin}); err == nil {
 		t.Fatal("unauthenticated should be denied")
 	}
 
 	// tenant_admin (GraphQL) must map to tenant-admin (storage) and pass.
 	taCtx := auth.WithCurrentUser(context.Background(), &auth.CurrentUser{Role: auth.RoleTenantAdmin})
-	if _, err := HasRole(taCtx, nil, next, []model.Role{model.RoleTenantAdmin}); err != nil {
+	if _, err := HasRole(taCtx, nil, next, []model.RoleName{model.RoleNameTenantAdmin}); err != nil {
 		t.Fatalf("tenant-admin should pass: %v", err)
 	}
 }
@@ -212,18 +199,16 @@ func TestResetPassword(t *testing.T) {
 	// (the directive guarantees a caller in prod — resolvers now enforce tenant
 	// scope on the caller).
 	admin := adminCtx()
-	u, _ := mr.CreateUser(admin, model.CreateUserInput{
-		Username: "carol", Email: "carol@x.io", Password: "CarolPass123", Role: model.RoleUser,
-	})
-	payload, err := mr.ResetPassword(admin, u.ID)
+	u := mkUser(t, mr, admin, "carol", "carol@x.io", model.RoleNameUser)
+	payload, err := mr.ResetUserPassword(admin, u.ID)
 	if err != nil {
 		t.Fatalf("ResetPassword: %v", err)
 	}
-	if payload.TempPassword == "" {
+	if payload.GeneratedPassword == "" {
 		t.Fatal("temp password must be returned")
 	}
 	// the temp password should log the user in (login is unauthenticated)
-	if _, err := mr.Login(ctx, model.LoginInput{Email: "carol", Password: payload.TempPassword}); err != nil {
+	if _, err := mr.Login(ctx, model.LoginInput{Email: "carol", Password: payload.GeneratedPassword}); err != nil {
 		t.Fatalf("login with temp password: %v", err)
 	}
 }
