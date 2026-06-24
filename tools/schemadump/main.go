@@ -50,7 +50,6 @@ func main() {
 	if err != nil {
 		fatal("create %s: %v", outPath, err)
 	}
-	defer out.Close()
 
 	fmt.Fprintln(out, "# AUTO-GENERATED — do not edit by hand.")
 	fmt.Fprintln(out, "# Complete merged SDL of every schema/*.graphql module (the whole API in one file).")
@@ -59,6 +58,11 @@ func main() {
 	fmt.Fprintln(out)
 	formatter.NewFormatter(out).FormatSchema(schema)
 
+	// Close explicitly (not deferred): a truncated write surfaces only on Close,
+	// and a silently-truncated SDL would be worse than a loud failure.
+	if err := out.Close(); err != nil {
+		fatal("close %s: %v", outPath, err)
+	}
 	fmt.Printf("wrote %s (%d source files merged)\n", outPath, len(files))
 }
 
