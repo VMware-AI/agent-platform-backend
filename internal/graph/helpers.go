@@ -23,6 +23,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/catalog"
+	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/VMware-AI/agent-platform-backend/internal/httpx"
 	"github.com/VMware-AI/agent-platform-backend/internal/secrets"
@@ -649,6 +650,23 @@ func toModelGateway(g *ent.GatewayConnection, backendModelCount int) *model.Mode
 // fronts (real DB count, surfaced as ModelGateway.backendModelCount).
 func (r *Resolver) backendModelCount(ctx context.Context) (int, error) {
 	return r.Ent.Upstream.Query().Count(ctx)
+}
+
+// gatewayClient builds a litellm client bound to a SPECIFIC gateway row — its own
+// endpoint and its own master key (resolved from the secret store) — so a
+// connection test hits the gateway under test, not a process-wide default. The
+// builder is injectable (GatewayClientFor) so tests can supply a fake.
+func (r *Resolver) gatewayClient(ctx context.Context, g *ent.GatewayConnection) gateway.ModelManager {
+	masterKey := ""
+	if g.MasterKeyRef != "" && r.Secrets != nil {
+		if cred, err := r.Secrets.Resolve(ctx, g.MasterKeyRef); err == nil {
+			masterKey = cred.APIKey
+		}
+	}
+	if r.GatewayClientFor != nil {
+		return r.GatewayClientFor(ctx, g.Endpoint, masterKey)
+	}
+	return gateway.NewHTTPClient(g.Endpoint, masterKey)
 }
 
 func toModelUpstream(u *ent.Upstream) *model.Upstream {
