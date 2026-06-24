@@ -8,6 +8,7 @@ package graph
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -160,6 +161,11 @@ func (r *mutationResolver) ChangePassword(ctx context.Context, oldPassword strin
 				HttpOnly: true, Secure: r.SecureCookies, SameSite: http.SameSiteLaxMode,
 				MaxAge: int(r.SessionTTL.Seconds()),
 			})
+		} else {
+			// Password change succeeded but the session store couldn't mint a fresh
+			// session: the user is now logged out (must re-login). Don't silently
+			// swallow — surface the store outage for an operator.
+			log.Printf("changePassword: session store Create failed for user %s; user must re-login: %v", u.ID, serr)
 		}
 	}
 	r.audit(ctx, "user.change_password", "user", u.ID.String(), true, cu.ID)
@@ -221,6 +227,12 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, id string, input mode
 	u, err := upd.Save(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if input.Role != nil {
+		// Role is cached in the session (SessionMiddleware reads it without re-querying
+		// the DB), so revoke the user's sessions on a role change — otherwise a
+		// demotion is not enforced until the old session's TTL expires (stale privilege).
+		_ = r.Sessions.DeleteByUser(uid.String())
 	}
 	r.audit(ctx, "user.update", "user", u.ID.String(), true, actorID(auth.FromContext(ctx)))
 	return toModelUser(u), nil

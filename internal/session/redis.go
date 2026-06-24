@@ -39,11 +39,15 @@ func (s *RedisStore) Create(d Data) (string, error) {
 	if err := s.rdb.Set(ctx, s.key(id), b, ttl).Err(); err != nil {
 		return "", err
 	}
-	// Index the session under its user for DeleteByUser. The set's TTL is refreshed
-	// to the session ttl; dead ids that linger are harmless (Del is a no-op on them).
+	// Index the session under its user for DeleteByUser. Give the index set a
+	// GENEROUS ttl (well beyond any single session's) so it can never expire while a
+	// live session still points into it — otherwise DeleteByUser (reset/disable/
+	// delete) would SMEMBERS an empty set and silently fail to revoke. Dead ids that
+	// linger are harmless (Del no-ops on them).
 	if d.UserID != "" {
+		indexTTL := ttl + s.defaultTTL
 		s.rdb.SAdd(ctx, s.userKey(d.UserID), id)
-		s.rdb.Expire(ctx, s.userKey(d.UserID), ttl)
+		s.rdb.Expire(ctx, s.userKey(d.UserID), indexTTL)
 	}
 	return id, nil
 }

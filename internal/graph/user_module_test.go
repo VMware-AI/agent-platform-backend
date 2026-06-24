@@ -2,11 +2,48 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"testing"
+	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
+	"github.com/VMware-AI/agent-platform-backend/internal/session"
 )
+
+// A role change must revoke the user's live sessions — the role is cached in the
+// session, so a demotion would otherwise leave stale admin privilege alive until
+// the session TTL expires (code-review CRITICAL fix).
+func TestUpdateUser_RoleChangeRevokesSessions(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := adminCtx()
+	bg := context.Background()
+	mr := &mutationResolver{r}
+
+	u := r.Ent.User.Create().SetUsername("victim").SetEmail("v@x.io").
+		SetPasswordHash("h").SetRole(user.RoleAdmin).SaveX(bg)
+	sid, _ := r.Sessions.Create(session.Data{UserID: u.ID.String(), Role: "admin", ExpiresAt: time.Now().Add(time.Hour)})
+
+	// demote admin → user; the live admin session must die
+	demote := model.RoleUser
+	if _, err := mr.UpdateUser(ctx, u.ID.String(), model.UpdateUserInput{Role: &demote}); err != nil {
+		t.Fatalf("UpdateUser: %v", err)
+	}
+	if _, err := r.Sessions.Get(sid); !errors.Is(err, session.ErrNotFound) {
+		t.Fatalf("role change must revoke the session, got %v", err)
+	}
+
+	// an email-only change does NOT revoke (no security posture change)
+	sid2, _ := r.Sessions.Create(session.Data{UserID: u.ID.String(), Role: "user", ExpiresAt: time.Now().Add(time.Hour)})
+	email := "new@x.io"
+	if _, err := mr.UpdateUser(ctx, u.ID.String(), model.UpdateUserInput{Email: &email}); err != nil {
+		t.Fatalf("UpdateUser email: %v", err)
+	}
+	if _, err := r.Sessions.Get(sid2); err != nil {
+		t.Fatalf("email-only change should NOT revoke, got %v", err)
+	}
+}
 
 // 模块① 用户与权限: roles lists the built-in assignable roles for the picker.
 func TestRoles_BuiltinList(t *testing.T) {
