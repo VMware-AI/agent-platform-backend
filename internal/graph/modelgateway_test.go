@@ -53,7 +53,7 @@ func TestModelGateways_Projection(t *testing.T) {
 		r.Ent.Upstream.Create().SetName("u" + string(rune('a'+i))).
 			SetProvider(upstream.ProviderVllm).SetModel("m").SaveX(context.Background())
 	}
-	conn, err := qr.ModelGateways(ctx, nil, model.PageInput{})
+	conn, err := qr.ModelGateways(ctx, nil, model.PageInput{}, nil)
 	if err != nil {
 		t.Fatalf("ModelGateways: %v", err)
 	}
@@ -62,11 +62,11 @@ func TestModelGateways_Projection(t *testing.T) {
 	}
 
 	// search filter
-	hit, _ := qr.ModelGateways(ctx, &model.ModelGatewayFilterInput{Search: ptr("prod")}, model.PageInput{})
+	hit, _ := qr.ModelGateways(ctx, &model.ModelGatewayFilterInput{Search: ptr("prod")}, model.PageInput{}, nil)
 	if hit.TotalCount != 1 {
 		t.Fatalf("search prod: %d, want 1", hit.TotalCount)
 	}
-	miss, _ := qr.ModelGateways(ctx, &model.ModelGatewayFilterInput{Search: ptr("nope")}, model.PageInput{})
+	miss, _ := qr.ModelGateways(ctx, &model.ModelGatewayFilterInput{Search: ptr("nope")}, model.PageInput{}, nil)
 	if miss.TotalCount != 0 {
 		t.Fatalf("search nope: %d, want 0", miss.TotalCount)
 	}
@@ -149,6 +149,35 @@ func TestModelGatewaySyncSummary_StateMachine(t *testing.T) {
 	s, _ := qr.ModelGatewaySyncSummary(ctx)
 	if s.State != model.ModelGatewaySyncStatePartial || s.SuccessCount != 1 {
 		t.Fatalf("connected+disconnected: %+v, want PARTIAL/success=1", s)
+	}
+}
+
+// modelGateways exposes createdAt/updatedAt and honors the sort arg.
+func TestModelGateways_SortAndTimestamps(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := adminCtx()
+	mr := &mutationResolver{r}
+	qr := &queryResolver{r}
+
+	mkGateway(t, mr, ctx, "bravo", "https://b:4000")
+	mkGateway(t, mr, ctx, "alpha", "https://a:4000")
+
+	asc, err := qr.ModelGateways(ctx, nil, model.PageInput{}, &model.ModelGatewaySort{
+		Field: model.ModelGatewaySortFieldName, Direction: model.SortDirectionAsc,
+	})
+	if err != nil || len(asc.Nodes) != 2 || asc.Nodes[0].Name != "alpha" || asc.Nodes[1].Name != "bravo" {
+		t.Fatalf("sort NAME asc wrong: %+v / %v", asc.Nodes, err)
+	}
+	if asc.Nodes[0].CreatedAt.IsZero() || asc.Nodes[0].UpdatedAt.IsZero() {
+		t.Fatal("createdAt/updatedAt must be exposed")
+	}
+
+	desc, _ := qr.ModelGateways(ctx, nil, model.PageInput{}, &model.ModelGatewaySort{
+		Field: model.ModelGatewaySortFieldName, Direction: model.SortDirectionDesc,
+	})
+	if desc.Nodes[0].Name != "bravo" {
+		t.Fatalf("sort NAME desc: %s", desc.Nodes[0].Name)
 	}
 }
 
@@ -321,7 +350,7 @@ func TestModelGateway_UpdateDelete(t *testing.T) {
 	if err != nil || del.DeletedID != g.ID {
 		t.Fatalf("delete: %+v / %v", del, err)
 	}
-	conn, _ := qr.ModelGateways(ctx, nil, model.PageInput{})
+	conn, _ := qr.ModelGateways(ctx, nil, model.PageInput{}, nil)
 	if conn.TotalCount != 0 {
 		t.Fatalf("gateway should be deleted, got %d", conn.TotalCount)
 	}

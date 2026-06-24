@@ -40,6 +40,8 @@ type ResourcePool struct {
 	HostCount int `json:"host_count,omitempty"`
 	// VMCount holds the value of the "vm_count" field.
 	VMCount int `json:"vm_count,omitempty"`
+	// LastSyncedAt holds the value of the "last_synced_at" field.
+	LastSyncedAt *time.Time `json:"last_synced_at,omitempty"`
 	// TenantID holds the value of the "tenant_id" field.
 	TenantID *uuid.UUID `json:"tenant_id,omitempty"`
 	// EnvironmentID holds the value of the "environment_id" field.
@@ -58,7 +60,7 @@ func (*ResourcePool) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case resourcepool.FieldName, resourcepool.FieldKind, resourcepool.FieldEndpoint, resourcepool.FieldStatus, resourcepool.FieldSecretRef:
 			values[i] = new(sql.NullString)
-		case resourcepool.FieldCreatedAt, resourcepool.FieldUpdatedAt:
+		case resourcepool.FieldCreatedAt, resourcepool.FieldUpdatedAt, resourcepool.FieldLastSyncedAt:
 			values[i] = new(sql.NullTime)
 		case resourcepool.FieldID:
 			values[i] = new(uuid.UUID)
@@ -149,6 +151,13 @@ func (_m *ResourcePool) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.VMCount = int(value.Int64)
 			}
+		case resourcepool.FieldLastSyncedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field last_synced_at", values[i])
+			} else if value.Valid {
+				_m.LastSyncedAt = new(time.Time)
+				*_m.LastSyncedAt = value.Time
+			}
 		case resourcepool.FieldTenantID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field tenant_id", values[i])
@@ -231,6 +240,11 @@ func (_m *ResourcePool) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("vm_count=")
 	builder.WriteString(fmt.Sprintf("%v", _m.VMCount))
+	builder.WriteString(", ")
+	if v := _m.LastSyncedAt; v != nil {
+		builder.WriteString("last_synced_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	if v := _m.TenantID; v != nil {
 		builder.WriteString("tenant_id=")

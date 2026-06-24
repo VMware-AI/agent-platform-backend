@@ -134,7 +134,7 @@ func (r *mutationResolver) TestModelGatewayConnection(ctx context.Context, id st
 
 // ModelGateways is a filtered/paged (limit/offset) list of gateways projected as
 // the console's ModelGateway aggregate.
-func (r *queryResolver) ModelGateways(ctx context.Context, filter *model.ModelGatewayFilterInput, page model.PageInput) (*model.ModelGatewayConnection, error) {
+func (r *queryResolver) ModelGateways(ctx context.Context, filter *model.ModelGatewayFilterInput, page model.PageInput, sort *model.ModelGatewaySort) (*model.ModelGatewayConnection, error) {
 	base := r.Ent.GatewayConnection.Query()
 	if filter != nil {
 		if filter.Search != nil && *filter.Search != "" {
@@ -158,7 +158,7 @@ func (r *queryResolver) ModelGateways(ctx context.Context, filter *model.ModelGa
 	if page.Offset != nil && *page.Offset > 0 {
 		offset = *page.Offset
 	}
-	gws, err := base.Clone().Order(orderNewest).Limit(limit).Offset(offset).All(ctx)
+	gws, err := applyModelGatewaySort(base.Clone(), sort).Limit(limit).Offset(offset).All(ctx)
 	if err != nil {
 		return nil, err
 	}

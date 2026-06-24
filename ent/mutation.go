@@ -12921,6 +12921,7 @@ type ResourcePoolMutation struct {
 	addhost_count       *int
 	vm_count            *int
 	addvm_count         *int
+	last_synced_at      *time.Time
 	tenant_id           *uuid.UUID
 	environment_id      *uuid.UUID
 	clearedFields       map[string]struct{}
@@ -13522,6 +13523,55 @@ func (m *ResourcePoolMutation) ResetVMCount() {
 	m.addvm_count = nil
 }
 
+// SetLastSyncedAt sets the "last_synced_at" field.
+func (m *ResourcePoolMutation) SetLastSyncedAt(t time.Time) {
+	m.last_synced_at = &t
+}
+
+// LastSyncedAt returns the value of the "last_synced_at" field in the mutation.
+func (m *ResourcePoolMutation) LastSyncedAt() (r time.Time, exists bool) {
+	v := m.last_synced_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastSyncedAt returns the old "last_synced_at" field's value of the ResourcePool entity.
+// If the ResourcePool object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ResourcePoolMutation) OldLastSyncedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastSyncedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastSyncedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastSyncedAt: %w", err)
+	}
+	return oldValue.LastSyncedAt, nil
+}
+
+// ClearLastSyncedAt clears the value of the "last_synced_at" field.
+func (m *ResourcePoolMutation) ClearLastSyncedAt() {
+	m.last_synced_at = nil
+	m.clearedFields[resourcepool.FieldLastSyncedAt] = struct{}{}
+}
+
+// LastSyncedAtCleared returns if the "last_synced_at" field was cleared in this mutation.
+func (m *ResourcePoolMutation) LastSyncedAtCleared() bool {
+	_, ok := m.clearedFields[resourcepool.FieldLastSyncedAt]
+	return ok
+}
+
+// ResetLastSyncedAt resets all changes to the "last_synced_at" field.
+func (m *ResourcePoolMutation) ResetLastSyncedAt() {
+	m.last_synced_at = nil
+	delete(m.clearedFields, resourcepool.FieldLastSyncedAt)
+}
+
 // SetTenantID sets the "tenant_id" field.
 func (m *ResourcePoolMutation) SetTenantID(u uuid.UUID) {
 	m.tenant_id = &u
@@ -13654,7 +13704,7 @@ func (m *ResourcePoolMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ResourcePoolMutation) Fields() []string {
-	fields := make([]string, 0, 13)
+	fields := make([]string, 0, 14)
 	if m.created_at != nil {
 		fields = append(fields, resourcepool.FieldCreatedAt)
 	}
@@ -13687,6 +13737,9 @@ func (m *ResourcePoolMutation) Fields() []string {
 	}
 	if m.vm_count != nil {
 		fields = append(fields, resourcepool.FieldVMCount)
+	}
+	if m.last_synced_at != nil {
+		fields = append(fields, resourcepool.FieldLastSyncedAt)
 	}
 	if m.tenant_id != nil {
 		fields = append(fields, resourcepool.FieldTenantID)
@@ -13724,6 +13777,8 @@ func (m *ResourcePoolMutation) Field(name string) (ent.Value, bool) {
 		return m.HostCount()
 	case resourcepool.FieldVMCount:
 		return m.VMCount()
+	case resourcepool.FieldLastSyncedAt:
+		return m.LastSyncedAt()
 	case resourcepool.FieldTenantID:
 		return m.TenantID()
 	case resourcepool.FieldEnvironmentID:
@@ -13759,6 +13814,8 @@ func (m *ResourcePoolMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldHostCount(ctx)
 	case resourcepool.FieldVMCount:
 		return m.OldVMCount(ctx)
+	case resourcepool.FieldLastSyncedAt:
+		return m.OldLastSyncedAt(ctx)
 	case resourcepool.FieldTenantID:
 		return m.OldTenantID(ctx)
 	case resourcepool.FieldEnvironmentID:
@@ -13848,6 +13905,13 @@ func (m *ResourcePoolMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetVMCount(v)
+		return nil
+	case resourcepool.FieldLastSyncedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastSyncedAt(v)
 		return nil
 	case resourcepool.FieldTenantID:
 		v, ok := value.(uuid.UUID)
@@ -13947,6 +14011,9 @@ func (m *ResourcePoolMutation) ClearedFields() []string {
 	if m.FieldCleared(resourcepool.FieldSecretRef) {
 		fields = append(fields, resourcepool.FieldSecretRef)
 	}
+	if m.FieldCleared(resourcepool.FieldLastSyncedAt) {
+		fields = append(fields, resourcepool.FieldLastSyncedAt)
+	}
 	if m.FieldCleared(resourcepool.FieldTenantID) {
 		fields = append(fields, resourcepool.FieldTenantID)
 	}
@@ -13969,6 +14036,9 @@ func (m *ResourcePoolMutation) ClearField(name string) error {
 	switch name {
 	case resourcepool.FieldSecretRef:
 		m.ClearSecretRef()
+		return nil
+	case resourcepool.FieldLastSyncedAt:
+		m.ClearLastSyncedAt()
 		return nil
 	case resourcepool.FieldTenantID:
 		m.ClearTenantID()
@@ -14016,6 +14086,9 @@ func (m *ResourcePoolMutation) ResetField(name string) error {
 		return nil
 	case resourcepool.FieldVMCount:
 		m.ResetVMCount()
+		return nil
+	case resourcepool.FieldLastSyncedAt:
+		m.ResetLastSyncedAt()
 		return nil
 	case resourcepool.FieldTenantID:
 		m.ResetTenantID()

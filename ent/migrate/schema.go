@@ -430,6 +430,7 @@ var (
 		{Name: "cluster_count", Type: field.TypeInt, Default: 0},
 		{Name: "host_count", Type: field.TypeInt, Default: 0},
 		{Name: "vm_count", Type: field.TypeInt, Default: 0},
+		{Name: "last_synced_at", Type: field.TypeTime, Nullable: true},
 		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "environment_id", Type: field.TypeUUID, Nullable: true},
 	}

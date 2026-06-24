@@ -100,6 +100,11 @@ func VMCount(v int) predicate.ResourcePool {
 	return predicate.ResourcePool(sql.FieldEQ(FieldVMCount, v))
 }
 
+// LastSyncedAt applies equality check predicate on the "last_synced_at" field. It's identical to LastSyncedAtEQ.
+func LastSyncedAt(v time.Time) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldEQ(FieldLastSyncedAt, v))
+}
+
 // TenantID applies equality check predicate on the "tenant_id" field. It's identical to TenantIDEQ.
 func TenantID(v uuid.UUID) predicate.ResourcePool {
 	return predicate.ResourcePool(sql.FieldEQ(FieldTenantID, v))
@@ -593,6 +598,56 @@ func VMCountLT(v int) predicate.ResourcePool {
 // VMCountLTE applies the LTE predicate on the "vm_count" field.
 func VMCountLTE(v int) predicate.ResourcePool {
 	return predicate.ResourcePool(sql.FieldLTE(FieldVMCount, v))
+}
+
+// LastSyncedAtEQ applies the EQ predicate on the "last_synced_at" field.
+func LastSyncedAtEQ(v time.Time) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldEQ(FieldLastSyncedAt, v))
+}
+
+// LastSyncedAtNEQ applies the NEQ predicate on the "last_synced_at" field.
+func LastSyncedAtNEQ(v time.Time) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldNEQ(FieldLastSyncedAt, v))
+}
+
+// LastSyncedAtIn applies the In predicate on the "last_synced_at" field.
+func LastSyncedAtIn(vs ...time.Time) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldIn(FieldLastSyncedAt, vs...))
+}
+
+// LastSyncedAtNotIn applies the NotIn predicate on the "last_synced_at" field.
+func LastSyncedAtNotIn(vs ...time.Time) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldNotIn(FieldLastSyncedAt, vs...))
+}
+
+// LastSyncedAtGT applies the GT predicate on the "last_synced_at" field.
+func LastSyncedAtGT(v time.Time) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldGT(FieldLastSyncedAt, v))
+}
+
+// LastSyncedAtGTE applies the GTE predicate on the "last_synced_at" field.
+func LastSyncedAtGTE(v time.Time) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldGTE(FieldLastSyncedAt, v))
+}
+
+// LastSyncedAtLT applies the LT predicate on the "last_synced_at" field.
+func LastSyncedAtLT(v time.Time) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldLT(FieldLastSyncedAt, v))
+}
+
+// LastSyncedAtLTE applies the LTE predicate on the "last_synced_at" field.
+func LastSyncedAtLTE(v time.Time) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldLTE(FieldLastSyncedAt, v))
+}
+
+// LastSyncedAtIsNil applies the IsNil predicate on the "last_synced_at" field.
+func LastSyncedAtIsNil() predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldIsNull(FieldLastSyncedAt))
+}
+
+// LastSyncedAtNotNil applies the NotNil predicate on the "last_synced_at" field.
+func LastSyncedAtNotNil() predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldNotNull(FieldLastSyncedAt))
 }
 
 // TenantIDEQ applies the EQ predicate on the "tenant_id" field.

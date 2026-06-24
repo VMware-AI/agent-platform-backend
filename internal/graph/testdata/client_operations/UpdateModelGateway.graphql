@@ -10,11 +10,12 @@ mutation UpdateModelGateway($id: ID!, $input: ModelGatewayInput!) {
     provider
     endpoint
     status
-    backendModelCount
     loadBalancingStrategy
     latencyMs
     adminUrl
     lastSyncAt
     lastSyncStatus
     lastSyncMessage
+    createdAt
+    updatedAt
   }

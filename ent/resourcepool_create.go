@@ -159,6 +159,20 @@ func (_c *ResourcePoolCreate) SetNillableVMCount(v *int) *ResourcePoolCreate {
 	return _c
 }
 
+// SetLastSyncedAt sets the "last_synced_at" field.
+func (_c *ResourcePoolCreate) SetLastSyncedAt(v time.Time) *ResourcePoolCreate {
+	_c.mutation.SetLastSyncedAt(v)
+	return _c
+}
+
+// SetNillableLastSyncedAt sets the "last_synced_at" field if the given value is not nil.
+func (_c *ResourcePoolCreate) SetNillableLastSyncedAt(v *time.Time) *ResourcePoolCreate {
+	if v != nil {
+		_c.SetLastSyncedAt(*v)
+	}
+	return _c
+}
+
 // SetTenantID sets the "tenant_id" field.
 func (_c *ResourcePoolCreate) SetTenantID(v uuid.UUID) *ResourcePoolCreate {
 	_c.mutation.SetTenantID(v)
@@ -424,6 +438,10 @@ func (_c *ResourcePoolCreate) createSpec() (*ResourcePool, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.VMCount(); ok {
 		_spec.SetField(resourcepool.FieldVMCount, field.TypeInt, value)
 		_node.VMCount = value
+	}
+	if value, ok := _c.mutation.LastSyncedAt(); ok {
+		_spec.SetField(resourcepool.FieldLastSyncedAt, field.TypeTime, value)
+		_node.LastSyncedAt = &value
 	}
 	if value, ok := _c.mutation.TenantID(); ok {
 		_spec.SetField(resourcepool.FieldTenantID, field.TypeUUID, value)

@@ -37,6 +37,8 @@ const (
 	FieldHostCount = "host_count"
 	// FieldVMCount holds the string denoting the vm_count field in the database.
 	FieldVMCount = "vm_count"
+	// FieldLastSyncedAt holds the string denoting the last_synced_at field in the database.
+	FieldLastSyncedAt = "last_synced_at"
 	// FieldTenantID holds the string denoting the tenant_id field in the database.
 	FieldTenantID = "tenant_id"
 	// FieldEnvironmentID holds the string denoting the environment_id field in the database.
@@ -59,6 +61,7 @@ var Columns = []string{
 	FieldClusterCount,
 	FieldHostCount,
 	FieldVMCount,
+	FieldLastSyncedAt,
 	FieldTenantID,
 	FieldEnvironmentID,
 }
@@ -217,6 +220,11 @@ func ByHostCount(opts ...sql.OrderTermOption) OrderOption {
 // ByVMCount orders the results by the vm_count field.
 func ByVMCount(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldVMCount, opts...).ToFunc()
+}
+
+// ByLastSyncedAt orders the results by the last_synced_at field.
+func ByLastSyncedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastSyncedAt, opts...).ToFunc()
 }
 
 // ByTenantID orders the results by the tenant_id field.

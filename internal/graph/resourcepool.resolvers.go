@@ -8,6 +8,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
@@ -144,19 +145,20 @@ func (r *mutationResolver) SyncResourcePool(ctx context.Context, id string) (*mo
 	if err != nil {
 		return nil, fmt.Errorf("inventory: %w", err)
 	}
+	now := time.Now()
 	pool, err = r.Ent.ResourcePool.UpdateOne(pool).
 		SetStatus(resourcepool.StatusConnected).
 		SetDatacenterCount(inv.Datacenters).
 		SetClusterCount(inv.Clusters).
 		SetHostCount(inv.Hosts).
 		SetVMCount(inv.VMs).
+		SetLastSyncedAt(now). // real inventory-sync time → drives syncStatus/lastSyncedAt
 		Save(ctx)
 	if err != nil {
 		return nil, err
 	}
 	r.audit(ctx, "resource_pool.sync", "resource_pool", id, true, actorID(auth.FromContext(ctx)))
-	// updated_at is the persisted sync time (set by ent on Save).
-	return &model.SyncResourcePoolPayload{Pool: toModelResourcePool(pool), SyncedAt: pool.UpdatedAt}, nil
+	return &model.SyncResourcePoolPayload{Pool: toModelResourcePool(pool), SyncedAt: now}, nil
 }
 
 // ResourcePools is a filtered/sorted/paged connection of pools (console 资源池 page).

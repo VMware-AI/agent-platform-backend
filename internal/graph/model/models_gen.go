@@ -327,6 +327,8 @@ type ModelGateway struct {
 	LastSyncAt            *time.Time            `json:"lastSyncAt,omitempty"`
 	LastSyncStatus        ModelGatewaySyncState `json:"lastSyncStatus"`
 	LastSyncMessage       *string               `json:"lastSyncMessage,omitempty"`
+	CreatedAt             time.Time             `json:"createdAt"`
+	UpdatedAt             time.Time             `json:"updatedAt"`
 }
 
 type ModelGatewayConnection struct {
@@ -346,6 +348,11 @@ type ModelGatewayInput struct {
 	AdminURL              *string               `json:"adminUrl,omitempty"`
 	MasterKey             *string               `json:"masterKey,omitempty"`
 	LoadBalancingStrategy LoadBalancingStrategy `json:"loadBalancingStrategy"`
+}
+
+type ModelGatewaySort struct {
+	Field     ModelGatewaySortField `json:"field"`
+	Direction SortDirection         `json:"direction"`
 }
 
 type ModelGatewaySyncSummary struct {
@@ -481,16 +488,18 @@ type ResetPasswordPayload struct {
 }
 
 type ResourcePool struct {
-	ID               string               `json:"id"`
-	Name             string               `json:"name"`
-	Endpoint         string               `json:"endpoint"`
-	ConnectionStatus PoolConnectionStatus `json:"connectionStatus"`
-	DatacenterCount  int                  `json:"datacenterCount"`
-	ClusterCount     int                  `json:"clusterCount"`
-	EsxiHostCount    int                  `json:"esxiHostCount"`
-	VMInstanceCount  int                  `json:"vmInstanceCount"`
-	CreatedAt        time.Time            `json:"createdAt"`
-	UpdatedAt        time.Time            `json:"updatedAt"`
+	ID               string                `json:"id"`
+	Name             string                `json:"name"`
+	Endpoint         string                `json:"endpoint"`
+	ConnectionStatus PoolConnectionStatus  `json:"connectionStatus"`
+	DatacenterCount  int                   `json:"datacenterCount"`
+	ClusterCount     int                   `json:"clusterCount"`
+	EsxiHostCount    int                   `json:"esxiHostCount"`
+	VMInstanceCount  int                   `json:"vmInstanceCount"`
+	SyncStatus       ResourcePoolSyncState `json:"syncStatus"`
+	LastSyncedAt     *time.Time            `json:"lastSyncedAt,omitempty"`
+	CreatedAt        time.Time             `json:"createdAt"`
+	UpdatedAt        time.Time             `json:"updatedAt"`
 }
 
 type ResourcePoolConnection struct {
@@ -1349,6 +1358,67 @@ func (e ModelGatewayProvider) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type ModelGatewaySortField string
+
+const (
+	ModelGatewaySortFieldName      ModelGatewaySortField = "NAME"
+	ModelGatewaySortFieldEndpoint  ModelGatewaySortField = "ENDPOINT"
+	ModelGatewaySortFieldStatus    ModelGatewaySortField = "STATUS"
+	ModelGatewaySortFieldCreatedAt ModelGatewaySortField = "CREATED_AT"
+	ModelGatewaySortFieldUpdatedAt ModelGatewaySortField = "UPDATED_AT"
+)
+
+var AllModelGatewaySortField = []ModelGatewaySortField{
+	ModelGatewaySortFieldName,
+	ModelGatewaySortFieldEndpoint,
+	ModelGatewaySortFieldStatus,
+	ModelGatewaySortFieldCreatedAt,
+	ModelGatewaySortFieldUpdatedAt,
+}
+
+func (e ModelGatewaySortField) IsValid() bool {
+	switch e {
+	case ModelGatewaySortFieldName, ModelGatewaySortFieldEndpoint, ModelGatewaySortFieldStatus, ModelGatewaySortFieldCreatedAt, ModelGatewaySortFieldUpdatedAt:
+		return true
+	}
+	return false
+}
+
+func (e ModelGatewaySortField) String() string {
+	return string(e)
+}
+
+func (e *ModelGatewaySortField) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ModelGatewaySortField(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ModelGatewaySortField", str)
+	}
+	return nil
+}
+
+func (e ModelGatewaySortField) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *ModelGatewaySortField) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e ModelGatewaySortField) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type ModelGatewayStatus string
 
 const (
@@ -1641,6 +1711,67 @@ func (e *ResourcePoolSortField) UnmarshalJSON(b []byte) error {
 }
 
 func (e ResourcePoolSortField) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type ResourcePoolSyncState string
+
+const (
+	ResourcePoolSyncStateSynced  ResourcePoolSyncState = "SYNCED"
+	ResourcePoolSyncStateSyncing ResourcePoolSyncState = "SYNCING"
+	ResourcePoolSyncStatePartial ResourcePoolSyncState = "PARTIAL"
+	ResourcePoolSyncStateFailed  ResourcePoolSyncState = "FAILED"
+	ResourcePoolSyncStateNever   ResourcePoolSyncState = "NEVER"
+)
+
+var AllResourcePoolSyncState = []ResourcePoolSyncState{
+	ResourcePoolSyncStateSynced,
+	ResourcePoolSyncStateSyncing,
+	ResourcePoolSyncStatePartial,
+	ResourcePoolSyncStateFailed,
+	ResourcePoolSyncStateNever,
+}
+
+func (e ResourcePoolSyncState) IsValid() bool {
+	switch e {
+	case ResourcePoolSyncStateSynced, ResourcePoolSyncStateSyncing, ResourcePoolSyncStatePartial, ResourcePoolSyncStateFailed, ResourcePoolSyncStateNever:
+		return true
+	}
+	return false
+}
+
+func (e ResourcePoolSyncState) String() string {
+	return string(e)
+}
+
+func (e *ResourcePoolSyncState) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ResourcePoolSyncState(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ResourcePoolSyncState", str)
+	}
+	return nil
+}
+
+func (e ResourcePoolSyncState) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *ResourcePoolSyncState) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e ResourcePoolSyncState) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil
