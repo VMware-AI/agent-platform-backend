@@ -196,6 +196,26 @@ func (_u *ResourcePoolUpdate) AddVMCount(v int) *ResourcePoolUpdate {
 	return _u
 }
 
+// SetLastSyncedAt sets the "last_synced_at" field.
+func (_u *ResourcePoolUpdate) SetLastSyncedAt(v time.Time) *ResourcePoolUpdate {
+	_u.mutation.SetLastSyncedAt(v)
+	return _u
+}
+
+// SetNillableLastSyncedAt sets the "last_synced_at" field if the given value is not nil.
+func (_u *ResourcePoolUpdate) SetNillableLastSyncedAt(v *time.Time) *ResourcePoolUpdate {
+	if v != nil {
+		_u.SetLastSyncedAt(*v)
+	}
+	return _u
+}
+
+// ClearLastSyncedAt clears the value of the "last_synced_at" field.
+func (_u *ResourcePoolUpdate) ClearLastSyncedAt() *ResourcePoolUpdate {
+	_u.mutation.ClearLastSyncedAt()
+	return _u
+}
+
 // SetTenantID sets the "tenant_id" field.
 func (_u *ResourcePoolUpdate) SetTenantID(v uuid.UUID) *ResourcePoolUpdate {
 	_u.mutation.SetTenantID(v)
@@ -384,6 +404,12 @@ func (_u *ResourcePoolUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if value, ok := _u.mutation.AddedVMCount(); ok {
 		_spec.AddField(resourcepool.FieldVMCount, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.LastSyncedAt(); ok {
+		_spec.SetField(resourcepool.FieldLastSyncedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LastSyncedAtCleared() {
+		_spec.ClearField(resourcepool.FieldLastSyncedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.TenantID(); ok {
 		_spec.SetField(resourcepool.FieldTenantID, field.TypeUUID, value)
@@ -582,6 +608,26 @@ func (_u *ResourcePoolUpdateOne) SetNillableVMCount(v *int) *ResourcePoolUpdateO
 // AddVMCount adds value to the "vm_count" field.
 func (_u *ResourcePoolUpdateOne) AddVMCount(v int) *ResourcePoolUpdateOne {
 	_u.mutation.AddVMCount(v)
+	return _u
+}
+
+// SetLastSyncedAt sets the "last_synced_at" field.
+func (_u *ResourcePoolUpdateOne) SetLastSyncedAt(v time.Time) *ResourcePoolUpdateOne {
+	_u.mutation.SetLastSyncedAt(v)
+	return _u
+}
+
+// SetNillableLastSyncedAt sets the "last_synced_at" field if the given value is not nil.
+func (_u *ResourcePoolUpdateOne) SetNillableLastSyncedAt(v *time.Time) *ResourcePoolUpdateOne {
+	if v != nil {
+		_u.SetLastSyncedAt(*v)
+	}
+	return _u
+}
+
+// ClearLastSyncedAt clears the value of the "last_synced_at" field.
+func (_u *ResourcePoolUpdateOne) ClearLastSyncedAt() *ResourcePoolUpdateOne {
+	_u.mutation.ClearLastSyncedAt()
 	return _u
 }
 
@@ -803,6 +849,12 @@ func (_u *ResourcePoolUpdateOne) sqlSave(ctx context.Context) (_node *ResourcePo
 	}
 	if value, ok := _u.mutation.AddedVMCount(); ok {
 		_spec.AddField(resourcepool.FieldVMCount, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.LastSyncedAt(); ok {
+		_spec.SetField(resourcepool.FieldLastSyncedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LastSyncedAtCleared() {
+		_spec.ClearField(resourcepool.FieldLastSyncedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.TenantID(); ok {
 		_spec.SetField(resourcepool.FieldTenantID, field.TypeUUID, value)

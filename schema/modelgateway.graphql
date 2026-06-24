@@ -39,6 +39,21 @@ type ModelGateway {
   lastSyncAt: Time
   lastSyncStatus: ModelGatewaySyncState!
   lastSyncMessage: String
+  createdAt: Time!
+  updatedAt: Time!
+}
+
+enum ModelGatewaySortField {
+  NAME
+  ENDPOINT
+  STATUS
+  CREATED_AT
+  UPDATED_AT
+}
+
+input ModelGatewaySort {
+  field: ModelGatewaySortField!
+  direction: SortDirection!
 }
 
 type ModelGatewayConnection {
@@ -84,7 +99,7 @@ input ModelGatewayInput {
 
 extend type Query {
   # page is the shared PageInput (limit/offset) defined alongside audit/observability.
-  modelGateways(filter: ModelGatewayFilterInput, page: PageInput!): ModelGatewayConnection! @hasRole(any: [admin])
+  modelGateways(filter: ModelGatewayFilterInput, page: PageInput!, sort: ModelGatewaySort): ModelGatewayConnection! @hasRole(any: [admin])
   modelGatewaySyncSummary: ModelGatewaySyncSummary! @hasRole(any: [admin])
 }
 

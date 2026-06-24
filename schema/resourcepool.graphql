@@ -9,6 +9,18 @@ enum PoolConnectionStatus {
   DISCONNECTED
 }
 
+# Inventory-sync state, distinct from connectionStatus. Derived: never synced →
+# NEVER; last sync ok → SYNCED; last sync errored → FAILED. (SYNCING/PARTIAL are
+# part of the console enum but the backend's sync is synchronous, so it never
+# produces them today.)
+enum ResourcePoolSyncState {
+  SYNCED
+  SYNCING
+  PARTIAL
+  FAILED
+  NEVER
+}
+
 enum ResourcePoolSortField {
   NAME
   ENDPOINT
@@ -30,6 +42,8 @@ type ResourcePool {
   clusterCount: Int!
   esxiHostCount: Int!
   vmInstanceCount: Int!
+  syncStatus: ResourcePoolSyncState!
+  lastSyncedAt: Time
   createdAt: Time!
   updatedAt: Time!
 }

@@ -29,6 +29,9 @@ func (ResourcePool) Fields() []ent.Field {
 		field.Int("cluster_count").NonNegative().Default(0),
 		field.Int("host_count").NonNegative().Default(0),
 		field.Int("vm_count").NonNegative().Default(0),
+		// last_synced_at: when syncResourcePool last succeeded. Nil = never synced.
+		// Drives the console's syncStatus (NEVER/SYNCED) + lastSyncedAt column.
+		field.Time("last_synced_at").Optional().Nillable(),
 		field.UUID("tenant_id", uuid.UUID{}).Optional().Nillable(),
 		field.UUID("environment_id", uuid.UUID{}).Optional().Nillable(), // LLD-10 env_scope (default off)
 	}

@@ -3,9 +3,37 @@ package graph
 import (
 	"context"
 	"testing"
+	"time"
 
+	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 )
+
+// syncStatus is derived: never synced → NEVER; last sync ok → SYNCED; status=error
+// → FAILED. lastSyncedAt mirrors the column.
+func TestResourcePool_SyncStatusProjection(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	fresh := r.Ent.ResourcePool.Create().SetName("fresh").SetEndpoint("https://f").SaveX(ctx)
+	if m := toModelResourcePool(fresh); m.SyncStatus != model.ResourcePoolSyncStateNever || m.LastSyncedAt != nil {
+		t.Fatalf("fresh pool: syncStatus=%v lastSyncedAt=%v, want NEVER/nil", m.SyncStatus, m.LastSyncedAt)
+	}
+
+	now := time.Now()
+	synced := r.Ent.ResourcePool.Create().SetName("ok").SetEndpoint("https://o").
+		SetStatus(resourcepool.StatusConnected).SetLastSyncedAt(now).SaveX(ctx)
+	if m := toModelResourcePool(synced); m.SyncStatus != model.ResourcePoolSyncStateSynced || m.LastSyncedAt == nil {
+		t.Fatalf("synced pool: syncStatus=%v lastSyncedAt=%v, want SYNCED/set", m.SyncStatus, m.LastSyncedAt)
+	}
+
+	failed := r.Ent.ResourcePool.Create().SetName("bad").SetEndpoint("https://b").
+		SetStatus(resourcepool.StatusError).SaveX(ctx)
+	if m := toModelResourcePool(failed); m.SyncStatus != model.ResourcePoolSyncStateFailed {
+		t.Fatalf("errored pool: syncStatus=%v, want FAILED", m.SyncStatus)
+	}
+}
 
 // mkPool registers a pool via the resolver and returns it (重蒙皮 P3 helper).
 func mkPool(t *testing.T, mr *mutationResolver, ctx context.Context, name, endpoint string) *model.ResourcePool {
@@ -59,6 +87,16 @@ func TestResourcePools_Connection(t *testing.T) {
 	}
 	if asc.Nodes[0].ConnectionStatus != model.PoolConnectionStatusDisconnected {
 		t.Fatalf("fresh pool status = %v, want DISCONNECTED", asc.Nodes[0].ConnectionStatus)
+	}
+	// sort by NAME desc (covers the desc branch)
+	desc := mustPoolConn(t, qr, ctx, nil, &model.ResourcePoolSort{Field: model.ResourcePoolSortFieldName, Direction: model.SortDirectionDesc})
+	if desc.Nodes[0].Name != "gamma-prod" || desc.Nodes[2].Name != "alpha-dc" {
+		t.Fatalf("sort NAME desc: %s..%s", desc.Nodes[0].Name, desc.Nodes[2].Name)
+	}
+	// sort by a non-name field (endpoint asc)
+	epSort := mustPoolConn(t, qr, ctx, nil, &model.ResourcePoolSort{Field: model.ResourcePoolSortFieldEndpoint, Direction: model.SortDirectionAsc})
+	if epSort.Nodes[0].Endpoint > epSort.Nodes[2].Endpoint {
+		t.Fatalf("sort ENDPOINT asc not ordered: %s..%s", epSort.Nodes[0].Endpoint, epSort.Nodes[2].Endpoint)
 	}
 }
 

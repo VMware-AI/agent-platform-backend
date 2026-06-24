@@ -314,6 +314,8 @@ func toModelResourcePool(p *ent.ResourcePool) *model.ResourcePool {
 		ClusterCount:     p.ClusterCount,
 		EsxiHostCount:    p.HostCount,
 		VMInstanceCount:  p.VMCount,
+		SyncStatus:       poolSyncState(p),
+		LastSyncedAt:     p.LastSyncedAt,
 		CreatedAt:        p.CreatedAt,
 		UpdatedAt:        p.UpdatedAt,
 	}
@@ -327,6 +329,21 @@ func poolConnStatus(s resourcepool.Status) model.PoolConnectionStatus {
 		return model.PoolConnectionStatusConnected
 	}
 	return model.PoolConnectionStatusDisconnected
+}
+
+// poolSyncState derives the console's inventory-sync state: never synced → NEVER;
+// last sync errored (status=error) → FAILED; otherwise (a successful sync is
+// recorded) → SYNCED. The backend's sync is synchronous, so SYNCING/PARTIAL are
+// never produced.
+func poolSyncState(p *ent.ResourcePool) model.ResourcePoolSyncState {
+	switch {
+	case p.Status == resourcepool.StatusError:
+		return model.ResourcePoolSyncStateFailed
+	case p.LastSyncedAt == nil:
+		return model.ResourcePoolSyncStateNever
+	default:
+		return model.ResourcePoolSyncStateSynced
+	}
 }
 
 // applyResourcePoolSort orders a pool query by the console's sort field, with a
@@ -636,7 +653,35 @@ func toModelGateway(g *ent.GatewayConnection, backendModelCount int) *model.Mode
 		AdminURL:              &adminURL,
 		LastSyncAt:            g.LastSyncedAt,
 		LastSyncStatus:        modelGatewaySyncState(g.Status),
+		CreatedAt:             g.CreatedAt,
+		UpdatedAt:             g.UpdatedAt,
 	}
+}
+
+// applyModelGatewaySort orders a gateway query by the console's sort field with a
+// stable id tiebreak; default (and any unmapped field) is newest-first.
+func applyModelGatewaySort(q *ent.GatewayConnectionQuery, sort *model.ModelGatewaySort) *ent.GatewayConnectionQuery {
+	if sort == nil {
+		return q.Order(ent.Desc(gatewayconnection.FieldCreatedAt))
+	}
+	desc := sort.Direction == model.SortDirectionDesc
+	col := gatewayconnection.FieldCreatedAt
+	switch sort.Field {
+	case model.ModelGatewaySortFieldName:
+		col = gatewayconnection.FieldName
+	case model.ModelGatewaySortFieldEndpoint:
+		col = gatewayconnection.FieldEndpoint
+	case model.ModelGatewaySortFieldStatus:
+		col = gatewayconnection.FieldStatus
+	case model.ModelGatewaySortFieldUpdatedAt:
+		col = gatewayconnection.FieldUpdatedAt
+	default: // CREATED_AT
+		col = gatewayconnection.FieldCreatedAt
+	}
+	if desc {
+		return q.Order(ent.Desc(col), ent.Desc(gatewayconnection.FieldID))
+	}
+	return q.Order(ent.Asc(col), ent.Asc(gatewayconnection.FieldID))
 }
 
 // backendModelCount is the number of registered upstreams the litellm gateway

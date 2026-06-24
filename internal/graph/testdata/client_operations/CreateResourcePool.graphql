@@ -7,6 +7,8 @@ fragment ResourcePoolFields on ResourcePool {
     clusterCount
     esxiHostCount
     vmInstanceCount
+    syncStatus
+    lastSyncedAt
     createdAt
     updatedAt
   }

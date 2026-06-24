@@ -254,6 +254,7 @@ type ComplexityRoot struct {
 	ModelGateway struct {
 		AdminURL              func(childComplexity int) int
 		BackendModelCount     func(childComplexity int) int
+		CreatedAt             func(childComplexity int) int
 		Endpoint              func(childComplexity int) int
 		ID                    func(childComplexity int) int
 		LastSyncAt            func(childComplexity int) int
@@ -264,6 +265,7 @@ type ComplexityRoot struct {
 		Name                  func(childComplexity int) int
 		Provider              func(childComplexity int) int
 		Status                func(childComplexity int) int
+		UpdatedAt             func(childComplexity int) int
 	}
 
 	ModelGatewayConnection struct {
@@ -403,7 +405,7 @@ type ComplexityRoot struct {
 		Me                      func(childComplexity int) int
 		MeteringSummary         func(childComplexity int, userID *string) int
 		ModelGatewaySyncSummary func(childComplexity int) int
-		ModelGateways           func(childComplexity int, filter *model.ModelGatewayFilterInput, page model.PageInput) int
+		ModelGateways           func(childComplexity int, filter *model.ModelGatewayFilterInput, page model.PageInput, sort *model.ModelGatewaySort) int
 		ModelRoutes             func(childComplexity int) int
 		Permissions             func(childComplexity int) int
 		RateLimitPolicies       func(childComplexity int) int
@@ -459,7 +461,9 @@ type ComplexityRoot struct {
 		Endpoint         func(childComplexity int) int
 		EsxiHostCount    func(childComplexity int) int
 		ID               func(childComplexity int) int
+		LastSyncedAt     func(childComplexity int) int
 		Name             func(childComplexity int) int
+		SyncStatus       func(childComplexity int) int
 		UpdatedAt        func(childComplexity int) int
 		VMInstanceCount  func(childComplexity int) int
 	}
@@ -677,7 +681,7 @@ type QueryResolver interface {
 	RouterTiers(ctx context.Context) ([]model.RouterTier, error)
 	TokenUsage(ctx context.Context, userID *string, page *model.PageInput) ([]model.TokenUsage, error)
 	MeteringSummary(ctx context.Context, userID *string) (*model.MeteringSummary, error)
-	ModelGateways(ctx context.Context, filter *model.ModelGatewayFilterInput, page model.PageInput) (*model.ModelGatewayConnection, error)
+	ModelGateways(ctx context.Context, filter *model.ModelGatewayFilterInput, page model.PageInput, sort *model.ModelGatewaySort) (*model.ModelGatewayConnection, error)
 	ModelGatewaySyncSummary(ctx context.Context) (*model.ModelGatewaySyncSummary, error)
 	RequestLogs(ctx context.Context, filter *model.RequestLogFilter, page *model.PageInput) ([]model.RequestLog, error)
 	RateLimitPolicies(ctx context.Context) ([]model.RateLimitPolicy, error)
@@ -1500,6 +1504,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelGateway.BackendModelCount(childComplexity), true
+	case "ModelGateway.createdAt":
+		if e.ComplexityRoot.ModelGateway.CreatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGateway.CreatedAt(childComplexity), true
 	case "ModelGateway.endpoint":
 		if e.ComplexityRoot.ModelGateway.Endpoint == nil {
 			break
@@ -1560,6 +1570,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelGateway.Status(childComplexity), true
+	case "ModelGateway.updatedAt":
+		if e.ComplexityRoot.ModelGateway.UpdatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGateway.UpdatedAt(childComplexity), true
 
 	case "ModelGatewayConnection.nodes":
 		if e.ComplexityRoot.ModelGatewayConnection.Nodes == nil {
@@ -2617,7 +2633,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Query.ModelGateways(childComplexity, args["filter"].(*model.ModelGatewayFilterInput), args["page"].(model.PageInput)), true
+		return e.ComplexityRoot.Query.ModelGateways(childComplexity, args["filter"].(*model.ModelGatewayFilterInput), args["page"].(model.PageInput), args["sort"].(*model.ModelGatewaySort)), true
 	case "Query.modelRoutes":
 		if e.ComplexityRoot.Query.ModelRoutes == nil {
 			break
@@ -2935,12 +2951,24 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ResourcePool.ID(childComplexity), true
+	case "ResourcePool.lastSyncedAt":
+		if e.ComplexityRoot.ResourcePool.LastSyncedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ResourcePool.LastSyncedAt(childComplexity), true
 	case "ResourcePool.name":
 		if e.ComplexityRoot.ResourcePool.Name == nil {
 			break
 		}
 
 		return e.ComplexityRoot.ResourcePool.Name(childComplexity), true
+	case "ResourcePool.syncStatus":
+		if e.ComplexityRoot.ResourcePool.SyncStatus == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ResourcePool.SyncStatus(childComplexity), true
 	case "ResourcePool.updatedAt":
 		if e.ComplexityRoot.ResourcePool.UpdatedAt == nil {
 			break
@@ -3381,6 +3409,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputLoginInput,
 		ec.unmarshalInputModelGatewayFilterInput,
 		ec.unmarshalInputModelGatewayInput,
+		ec.unmarshalInputModelGatewaySort,
 		ec.unmarshalInputPageInput,
 		ec.unmarshalInputPagination,
 		ec.unmarshalInputRecordRequestLogInput,
@@ -4250,6 +4279,21 @@ type ModelGateway {
   lastSyncAt: Time
   lastSyncStatus: ModelGatewaySyncState!
   lastSyncMessage: String
+  createdAt: Time!
+  updatedAt: Time!
+}
+
+enum ModelGatewaySortField {
+  NAME
+  ENDPOINT
+  STATUS
+  CREATED_AT
+  UPDATED_AT
+}
+
+input ModelGatewaySort {
+  field: ModelGatewaySortField!
+  direction: SortDirection!
 }
 
 type ModelGatewayConnection {
@@ -4295,7 +4339,7 @@ input ModelGatewayInput {
 
 extend type Query {
   # page is the shared PageInput (limit/offset) defined alongside audit/observability.
-  modelGateways(filter: ModelGatewayFilterInput, page: PageInput!): ModelGatewayConnection! @hasRole(any: [admin])
+  modelGateways(filter: ModelGatewayFilterInput, page: PageInput!, sort: ModelGatewaySort): ModelGatewayConnection! @hasRole(any: [admin])
   modelGatewaySyncSummary: ModelGatewaySyncSummary! @hasRole(any: [admin])
 }
 
@@ -4420,6 +4464,18 @@ enum PoolConnectionStatus {
   DISCONNECTED
 }
 
+# Inventory-sync state, distinct from connectionStatus. Derived: never synced →
+# NEVER; last sync ok → SYNCED; last sync errored → FAILED. (SYNCING/PARTIAL are
+# part of the console enum but the backend's sync is synchronous, so it never
+# produces them today.)
+enum ResourcePoolSyncState {
+  SYNCED
+  SYNCING
+  PARTIAL
+  FAILED
+  NEVER
+}
+
 enum ResourcePoolSortField {
   NAME
   ENDPOINT
@@ -4441,6 +4497,8 @@ type ResourcePool {
   clusterCount: Int!
   esxiHostCount: Int!
   vmInstanceCount: Int!
+  syncStatus: ResourcePoolSyncState!
+  lastSyncedAt: Time
   createdAt: Time!
   updatedAt: Time!
 }
@@ -5125,6 +5183,10 @@ func (ec *executionContext) childFields_ModelGateway(ctx context.Context, field 
 		return ec.fieldContext_ModelGateway_lastSyncStatus(ctx, field)
 	case "lastSyncMessage":
 		return ec.fieldContext_ModelGateway_lastSyncMessage(ctx, field)
+	case "createdAt":
+		return ec.fieldContext_ModelGateway_createdAt(ctx, field)
+	case "updatedAt":
+		return ec.fieldContext_ModelGateway_updatedAt(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type ModelGateway", field.Name)
 }
@@ -5307,6 +5369,10 @@ func (ec *executionContext) childFields_ResourcePool(ctx context.Context, field 
 		return ec.fieldContext_ResourcePool_esxiHostCount(ctx, field)
 	case "vmInstanceCount":
 		return ec.fieldContext_ResourcePool_vmInstanceCount(ctx, field)
+	case "syncStatus":
+		return ec.fieldContext_ResourcePool_syncStatus(ctx, field)
+	case "lastSyncedAt":
+		return ec.fieldContext_ResourcePool_lastSyncedAt(ctx, field)
 	case "createdAt":
 		return ec.fieldContext_ResourcePool_createdAt(ctx, field)
 	case "updatedAt":
@@ -6904,6 +6970,14 @@ func (ec *executionContext) field_Query_modelGateways_args(ctx context.Context, 
 		return nil, err
 	}
 	args["page"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
+		func(ctx context.Context, v any) (*model.ModelGatewaySort, error) {
+			return ec.unmarshalOModelGatewaySort2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySort(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["sort"] = arg2
 	return args, nil
 }
 
@@ -10470,6 +10544,52 @@ func (ec *executionContext) _ModelGateway_lastSyncMessage(ctx context.Context, f
 }
 func (ec *executionContext) fieldContext_ModelGateway_lastSyncMessage(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGateway_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGateway_createdAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGateway_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGateway_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGateway_updatedAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.UpdatedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGateway_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
 func (ec *executionContext) _ModelGatewayConnection_nodes(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayConnection) (ret graphql.Marshaler) {
@@ -16170,7 +16290,7 @@ func (ec *executionContext) _Query_modelGateways(ctx context.Context, field grap
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().ModelGateways(ctx, fc.Args["filter"].(*model.ModelGatewayFilterInput), fc.Args["page"].(model.PageInput))
+			return ec.Resolvers.Query().ModelGateways(ctx, fc.Args["filter"].(*model.ModelGatewayFilterInput), fc.Args["page"].(model.PageInput), fc.Args["sort"].(*model.ModelGatewaySort))
 		},
 		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
 			directive0 := next
@@ -17436,6 +17556,52 @@ func (ec *executionContext) _ResourcePool_vmInstanceCount(ctx context.Context, f
 }
 func (ec *executionContext) fieldContext_ResourcePool_vmInstanceCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ResourcePool_syncStatus(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ResourcePool_syncStatus(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.SyncStatus, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.ResourcePoolSyncState) graphql.Marshaler {
+			return ec.marshalNResourcePoolSyncState2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolSyncState(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ResourcePool_syncStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type ResourcePoolSyncState does not have child fields"))
+}
+
+func (ec *executionContext) _ResourcePool_lastSyncedAt(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ResourcePool_lastSyncedAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.LastSyncedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *time.Time) graphql.Marshaler {
+			return ec.marshalOTime2ᚖtimeᚐTime(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_ResourcePool_lastSyncedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
 func (ec *executionContext) _ResourcePool_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
@@ -20916,6 +21082,43 @@ func (ec *executionContext) unmarshalInputModelGatewayInput(ctx context.Context,
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputModelGatewaySort(ctx context.Context, obj any) (model.ModelGatewaySort, error) {
+	var it model.ModelGatewaySort
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"field", "direction"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "field":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			data, err := ec.unmarshalNModelGatewaySortField2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySortField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Field = data
+		case "direction":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			data, err := ec.unmarshalNSortDirection2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSortDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Direction = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputPageInput(ctx context.Context, obj any) (model.PageInput, error) {
 	var it model.PageInput
 	if obj == nil {
@@ -23953,6 +24156,16 @@ func (ec *executionContext) _ModelGateway(ctx context.Context, sel ast.Selection
 			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
+		case "createdAt":
+			out.Values[i] = ec._ModelGateway_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updatedAt":
+			out.Values[i] = ec._ModelGateway_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -25901,6 +26114,16 @@ func (ec *executionContext) _ResourcePool(ctx context.Context, sel ast.Selection
 		case "vmInstanceCount":
 			out.Values[i] = ec._ResourcePool_vmInstanceCount(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "syncStatus":
+			out.Values[i] = ec._ResourcePool_syncStatus(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "lastSyncedAt":
+			out.Values[i] = ec._ResourcePool_lastSyncedAt(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
 		case "createdAt":
@@ -28037,6 +28260,16 @@ func (ec *executionContext) marshalNModelGatewayProvider2githubᚗcomᚋVMware�
 	return v
 }
 
+func (ec *executionContext) unmarshalNModelGatewaySortField2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySortField(ctx context.Context, v any) (model.ModelGatewaySortField, error) {
+	var res model.ModelGatewaySortField
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNModelGatewaySortField2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySortField(ctx context.Context, sel ast.SelectionSet, v model.ModelGatewaySortField) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) unmarshalNModelGatewayStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx context.Context, v any) (model.ModelGatewayStatus, error) {
 	var res model.ModelGatewayStatus
 	err := res.UnmarshalGQL(v)
@@ -28345,6 +28578,16 @@ func (ec *executionContext) unmarshalNResourcePoolSortField2githubᚗcomᚋVMwar
 }
 
 func (ec *executionContext) marshalNResourcePoolSortField2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolSortField(ctx context.Context, sel ast.SelectionSet, v model.ResourcePoolSortField) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNResourcePoolSyncState2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolSyncState(ctx context.Context, v any) (model.ResourcePoolSyncState, error) {
+	var res model.ResourcePoolSyncState
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNResourcePoolSyncState2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolSyncState(ctx context.Context, sel ast.SelectionSet, v model.ResourcePoolSyncState) graphql.Marshaler {
 	return v
 }
 
@@ -29213,6 +29456,14 @@ func (ec *executionContext) unmarshalOModelGatewayFilterInput2ᚖgithubᚗcomᚋ
 		return nil, nil
 	}
 	res, err := ec.unmarshalInputModelGatewayFilterInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOModelGatewaySort2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySort(ctx context.Context, v any) (*model.ModelGatewaySort, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputModelGatewaySort(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
