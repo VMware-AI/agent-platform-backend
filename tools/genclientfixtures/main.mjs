@@ -8,7 +8,7 @@
 // Usage (from the backend repo root):
 //   node tools/genclientfixtures/main.mjs [path-to-console-repo]
 // Default console path: ../agent-platform-console (sibling checkout).
-import { readFileSync, readdirSync, writeFileSync, mkdirSync, rmSync } from 'node:fs'
+import { readFileSync, readdirSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'node:fs'
 
 const consoleRepo = process.argv[2] ?? '../agent-platform-console'
 const QDIR = `${consoleRepo}/src/api/graphql/queries`
@@ -28,10 +28,20 @@ const consts = {}
 for (const m of text.matchAll(/const\s+(\w+)\s*=\s*(?:\/\*\s*GraphQL\s*\*\/|gql)\s*`([\s\S]*?)`/g)) {
   consts[m[1]] = m[2]
 }
-const inline = (body) => body.replace(/\$\{(\w+)\}/g, (_, n) => consts[n] ?? '')
+const inline = (body) =>
+  body.replace(/\$\{(\w+)\}/g, (_, n) => {
+    if (!(n in consts)) {
+      console.error(`genclientfixtures: unresolved interpolation \${${n}} — fragment defined in an unscanned file?`)
+      process.exit(1)
+    }
+    return consts[n]
+  })
 
-rmSync(OUT, { recursive: true, force: true })
+// Prune only the generated fixtures (keep README.md and anything else here).
 mkdirSync(OUT, { recursive: true })
+if (existsSync(OUT)) {
+  for (const f of readdirSync(OUT).filter((f) => f.endsWith('.graphql'))) rmSync(`${OUT}/${f}`)
+}
 
 let count = 0
 for (const m of text.matchAll(/gql`([\s\S]*?)`/g)) {

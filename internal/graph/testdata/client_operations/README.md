@@ -28,3 +28,12 @@ go test ./internal/graph/ -run TestClientOperationsMatchSchema
 The generator reads `src/api/graphql/queries/*.ts`, resolves the `${FRAGMENT}`
 interpolations, and writes one complete operation document per file. It is a
 faithful snapshot — do not hand-edit these files.
+
+## Limitation
+
+These snapshots are only as current as the last `make client-fixtures` run. The
+test validates **snapshot-vs-backend**, not **live-frontend-vs-backend** — if the
+console changes an operation and nobody re-snapshots here, the test keeps passing
+against the stale copy and the real drift ships undetected. Refresh whenever the
+console's operations change (ideally wire `make client-fixtures` into a pre-merge
+check so the snapshot can't silently rot).
