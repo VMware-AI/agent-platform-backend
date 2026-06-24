@@ -7,6 +7,7 @@ package graph
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
@@ -90,6 +91,10 @@ func (r *mutationResolver) TestModelGatewayConnection(ctx context.Context, id st
 	status := gatewayconnection.StatusDisconnected
 	message := "model gateway not configured"
 	var latency *int
+	// TODO(reskin H1): r.GatewayModels is the single app-configured litellm client,
+	// not a per-row client built from g.Endpoint/g.MasterKeyRef. The platform runs
+	// one litellm gateway today (same assumption as TestGatewayConnection); when
+	// multiple gateways are supported, build a per-gateway client here.
 	if r.GatewayModels != nil {
 		start := time.Now()
 		terr := r.GatewayModels.TestConnection(ctx)
@@ -100,7 +105,10 @@ func (r *mutationResolver) TestModelGatewayConnection(ctx context.Context, id st
 			message = "connection ok"
 		} else {
 			status = gatewayconnection.StatusError
-			message = terr.Error()
+			// Never echo the raw transport error to the client — it can embed the
+			// endpoint (and any user-info in it). Log the detail server-side only.
+			message = "connection failed"
+			log.Printf("model gateway test failed (id=%s): %v", id, terr)
 		}
 	}
 	g, err = r.Ent.GatewayConnection.UpdateOne(g).SetStatus(status).Save(ctx)
@@ -185,6 +193,9 @@ func (r *queryResolver) ModelGatewaySyncSummary(ctx context.Context) (*model.Mod
 			failed++
 		}
 	}
+	// Total state machine over the three ent states (connected/error/disconnected).
+	// Disconnected rows count as "not yet synced": they make a fleet neither fully
+	// SYNCED nor FAILED, so a mix with any success is PARTIAL.
 	state := model.ModelGatewaySyncStateNever
 	switch {
 	case len(gws) == 0:
@@ -193,8 +204,11 @@ func (r *queryResolver) ModelGatewaySyncSummary(ctx context.Context) (*model.Mod
 		state = model.ModelGatewaySyncStateSynced
 	case success == 0 && failed > 0:
 		state = model.ModelGatewaySyncStateFailed
-	case failed > 0:
+	case success > 0 && (failed > 0 || success < len(gws)):
 		state = model.ModelGatewaySyncStatePartial
+	default:
+		// no success, no failure → all disconnected (never synced)
+		state = model.ModelGatewaySyncStateNever
 	}
 	return &model.ModelGatewaySyncSummary{
 		State:        state,

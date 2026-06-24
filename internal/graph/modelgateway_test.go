@@ -100,14 +100,50 @@ func TestModelGateway_TestAndSyncSummary(t *testing.T) {
 		t.Fatalf("sync summary wrong: %+v", sum)
 	}
 
-	// a failing gateway → ERROR status, summary FAILED
+	// a failing gateway → ERROR status, summary FAILED (only this one gateway)
 	r.GatewayModels = &fakeModelManager{testErr: errors.New("dial tcp: refused")}
-	if _, err := mr.TestModelGatewayConnection(ctx, g.ID); err != nil {
+	res2, err := mr.TestModelGatewayConnection(ctx, g.ID)
+	if err != nil {
 		t.Fatalf("test (fail path): %v", err)
+	}
+	// H2: the raw transport error must NOT leak to the client message.
+	if res2.Message != "connection failed" {
+		t.Fatalf("error message should be sanitized, got %q", res2.Message)
 	}
 	sum2, _ := qr.ModelGatewaySyncSummary(ctx)
 	if sum2.State != model.ModelGatewaySyncStateFailed || sum2.FailedCount != 1 {
 		t.Fatalf("sync summary after failure: %+v", sum2)
+	}
+}
+
+// M1: the sync-summary state machine must be total over connected/error/disconnected.
+func TestModelGatewaySyncSummary_StateMachine(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := adminCtx()
+	mr := &mutationResolver{r}
+	qr := &queryResolver{r}
+
+	// no gateways → NEVER
+	if s, _ := qr.ModelGatewaySyncSummary(ctx); s.State != model.ModelGatewaySyncStateNever {
+		t.Fatalf("empty fleet: %v, want NEVER", s.State)
+	}
+
+	// two fresh (disconnected, never tested) gateways → NEVER, not PARTIAL/SYNCED
+	a := mkGateway(t, mr, ctx, "a", "https://a:4000")
+	mkGateway(t, mr, ctx, "b", "https://b:4000")
+	if s, _ := qr.ModelGatewaySyncSummary(ctx); s.State != model.ModelGatewaySyncStateNever {
+		t.Fatalf("all-disconnected: %v, want NEVER", s.State)
+	}
+
+	// connect only one → mix of connected + disconnected → PARTIAL (the bug M1 fixed)
+	r.GatewayModels = &fakeModelManager{}
+	if _, err := mr.TestModelGatewayConnection(ctx, a.ID); err != nil {
+		t.Fatalf("test a: %v", err)
+	}
+	s, _ := qr.ModelGatewaySyncSummary(ctx)
+	if s.State != model.ModelGatewaySyncStatePartial || s.SuccessCount != 1 {
+		t.Fatalf("connected+disconnected: %+v, want PARTIAL/success=1", s)
 	}
 }
 

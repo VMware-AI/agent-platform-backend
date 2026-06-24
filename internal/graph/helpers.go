@@ -617,6 +617,14 @@ func modelGatewaySyncState(s gatewayconnection.Status) model.ModelGatewaySyncSta
 // supported values; adminUrl is derived as <endpoint>/ui (litellm admin UI);
 // latencyMs is transient (only a live test sets it); lastSyncAt reflects the last
 // status change (updated_at) and is nil until the gateway has ever connected.
+//
+// TODO(reskin M2/M3/M4): these are interim approximations until a real sync-tracking
+// column exists — (M2/M3) sync state/time derive from connection status + updated_at,
+// so a previously-synced gateway that drops to disconnected reads as NEVER, and any
+// unrelated update bumps the apparent sync time; (M4) ModelGatewayInput.adminUrl is
+// not persisted (no column) — the value is always derived here. Mirrors the
+// displayName-in-CreateUserInput interim. Adding a last_synced_at / admin_url column
+// needs an Atlas migration (prod does not auto-migrate).
 func toModelGateway(g *ent.GatewayConnection, backendModelCount int) *model.ModelGateway {
 	adminURL := strings.TrimRight(g.Endpoint, "/") + "/ui"
 	gw := &model.ModelGateway{
