@@ -213,6 +213,38 @@ func TestModelGateway_LastSyncTracking(t *testing.T) {
 	}
 }
 
+// M2/M3 invariant: a FAILED test must not clear or move a prior lastSyncAt.
+func TestModelGateway_FailedTestKeepsSyncTime(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := adminCtx()
+	mr := &mutationResolver{r}
+
+	// first test succeeds → sets lastSyncAt
+	r.GatewayClientFor = func(context.Context, string, string) gateway.ModelManager { return &fakeModelManager{} }
+	g := mkGateway(t, mr, ctx, "g", "https://gw:4000")
+	good, err := mr.TestModelGatewayConnection(ctx, g.ID)
+	if err != nil || good.Gateway.LastSyncAt == nil {
+		t.Fatalf("first test should set lastSyncAt: %+v / %v", good.Gateway.LastSyncAt, err)
+	}
+	synced := *good.Gateway.LastSyncAt
+
+	// second test FAILS → status ERROR, but lastSyncAt preserved
+	r.GatewayClientFor = func(context.Context, string, string) gateway.ModelManager {
+		return &fakeModelManager{testErr: errors.New("down")}
+	}
+	bad, err := mr.TestModelGatewayConnection(ctx, g.ID)
+	if err != nil {
+		t.Fatalf("test (fail): %v", err)
+	}
+	if bad.Gateway.Status != model.ModelGatewayStatusError {
+		t.Fatalf("status = %v, want ERROR", bad.Gateway.Status)
+	}
+	if bad.Gateway.LastSyncAt == nil || !bad.Gateway.LastSyncAt.Equal(synced) {
+		t.Fatalf("failed test must keep old lastSyncAt: got %v, want %v", bad.Gateway.LastSyncAt, synced)
+	}
+}
+
 // H1: the connection test must build a client from the gateway's OWN endpoint and
 // its OWN master key (resolved from the secret store), not a process-wide default.
 func TestModelGateway_TestUsesPerGatewayClient(t *testing.T) {
