@@ -1,0 +1,96 @@
+# 模型网关 (model gateway) page façade over GatewayConnection (重蒙皮 P4).
+# The console renders the litellm gateway as a single aggregate entity; the richer
+# upstream/route model stays in gateway-routing.graphql. Computed fields are real
+# where a source exists (backendModelCount = upstream count, test = live litellm
+# ping + measured latency); sync state is derived from the connection status.
+
+enum ModelGatewayProvider {
+  LITELLM
+}
+
+enum ModelGatewayStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+enum ModelGatewaySyncState {
+  SYNCED
+  SYNCING
+  PARTIAL
+  FAILED
+  NEVER
+}
+
+enum LoadBalancingStrategy {
+  ROUND_ROBIN
+}
+
+type ModelGateway {
+  id: ID!
+  name: String!
+  provider: ModelGatewayProvider!
+  endpoint: String!
+  status: ModelGatewayStatus!
+  backendModelCount: Int!
+  loadBalancingStrategy: LoadBalancingStrategy!
+  latencyMs: Int
+  adminUrl: String
+  lastSyncAt: Time
+  lastSyncStatus: ModelGatewaySyncState!
+  lastSyncMessage: String
+}
+
+type ModelGatewayConnection {
+  nodes: [ModelGateway!]!
+  totalCount: Int!
+}
+
+type ModelGatewaySyncSummary {
+  state: ModelGatewaySyncState!
+  lastSyncedAt: Time
+  successCount: Int!
+  failedCount: Int!
+  message: String
+}
+
+type ModelGatewayTestResult {
+  success: Boolean!
+  status: ModelGatewayStatus!
+  latencyMs: Int
+  message: String!
+  testedAt: Time!
+  gateway: ModelGateway!
+}
+
+type DeleteModelGatewayPayload {
+  deletedID: ID!
+}
+
+input ModelGatewayFilterInput {
+  search: String
+  status: ModelGatewayStatus
+}
+
+input ModelGatewayInput {
+  name: String!
+  provider: ModelGatewayProvider!
+  endpoint: String!
+  adminUrl: String
+  # litellm master key(接入表单填写)→ 后端写 secret store,只存引用,明文不落库。
+  masterKey: String
+  loadBalancingStrategy: LoadBalancingStrategy!
+}
+
+extend type Query {
+  # page is the shared PageInput (limit/offset) defined alongside audit/observability.
+  modelGateways(filter: ModelGatewayFilterInput, page: PageInput!): ModelGatewayConnection! @hasRole(any: [admin])
+  modelGatewaySyncSummary: ModelGatewaySyncSummary! @hasRole(any: [admin])
+}
+
+extend type Mutation {
+  createModelGateway(input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
+  updateModelGateway(id: ID!, input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
+  deleteModelGateway(id: ID!): DeleteModelGatewayPayload! @hasRole(any: [admin])
+  testModelGatewayConnection(id: ID!): ModelGatewayTestResult! @hasRole(any: [admin])
+}

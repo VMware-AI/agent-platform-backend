@@ -222,6 +222,10 @@ type DateUsage struct {
 	Cost         float64 `json:"cost"`
 }
 
+type DeleteModelGatewayPayload struct {
+	DeletedID string `json:"deletedID"`
+}
+
 type DeleteResourcePoolPayload struct {
 	ID          string `json:"id"`
 	DeletedName string `json:"deletedName"`
@@ -308,6 +312,57 @@ type MeteringSummary struct {
 	ByModel           []ModelUsage `json:"byModel"`
 	ByAgent           []AgentUsage `json:"byAgent"`
 	ByDate            []DateUsage  `json:"byDate"`
+}
+
+type ModelGateway struct {
+	ID                    string                `json:"id"`
+	Name                  string                `json:"name"`
+	Provider              ModelGatewayProvider  `json:"provider"`
+	Endpoint              string                `json:"endpoint"`
+	Status                ModelGatewayStatus    `json:"status"`
+	BackendModelCount     int                   `json:"backendModelCount"`
+	LoadBalancingStrategy LoadBalancingStrategy `json:"loadBalancingStrategy"`
+	LatencyMs             *int                  `json:"latencyMs,omitempty"`
+	AdminURL              *string               `json:"adminUrl,omitempty"`
+	LastSyncAt            *time.Time            `json:"lastSyncAt,omitempty"`
+	LastSyncStatus        ModelGatewaySyncState `json:"lastSyncStatus"`
+	LastSyncMessage       *string               `json:"lastSyncMessage,omitempty"`
+}
+
+type ModelGatewayConnection struct {
+	Nodes      []ModelGateway `json:"nodes"`
+	TotalCount int            `json:"totalCount"`
+}
+
+type ModelGatewayFilterInput struct {
+	Search *string             `json:"search,omitempty"`
+	Status *ModelGatewayStatus `json:"status,omitempty"`
+}
+
+type ModelGatewayInput struct {
+	Name                  string                `json:"name"`
+	Provider              ModelGatewayProvider  `json:"provider"`
+	Endpoint              string                `json:"endpoint"`
+	AdminURL              *string               `json:"adminUrl,omitempty"`
+	MasterKey             *string               `json:"masterKey,omitempty"`
+	LoadBalancingStrategy LoadBalancingStrategy `json:"loadBalancingStrategy"`
+}
+
+type ModelGatewaySyncSummary struct {
+	State        ModelGatewaySyncState `json:"state"`
+	LastSyncedAt *time.Time            `json:"lastSyncedAt,omitempty"`
+	SuccessCount int                   `json:"successCount"`
+	FailedCount  int                   `json:"failedCount"`
+	Message      *string               `json:"message,omitempty"`
+}
+
+type ModelGatewayTestResult struct {
+	Success   bool               `json:"success"`
+	Status    ModelGatewayStatus `json:"status"`
+	LatencyMs *int               `json:"latencyMs,omitempty"`
+	Message   string             `json:"message"`
+	TestedAt  time.Time          `json:"testedAt"`
+	Gateway   *ModelGateway      `json:"gateway"`
 }
 
 type ModelRoute struct {
@@ -1133,6 +1188,59 @@ func (e LoadBalanceStrategy) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type LoadBalancingStrategy string
+
+const (
+	LoadBalancingStrategyRoundRobin LoadBalancingStrategy = "ROUND_ROBIN"
+)
+
+var AllLoadBalancingStrategy = []LoadBalancingStrategy{
+	LoadBalancingStrategyRoundRobin,
+}
+
+func (e LoadBalancingStrategy) IsValid() bool {
+	switch e {
+	case LoadBalancingStrategyRoundRobin:
+		return true
+	}
+	return false
+}
+
+func (e LoadBalancingStrategy) String() string {
+	return string(e)
+}
+
+func (e *LoadBalancingStrategy) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = LoadBalancingStrategy(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid LoadBalancingStrategy", str)
+	}
+	return nil
+}
+
+func (e LoadBalancingStrategy) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *LoadBalancingStrategy) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e LoadBalancingStrategy) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type MembershipRole string
 
 const (
@@ -1183,6 +1291,177 @@ func (e *MembershipRole) UnmarshalJSON(b []byte) error {
 }
 
 func (e MembershipRole) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type ModelGatewayProvider string
+
+const (
+	ModelGatewayProviderLitellm ModelGatewayProvider = "LITELLM"
+)
+
+var AllModelGatewayProvider = []ModelGatewayProvider{
+	ModelGatewayProviderLitellm,
+}
+
+func (e ModelGatewayProvider) IsValid() bool {
+	switch e {
+	case ModelGatewayProviderLitellm:
+		return true
+	}
+	return false
+}
+
+func (e ModelGatewayProvider) String() string {
+	return string(e)
+}
+
+func (e *ModelGatewayProvider) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ModelGatewayProvider(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ModelGatewayProvider", str)
+	}
+	return nil
+}
+
+func (e ModelGatewayProvider) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *ModelGatewayProvider) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e ModelGatewayProvider) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type ModelGatewayStatus string
+
+const (
+	ModelGatewayStatusConnected    ModelGatewayStatus = "CONNECTED"
+	ModelGatewayStatusDisconnected ModelGatewayStatus = "DISCONNECTED"
+	ModelGatewayStatusError        ModelGatewayStatus = "ERROR"
+)
+
+var AllModelGatewayStatus = []ModelGatewayStatus{
+	ModelGatewayStatusConnected,
+	ModelGatewayStatusDisconnected,
+	ModelGatewayStatusError,
+}
+
+func (e ModelGatewayStatus) IsValid() bool {
+	switch e {
+	case ModelGatewayStatusConnected, ModelGatewayStatusDisconnected, ModelGatewayStatusError:
+		return true
+	}
+	return false
+}
+
+func (e ModelGatewayStatus) String() string {
+	return string(e)
+}
+
+func (e *ModelGatewayStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ModelGatewayStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ModelGatewayStatus", str)
+	}
+	return nil
+}
+
+func (e ModelGatewayStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *ModelGatewayStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e ModelGatewayStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type ModelGatewaySyncState string
+
+const (
+	ModelGatewaySyncStateSynced  ModelGatewaySyncState = "SYNCED"
+	ModelGatewaySyncStateSyncing ModelGatewaySyncState = "SYNCING"
+	ModelGatewaySyncStatePartial ModelGatewaySyncState = "PARTIAL"
+	ModelGatewaySyncStateFailed  ModelGatewaySyncState = "FAILED"
+	ModelGatewaySyncStateNever   ModelGatewaySyncState = "NEVER"
+)
+
+var AllModelGatewaySyncState = []ModelGatewaySyncState{
+	ModelGatewaySyncStateSynced,
+	ModelGatewaySyncStateSyncing,
+	ModelGatewaySyncStatePartial,
+	ModelGatewaySyncStateFailed,
+	ModelGatewaySyncStateNever,
+}
+
+func (e ModelGatewaySyncState) IsValid() bool {
+	switch e {
+	case ModelGatewaySyncStateSynced, ModelGatewaySyncStateSyncing, ModelGatewaySyncStatePartial, ModelGatewaySyncStateFailed, ModelGatewaySyncStateNever:
+		return true
+	}
+	return false
+}
+
+func (e ModelGatewaySyncState) String() string {
+	return string(e)
+}
+
+func (e *ModelGatewaySyncState) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ModelGatewaySyncState(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ModelGatewaySyncState", str)
+	}
+	return nil
+}
+
+func (e ModelGatewaySyncState) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *ModelGatewaySyncState) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e ModelGatewaySyncState) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

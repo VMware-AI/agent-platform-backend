@@ -16,6 +16,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
+	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
@@ -569,6 +570,77 @@ func toModelGatewayConnection(g *ent.GatewayConnection) *model.GatewayConnection
 		LoadBalanceStrategy: model.LoadBalanceStrategy(string(g.LoadBalanceStrategy)),
 		CreatedAt:           g.CreatedAt,
 	}
+}
+
+// ---- 模型网关页 (P4): GatewayConnection façade helpers ----
+
+// modelGatewayStatus maps the ent connection status to the console status enum.
+func modelGatewayStatus(s gatewayconnection.Status) model.ModelGatewayStatus {
+	switch s {
+	case gatewayconnection.StatusConnected:
+		return model.ModelGatewayStatusConnected
+	case gatewayconnection.StatusError:
+		return model.ModelGatewayStatusError
+	default:
+		return model.ModelGatewayStatusDisconnected
+	}
+}
+
+// entGatewayStatus maps the console status enum back to the ent column (filter).
+func entGatewayStatus(s model.ModelGatewayStatus) gatewayconnection.Status {
+	switch s {
+	case model.ModelGatewayStatusConnected:
+		return gatewayconnection.StatusConnected
+	case model.ModelGatewayStatusError:
+		return gatewayconnection.StatusError
+	default:
+		return gatewayconnection.StatusDisconnected
+	}
+}
+
+// modelGatewaySyncState derives the sync state from the connection status — there
+// is no dedicated sync-tracking store yet: connected→SYNCED, error→FAILED,
+// disconnected→NEVER (never synced).
+func modelGatewaySyncState(s gatewayconnection.Status) model.ModelGatewaySyncState {
+	switch s {
+	case gatewayconnection.StatusConnected:
+		return model.ModelGatewaySyncStateSynced
+	case gatewayconnection.StatusError:
+		return model.ModelGatewaySyncStateFailed
+	default:
+		return model.ModelGatewaySyncStateNever
+	}
+}
+
+// toModelGateway projects a GatewayConnection (+ the live backend-model count) into
+// the console's ModelGateway aggregate. provider/strategy are the console's single
+// supported values; adminUrl is derived as <endpoint>/ui (litellm admin UI);
+// latencyMs is transient (only a live test sets it); lastSyncAt reflects the last
+// status change (updated_at) and is nil until the gateway has ever connected.
+func toModelGateway(g *ent.GatewayConnection, backendModelCount int) *model.ModelGateway {
+	adminURL := strings.TrimRight(g.Endpoint, "/") + "/ui"
+	gw := &model.ModelGateway{
+		ID:                    g.ID.String(),
+		Name:                  g.Name,
+		Provider:              model.ModelGatewayProviderLitellm,
+		Endpoint:              g.Endpoint,
+		Status:                modelGatewayStatus(g.Status),
+		BackendModelCount:     backendModelCount,
+		LoadBalancingStrategy: model.LoadBalancingStrategyRoundRobin,
+		AdminURL:              &adminURL,
+		LastSyncStatus:        modelGatewaySyncState(g.Status),
+	}
+	if g.Status != gatewayconnection.StatusDisconnected {
+		t := g.UpdatedAt
+		gw.LastSyncAt = &t
+	}
+	return gw
+}
+
+// backendModelCount is the number of registered upstreams the litellm gateway
+// fronts (real DB count, surfaced as ModelGateway.backendModelCount).
+func (r *Resolver) backendModelCount(ctx context.Context) (int, error) {
+	return r.Ent.Upstream.Query().Count(ctx)
 }
 
 func toModelUpstream(u *ent.Upstream) *model.Upstream {

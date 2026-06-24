@@ -186,6 +186,10 @@ type ComplexityRoot struct {
 		OutputTokens func(childComplexity int) int
 	}
 
+	DeleteModelGatewayPayload struct {
+		DeletedID func(childComplexity int) int
+	}
+
 	DeleteResourcePoolPayload struct {
 		DeletedName func(childComplexity int) int
 		ID          func(childComplexity int) int
@@ -247,6 +251,43 @@ type ComplexityRoot struct {
 		TotalOutputTokens func(childComplexity int) int
 	}
 
+	ModelGateway struct {
+		AdminURL              func(childComplexity int) int
+		BackendModelCount     func(childComplexity int) int
+		Endpoint              func(childComplexity int) int
+		ID                    func(childComplexity int) int
+		LastSyncAt            func(childComplexity int) int
+		LastSyncMessage       func(childComplexity int) int
+		LastSyncStatus        func(childComplexity int) int
+		LatencyMs             func(childComplexity int) int
+		LoadBalancingStrategy func(childComplexity int) int
+		Name                  func(childComplexity int) int
+		Provider              func(childComplexity int) int
+		Status                func(childComplexity int) int
+	}
+
+	ModelGatewayConnection struct {
+		Nodes      func(childComplexity int) int
+		TotalCount func(childComplexity int) int
+	}
+
+	ModelGatewaySyncSummary struct {
+		FailedCount  func(childComplexity int) int
+		LastSyncedAt func(childComplexity int) int
+		Message      func(childComplexity int) int
+		State        func(childComplexity int) int
+		SuccessCount func(childComplexity int) int
+	}
+
+	ModelGatewayTestResult struct {
+		Gateway   func(childComplexity int) int
+		LatencyMs func(childComplexity int) int
+		Message   func(childComplexity int) int
+		Status    func(childComplexity int) int
+		Success   func(childComplexity int) int
+		TestedAt  func(childComplexity int) int
+	}
+
 	ModelRoute struct {
 		BackendGatewayID func(childComplexity int) int
 		CreatedAt        func(childComplexity int) int
@@ -274,6 +315,7 @@ type ComplexityRoot struct {
 		CreateAgentConfig          func(childComplexity int, input model.CreateAgentConfigInput) int
 		CreateCustomRole           func(childComplexity int, input model.CreateCustomRoleInput) int
 		CreateDepartment           func(childComplexity int, input model.CreateDepartmentInput) int
+		CreateModelGateway         func(childComplexity int, input model.ModelGatewayInput) int
 		CreateResourcePool         func(childComplexity int, input model.CreateResourcePoolInput) int
 		CreateUser                 func(childComplexity int, input model.CreateUserInput) int
 		DeleteAgentConfig          func(childComplexity int, id string) int
@@ -282,6 +324,7 @@ type ComplexityRoot struct {
 		DeleteDepartment           func(childComplexity int, id string) int
 		DeleteGatewayConnection    func(childComplexity int, id string) int
 		DeleteImage                func(childComplexity int, id string) int
+		DeleteModelGateway         func(childComplexity int, id string) int
 		DeleteModelRoute           func(childComplexity int, id string) int
 		DeleteRateLimitPolicy      func(childComplexity int, id string) int
 		DeleteResourcePool         func(childComplexity int, id string) int
@@ -315,9 +358,11 @@ type ComplexityRoot struct {
 		SnapshotAgent              func(childComplexity int, input model.SnapshotAgentInput) int
 		SyncResourcePool           func(childComplexity int, id string) int
 		TestGatewayConnection      func(childComplexity int, id string) int
+		TestModelGatewayConnection func(childComplexity int, id string) int
 		TestResourcePoolConnection func(childComplexity int, id string) int
 		ToggleUserEnabled          func(childComplexity int, id string) int
 		UpdateAgentConfig          func(childComplexity int, id string, input model.UpdateAgentConfigInput) int
+		UpdateModelGateway         func(childComplexity int, id string, input model.ModelGatewayInput) int
 		UpdateResourcePool         func(childComplexity int, id string, input model.UpdateResourcePoolInput) int
 		UpdateUser                 func(childComplexity int, id string, input model.UpdateUserInput) int
 		UpsertAgentTemplate        func(childComplexity int, input model.UpsertAgentTemplateInput) int
@@ -343,37 +388,39 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		AgentConfigs       func(childComplexity int, agentType *string) int
-		AgentSnapshots     func(childComplexity int, agentID string) int
-		AgentTemplates     func(childComplexity int) int
-		Agents             func(childComplexity int, filter *model.AgentFilter, pagination *model.Pagination, sort *model.AgentSort) int
-		ArtifactVersions   func(childComplexity int, name string) int
-		Artifacts          func(childComplexity int, kind *model.ArtifactKind) int
-		AuditLogs          func(childComplexity int, filter *model.AuditFilter, page *model.PageInput) int
-		CustomRoles        func(childComplexity int) int
-		DepartmentMembers  func(childComplexity int, departmentID string) int
-		Departments        func(childComplexity int) int
-		GatewayConnections func(childComplexity int) int
-		Images             func(childComplexity int) int
-		Me                 func(childComplexity int) int
-		MeteringSummary    func(childComplexity int, userID *string) int
-		ModelRoutes        func(childComplexity int) int
-		Permissions        func(childComplexity int) int
-		RateLimitPolicies  func(childComplexity int) int
-		RequestLogs        func(childComplexity int, filter *model.RequestLogFilter, page *model.PageInput) int
-		ResourcePool       func(childComplexity int, id string) int
-		ResourcePools      func(childComplexity int, filter *model.ResourcePoolFilter, pagination *model.Pagination, sort *model.ResourcePoolSort) int
-		Role               func(childComplexity int, id string) int
-		Roles              func(childComplexity int, pagination *model.Pagination) int
-		RouterTiers        func(childComplexity int) int
-		Skills             func(childComplexity int) int
-		TokenUsage         func(childComplexity int, userID *string, page *model.PageInput) int
-		Upstreams          func(childComplexity int) int
-		UserExists         func(childComplexity int, username *string, email *string) int
-		UserRoles          func(childComplexity int, userID string) int
-		Users              func(childComplexity int, filter *model.UserFilter, pagination *model.Pagination, sort *model.UserSort) int
-		VMTemplates        func(childComplexity int, resourcePoolID string) int
-		VirtualKeys        func(childComplexity int, userID *string) int
+		AgentConfigs            func(childComplexity int, agentType *string) int
+		AgentSnapshots          func(childComplexity int, agentID string) int
+		AgentTemplates          func(childComplexity int) int
+		Agents                  func(childComplexity int, filter *model.AgentFilter, pagination *model.Pagination, sort *model.AgentSort) int
+		ArtifactVersions        func(childComplexity int, name string) int
+		Artifacts               func(childComplexity int, kind *model.ArtifactKind) int
+		AuditLogs               func(childComplexity int, filter *model.AuditFilter, page *model.PageInput) int
+		CustomRoles             func(childComplexity int) int
+		DepartmentMembers       func(childComplexity int, departmentID string) int
+		Departments             func(childComplexity int) int
+		GatewayConnections      func(childComplexity int) int
+		Images                  func(childComplexity int) int
+		Me                      func(childComplexity int) int
+		MeteringSummary         func(childComplexity int, userID *string) int
+		ModelGatewaySyncSummary func(childComplexity int) int
+		ModelGateways           func(childComplexity int, filter *model.ModelGatewayFilterInput, page model.PageInput) int
+		ModelRoutes             func(childComplexity int) int
+		Permissions             func(childComplexity int) int
+		RateLimitPolicies       func(childComplexity int) int
+		RequestLogs             func(childComplexity int, filter *model.RequestLogFilter, page *model.PageInput) int
+		ResourcePool            func(childComplexity int, id string) int
+		ResourcePools           func(childComplexity int, filter *model.ResourcePoolFilter, pagination *model.Pagination, sort *model.ResourcePoolSort) int
+		Role                    func(childComplexity int, id string) int
+		Roles                   func(childComplexity int, pagination *model.Pagination) int
+		RouterTiers             func(childComplexity int) int
+		Skills                  func(childComplexity int) int
+		TokenUsage              func(childComplexity int, userID *string, page *model.PageInput) int
+		Upstreams               func(childComplexity int) int
+		UserExists              func(childComplexity int, username *string, email *string) int
+		UserRoles               func(childComplexity int, userID string) int
+		Users                   func(childComplexity int, filter *model.UserFilter, pagination *model.Pagination, sort *model.UserSort) int
+		VMTemplates             func(childComplexity int, resourcePoolID string) int
+		VirtualKeys             func(childComplexity int, userID *string) int
 	}
 
 	RateLimitPolicy struct {
@@ -582,6 +629,10 @@ type MutationResolver interface {
 	DeleteModelRoute(ctx context.Context, id string) (bool, error)
 	SetRouterTier(ctx context.Context, tier model.RouterTierLevel, modelAlias string) (*model.RouterTier, error)
 	RecordTokenUsage(ctx context.Context, input model.RecordTokenUsageInput) (*model.TokenUsage, error)
+	CreateModelGateway(ctx context.Context, input model.ModelGatewayInput) (*model.ModelGateway, error)
+	UpdateModelGateway(ctx context.Context, id string, input model.ModelGatewayInput) (*model.ModelGateway, error)
+	DeleteModelGateway(ctx context.Context, id string) (*model.DeleteModelGatewayPayload, error)
+	TestModelGatewayConnection(ctx context.Context, id string) (*model.ModelGatewayTestResult, error)
 	RecordRequestLog(ctx context.Context, input model.RecordRequestLogInput) (*model.RequestLog, error)
 	UpsertRateLimitPolicy(ctx context.Context, input model.UpsertRateLimitPolicyInput) (*model.RateLimitPolicy, error)
 	SetRateLimitPolicyEnabled(ctx context.Context, id string, enabled bool) (*model.RateLimitPolicy, error)
@@ -626,6 +677,8 @@ type QueryResolver interface {
 	RouterTiers(ctx context.Context) ([]model.RouterTier, error)
 	TokenUsage(ctx context.Context, userID *string, page *model.PageInput) ([]model.TokenUsage, error)
 	MeteringSummary(ctx context.Context, userID *string) (*model.MeteringSummary, error)
+	ModelGateways(ctx context.Context, filter *model.ModelGatewayFilterInput, page model.PageInput) (*model.ModelGatewayConnection, error)
+	ModelGatewaySyncSummary(ctx context.Context) (*model.ModelGatewaySyncSummary, error)
 	RequestLogs(ctx context.Context, filter *model.RequestLogFilter, page *model.PageInput) ([]model.RequestLog, error)
 	RateLimitPolicies(ctx context.Context) ([]model.RateLimitPolicy, error)
 	CustomRoles(ctx context.Context) ([]model.CustomRole, error)
@@ -1215,6 +1268,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.DateUsage.OutputTokens(childComplexity), true
 
+	case "DeleteModelGatewayPayload.deletedID":
+		if e.ComplexityRoot.DeleteModelGatewayPayload.DeletedID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DeleteModelGatewayPayload.DeletedID(childComplexity), true
+
 	case "DeleteResourcePoolPayload.deletedName":
 		if e.ComplexityRoot.DeleteResourcePoolPayload.DeletedName == nil {
 			break
@@ -1428,6 +1488,160 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.MeteringSummary.TotalOutputTokens(childComplexity), true
 
+	case "ModelGateway.adminUrl":
+		if e.ComplexityRoot.ModelGateway.AdminURL == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGateway.AdminURL(childComplexity), true
+	case "ModelGateway.backendModelCount":
+		if e.ComplexityRoot.ModelGateway.BackendModelCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGateway.BackendModelCount(childComplexity), true
+	case "ModelGateway.endpoint":
+		if e.ComplexityRoot.ModelGateway.Endpoint == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGateway.Endpoint(childComplexity), true
+	case "ModelGateway.id":
+		if e.ComplexityRoot.ModelGateway.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGateway.ID(childComplexity), true
+	case "ModelGateway.lastSyncAt":
+		if e.ComplexityRoot.ModelGateway.LastSyncAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGateway.LastSyncAt(childComplexity), true
+	case "ModelGateway.lastSyncMessage":
+		if e.ComplexityRoot.ModelGateway.LastSyncMessage == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGateway.LastSyncMessage(childComplexity), true
+	case "ModelGateway.lastSyncStatus":
+		if e.ComplexityRoot.ModelGateway.LastSyncStatus == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGateway.LastSyncStatus(childComplexity), true
+	case "ModelGateway.latencyMs":
+		if e.ComplexityRoot.ModelGateway.LatencyMs == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGateway.LatencyMs(childComplexity), true
+	case "ModelGateway.loadBalancingStrategy":
+		if e.ComplexityRoot.ModelGateway.LoadBalancingStrategy == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGateway.LoadBalancingStrategy(childComplexity), true
+	case "ModelGateway.name":
+		if e.ComplexityRoot.ModelGateway.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGateway.Name(childComplexity), true
+	case "ModelGateway.provider":
+		if e.ComplexityRoot.ModelGateway.Provider == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGateway.Provider(childComplexity), true
+	case "ModelGateway.status":
+		if e.ComplexityRoot.ModelGateway.Status == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGateway.Status(childComplexity), true
+
+	case "ModelGatewayConnection.nodes":
+		if e.ComplexityRoot.ModelGatewayConnection.Nodes == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewayConnection.Nodes(childComplexity), true
+	case "ModelGatewayConnection.totalCount":
+		if e.ComplexityRoot.ModelGatewayConnection.TotalCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewayConnection.TotalCount(childComplexity), true
+
+	case "ModelGatewaySyncSummary.failedCount":
+		if e.ComplexityRoot.ModelGatewaySyncSummary.FailedCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewaySyncSummary.FailedCount(childComplexity), true
+	case "ModelGatewaySyncSummary.lastSyncedAt":
+		if e.ComplexityRoot.ModelGatewaySyncSummary.LastSyncedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewaySyncSummary.LastSyncedAt(childComplexity), true
+	case "ModelGatewaySyncSummary.message":
+		if e.ComplexityRoot.ModelGatewaySyncSummary.Message == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewaySyncSummary.Message(childComplexity), true
+	case "ModelGatewaySyncSummary.state":
+		if e.ComplexityRoot.ModelGatewaySyncSummary.State == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewaySyncSummary.State(childComplexity), true
+	case "ModelGatewaySyncSummary.successCount":
+		if e.ComplexityRoot.ModelGatewaySyncSummary.SuccessCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewaySyncSummary.SuccessCount(childComplexity), true
+
+	case "ModelGatewayTestResult.gateway":
+		if e.ComplexityRoot.ModelGatewayTestResult.Gateway == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewayTestResult.Gateway(childComplexity), true
+	case "ModelGatewayTestResult.latencyMs":
+		if e.ComplexityRoot.ModelGatewayTestResult.LatencyMs == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewayTestResult.LatencyMs(childComplexity), true
+	case "ModelGatewayTestResult.message":
+		if e.ComplexityRoot.ModelGatewayTestResult.Message == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewayTestResult.Message(childComplexity), true
+	case "ModelGatewayTestResult.status":
+		if e.ComplexityRoot.ModelGatewayTestResult.Status == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewayTestResult.Status(childComplexity), true
+	case "ModelGatewayTestResult.success":
+		if e.ComplexityRoot.ModelGatewayTestResult.Success == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewayTestResult.Success(childComplexity), true
+	case "ModelGatewayTestResult.testedAt":
+		if e.ComplexityRoot.ModelGatewayTestResult.TestedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewayTestResult.TestedAt(childComplexity), true
+
 	case "ModelRoute.backendGatewayId":
 		if e.ComplexityRoot.ModelRoute.BackendGatewayID == nil {
 			break
@@ -1590,6 +1804,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.CreateDepartment(childComplexity, args["input"].(model.CreateDepartmentInput)), true
+	case "Mutation.createModelGateway":
+		if e.ComplexityRoot.Mutation.CreateModelGateway == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createModelGateway_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.CreateModelGateway(childComplexity, args["input"].(model.ModelGatewayInput)), true
 	case "Mutation.createResourcePool":
 		if e.ComplexityRoot.Mutation.CreateResourcePool == nil {
 			break
@@ -1678,6 +1903,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.DeleteImage(childComplexity, args["id"].(string)), true
+	case "Mutation.deleteModelGateway":
+		if e.ComplexityRoot.Mutation.DeleteModelGateway == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteModelGateway_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.DeleteModelGateway(childComplexity, args["id"].(string)), true
 	case "Mutation.deleteModelRoute":
 		if e.ComplexityRoot.Mutation.DeleteModelRoute == nil {
 			break
@@ -2036,6 +2272,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.TestGatewayConnection(childComplexity, args["id"].(string)), true
+	case "Mutation.testModelGatewayConnection":
+		if e.ComplexityRoot.Mutation.TestModelGatewayConnection == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_testModelGatewayConnection_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.TestModelGatewayConnection(childComplexity, args["id"].(string)), true
 	case "Mutation.testResourcePoolConnection":
 		if e.ComplexityRoot.Mutation.TestResourcePoolConnection == nil {
 			break
@@ -2069,6 +2316,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.UpdateAgentConfig(childComplexity, args["id"].(string), args["input"].(model.UpdateAgentConfigInput)), true
+	case "Mutation.updateModelGateway":
+		if e.ComplexityRoot.Mutation.UpdateModelGateway == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateModelGateway_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.UpdateModelGateway(childComplexity, args["id"].(string), args["input"].(model.ModelGatewayInput)), true
 	case "Mutation.updateResourcePool":
 		if e.ComplexityRoot.Mutation.UpdateResourcePool == nil {
 			break
@@ -2343,6 +2601,23 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.MeteringSummary(childComplexity, args["userId"].(*string)), true
+	case "Query.modelGatewaySyncSummary":
+		if e.ComplexityRoot.Query.ModelGatewaySyncSummary == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.ModelGatewaySyncSummary(childComplexity), true
+	case "Query.modelGateways":
+		if e.ComplexityRoot.Query.ModelGateways == nil {
+			break
+		}
+
+		args, err := ec.field_Query_modelGateways_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.ModelGateways(childComplexity, args["filter"].(*model.ModelGatewayFilterInput), args["page"].(model.PageInput)), true
 	case "Query.modelRoutes":
 		if e.ComplexityRoot.Query.ModelRoutes == nil {
 			break
@@ -3104,6 +3379,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputDeployAgentInput,
 		ec.unmarshalInputIssueVirtualKeyInput,
 		ec.unmarshalInputLoginInput,
+		ec.unmarshalInputModelGatewayFilterInput,
+		ec.unmarshalInputModelGatewayInput,
 		ec.unmarshalInputPageInput,
 		ec.unmarshalInputPagination,
 		ec.unmarshalInputRecordRequestLogInput,
@@ -3932,6 +4209,103 @@ extend type Mutation {
   recordTokenUsage(input: RecordTokenUsageInput!): TokenUsage! @hasRole(any: [admin])
 }
 `, BuiltIn: false},
+	{Name: "../../schema/modelgateway.graphql", Input: `# 模型网关 (model gateway) page façade over GatewayConnection (重蒙皮 P4).
+# The console renders the litellm gateway as a single aggregate entity; the richer
+# upstream/route model stays in gateway-routing.graphql. Computed fields are real
+# where a source exists (backendModelCount = upstream count, test = live litellm
+# ping + measured latency); sync state is derived from the connection status.
+
+enum ModelGatewayProvider {
+  LITELLM
+}
+
+enum ModelGatewayStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+enum ModelGatewaySyncState {
+  SYNCED
+  SYNCING
+  PARTIAL
+  FAILED
+  NEVER
+}
+
+enum LoadBalancingStrategy {
+  ROUND_ROBIN
+}
+
+type ModelGateway {
+  id: ID!
+  name: String!
+  provider: ModelGatewayProvider!
+  endpoint: String!
+  status: ModelGatewayStatus!
+  backendModelCount: Int!
+  loadBalancingStrategy: LoadBalancingStrategy!
+  latencyMs: Int
+  adminUrl: String
+  lastSyncAt: Time
+  lastSyncStatus: ModelGatewaySyncState!
+  lastSyncMessage: String
+}
+
+type ModelGatewayConnection {
+  nodes: [ModelGateway!]!
+  totalCount: Int!
+}
+
+type ModelGatewaySyncSummary {
+  state: ModelGatewaySyncState!
+  lastSyncedAt: Time
+  successCount: Int!
+  failedCount: Int!
+  message: String
+}
+
+type ModelGatewayTestResult {
+  success: Boolean!
+  status: ModelGatewayStatus!
+  latencyMs: Int
+  message: String!
+  testedAt: Time!
+  gateway: ModelGateway!
+}
+
+type DeleteModelGatewayPayload {
+  deletedID: ID!
+}
+
+input ModelGatewayFilterInput {
+  search: String
+  status: ModelGatewayStatus
+}
+
+input ModelGatewayInput {
+  name: String!
+  provider: ModelGatewayProvider!
+  endpoint: String!
+  adminUrl: String
+  # litellm master key(接入表单填写)→ 后端写 secret store,只存引用,明文不落库。
+  masterKey: String
+  loadBalancingStrategy: LoadBalancingStrategy!
+}
+
+extend type Query {
+  # page is the shared PageInput (limit/offset) defined alongside audit/observability.
+  modelGateways(filter: ModelGatewayFilterInput, page: PageInput!): ModelGatewayConnection! @hasRole(any: [admin])
+  modelGatewaySyncSummary: ModelGatewaySyncSummary! @hasRole(any: [admin])
+}
+
+extend type Mutation {
+  createModelGateway(input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
+  updateModelGateway(id: ID!, input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
+  deleteModelGateway(id: ID!): DeleteModelGatewayPayload! @hasRole(any: [admin])
+  testModelGatewayConnection(id: ID!): ModelGatewayTestResult! @hasRole(any: [admin])
+}
+`, BuiltIn: false},
 	{Name: "../../schema/observability.graphql", Input: `# Request logs (请求日志) + rate-limit policies (限流策略). 0619.
 
 type RequestLog {
@@ -4595,6 +4969,14 @@ func (ec *executionContext) childFields_DateUsage(ctx context.Context, field gra
 	return nil, fmt.Errorf("no field named %q was found under type DateUsage", field.Name)
 }
 
+func (ec *executionContext) childFields_DeleteModelGatewayPayload(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "deletedID":
+		return ec.fieldContext_DeleteModelGatewayPayload_deletedID(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type DeleteModelGatewayPayload", field.Name)
+}
+
 func (ec *executionContext) childFields_DeleteResourcePoolPayload(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -4715,6 +5097,80 @@ func (ec *executionContext) childFields_MeteringSummary(ctx context.Context, fie
 		return ec.fieldContext_MeteringSummary_byDate(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type MeteringSummary", field.Name)
+}
+
+func (ec *executionContext) childFields_ModelGateway(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_ModelGateway_id(ctx, field)
+	case "name":
+		return ec.fieldContext_ModelGateway_name(ctx, field)
+	case "provider":
+		return ec.fieldContext_ModelGateway_provider(ctx, field)
+	case "endpoint":
+		return ec.fieldContext_ModelGateway_endpoint(ctx, field)
+	case "status":
+		return ec.fieldContext_ModelGateway_status(ctx, field)
+	case "backendModelCount":
+		return ec.fieldContext_ModelGateway_backendModelCount(ctx, field)
+	case "loadBalancingStrategy":
+		return ec.fieldContext_ModelGateway_loadBalancingStrategy(ctx, field)
+	case "latencyMs":
+		return ec.fieldContext_ModelGateway_latencyMs(ctx, field)
+	case "adminUrl":
+		return ec.fieldContext_ModelGateway_adminUrl(ctx, field)
+	case "lastSyncAt":
+		return ec.fieldContext_ModelGateway_lastSyncAt(ctx, field)
+	case "lastSyncStatus":
+		return ec.fieldContext_ModelGateway_lastSyncStatus(ctx, field)
+	case "lastSyncMessage":
+		return ec.fieldContext_ModelGateway_lastSyncMessage(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type ModelGateway", field.Name)
+}
+
+func (ec *executionContext) childFields_ModelGatewayConnection(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "nodes":
+		return ec.fieldContext_ModelGatewayConnection_nodes(ctx, field)
+	case "totalCount":
+		return ec.fieldContext_ModelGatewayConnection_totalCount(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type ModelGatewayConnection", field.Name)
+}
+
+func (ec *executionContext) childFields_ModelGatewaySyncSummary(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "state":
+		return ec.fieldContext_ModelGatewaySyncSummary_state(ctx, field)
+	case "lastSyncedAt":
+		return ec.fieldContext_ModelGatewaySyncSummary_lastSyncedAt(ctx, field)
+	case "successCount":
+		return ec.fieldContext_ModelGatewaySyncSummary_successCount(ctx, field)
+	case "failedCount":
+		return ec.fieldContext_ModelGatewaySyncSummary_failedCount(ctx, field)
+	case "message":
+		return ec.fieldContext_ModelGatewaySyncSummary_message(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type ModelGatewaySyncSummary", field.Name)
+}
+
+func (ec *executionContext) childFields_ModelGatewayTestResult(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "success":
+		return ec.fieldContext_ModelGatewayTestResult_success(ctx, field)
+	case "status":
+		return ec.fieldContext_ModelGatewayTestResult_status(ctx, field)
+	case "latencyMs":
+		return ec.fieldContext_ModelGatewayTestResult_latencyMs(ctx, field)
+	case "message":
+		return ec.fieldContext_ModelGatewayTestResult_message(ctx, field)
+	case "testedAt":
+		return ec.fieldContext_ModelGatewayTestResult_testedAt(ctx, field)
+	case "gateway":
+		return ec.fieldContext_ModelGatewayTestResult_gateway(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type ModelGatewayTestResult", field.Name)
 }
 
 func (ec *executionContext) childFields_ModelRoute(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -5361,6 +5817,20 @@ func (ec *executionContext) field_Mutation_createDepartment_args(ctx context.Con
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_createModelGateway_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.ModelGatewayInput, error) {
+			return ec.unmarshalNModelGatewayInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_createResourcePool_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -5460,6 +5930,20 @@ func (ec *executionContext) field_Mutation_deleteGatewayConnection_args(ctx cont
 }
 
 func (ec *executionContext) field_Mutation_deleteImage_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteModelGateway_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
@@ -6001,6 +6485,20 @@ func (ec *executionContext) field_Mutation_testGatewayConnection_args(ctx contex
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_testModelGatewayConnection_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_testResourcePoolConnection_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -6043,6 +6541,28 @@ func (ec *executionContext) field_Mutation_updateAgentConfig_args(ctx context.Co
 	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input",
 		func(ctx context.Context, v any) (model.UpdateAgentConfigInput, error) {
 			return ec.unmarshalNUpdateAgentConfigInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUpdateAgentConfigInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateModelGateway_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.ModelGatewayInput, error) {
+			return ec.unmarshalNModelGatewayInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -6362,6 +6882,28 @@ func (ec *executionContext) field_Query_meteringSummary_args(ctx context.Context
 		return nil, err
 	}
 	args["userId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_modelGateways_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
+		func(ctx context.Context, v any) (*model.ModelGatewayFilterInput, error) {
+			return ec.unmarshalOModelGatewayFilterInput2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayFilterInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["filter"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "page",
+		func(ctx context.Context, v any) (model.PageInput, error) {
+			return ec.unmarshalNPageInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPageInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["page"] = arg1
 	return args, nil
 }
 
@@ -8804,6 +9346,29 @@ func (ec *executionContext) fieldContext_DateUsage_cost(_ context.Context, field
 	return graphql.NewScalarFieldContext("DateUsage", field, false, false, errors.New("field of type Float does not have child fields"))
 }
 
+func (ec *executionContext) _DeleteModelGatewayPayload_deletedID(ctx context.Context, field graphql.CollectedField, obj *model.DeleteModelGatewayPayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DeleteModelGatewayPayload_deletedID(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DeletedID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DeleteModelGatewayPayload_deletedID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DeleteModelGatewayPayload", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
 func (ec *executionContext) _DeleteResourcePoolPayload_id(ctx context.Context, field graphql.CollectedField, obj *model.DeleteResourcePoolPayload) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -9626,6 +10191,599 @@ func (ec *executionContext) fieldContext_MeteringSummary_byDate(_ context.Contex
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_DateUsage(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ModelGateway_id(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGateway_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGateway_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGateway_name(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGateway_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGateway_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGateway_provider(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGateway_provider(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Provider, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.ModelGatewayProvider) graphql.Marshaler {
+			return ec.marshalNModelGatewayProvider2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayProvider(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGateway_provider(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type ModelGatewayProvider does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGateway_endpoint(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGateway_endpoint(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Endpoint, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGateway_endpoint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGateway_status(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGateway_status(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Status, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.ModelGatewayStatus) graphql.Marshaler {
+			return ec.marshalNModelGatewayStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGateway_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type ModelGatewayStatus does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGateway_backendModelCount(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGateway_backendModelCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.BackendModelCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGateway_backendModelCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGateway_loadBalancingStrategy(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGateway_loadBalancingStrategy(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.LoadBalancingStrategy, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.LoadBalancingStrategy) graphql.Marshaler {
+			return ec.marshalNLoadBalancingStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGateway_loadBalancingStrategy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type LoadBalancingStrategy does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGateway_latencyMs(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGateway_latencyMs(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.LatencyMs, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
+			return ec.marshalOInt2ᚖint(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGateway_latencyMs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGateway_adminUrl(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGateway_adminUrl(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.AdminURL, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGateway_adminUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGateway_lastSyncAt(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGateway_lastSyncAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.LastSyncAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *time.Time) graphql.Marshaler {
+			return ec.marshalOTime2ᚖtimeᚐTime(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGateway_lastSyncAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGateway_lastSyncStatus(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGateway_lastSyncStatus(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.LastSyncStatus, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.ModelGatewaySyncState) graphql.Marshaler {
+			return ec.marshalNModelGatewaySyncState2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySyncState(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGateway_lastSyncStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type ModelGatewaySyncState does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGateway_lastSyncMessage(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGateway_lastSyncMessage(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.LastSyncMessage, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGateway_lastSyncMessage(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGatewayConnection_nodes(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewayConnection_nodes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Nodes, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.ModelGateway) graphql.Marshaler {
+			return ec.marshalNModelGateway2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewayConnection_nodes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ModelGatewayConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ModelGateway(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ModelGatewayConnection_totalCount(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewayConnection_totalCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewayConnection_totalCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGatewayConnection", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGatewaySyncSummary_state(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewaySyncSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewaySyncSummary_state(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.State, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.ModelGatewaySyncState) graphql.Marshaler {
+			return ec.marshalNModelGatewaySyncState2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySyncState(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewaySyncSummary_state(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGatewaySyncSummary", field, false, false, errors.New("field of type ModelGatewaySyncState does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGatewaySyncSummary_lastSyncedAt(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewaySyncSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewaySyncSummary_lastSyncedAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.LastSyncedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *time.Time) graphql.Marshaler {
+			return ec.marshalOTime2ᚖtimeᚐTime(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewaySyncSummary_lastSyncedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGatewaySyncSummary", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGatewaySyncSummary_successCount(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewaySyncSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewaySyncSummary_successCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.SuccessCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewaySyncSummary_successCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGatewaySyncSummary", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGatewaySyncSummary_failedCount(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewaySyncSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewaySyncSummary_failedCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FailedCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewaySyncSummary_failedCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGatewaySyncSummary", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGatewaySyncSummary_message(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewaySyncSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewaySyncSummary_message(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Message, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewaySyncSummary_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGatewaySyncSummary", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGatewayTestResult_success(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayTestResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewayTestResult_success(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Success, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewayTestResult_success(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGatewayTestResult", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGatewayTestResult_status(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayTestResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewayTestResult_status(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Status, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.ModelGatewayStatus) graphql.Marshaler {
+			return ec.marshalNModelGatewayStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewayTestResult_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGatewayTestResult", field, false, false, errors.New("field of type ModelGatewayStatus does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGatewayTestResult_latencyMs(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayTestResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewayTestResult_latencyMs(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.LatencyMs, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
+			return ec.marshalOInt2ᚖint(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewayTestResult_latencyMs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGatewayTestResult", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGatewayTestResult_message(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayTestResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewayTestResult_message(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Message, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewayTestResult_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGatewayTestResult", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGatewayTestResult_testedAt(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayTestResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewayTestResult_testedAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TestedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewayTestResult_testedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGatewayTestResult", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGatewayTestResult_gateway(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayTestResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewayTestResult_gateway(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Gateway, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ModelGateway) graphql.Marshaler {
+			return ec.marshalNModelGateway2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGateway(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewayTestResult_gateway(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ModelGatewayTestResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ModelGateway(ctx, field)
 		},
 	}
 	return fc, nil
@@ -12318,6 +13476,254 @@ func (ec *executionContext) fieldContext_Mutation_recordTokenUsage(ctx context.C
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_createModelGateway(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_createModelGateway(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().CreateModelGateway(ctx, fc.Args["input"].(model.ModelGatewayInput))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.ModelGateway
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.ModelGateway
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ModelGateway) graphql.Marshaler {
+			return ec.marshalNModelGateway2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGateway(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_createModelGateway(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ModelGateway(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createModelGateway_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateModelGateway(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_updateModelGateway(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().UpdateModelGateway(ctx, fc.Args["id"].(string), fc.Args["input"].(model.ModelGatewayInput))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.ModelGateway
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.ModelGateway
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ModelGateway) graphql.Marshaler {
+			return ec.marshalNModelGateway2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGateway(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_updateModelGateway(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ModelGateway(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateModelGateway_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteModelGateway(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_deleteModelGateway(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().DeleteModelGateway(ctx, fc.Args["id"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.DeleteModelGatewayPayload
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.DeleteModelGatewayPayload
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.DeleteModelGatewayPayload) graphql.Marshaler {
+			return ec.marshalNDeleteModelGatewayPayload2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDeleteModelGatewayPayload(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_deleteModelGateway(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_DeleteModelGatewayPayload(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteModelGateway_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_testModelGatewayConnection(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_testModelGatewayConnection(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().TestModelGatewayConnection(ctx, fc.Args["id"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.ModelGatewayTestResult
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.ModelGatewayTestResult
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ModelGatewayTestResult) graphql.Marshaler {
+			return ec.marshalNModelGatewayTestResult2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayTestResult(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_testModelGatewayConnection(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ModelGatewayTestResult(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_testModelGatewayConnection_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_recordRequestLog(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -14750,6 +16156,118 @@ func (ec *executionContext) fieldContext_Query_meteringSummary(ctx context.Conte
 	if fc.Args, err = ec.field_Query_meteringSummary_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_modelGateways(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_modelGateways(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().ModelGateways(ctx, fc.Args["filter"].(*model.ModelGatewayFilterInput), fc.Args["page"].(model.PageInput))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.ModelGatewayConnection
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.ModelGatewayConnection
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ModelGatewayConnection) graphql.Marshaler {
+			return ec.marshalNModelGatewayConnection2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayConnection(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_modelGateways(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ModelGatewayConnection(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_modelGateways_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_modelGatewaySyncSummary(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_modelGatewaySyncSummary(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().ModelGatewaySyncSummary(ctx)
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.ModelGatewaySyncSummary
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.ModelGatewaySyncSummary
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ModelGatewaySyncSummary) graphql.Marshaler {
+			return ec.marshalNModelGatewaySyncSummary2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySyncSummary(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_modelGatewaySyncSummary(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ModelGatewaySyncSummary(ctx, field)
+		},
 	}
 	return fc, nil
 }
@@ -19296,6 +20814,108 @@ func (ec *executionContext) unmarshalInputLoginInput(ctx context.Context, obj an
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputModelGatewayFilterInput(ctx context.Context, obj any) (model.ModelGatewayFilterInput, error) {
+	var it model.ModelGatewayFilterInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"search", "status"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "search":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("search"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Search = data
+		case "status":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
+			data, err := ec.unmarshalOModelGatewayStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Status = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputModelGatewayInput(ctx context.Context, obj any) (model.ModelGatewayInput, error) {
+	var it model.ModelGatewayInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name", "provider", "endpoint", "adminUrl", "masterKey", "loadBalancingStrategy"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "provider":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("provider"))
+			data, err := ec.unmarshalNModelGatewayProvider2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayProvider(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Provider = data
+		case "endpoint":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("endpoint"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Endpoint = data
+		case "adminUrl":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("adminUrl"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.AdminURL = data
+		case "masterKey":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("masterKey"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.MasterKey = data
+		case "loadBalancingStrategy":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("loadBalancingStrategy"))
+			data, err := ec.unmarshalNLoadBalancingStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LoadBalancingStrategy = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputPageInput(ctx context.Context, obj any) (model.PageInput, error) {
 	var it model.PageInput
 	if obj == nil {
@@ -21747,6 +23367,45 @@ func (ec *executionContext) _DateUsage(ctx context.Context, sel ast.SelectionSet
 	return out
 }
 
+var deleteModelGatewayPayloadImplementors = []string{"DeleteModelGatewayPayload"}
+
+func (ec *executionContext) _DeleteModelGatewayPayload(ctx context.Context, sel ast.SelectionSet, obj *model.DeleteModelGatewayPayload) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, deleteModelGatewayPayloadImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DeleteModelGatewayPayload")
+		case "deletedID":
+			out.Values[i] = ec._DeleteModelGatewayPayload_deletedID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var deleteResourcePoolPayloadImplementors = []string{"DeleteResourcePoolPayload"}
 
 func (ec *executionContext) _DeleteResourcePoolPayload(ctx context.Context, sel ast.SelectionSet, obj *model.DeleteResourcePoolPayload) graphql.Marshaler {
@@ -22223,6 +23882,267 @@ func (ec *executionContext) _MeteringSummary(ctx context.Context, sel ast.Select
 	return out
 }
 
+var modelGatewayImplementors = []string{"ModelGateway"}
+
+func (ec *executionContext) _ModelGateway(ctx context.Context, sel ast.SelectionSet, obj *model.ModelGateway) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, modelGatewayImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ModelGateway")
+		case "id":
+			out.Values[i] = ec._ModelGateway_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._ModelGateway_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "provider":
+			out.Values[i] = ec._ModelGateway_provider(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "endpoint":
+			out.Values[i] = ec._ModelGateway_endpoint(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "status":
+			out.Values[i] = ec._ModelGateway_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "backendModelCount":
+			out.Values[i] = ec._ModelGateway_backendModelCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "loadBalancingStrategy":
+			out.Values[i] = ec._ModelGateway_loadBalancingStrategy(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "latencyMs":
+			out.Values[i] = ec._ModelGateway_latencyMs(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "adminUrl":
+			out.Values[i] = ec._ModelGateway_adminUrl(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "lastSyncAt":
+			out.Values[i] = ec._ModelGateway_lastSyncAt(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "lastSyncStatus":
+			out.Values[i] = ec._ModelGateway_lastSyncStatus(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "lastSyncMessage":
+			out.Values[i] = ec._ModelGateway_lastSyncMessage(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var modelGatewayConnectionImplementors = []string{"ModelGatewayConnection"}
+
+func (ec *executionContext) _ModelGatewayConnection(ctx context.Context, sel ast.SelectionSet, obj *model.ModelGatewayConnection) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, modelGatewayConnectionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ModelGatewayConnection")
+		case "nodes":
+			out.Values[i] = ec._ModelGatewayConnection_nodes(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalCount":
+			out.Values[i] = ec._ModelGatewayConnection_totalCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var modelGatewaySyncSummaryImplementors = []string{"ModelGatewaySyncSummary"}
+
+func (ec *executionContext) _ModelGatewaySyncSummary(ctx context.Context, sel ast.SelectionSet, obj *model.ModelGatewaySyncSummary) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, modelGatewaySyncSummaryImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ModelGatewaySyncSummary")
+		case "state":
+			out.Values[i] = ec._ModelGatewaySyncSummary_state(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "lastSyncedAt":
+			out.Values[i] = ec._ModelGatewaySyncSummary_lastSyncedAt(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "successCount":
+			out.Values[i] = ec._ModelGatewaySyncSummary_successCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "failedCount":
+			out.Values[i] = ec._ModelGatewaySyncSummary_failedCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "message":
+			out.Values[i] = ec._ModelGatewaySyncSummary_message(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var modelGatewayTestResultImplementors = []string{"ModelGatewayTestResult"}
+
+func (ec *executionContext) _ModelGatewayTestResult(ctx context.Context, sel ast.SelectionSet, obj *model.ModelGatewayTestResult) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, modelGatewayTestResultImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ModelGatewayTestResult")
+		case "success":
+			out.Values[i] = ec._ModelGatewayTestResult_success(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "status":
+			out.Values[i] = ec._ModelGatewayTestResult_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "latencyMs":
+			out.Values[i] = ec._ModelGatewayTestResult_latencyMs(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "message":
+			out.Values[i] = ec._ModelGatewayTestResult_message(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "testedAt":
+			out.Values[i] = ec._ModelGatewayTestResult_testedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "gateway":
+			out.Values[i] = ec._ModelGatewayTestResult_gateway(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var modelRouteImplementors = []string{"ModelRoute"}
 
 func (ec *executionContext) _ModelRoute(ctx context.Context, sel ast.SelectionSet, obj *model.ModelRoute) graphql.Marshaler {
@@ -22667,6 +24587,34 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "recordTokenUsage":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_recordTokenUsage(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createModelGateway":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createModelGateway(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updateModelGateway":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateModelGateway(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deleteModelGateway":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteModelGateway(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "testModelGatewayConnection":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_testModelGatewayConnection(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -23438,6 +25386,50 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_meteringSummary(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "modelGateways":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_modelGateways(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "modelGatewaySyncSummary":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_modelGatewaySyncSummary(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -25639,6 +27631,20 @@ func (ec *executionContext) marshalNDateUsage2ᚕgithubᚗcomᚋVMwareᚑAIᚋag
 	return ret
 }
 
+func (ec *executionContext) marshalNDeleteModelGatewayPayload2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDeleteModelGatewayPayload(ctx context.Context, sel ast.SelectionSet, v model.DeleteModelGatewayPayload) graphql.Marshaler {
+	return ec._DeleteModelGatewayPayload(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNDeleteModelGatewayPayload2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDeleteModelGatewayPayload(ctx context.Context, sel ast.SelectionSet, v *model.DeleteModelGatewayPayload) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._DeleteModelGatewayPayload(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNDeleteResourcePoolPayload2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDeleteResourcePoolPayload(ctx context.Context, sel ast.SelectionSet, v model.DeleteResourcePoolPayload) graphql.Marshaler {
 	return ec._DeleteResourcePoolPayload(ctx, sel, &v)
 }
@@ -25903,6 +27909,16 @@ func (ec *executionContext) marshalNLoadBalanceStrategy2githubᚗcomᚋVMwareᚑ
 	return v
 }
 
+func (ec *executionContext) unmarshalNLoadBalancingStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx context.Context, v any) (model.LoadBalancingStrategy, error) {
+	var res model.LoadBalancingStrategy
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNLoadBalancingStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx context.Context, sel ast.SelectionSet, v model.LoadBalancingStrategy) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) unmarshalNLoginInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoginInput(ctx context.Context, v any) (model.LoginInput, error) {
 	res, err := ec.unmarshalInputLoginInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -25960,6 +27976,113 @@ func (ec *executionContext) marshalNMeteringSummary2ᚖgithubᚗcomᚋVMwareᚑA
 		return graphql.Null
 	}
 	return ec._MeteringSummary(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNModelGateway2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGateway(ctx context.Context, sel ast.SelectionSet, v model.ModelGateway) graphql.Marshaler {
+	return ec._ModelGateway(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNModelGateway2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayᚄ(ctx context.Context, sel ast.SelectionSet, v []model.ModelGateway) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNModelGateway2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGateway(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNModelGateway2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGateway(ctx context.Context, sel ast.SelectionSet, v *model.ModelGateway) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ModelGateway(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNModelGatewayConnection2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayConnection(ctx context.Context, sel ast.SelectionSet, v model.ModelGatewayConnection) graphql.Marshaler {
+	return ec._ModelGatewayConnection(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNModelGatewayConnection2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayConnection(ctx context.Context, sel ast.SelectionSet, v *model.ModelGatewayConnection) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ModelGatewayConnection(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNModelGatewayInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayInput(ctx context.Context, v any) (model.ModelGatewayInput, error) {
+	res, err := ec.unmarshalInputModelGatewayInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNModelGatewayProvider2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayProvider(ctx context.Context, v any) (model.ModelGatewayProvider, error) {
+	var res model.ModelGatewayProvider
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNModelGatewayProvider2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayProvider(ctx context.Context, sel ast.SelectionSet, v model.ModelGatewayProvider) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNModelGatewayStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx context.Context, v any) (model.ModelGatewayStatus, error) {
+	var res model.ModelGatewayStatus
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNModelGatewayStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx context.Context, sel ast.SelectionSet, v model.ModelGatewayStatus) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNModelGatewaySyncState2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySyncState(ctx context.Context, v any) (model.ModelGatewaySyncState, error) {
+	var res model.ModelGatewaySyncState
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNModelGatewaySyncState2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySyncState(ctx context.Context, sel ast.SelectionSet, v model.ModelGatewaySyncState) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) marshalNModelGatewaySyncSummary2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySyncSummary(ctx context.Context, sel ast.SelectionSet, v model.ModelGatewaySyncSummary) graphql.Marshaler {
+	return ec._ModelGatewaySyncSummary(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNModelGatewaySyncSummary2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySyncSummary(ctx context.Context, sel ast.SelectionSet, v *model.ModelGatewaySyncSummary) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ModelGatewaySyncSummary(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNModelGatewayTestResult2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayTestResult(ctx context.Context, sel ast.SelectionSet, v model.ModelGatewayTestResult) graphql.Marshaler {
+	return ec._ModelGatewayTestResult(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNModelGatewayTestResult2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayTestResult(ctx context.Context, sel ast.SelectionSet, v *model.ModelGatewayTestResult) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ModelGatewayTestResult(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNModelRoute2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRoute(ctx context.Context, sel ast.SelectionSet, v model.ModelRoute) graphql.Marshaler {
@@ -26020,6 +28143,11 @@ func (ec *executionContext) marshalNPageInfo2ᚖgithubᚗcomᚋVMwareᚑAIᚋage
 		return graphql.Null
 	}
 	return ec._PageInfo(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNPageInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPageInput(ctx context.Context, v any) (model.PageInput, error) {
+	res, err := ec.unmarshalInputPageInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNPasswordMode2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPasswordMode(ctx context.Context, v any) (model.PasswordMode, error) {
@@ -27074,6 +29202,30 @@ func (ec *executionContext) unmarshalOMembershipRole2ᚖgithubᚗcomᚋVMwareᚑ
 }
 
 func (ec *executionContext) marshalOMembershipRole2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMembershipRole(ctx context.Context, sel ast.SelectionSet, v *model.MembershipRole) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
+func (ec *executionContext) unmarshalOModelGatewayFilterInput2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayFilterInput(ctx context.Context, v any) (*model.ModelGatewayFilterInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputModelGatewayFilterInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOModelGatewayStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx context.Context, v any) (*model.ModelGatewayStatus, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.ModelGatewayStatus)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOModelGatewayStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx context.Context, sel ast.SelectionSet, v *model.ModelGatewayStatus) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
