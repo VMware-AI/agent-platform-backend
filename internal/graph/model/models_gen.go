@@ -10,6 +10,24 @@ import (
 	"time"
 )
 
+type AccountRoleRef struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type AccountUser struct {
+	ID               string           `json:"id"`
+	Username         string           `json:"username"`
+	DisplayName      string           `json:"displayName"`
+	Email            string           `json:"email"`
+	Role             *AccountRoleRef  `json:"role"`
+	ConnectionStatus ConnectionStatus `json:"connectionStatus"`
+	LastLoginAt      *time.Time       `json:"lastLoginAt,omitempty"`
+	Enabled          bool             `json:"enabled"`
+	CreatedAt        time.Time        `json:"createdAt"`
+	UpdatedAt        time.Time        `json:"updatedAt"`
+}
+
 type Agent struct {
 	ID        string       `json:"id"`
 	Name      string       `json:"name"`
@@ -97,6 +115,16 @@ type Artifact struct {
 	CreatedAt time.Time      `json:"createdAt"`
 }
 
+type AssignUsersToRoleInput struct {
+	RoleID  string   `json:"roleId"`
+	UserIds []string `json:"userIds"`
+}
+
+type AssignUsersToRolePayload struct {
+	Role          *Role `json:"role"`
+	AssignedCount int   `json:"assignedCount"`
+}
+
 type AuditConnection struct {
 	Items []AuditLog `json:"items"`
 	Total int        `json:"total"`
@@ -151,11 +179,18 @@ type CreateDepartmentInput struct {
 }
 
 type CreateUserInput struct {
-	Username string  `json:"username"`
-	Email    string  `json:"email"`
-	Password string  `json:"password"`
-	Role     Role    `json:"role"`
-	TenantID *string `json:"tenantId,omitempty"`
+	Username       string       `json:"username"`
+	DisplayName    string       `json:"displayName"`
+	Email          string       `json:"email"`
+	RoleID         string       `json:"roleId"`
+	PasswordMode   PasswordMode `json:"passwordMode"`
+	CustomPassword *string      `json:"customPassword,omitempty"`
+	Enabled        *bool        `json:"enabled,omitempty"`
+}
+
+type CreateUserPayload struct {
+	User              *AccountUser `json:"user"`
+	GeneratedPassword *string      `json:"generatedPassword,omitempty"`
 }
 
 type CustomRole struct {
@@ -171,6 +206,10 @@ type DateUsage struct {
 	InputTokens  int     `json:"inputTokens"`
 	OutputTokens int     `json:"outputTokens"`
 	Cost         float64 `json:"cost"`
+}
+
+type DeleteUserPayload struct {
+	ID string `json:"id"`
 }
 
 type Department struct {
@@ -370,6 +409,11 @@ type RequestLogFilter struct {
 	RequestID  *string `json:"requestId,omitempty"`
 }
 
+type ResetPasswordPayload struct {
+	User              *AccountUser `json:"user"`
+	GeneratedPassword string       `json:"generatedPassword"`
+}
+
 type ResourcePool struct {
 	ID              string             `json:"id"`
 	Name            string             `json:"name"`
@@ -389,10 +433,18 @@ type RevertAgentSnapshotInput struct {
 	Confirm      bool   `json:"confirm"`
 }
 
-type RoleInfo struct {
-	Value       Role   `json:"value"`
-	Label       string `json:"label"`
+type Role struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
 	Description string `json:"description"`
+	UserCount   int    `json:"userCount"`
+	BuiltIn     bool   `json:"builtIn"`
+}
+
+type RoleConnection struct {
+	Nodes      []Role    `json:"nodes"`
+	TotalCount int       `json:"totalCount"`
+	PageInfo   *PageInfo `json:"pageInfo"`
 }
 
 type RouterTier struct {
@@ -416,9 +468,8 @@ type SnapshotAgentInput struct {
 	Description *string `json:"description,omitempty"`
 }
 
-type TempPasswordPayload struct {
-	UserID       string `json:"userId"`
-	TempPassword string `json:"tempPassword"`
+type ToggleUserEnabledPayload struct {
+	User *AccountUser `json:"user"`
 }
 
 type TokenUsage struct {
@@ -446,8 +497,10 @@ type UpdateResourcePoolInput struct {
 }
 
 type UpdateUserInput struct {
-	Email *string `json:"email,omitempty"`
-	Role  *Role   `json:"role,omitempty"`
+	DisplayName *string `json:"displayName,omitempty"`
+	Email       *string `json:"email,omitempty"`
+	RoleID      *string `json:"roleId,omitempty"`
+	Enabled     *bool   `json:"enabled,omitempty"`
 }
 
 type UpsertAgentTemplateInput struct {
@@ -527,7 +580,7 @@ type User struct {
 	Username           string     `json:"username"`
 	DisplayName        string     `json:"displayName"`
 	Email              string     `json:"email"`
-	Role               Role       `json:"role"`
+	Role               RoleName   `json:"role"`
 	TenantID           *string    `json:"tenantId,omitempty"`
 	MustChangePassword bool       `json:"mustChangePassword"`
 	IsActive           bool       `json:"isActive"`
@@ -536,14 +589,17 @@ type User struct {
 }
 
 type UserConnection struct {
-	Items []User `json:"items"`
-	Total int    `json:"total"`
+	Nodes      []AccountUser `json:"nodes"`
+	TotalCount int           `json:"totalCount"`
+	PageInfo   *PageInfo     `json:"pageInfo"`
 }
 
 type UserFilter struct {
-	Search *string `json:"search,omitempty"`
-	Role   *Role   `json:"role,omitempty"`
-	Active *bool   `json:"active,omitempty"`
+	UsernameKeyword *string           `json:"usernameKeyword,omitempty"`
+	RoleKeyword     *string           `json:"roleKeyword,omitempty"`
+	EmailKeyword    *string           `json:"emailKeyword,omitempty"`
+	StatusKeyword   *ConnectionStatus `json:"statusKeyword,omitempty"`
+	RoleID          *string           `json:"roleId,omitempty"`
 }
 
 type UserSort struct {
@@ -808,6 +864,61 @@ func (e ArtifactKind) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type ConnectionStatus string
+
+const (
+	ConnectionStatusOnline  ConnectionStatus = "ONLINE"
+	ConnectionStatusOffline ConnectionStatus = "OFFLINE"
+)
+
+var AllConnectionStatus = []ConnectionStatus{
+	ConnectionStatusOnline,
+	ConnectionStatusOffline,
+}
+
+func (e ConnectionStatus) IsValid() bool {
+	switch e {
+	case ConnectionStatusOnline, ConnectionStatusOffline:
+		return true
+	}
+	return false
+}
+
+func (e ConnectionStatus) String() string {
+	return string(e)
+}
+
+func (e *ConnectionStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ConnectionStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ConnectionStatus", str)
+	}
+	return nil
+}
+
+func (e ConnectionStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *ConnectionStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e ConnectionStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type GatewayStatus string
 
 const (
@@ -1038,6 +1149,61 @@ func (e MembershipRole) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type PasswordMode string
+
+const (
+	PasswordModeAuto   PasswordMode = "AUTO"
+	PasswordModeCustom PasswordMode = "CUSTOM"
+)
+
+var AllPasswordMode = []PasswordMode{
+	PasswordModeAuto,
+	PasswordModeCustom,
+}
+
+func (e PasswordMode) IsValid() bool {
+	switch e {
+	case PasswordModeAuto, PasswordModeCustom:
+		return true
+	}
+	return false
+}
+
+func (e PasswordMode) String() string {
+	return string(e)
+}
+
+func (e *PasswordMode) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = PasswordMode(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid PasswordMode", str)
+	}
+	return nil
+}
+
+func (e PasswordMode) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *PasswordMode) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e PasswordMode) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type ResourcePoolStatus string
 
 const (
@@ -1095,52 +1261,52 @@ func (e ResourcePoolStatus) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-type Role string
+type RoleName string
 
 const (
-	RoleAdmin         Role = "admin"
-	RoleUser          Role = "user"
-	RoleObservability Role = "observability"
-	RoleTenantAdmin   Role = "tenant_admin"
+	RoleNameAdmin         RoleName = "admin"
+	RoleNameUser          RoleName = "user"
+	RoleNameObservability RoleName = "observability"
+	RoleNameTenantAdmin   RoleName = "tenant_admin"
 )
 
-var AllRole = []Role{
-	RoleAdmin,
-	RoleUser,
-	RoleObservability,
-	RoleTenantAdmin,
+var AllRoleName = []RoleName{
+	RoleNameAdmin,
+	RoleNameUser,
+	RoleNameObservability,
+	RoleNameTenantAdmin,
 }
 
-func (e Role) IsValid() bool {
+func (e RoleName) IsValid() bool {
 	switch e {
-	case RoleAdmin, RoleUser, RoleObservability, RoleTenantAdmin:
+	case RoleNameAdmin, RoleNameUser, RoleNameObservability, RoleNameTenantAdmin:
 		return true
 	}
 	return false
 }
 
-func (e Role) String() string {
+func (e RoleName) String() string {
 	return string(e)
 }
 
-func (e *Role) UnmarshalGQL(v any) error {
+func (e *RoleName) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
 	}
 
-	*e = Role(str)
+	*e = RoleName(str)
 	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid Role", str)
+		return fmt.Errorf("%s is not a valid RoleName", str)
 	}
 	return nil
 }
 
-func (e Role) MarshalGQL(w io.Writer) {
+func (e RoleName) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
-func (e *Role) UnmarshalJSON(b []byte) error {
+func (e *RoleName) UnmarshalJSON(b []byte) error {
 	s, err := strconv.Unquote(string(b))
 	if err != nil {
 		return err
@@ -1148,7 +1314,7 @@ func (e *Role) UnmarshalJSON(b []byte) error {
 	return e.UnmarshalGQL(s)
 }
 
-func (e Role) MarshalJSON() ([]byte, error) {
+func (e RoleName) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil
@@ -1387,24 +1553,28 @@ func (e UpstreamProvider) MarshalJSON() ([]byte, error) {
 type UserSortField string
 
 const (
-	UserSortFieldUsername  UserSortField = "USERNAME"
-	UserSortFieldEmail     UserSortField = "EMAIL"
-	UserSortFieldRole      UserSortField = "ROLE"
-	UserSortFieldCreatedAt UserSortField = "CREATED_AT"
-	UserSortFieldLastLogin UserSortField = "LAST_LOGIN"
+	UserSortFieldUsername   UserSortField = "USERNAME"
+	UserSortFieldRole       UserSortField = "ROLE"
+	UserSortFieldEmail      UserSortField = "EMAIL"
+	UserSortFieldConnection UserSortField = "CONNECTION"
+	UserSortFieldLastLogin  UserSortField = "LAST_LOGIN"
+	UserSortFieldCreatedAt  UserSortField = "CREATED_AT"
+	UserSortFieldUpdatedAt  UserSortField = "UPDATED_AT"
 )
 
 var AllUserSortField = []UserSortField{
 	UserSortFieldUsername,
-	UserSortFieldEmail,
 	UserSortFieldRole,
-	UserSortFieldCreatedAt,
+	UserSortFieldEmail,
+	UserSortFieldConnection,
 	UserSortFieldLastLogin,
+	UserSortFieldCreatedAt,
+	UserSortFieldUpdatedAt,
 }
 
 func (e UserSortField) IsValid() bool {
 	switch e {
-	case UserSortFieldUsername, UserSortFieldEmail, UserSortFieldRole, UserSortFieldCreatedAt, UserSortFieldLastLogin:
+	case UserSortFieldUsername, UserSortFieldRole, UserSortFieldEmail, UserSortFieldConnection, UserSortFieldLastLogin, UserSortFieldCreatedAt, UserSortFieldUpdatedAt:
 		return true
 	}
 	return false

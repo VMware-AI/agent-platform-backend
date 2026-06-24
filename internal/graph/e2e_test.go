@@ -65,14 +65,14 @@ func (e *e2eEnv) seedUser(t *testing.T, username string, role user.Role) *http.C
 	return &http.Cookie{Name: auth.SessionCookie, Value: sid}
 }
 
-const createUserMut = `mutation { createUser(input:{username:"newbie", email:"nb@x.io", password:"NewbiePass12", role:user}){ id username role } }`
-const usersQuery = `{ users { total items { username } } }`
+const createUserMut = `mutation { createUser(input:{username:"newbie", displayName:"newbie", email:"nb@x.io", roleId:"user", passwordMode:CUSTOM, customPassword:"NewbiePass12"}){ user{ id username role{ id } } } }`
+const usersQuery = `{ users { totalCount nodes { username } } }`
 
 func TestE2E_DirectiveBlocksUnauthenticated(t *testing.T) {
 	e := setupE2E(t)
 	defer e.cleanup()
 	var resp struct {
-		Users struct{ Total int }
+		Users struct{ TotalCount int }
 	}
 	// No cookie => @hasRole(admin) must reject.
 	if err := e.gql.Post(usersQuery, &resp); err == nil {
@@ -86,7 +86,9 @@ func TestE2E_DirectiveBlocksNonAdmin(t *testing.T) {
 	userCookie := e.seedUser(t, "plain", user.RoleUser)
 
 	var resp struct {
-		CreateUser struct{ ID string }
+		CreateUser struct {
+			User struct{ ID string }
+		}
 	}
 	err := e.gql.Post(createUserMut, &resp, client.AddCookie(userCookie))
 	if err == nil {
@@ -101,26 +103,28 @@ func TestE2E_AdminAllowed(t *testing.T) {
 
 	var resp struct {
 		CreateUser struct {
-			ID       string
-			Username string
-			Role     string
+			User struct {
+				ID       string
+				Username string
+				Role     struct{ ID string }
+			}
 		}
 	}
 	e.gql.MustPost(createUserMut, &resp, client.AddCookie(adminCookie))
-	if resp.CreateUser.Username != "newbie" || resp.CreateUser.Role != "user" {
+	if resp.CreateUser.User.Username != "newbie" || resp.CreateUser.User.Role.ID != "user" {
 		t.Fatalf("unexpected createUser result: %+v", resp.CreateUser)
 	}
 
 	// admin can list users (self + created)
 	var listResp struct {
 		Users struct {
-			Total int
-			Items []struct{ Username string }
+			TotalCount int
+			Nodes      []struct{ Username string }
 		}
 	}
 	e.gql.MustPost(usersQuery, &listResp, client.AddCookie(adminCookie))
-	if listResp.Users.Total < 2 {
-		t.Fatalf("expected >=2 users, got %d", listResp.Users.Total)
+	if listResp.Users.TotalCount < 2 {
+		t.Fatalf("expected >=2 users, got %d", listResp.Users.TotalCount)
 	}
 }
 

@@ -10,6 +10,8 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 
+	"strings"
+
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
@@ -106,7 +108,7 @@ func (r *Resolver) assertAgentConfigWritable(ctx context.Context, id uuid.UUID) 
 // against escalation (LLD-10 §1.5): a tenant-admin is confined to their own
 // tenant and may not mint admin/tenant-admin users; a platform admin may target
 // any tenant via explicit input (or none = untenanted platform user).
-func (r *Resolver) resolveUserWriteTenant(ctx context.Context, inputTenantID *string, role model.Role) (*uuid.UUID, error) {
+func (r *Resolver) resolveUserWriteTenant(ctx context.Context, inputTenantID *string, role model.RoleName) (*uuid.UUID, error) {
 	cu := auth.FromContext(ctx)
 	if cu != nil && cu.Role == auth.RoleTenantAdmin {
 		tid, err := uuid.Parse(cu.TenantID)
@@ -116,7 +118,7 @@ func (r *Resolver) resolveUserWriteTenant(ctx context.Context, inputTenantID *st
 		if inputTenantID != nil && *inputTenantID != tid.String() {
 			return nil, gqlerror.Errorf("forbidden: cannot create users in another tenant")
 		}
-		if role == model.RoleAdmin || role == model.RoleTenantAdmin {
+		if role == model.RoleNameAdmin || role == model.RoleNameTenantAdmin {
 			return nil, gqlerror.Errorf("forbidden: tenant-admin cannot grant admin roles")
 		}
 		return &tid, nil
@@ -977,15 +979,97 @@ func applyUserSort(q *ent.UserQuery, sort *model.UserSort) *ent.UserQuery {
 		col = user.FieldRole
 	case model.UserSortFieldCreatedAt:
 		col = user.FieldCreatedAt
+	case model.UserSortFieldUpdatedAt:
+		col = user.FieldUpdatedAt
 	case model.UserSortFieldLastLogin:
 		col = user.FieldLastLoginAt
 	default:
+		// CONNECTION (online status) is derived, not a column — fall back to newest.
 		return q.Order(orderNewest)
 	}
 	if desc {
 		return q.Order(ent.Desc(col), ent.Desc(user.FieldID))
 	}
 	return q.Order(ent.Asc(col), ent.Asc(user.FieldID))
+}
+
+// ---- 用户与权限页 (P2) helpers: built-in roles surfaced as entities ----
+
+// builtinRoles are the assignable platform roles shown in the UI as entities.
+// id = the RoleName GraphQL enum value (underscored, e.g. tenant_admin). 本期不
+// 支持自定义角色 (LLD-01 §4.2 enforcement 渐进).
+var builtinRoles = []struct{ id, name, desc string }{
+	{"admin", "管理员", "平台全局管理权限"},
+	{"tenant_admin", "租户管理员", "管理本租户的用户与资源"},
+	{"user", "普通用户", "自助创建与管理自己的智能体"},
+	{"observability", "可观测", "查看计量、日志与审计(只读)"},
+}
+
+func builtinRole(id string) (name, desc string, ok bool) {
+	for _, r := range builtinRoles {
+		if r.id == id {
+			return r.name, r.desc, true
+		}
+	}
+	return "", "", false
+}
+
+// roleEntity builds the Role entity for a built-in role id.
+func roleEntity(id string, userCount int) *model.Role {
+	name, desc, _ := builtinRole(id)
+	return &model.Role{ID: id, Name: name, Description: desc, UserCount: userCount, BuiltIn: true}
+}
+
+// roleUserCount counts users holding a built-in role, within the caller's tenant
+// scope (tenant-admin sees only their tenant; admin sees all).
+func (r *Resolver) roleUserCount(ctx context.Context, roleID string) (int, error) {
+	q := r.Ent.User.Query().Where(user.RoleEQ(user.Role(gqlRoleToEnt(model.RoleName(roleID)))))
+	if d := tenantScopeFor(ctx); d.apply {
+		if d.denyAll {
+			return 0, nil
+		}
+		q = q.Where(user.TenantID(d.tenant))
+	}
+	return q.Count(ctx)
+}
+
+// matchRoleKeyword returns the ent role values whose id or 中文 label contains the
+// keyword (for the user-list roleKeyword filter). Empty result → matches nothing.
+func matchRoleKeyword(kw string) []user.Role {
+	low := strings.ToLower(kw)
+	var out []user.Role
+	for _, br := range builtinRoles {
+		if strings.Contains(strings.ToLower(br.id), low) || strings.Contains(br.name, kw) {
+			out = append(out, user.Role(gqlRoleToEnt(model.RoleName(br.id))))
+		}
+	}
+	return out
+}
+
+// toAccountUser maps an ent.User to the frontend AccountUser shape. online drives
+// the connection-status badge. displayName has no column yet → mirrors username.
+func toAccountUser(u *ent.User, online bool) *model.AccountUser {
+	roleID := string(entRoleToGQL(string(u.Role)))
+	name, _, _ := builtinRole(roleID)
+	cs := model.ConnectionStatusOffline
+	if online {
+		cs = model.ConnectionStatusOnline
+	}
+	m := &model.AccountUser{
+		ID:               u.ID.String(),
+		Username:         u.Username,
+		DisplayName:      u.Username,
+		Email:            u.Email,
+		Role:             &model.AccountRoleRef{ID: roleID, Name: name},
+		ConnectionStatus: cs,
+		Enabled:          u.IsActive,
+		CreatedAt:        u.CreatedAt,
+		UpdatedAt:        u.UpdatedAt,
+	}
+	if u.LastLoginAt != nil {
+		m.LastLoginAt = u.LastLoginAt
+	}
+	return m
 }
 
 // joinOrder orders agents by a column on a related table (owner username / key

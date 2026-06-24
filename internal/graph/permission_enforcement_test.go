@@ -19,14 +19,12 @@ func TestHasPermission_CustomRoleEnforcement(t *testing.T) {
 	ctx := adminCtx()
 	mr := &mutationResolver{r}
 
-	u, err := mr.CreateUser(ctx, model.CreateUserInput{
-		Username: "analyst", Email: "a@x.io", Password: "AnalystPass1", Role: model.RoleUser,
-	})
+	u, err := mr.CreateUser(ctx, model.CreateUserInput{Username: "analyst", DisplayName: "analyst", Email: "a@x.io", RoleID: string(model.RoleNameUser), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("AnalystPass1")})
 	if err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
 	next := func(context.Context) (any, error) { return "ok", nil }
-	userCtx := auth.WithCurrentUser(context.Background(), &auth.CurrentUser{ID: u.ID, Role: auth.RoleUser})
+	userCtx := auth.WithCurrentUser(context.Background(), &auth.CurrentUser{ID: u.User.ID, Role: auth.RoleUser})
 
 	// Plain user's static role lacks audit:view.
 	if _, err := r.HasPermission(userCtx, nil, next, "audit:view"); err == nil {
@@ -41,7 +39,7 @@ func TestHasPermission_CustomRoleEnforcement(t *testing.T) {
 	if _, err := mr.SetRolePermissions(ctx, role.ID, []string{"audit:view"}); err != nil {
 		t.Fatalf("SetRolePermissions: %v", err)
 	}
-	if _, err := mr.AssignUserRole(ctx, u.ID, role.ID); err != nil {
+	if _, err := mr.AssignUserRole(ctx, u.User.ID, role.ID); err != nil {
 		t.Fatalf("AssignUserRole: %v", err)
 	}
 
@@ -55,7 +53,7 @@ func TestHasPermission_CustomRoleEnforcement(t *testing.T) {
 	}
 
 	// Removing the role revokes immediately (not after TTL).
-	if _, err := mr.RemoveUserRole(ctx, u.ID, role.ID); err != nil {
+	if _, err := mr.RemoveUserRole(ctx, u.User.ID, role.ID); err != nil {
 		t.Fatalf("RemoveUserRole: %v", err)
 	}
 	if _, err := r.HasPermission(userCtx, nil, next, "audit:view"); err == nil {

@@ -33,14 +33,9 @@ func TestIssueVirtualKey_InternalErrorIsMaskable(t *testing.T) {
 	ctx := context.Background()
 	mr := &mutationResolver{r}
 
-	u, err := mr.CreateUser(ctx, model.CreateUserInput{
-		Username: "maskuser", Email: "m@x.io", Password: "MaskUserPass1", Role: model.RoleUser,
-	})
-	if err != nil {
-		t.Fatalf("CreateUser: %v", err)
-	}
+	u := mkUser(t, mr, ctx, "maskuser", "m@x.io", model.RoleNameUser)
 
-	_, err = mr.IssueVirtualKey(ctx, model.IssueVirtualKeyInput{UserID: u.ID, Models: []string{"smart"}})
+	_, err := mr.IssueVirtualKey(ctx, model.IssueVirtualKeyInput{UserID: u.ID, Models: []string{"smart"}})
 	if err == nil {
 		t.Fatal("expected gateway failure")
 	}
@@ -101,12 +96,7 @@ func TestIssueAndRevokeVirtualKey(t *testing.T) {
 	qr := &queryResolver{r}
 
 	// need a user to attach the key to
-	u, err := mr.CreateUser(ctx, model.CreateUserInput{
-		Username: "keyuser", Email: "k@x.io", Password: "KeyUserPass1", Role: model.RoleUser,
-	})
-	if err != nil {
-		t.Fatalf("CreateUser: %v", err)
-	}
+	u := mkUser(t, mr, ctx, "keyuser", "k@x.io", model.RoleNameUser)
 
 	budget := 50.0
 	alias := "keyuser / coding"
@@ -161,12 +151,7 @@ func TestRegenerateVirtualKey(t *testing.T) {
 	ctx := context.Background()
 	mr := &mutationResolver{r}
 
-	u, err := mr.CreateUser(ctx, model.CreateUserInput{
-		Username: "rotuser", Email: "rot@x.io", Password: "RotUserPass1", Role: model.RoleUser,
-	})
-	if err != nil {
-		t.Fatalf("CreateUser: %v", err)
-	}
+	u := mkUser(t, mr, ctx, "rotuser", "rot@x.io", model.RoleNameUser)
 	issued, err := mr.IssueVirtualKey(ctx, model.IssueVirtualKeyInput{UserID: u.ID, Models: []string{"smart"}})
 	if err != nil {
 		t.Fatalf("IssueVirtualKey: %v", err)
@@ -204,9 +189,7 @@ func TestRegenerateVirtualKey_RejectsRevoked(t *testing.T) {
 	ctx := context.Background()
 	mr := &mutationResolver{r}
 
-	u, _ := mr.CreateUser(ctx, model.CreateUserInput{
-		Username: "revuser", Email: "rev@x.io", Password: "RevUserPass1", Role: model.RoleUser,
-	})
+	u := mkUser(t, mr, ctx, "revuser", "rev@x.io", model.RoleNameUser)
 	issued, _ := mr.IssueVirtualKey(ctx, model.IssueVirtualKeyInput{UserID: u.ID, Models: []string{"smart"}})
 	if _, err := mr.RevokeVirtualKey(ctx, issued.VirtualKey.ID); err != nil {
 		t.Fatalf("RevokeVirtualKey: %v", err)

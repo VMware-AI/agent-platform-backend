@@ -21,7 +21,7 @@ func TestIssueVirtualKey_AppliesPolicyAndBindsAgent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("policy: %v", err)
 	}
-	u, _ := mr.CreateUser(ctx, model.CreateUserInput{Username: "ku", Email: "ku@x.io", Password: "KuPass1234567", Role: model.RoleUser})
+	u := mkUser(t, mr, ctx, "ku", "ku@x.io", model.RoleNameUser)
 	ownerCtx := auth.WithCurrentUser(ctx, &auth.CurrentUser{ID: u.ID, Role: auth.RoleUser})
 	seedActiveTemplate(t, mr.Resolver, "goose")
 	ag, _ := mr.CreateAgent(ownerCtx, model.CreateAgentInput{Name: "a", AgentType: "goose"})

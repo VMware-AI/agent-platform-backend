@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
@@ -176,136 +175,6 @@ func (r *mutationResolver) ChangePassword(ctx context.Context, oldPassword strin
 	return true, nil
 }
 
-// CreateUser is the resolver for the createUser field.
-func (r *mutationResolver) CreateUser(ctx context.Context, input model.CreateUserInput) (*model.User, error) {
-	actor := actorID(auth.FromContext(ctx))
-	hash, err := auth.HashPassword(input.Password)
-	if err != nil {
-		return nil, err
-	}
-	tenantID, err := r.resolveUserWriteTenant(ctx, input.TenantID, input.Role)
-	if err != nil {
-		return nil, err
-	}
-	create := r.Ent.User.Create().
-		SetUsername(input.Username).
-		SetEmail(input.Email).
-		SetPasswordHash(hash).
-		SetRole(user.Role(gqlRoleToEnt(input.Role))).
-		SetMustChangePassword(true).
-		SetNillableTenantID(tenantID)
-	u, err := create.Save(ctx)
-	if err != nil {
-		r.audit(ctx, "user.create", "user", input.Username, false, actor)
-		if ent.IsConstraintError(err) {
-			return nil, gqlerror.Errorf("username or email already exists")
-		}
-		return nil, err
-	}
-	r.audit(ctx, "user.create", "user", u.ID.String(), true, actor)
-	return toModelUser(u), nil
-}
-
-// UpdateUser is the resolver for the updateUser field.
-func (r *mutationResolver) UpdateUser(ctx context.Context, id string, input model.UpdateUserInput) (*model.User, error) {
-	uid, err := uuid.Parse(id)
-	if err != nil {
-		return nil, gqlerror.Errorf("invalid id")
-	}
-	if err := r.assertUserInCallerTenant(ctx, uid); err != nil {
-		return nil, err
-	}
-	if input.Role != nil {
-		if cu := auth.FromContext(ctx); cu != nil && cu.Role == auth.RoleTenantAdmin &&
-			(*input.Role == model.RoleAdmin || *input.Role == model.RoleTenantAdmin) {
-			return nil, gqlerror.Errorf("forbidden: tenant-admin cannot grant admin roles")
-		}
-	}
-	upd := r.Ent.User.UpdateOneID(uid)
-	if input.Email != nil {
-		upd.SetEmail(*input.Email)
-	}
-	if input.Role != nil {
-		upd.SetRole(user.Role(gqlRoleToEnt(*input.Role)))
-	}
-	u, err := upd.Save(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if input.Role != nil {
-		// Role is cached in the session (SessionMiddleware reads it without re-querying
-		// the DB), so revoke the user's sessions on a role change — otherwise a
-		// demotion is not enforced until the old session's TTL expires (stale privilege).
-		_ = r.Sessions.DeleteByUser(uid.String())
-	}
-	r.audit(ctx, "user.update", "user", u.ID.String(), true, actorID(auth.FromContext(ctx)))
-	return toModelUser(u), nil
-}
-
-// SetUserActive is the resolver for the setUserActive field.
-func (r *mutationResolver) SetUserActive(ctx context.Context, id string, active bool) (*model.User, error) {
-	uid, err := uuid.Parse(id)
-	if err != nil {
-		return nil, gqlerror.Errorf("invalid id")
-	}
-	if err := r.assertUserInCallerTenant(ctx, uid); err != nil {
-		return nil, err
-	}
-	u, err := r.Ent.User.UpdateOneID(uid).SetIsActive(active).Save(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if !active {
-		_ = r.Sessions.DeleteByUser(uid.String()) // disabling kicks out live sessions
-	}
-	r.audit(ctx, "user.set_active", "user", u.ID.String(), true, actorID(auth.FromContext(ctx)))
-	return toModelUser(u), nil
-}
-
-// ResetPassword is the resolver for the resetPassword field.
-func (r *mutationResolver) ResetPassword(ctx context.Context, userID string) (*model.TempPasswordPayload, error) {
-	uid, err := uuid.Parse(userID)
-	if err != nil {
-		return nil, gqlerror.Errorf("invalid id")
-	}
-	if err := r.assertUserInCallerTenant(ctx, uid); err != nil {
-		return nil, err
-	}
-	temp, err := auth.GenerateTempPassword()
-	if err != nil {
-		return nil, err
-	}
-	hash, err := auth.HashPassword(temp)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := r.Ent.User.UpdateOneID(uid).SetPasswordHash(hash).SetMustChangePassword(true).Save(ctx); err != nil {
-		return nil, err
-	}
-	// Revoke the target's live sessions so the old password can't keep a session
-	// alive after an admin reset (they must log in with the temp password).
-	_ = r.Sessions.DeleteByUser(uid.String())
-	r.audit(ctx, "user.reset_password", "user", userID, true, actorID(auth.FromContext(ctx)))
-	return &model.TempPasswordPayload{UserID: userID, TempPassword: temp}, nil
-}
-
-// DeleteUser is the resolver for the deleteUser field.
-func (r *mutationResolver) DeleteUser(ctx context.Context, id string) (bool, error) {
-	uid, err := uuid.Parse(id)
-	if err != nil {
-		return false, gqlerror.Errorf("invalid id")
-	}
-	if err := r.assertUserInCallerTenant(ctx, uid); err != nil {
-		return false, err
-	}
-	if err := r.Ent.User.DeleteOneID(uid).Exec(ctx); err != nil {
-		return false, err
-	}
-	_ = r.Sessions.DeleteByUser(uid.String()) // a deleted user's sessions must die
-	r.audit(ctx, "user.delete", "user", id, true, actorID(auth.FromContext(ctx)))
-	return true, nil
-}
-
 // Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	cu := auth.FromContext(ctx)
@@ -321,58 +190,6 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 		return nil, err
 	}
 	return toModelUser(u), nil
-}
-
-// Users is the resolver for the users field.
-func (r *queryResolver) Users(ctx context.Context, page *model.PageInput, filter *model.UserFilter, sort *model.UserSort) (*model.UserConnection, error) {
-	limit, offset := pageBounds(page)
-	// Tenant isolation (C1): a tenant-admin sees only their tenant's users; both
-	// the count and the page must use the same scope or totals/pages disagree.
-	base := r.Ent.User.Query()
-	if d := tenantScopeFor(ctx); d.apply {
-		if d.denyAll {
-			base = base.Where(user.IDEQ(uuid.Nil)) // never matches → fail closed
-		} else {
-			base = base.Where(user.TenantID(d.tenant))
-		}
-	}
-	// UI filters on top of the tenant scope (模块① 用户与权限). Count + page share
-	// the same scoped+filtered base so totals/pages stay consistent.
-	if filter != nil {
-		if v := derefString(filter.Search); v != "" {
-			base = base.Where(user.Or(user.UsernameContainsFold(v), user.EmailContainsFold(v)))
-		}
-		if filter.Role != nil {
-			base = base.Where(user.RoleEQ(user.Role(gqlRoleToEnt(*filter.Role))))
-		}
-		if filter.Active != nil {
-			base = base.Where(user.IsActiveEQ(*filter.Active))
-		}
-	}
-	total, err := base.Clone().Count(ctx)
-	if err != nil {
-		return nil, err
-	}
-	us, err := applyUserSort(base.Clone(), sort).Limit(limit).Offset(offset).All(ctx)
-	if err != nil {
-		return nil, err
-	}
-	items := make([]model.User, 0, len(us))
-	for _, u := range us {
-		items = append(items, *toModelUser(u))
-	}
-	return &model.UserConnection{Items: items, Total: total}, nil
-}
-
-// Roles lists the built-in assignable roles for the user-form picker (模块①). The
-// set is fixed (no custom roles this phase); labels are zh-first for the UI.
-func (r *queryResolver) Roles(ctx context.Context) ([]model.RoleInfo, error) {
-	return []model.RoleInfo{
-		{Value: model.RoleAdmin, Label: "管理员", Description: "平台全局管理权限"},
-		{Value: model.RoleTenantAdmin, Label: "租户管理员", Description: "管理本租户的用户与资源"},
-		{Value: model.RoleUser, Label: "普通用户", Description: "自助创建与管理自己的智能体"},
-		{Value: model.RoleObservability, Label: "可观测", Description: "查看计量、日志与审计(只读)"},
-	}, nil
 }
 
 // AuditLogs is the resolver for the auditLogs field.

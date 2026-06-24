@@ -54,9 +54,7 @@ func TestDeployAgent_EndToEnd(t *testing.T) {
 	mr := &mutationResolver{r}
 
 	// create owner + agent + pool (pool endpoint points at vcsim)
-	owner, _ := mr.CreateUser(ctx, model.CreateUserInput{
-		Username: "deployer", Email: "d@x.io", Password: "DeployPass12", Role: model.RoleUser,
-	})
+	owner := mkUser(t, mr, ctx, "deployer", "d@x.io", model.RoleNameUser)
 	ownerCtx := userCtx(owner.ID, "user")
 	seedActiveTemplate(t, mr.Resolver, "goose")
 
@@ -198,9 +196,7 @@ func TestRecycleAgent_VCSim(t *testing.T) {
 	}
 	mr := &mutationResolver{r}
 
-	owner, _ := mr.CreateUser(ctx, model.CreateUserInput{
-		Username: "recycler", Email: "r@x.io", Password: "RecyclePass1", Role: model.RoleUser,
-	})
+	owner := mkUser(t, mr, ctx, "recycler", "r@x.io", model.RoleNameUser)
 	ownerCtx := userCtx(owner.ID, "user")
 	seedActiveTemplate(t, mr.Resolver, "goose")
 	ag, _ := mr.CreateAgent(ownerCtx, model.CreateAgentInput{Name: "bob-goose", AgentType: "goose"})

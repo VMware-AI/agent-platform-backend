@@ -34,6 +34,10 @@ type Store interface {
 	// DeleteByUser revokes ALL of a user's sessions (every device). Used on a
 	// password change / admin reset so old credentials can't keep live sessions.
 	DeleteByUser(userID string) error
+	// ActiveByUser reports whether the user currently has at least one session
+	// (approximate — may briefly include not-yet-pruned expired ones). Drives the
+	// user list's online/offline badge.
+	ActiveByUser(userID string) (bool, error)
 }
 
 // NewID returns a cryptographically random 256-bit session id.
@@ -114,4 +118,11 @@ func (m *MemoryStore) DeleteByUser(userID string) error {
 	delete(m.byUser, userID)
 	m.mu.Unlock()
 	return nil
+}
+
+func (m *MemoryStore) ActiveByUser(userID string) (bool, error) {
+	m.mu.RLock()
+	n := len(m.byUser[userID])
+	m.mu.RUnlock()
+	return n > 0, nil
 }

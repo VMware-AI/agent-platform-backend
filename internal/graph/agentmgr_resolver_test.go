@@ -19,9 +19,7 @@ func TestRequestRotationAndRevoke_Authz(t *testing.T) {
 	mr := &mutationResolver{r}
 	ctx := context.Background()
 
-	owner, _ := mr.CreateUser(ctx, model.CreateUserInput{
-		Username: "rot", Email: "rot@x.io", Password: "RotatePass12", Role: model.RoleUser,
-	})
+	owner := mkUser(t, mr, ctx, "rot", "rot@x.io", model.RoleNameUser)
 	ownerCtx := userCtx(owner.ID, "user")
 	seedActiveTemplate(t, r, "goose")
 	ag, err := mr.CreateAgent(ownerCtx, model.CreateAgentInput{Name: "rot-goose", AgentType: "goose"})

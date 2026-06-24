@@ -67,14 +67,12 @@ func TestRollbackDeploy_DestroysVMRevokesKeyMarksException(t *testing.T) {
 	ctx := context.Background()
 	mr := &mutationResolver{r}
 
-	owner, err := mr.CreateUser(ctx, model.CreateUserInput{
-		Username: "o", Email: "o@x.io", Password: "OwnerPass123", Role: model.RoleUser,
-	})
+	owner, err := mr.CreateUser(ctx, model.CreateUserInput{Username: "o", DisplayName: "o", Email: "o@x.io", RoleID: string(model.RoleNameUser), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("OwnerPass123")})
 	if err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
 	seedActiveTemplate(t, r, "goose")
-	ag, err := mr.CreateAgent(userCtx(owner.ID, "user"), model.CreateAgentInput{Name: "a", AgentType: "goose"})
+	ag, err := mr.CreateAgent(userCtx(owner.User.ID, "user"), model.CreateAgentInput{Name: "a", AgentType: "goose"})
 	if err != nil {
 		t.Fatalf("CreateAgent: %v", err)
 	}

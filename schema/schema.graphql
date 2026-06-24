@@ -1,11 +1,13 @@
 # Agent Platform — GraphQL contract (single source of truth).
-# Consumed by the frontend (agent-platform-web) via codegen. See LLD-01 §5.
+# Consumed by the frontend (agent-platform-console). See LLD-01 §5.
 
 scalar Time
 # Free-form JSON object (gqlgen built-in) — used for Artifact metadata (LLD-06).
 scalar Map
 
-enum Role {
+# Platform role enum (用于 @hasRole 鉴权 + User.role). Renamed from `Role` so the
+# frontend-facing `Role` *entity* (in account.graphql) can own that name (前后端整合).
+enum RoleName {
   admin
   user
   observability
@@ -19,7 +21,7 @@ type User {
   # dedicated display-name field exists.
   displayName: String! @goField(forceResolver: true)
   email: String!
-  role: Role!
+  role: RoleName!
   tenantId: ID
   mustChangePassword: Boolean!
   isActive: Boolean!
@@ -39,11 +41,6 @@ input LoginInput {
   # The console login form collects an email; the backend accepts username or email.
   email: String!
   password: String!
-}
-
-type TempPasswordPayload {
-  userId: ID!
-  tempPassword: String!
 }
 
 type AuditLog {
@@ -66,55 +63,9 @@ input AuditFilter {
   search: String
 }
 
-input CreateUserInput {
-  username: String!
-  email: String!
-  password: String!
-  role: Role!
-  tenantId: ID
-}
-
-input UpdateUserInput {
-  email: String
-  role: Role
-}
-
-# Built-in assignable role with a display label, for the user-form role picker
-# (模块① 用户与权限). 本期用内置角色,不支持自定义角色 UI.
-type RoleInfo {
-  value: Role!
-  label: String!
-  description: String!
-}
-
-input UserFilter {
-  # substring match on username / email
-  search: String
-  role: Role
-  active: Boolean
-}
-
-enum UserSortField {
-  USERNAME
-  EMAIL
-  ROLE
-  CREATED_AT
-  LAST_LOGIN
-}
-
-input UserSort {
-  field: UserSortField!
-  direction: SortDirection!
-}
-
 input PageInput {
   limit: Int = 50
   offset: Int = 0
-}
-
-type UserConnection {
-  items: [User!]!
-  total: Int!
 }
 
 type AuditConnection {
@@ -124,9 +75,6 @@ type AuditConnection {
 
 type Query {
   me: User!
-  users(page: PageInput, filter: UserFilter, sort: UserSort): UserConnection! @hasRole(any: [admin, tenant_admin])
-  # Built-in assignable roles for user-form pickers (模块① 用户与权限).
-  roles: [RoleInfo!]! @hasRole(any: [admin, tenant_admin])
   auditLogs(filter: AuditFilter, page: PageInput): AuditConnection! @hasPermission(perm: "audit:view")
 }
 
@@ -134,15 +82,9 @@ type Mutation {
   login(input: LoginInput!): AuthPayload!
   logout: Boolean!
   changePassword(oldPassword: String!, newPassword: String!): Boolean!
-
-  createUser(input: CreateUserInput!): User! @hasRole(any: [admin, tenant_admin])
-  updateUser(id: ID!, input: UpdateUserInput!): User! @hasRole(any: [admin, tenant_admin])
-  setUserActive(id: ID!, active: Boolean!): User! @hasRole(any: [admin, tenant_admin])
-  resetPassword(userId: ID!): TempPasswordPayload! @hasRole(any: [admin, tenant_admin])
-  deleteUser(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
 }
 
-directive @hasRole(any: [Role!]!) on FIELD_DEFINITION
+directive @hasRole(any: [RoleName!]!) on FIELD_DEFINITION
 directive @hasPermission(perm: String!) on FIELD_DEFINITION
 # gqlgen codegen directive (not auto-injected in this version): forces a field to
 # be a resolver method instead of a plain model field — used for lazy edge loads.
