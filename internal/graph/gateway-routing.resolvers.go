@@ -62,7 +62,9 @@ func (r *mutationResolver) TestGatewayConnection(ctx context.Context, id string)
 			status = gatewayconnection.StatusError
 		}
 	}
-	g, err = r.Ent.GatewayConnection.UpdateOne(g).SetStatus(status).Save(ctx)
+	// Shared with the ModelGateway façade: a successful test also stamps
+	// last_synced_at, so both pages agree on "last synced".
+	g, err = r.applyGatewayTestResult(ctx, g, status)
 	if err != nil {
 		return "", err
 	}

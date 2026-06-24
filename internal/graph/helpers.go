@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
@@ -659,6 +660,19 @@ func (r *Resolver) gatewayClient(ctx context.Context, g *ent.GatewayConnection) 
 		return r.GatewayClientFor(ctx, g.Endpoint, masterKey)
 	}
 	return gateway.NewHTTPClient(g.Endpoint, masterKey)
+}
+
+// applyGatewayTestResult persists a connection-test outcome on a gateway row: it
+// sets the status and, on a successful connect, stamps last_synced_at = now.
+// Both gateway façades (ModelGateway + the legacy routing GatewayConnection) go
+// through here so they agree on "last synced" — a successful test from either the
+// 模型网关接入 page or the 模型路由 page advances the same timestamp.
+func (r *Resolver) applyGatewayTestResult(ctx context.Context, g *ent.GatewayConnection, status gatewayconnection.Status) (*ent.GatewayConnection, error) {
+	upd := r.Ent.GatewayConnection.UpdateOne(g).SetStatus(status)
+	if status == gatewayconnection.StatusConnected {
+		upd.SetLastSyncedAt(time.Now())
+	}
+	return upd.Save(ctx)
 }
 
 func toModelUpstream(u *ent.Upstream) *model.Upstream {

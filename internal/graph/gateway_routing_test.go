@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/VMware-AI/agent-platform-backend/internal/secrets"
@@ -107,6 +109,12 @@ func TestRegisterAndTestGatewayConnection(t *testing.T) {
 	}
 	if st != model.GatewayStatusConnected {
 		t.Fatalf("status = %v, want connected", st)
+	}
+	// A successful test from the routing façade must also stamp last_synced_at, so
+	// it agrees with the ModelGateway page (shared applyGatewayTestResult helper).
+	row := r.Ent.GatewayConnection.GetX(context.Background(), uuid.MustParse(g.ID))
+	if row.LastSyncedAt == nil {
+		t.Fatal("successful routing test must set last_synced_at")
 	}
 }
 

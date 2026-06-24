@@ -110,13 +110,9 @@ func (r *mutationResolver) TestModelGatewayConnection(ctx context.Context, id st
 		message = "connection failed"
 		log.Printf("model gateway test failed (id=%s): %v", id, terr)
 	}
-	upd := r.Ent.GatewayConnection.UpdateOne(g).SetStatus(status)
-	if status == gatewayconnection.StatusConnected {
-		// Record a real sync timestamp only on a successful connect, so lastSyncAt
-		// reflects connectivity, not unrelated edits.
-		upd.SetLastSyncedAt(time.Now())
-	}
-	g, err = upd.Save(ctx)
+	// Persist status + (on success) last_synced_at via the shared helper so this
+	// page and the routing page agree on "last synced".
+	g, err = r.applyGatewayTestResult(ctx, g, status)
 	if err != nil {
 		return nil, err
 	}
