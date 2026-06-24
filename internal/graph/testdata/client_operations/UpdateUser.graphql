@@ -1,0 +1,21 @@
+fragment AccountUserFields on AccountUser {
+    id
+    username
+    displayName
+    email
+    role {
+      id
+      name
+    }
+    connectionStatus
+    lastLoginAt
+    enabled
+    createdAt
+    updatedAt
+  }
+
+  mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
+    updateUser(id: $id, input: $input) {
+      ...AccountUserFields
+    }
+  }

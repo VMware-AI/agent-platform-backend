@@ -1,0 +1,24 @@
+fragment AccountUserFields on AccountUser {
+    id
+    username
+    displayName
+    email
+    role {
+      id
+      name
+    }
+    connectionStatus
+    lastLoginAt
+    enabled
+    createdAt
+    updatedAt
+  }
+
+  query UsersByRole($roleId: ID!) {
+    users(filter: { roleId: $roleId }) {
+      nodes {
+        ...AccountUserFields
+      }
+      totalCount
+    }
+  }

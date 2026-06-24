@@ -1,0 +1,20 @@
+mutation UpdateModelGateway($id: ID!, $input: ModelGatewayInput!) {
+    updateModelGateway(id: $id, input: $input) {
+      ...ModelGatewayFields
+    }
+  }
+  
+  fragment ModelGatewayFields on ModelGateway {
+    id
+    name
+    provider
+    endpoint
+    status
+    backendModelCount
+    loadBalancingStrategy
+    latencyMs
+    adminUrl
+    lastSyncAt
+    lastSyncStatus
+    lastSyncMessage
+  }

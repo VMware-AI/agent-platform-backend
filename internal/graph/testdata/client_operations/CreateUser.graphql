@@ -1,0 +1,24 @@
+fragment AccountUserFields on AccountUser {
+    id
+    username
+    displayName
+    email
+    role {
+      id
+      name
+    }
+    connectionStatus
+    lastLoginAt
+    enabled
+    createdAt
+    updatedAt
+  }
+
+  mutation CreateUser($input: CreateUserInput!) {
+    createUser(input: $input) {
+      user {
+        ...AccountUserFields
+      }
+      generatedPassword
+    }
+  }

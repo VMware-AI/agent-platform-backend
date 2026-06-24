@@ -1,0 +1,27 @@
+mutation TestModelGatewayConnection($id: ID!) {
+    testModelGatewayConnection(id: $id) {
+      success
+      status
+      latencyMs
+      message
+      testedAt
+      gateway {
+        ...ModelGatewayFields
+      }
+    }
+  }
+  
+  fragment ModelGatewayFields on ModelGateway {
+    id
+    name
+    provider
+    endpoint
+    status
+    backendModelCount
+    loadBalancingStrategy
+    latencyMs
+    adminUrl
+    lastSyncAt
+    lastSyncStatus
+    lastSyncMessage
+  }

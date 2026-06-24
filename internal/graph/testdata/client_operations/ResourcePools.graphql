@@ -1,0 +1,30 @@
+fragment ResourcePoolFields on ResourcePool {
+    id
+    name
+    endpoint
+    connectionStatus
+    datacenterCount
+    clusterCount
+    esxiHostCount
+    vmInstanceCount
+    createdAt
+    updatedAt
+  }
+
+  query ResourcePools(
+    $filter: ResourcePoolFilter
+    $pagination: Pagination
+    $sort: ResourcePoolSort
+  ) {
+    resourcePools(filter: $filter, pagination: $pagination, sort: $sort) {
+      nodes {
+        ...ResourcePoolFields
+      }
+      totalCount
+      pageInfo {
+        page
+        pageSize
+        totalPages
+      }
+    }
+  }

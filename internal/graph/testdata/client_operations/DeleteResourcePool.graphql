@@ -1,0 +1,6 @@
+mutation DeleteResourcePool($id: ID!) {
+    deleteResourcePool(id: $id) {
+      id
+      deletedName
+    }
+  }

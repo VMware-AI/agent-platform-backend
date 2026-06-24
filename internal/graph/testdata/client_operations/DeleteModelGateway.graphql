@@ -1,0 +1,5 @@
+mutation DeleteModelGateway($id: ID!) {
+    deleteModelGateway(id: $id) {
+      deletedID
+    }
+  }

@@ -1,0 +1,29 @@
+fragment AccountUserFields on AccountUser {
+    id
+    username
+    displayName
+    email
+    role {
+      id
+      name
+    }
+    connectionStatus
+    lastLoginAt
+    enabled
+    createdAt
+    updatedAt
+  }
+
+  query Users($filter: UserFilter, $pagination: Pagination, $sort: UserSort) {
+    users(filter: $filter, pagination: $pagination, sort: $sort) {
+      nodes {
+        ...AccountUserFields
+      }
+      totalCount
+      pageInfo {
+        page
+        pageSize
+        totalPages
+      }
+    }
+  }

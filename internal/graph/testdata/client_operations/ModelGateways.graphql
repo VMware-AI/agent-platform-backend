@@ -1,0 +1,30 @@
+query ModelGateways($filter: ModelGatewayFilterInput, $page: PageInput!) {
+    modelGateways(filter: $filter, page: $page) {
+      nodes {
+        ...ModelGatewayFields
+      }
+      totalCount
+    }
+    modelGatewaySyncSummary {
+      state
+      lastSyncedAt
+      successCount
+      failedCount
+      message
+    }
+  }
+  
+  fragment ModelGatewayFields on ModelGateway {
+    id
+    name
+    provider
+    endpoint
+    status
+    backendModelCount
+    loadBalancingStrategy
+    latencyMs
+    adminUrl
+    lastSyncAt
+    lastSyncStatus
+    lastSyncMessage
+  }
