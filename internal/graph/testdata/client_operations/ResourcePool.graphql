@@ -1,0 +1,18 @@
+fragment ResourcePoolFields on ResourcePool {
+    id
+    name
+    endpoint
+    connectionStatus
+    datacenterCount
+    clusterCount
+    esxiHostCount
+    vmInstanceCount
+    createdAt
+    updatedAt
+  }
+
+  query ResourcePool($id: ID!) {
+    resourcePool(id: $id) {
+      ...ResourcePoolFields
+    }
+  }

@@ -1,0 +1,20 @@
+fragment ResourcePoolFields on ResourcePool {
+    id
+    name
+    endpoint
+    connectionStatus
+    datacenterCount
+    clusterCount
+    esxiHostCount
+    vmInstanceCount
+    createdAt
+    updatedAt
+  }
+
+  mutation UpdateResourcePool($id: ID!, $input: UpdateResourcePoolInput!) {
+    updateResourcePool(id: $id, input: $input) {
+      pool {
+        ...ResourcePoolFields
+      }
+    }
+  }

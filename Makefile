@@ -9,6 +9,11 @@ generate:
 schema-dump:
 	go run ./tools/schemadump
 
+# Snapshot the console's GraphQL operations as contract fixtures (validated by
+# TestClientOperationsMatchSchema). Console defaults to ../agent-platform-console.
+client-fixtures:
+	node tools/genclientfixtures/main.mjs $(CONSOLE)
+
 tidy:
 	go mod tidy
 

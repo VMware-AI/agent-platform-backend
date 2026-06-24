@@ -1,0 +1,13 @@
+fragment RoleFields on Role {
+    id
+    name
+    description
+    userCount
+    builtIn
+  }
+
+  query Role($id: ID!) {
+    role(id: $id) {
+      ...RoleFields
+    }
+  }

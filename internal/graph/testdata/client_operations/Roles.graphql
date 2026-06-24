@@ -1,0 +1,21 @@
+fragment RoleFields on Role {
+    id
+    name
+    description
+    userCount
+    builtIn
+  }
+
+  query Roles {
+    roles {
+      nodes {
+        ...RoleFields
+      }
+      totalCount
+      pageInfo {
+        page
+        pageSize
+        totalPages
+      }
+    }
+  }

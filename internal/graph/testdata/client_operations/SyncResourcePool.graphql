@@ -1,0 +1,21 @@
+fragment ResourcePoolFields on ResourcePool {
+    id
+    name
+    endpoint
+    connectionStatus
+    datacenterCount
+    clusterCount
+    esxiHostCount
+    vmInstanceCount
+    createdAt
+    updatedAt
+  }
+
+  mutation SyncResourcePool($id: ID!) {
+    syncResourcePool(id: $id) {
+      pool {
+        ...ResourcePoolFields
+      }
+      syncedAt
+    }
+  }
