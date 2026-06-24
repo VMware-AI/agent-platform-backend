@@ -152,6 +152,67 @@ func TestModelGatewaySyncSummary_StateMachine(t *testing.T) {
 	}
 }
 
+// M4: adminUrl is persisted when set, and derived from the endpoint when not.
+func TestModelGateway_AdminURLPersistedOrDerived(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := adminCtx()
+	mr := &mutationResolver{r}
+
+	custom := "https://litellm.internal/admin"
+	withURL, err := mr.CreateModelGateway(ctx, model.ModelGatewayInput{
+		Name: "with", Provider: model.ModelGatewayProviderLitellm, Endpoint: "https://gw:4000",
+		LoadBalancingStrategy: model.LoadBalancingStrategyRoundRobin, AdminURL: &custom,
+	})
+	if err != nil || withURL.AdminURL == nil || *withURL.AdminURL != custom {
+		t.Fatalf("adminUrl not persisted: %+v / %v", withURL.AdminURL, err)
+	}
+	without, _ := mr.CreateModelGateway(ctx, model.ModelGatewayInput{
+		Name: "without", Provider: model.ModelGatewayProviderLitellm, Endpoint: "https://gw2:4000",
+		LoadBalancingStrategy: model.LoadBalancingStrategyRoundRobin,
+	})
+	if without.AdminURL == nil || *without.AdminURL != "https://gw2:4000/ui" {
+		t.Fatalf("adminUrl not derived: %+v", without.AdminURL)
+	}
+}
+
+// M2/M3: lastSyncAt is nil until a successful test, is set on success, and does
+// NOT move on an unrelated update.
+func TestModelGateway_LastSyncTracking(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	r.GatewayClientFor = func(context.Context, string, string) gateway.ModelManager { return &fakeModelManager{} }
+	ctx := adminCtx()
+	mr := &mutationResolver{r}
+	qr := &queryResolver{r}
+
+	g := mkGateway(t, mr, ctx, "g", "https://gw:4000")
+	if g.LastSyncAt != nil {
+		t.Fatal("fresh gateway should have nil lastSyncAt")
+	}
+
+	res, err := mr.TestModelGatewayConnection(ctx, g.ID)
+	if err != nil || res.Gateway.LastSyncAt == nil {
+		t.Fatalf("successful test must set lastSyncAt: %+v / %v", res.Gateway.LastSyncAt, err)
+	}
+	synced := *res.Gateway.LastSyncAt
+
+	// an unrelated update must NOT move lastSyncAt (M3 fix)
+	upd, err := mr.UpdateModelGateway(ctx, g.ID, model.ModelGatewayInput{
+		Name: "renamed", Provider: model.ModelGatewayProviderLitellm, Endpoint: "https://gw:4000",
+		LoadBalancingStrategy: model.LoadBalancingStrategyRoundRobin,
+	})
+	if err != nil || upd.LastSyncAt == nil || !upd.LastSyncAt.Equal(synced) {
+		t.Fatalf("update must not change lastSyncAt: got %v, want %v", upd.LastSyncAt, synced)
+	}
+
+	// summary surfaces the real sync time
+	sum, _ := qr.ModelGatewaySyncSummary(ctx)
+	if sum.LastSyncedAt == nil || !sum.LastSyncedAt.Equal(synced) {
+		t.Fatalf("summary lastSyncedAt = %v, want %v", sum.LastSyncedAt, synced)
+	}
+}
+
 // H1: the connection test must build a client from the gateway's OWN endpoint and
 // its OWN master key (resolved from the secret store), not a process-wide default.
 func TestModelGateway_TestUsesPerGatewayClient(t *testing.T) {

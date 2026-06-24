@@ -22,6 +22,9 @@ import (
 // console's single supported values.
 func (r *mutationResolver) CreateModelGateway(ctx context.Context, input model.ModelGatewayInput) (*model.ModelGateway, error) {
 	c := r.Ent.GatewayConnection.Create().SetName(input.Name).SetEndpoint(input.Endpoint)
+	if input.AdminURL != nil {
+		c.SetAdminURL(*input.AdminURL)
+	}
 	if ref, set, err := r.resolveKeySecretRef(ctx, "gateway/"+input.Name, input.MasterKey, nil); err != nil {
 		return nil, err
 	} else if set {
@@ -47,6 +50,9 @@ func (r *mutationResolver) UpdateModelGateway(ctx context.Context, id string, in
 		return nil, gqlerror.Errorf("invalid id")
 	}
 	u := r.Ent.GatewayConnection.UpdateOneID(gid).SetName(input.Name).SetEndpoint(input.Endpoint)
+	if input.AdminURL != nil {
+		u.SetAdminURL(*input.AdminURL)
+	}
 	if ref, set, err := r.resolveKeySecretRef(ctx, "gateway/"+input.Name, input.MasterKey, nil); err != nil {
 		return nil, err
 	} else if set {
@@ -104,7 +110,13 @@ func (r *mutationResolver) TestModelGatewayConnection(ctx context.Context, id st
 		message = "connection failed"
 		log.Printf("model gateway test failed (id=%s): %v", id, terr)
 	}
-	g, err = r.Ent.GatewayConnection.UpdateOne(g).SetStatus(status).Save(ctx)
+	upd := r.Ent.GatewayConnection.UpdateOne(g).SetStatus(status)
+	if status == gatewayconnection.StatusConnected {
+		// Record a real sync timestamp only on a successful connect, so lastSyncAt
+		// reflects connectivity, not unrelated edits.
+		upd.SetLastSyncedAt(time.Now())
+	}
+	g, err = upd.Save(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -178,12 +190,13 @@ func (r *queryResolver) ModelGatewaySyncSummary(ctx context.Context) (*model.Mod
 		switch g.Status {
 		case gatewayconnection.StatusConnected:
 			success++
-			t := g.UpdatedAt
-			if lastSyncedAt == nil || t.After(*lastSyncedAt) {
-				lastSyncedAt = &t
-			}
 		case gatewayconnection.StatusError:
 			failed++
+		}
+		// Most recent real sync across the fleet — independent of current status, so
+		// a gateway that synced then dropped still contributes its sync time.
+		if g.LastSyncedAt != nil && (lastSyncedAt == nil || g.LastSyncedAt.After(*lastSyncedAt)) {
+			lastSyncedAt = g.LastSyncedAt
 		}
 	}
 	// Total state machine over the three ent states (connected/error/disconnected).

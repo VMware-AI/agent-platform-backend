@@ -80,6 +80,16 @@ func MasterKeyRef(v string) predicate.GatewayConnection {
 	return predicate.GatewayConnection(sql.FieldEQ(FieldMasterKeyRef, v))
 }
 
+// AdminURL applies equality check predicate on the "admin_url" field. It's identical to AdminURLEQ.
+func AdminURL(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldEQ(FieldAdminURL, v))
+}
+
+// LastSyncedAt applies equality check predicate on the "last_synced_at" field. It's identical to LastSyncedAtEQ.
+func LastSyncedAt(v time.Time) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldEQ(FieldLastSyncedAt, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.GatewayConnection {
 	return predicate.GatewayConnection(sql.FieldEQ(FieldCreatedAt, v))
@@ -363,6 +373,131 @@ func MasterKeyRefEqualFold(v string) predicate.GatewayConnection {
 // MasterKeyRefContainsFold applies the ContainsFold predicate on the "master_key_ref" field.
 func MasterKeyRefContainsFold(v string) predicate.GatewayConnection {
 	return predicate.GatewayConnection(sql.FieldContainsFold(FieldMasterKeyRef, v))
+}
+
+// AdminURLEQ applies the EQ predicate on the "admin_url" field.
+func AdminURLEQ(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldEQ(FieldAdminURL, v))
+}
+
+// AdminURLNEQ applies the NEQ predicate on the "admin_url" field.
+func AdminURLNEQ(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldNEQ(FieldAdminURL, v))
+}
+
+// AdminURLIn applies the In predicate on the "admin_url" field.
+func AdminURLIn(vs ...string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldIn(FieldAdminURL, vs...))
+}
+
+// AdminURLNotIn applies the NotIn predicate on the "admin_url" field.
+func AdminURLNotIn(vs ...string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldNotIn(FieldAdminURL, vs...))
+}
+
+// AdminURLGT applies the GT predicate on the "admin_url" field.
+func AdminURLGT(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldGT(FieldAdminURL, v))
+}
+
+// AdminURLGTE applies the GTE predicate on the "admin_url" field.
+func AdminURLGTE(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldGTE(FieldAdminURL, v))
+}
+
+// AdminURLLT applies the LT predicate on the "admin_url" field.
+func AdminURLLT(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldLT(FieldAdminURL, v))
+}
+
+// AdminURLLTE applies the LTE predicate on the "admin_url" field.
+func AdminURLLTE(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldLTE(FieldAdminURL, v))
+}
+
+// AdminURLContains applies the Contains predicate on the "admin_url" field.
+func AdminURLContains(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldContains(FieldAdminURL, v))
+}
+
+// AdminURLHasPrefix applies the HasPrefix predicate on the "admin_url" field.
+func AdminURLHasPrefix(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldHasPrefix(FieldAdminURL, v))
+}
+
+// AdminURLHasSuffix applies the HasSuffix predicate on the "admin_url" field.
+func AdminURLHasSuffix(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldHasSuffix(FieldAdminURL, v))
+}
+
+// AdminURLIsNil applies the IsNil predicate on the "admin_url" field.
+func AdminURLIsNil() predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldIsNull(FieldAdminURL))
+}
+
+// AdminURLNotNil applies the NotNil predicate on the "admin_url" field.
+func AdminURLNotNil() predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldNotNull(FieldAdminURL))
+}
+
+// AdminURLEqualFold applies the EqualFold predicate on the "admin_url" field.
+func AdminURLEqualFold(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldEqualFold(FieldAdminURL, v))
+}
+
+// AdminURLContainsFold applies the ContainsFold predicate on the "admin_url" field.
+func AdminURLContainsFold(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldContainsFold(FieldAdminURL, v))
+}
+
+// LastSyncedAtEQ applies the EQ predicate on the "last_synced_at" field.
+func LastSyncedAtEQ(v time.Time) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldEQ(FieldLastSyncedAt, v))
+}
+
+// LastSyncedAtNEQ applies the NEQ predicate on the "last_synced_at" field.
+func LastSyncedAtNEQ(v time.Time) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldNEQ(FieldLastSyncedAt, v))
+}
+
+// LastSyncedAtIn applies the In predicate on the "last_synced_at" field.
+func LastSyncedAtIn(vs ...time.Time) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldIn(FieldLastSyncedAt, vs...))
+}
+
+// LastSyncedAtNotIn applies the NotIn predicate on the "last_synced_at" field.
+func LastSyncedAtNotIn(vs ...time.Time) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldNotIn(FieldLastSyncedAt, vs...))
+}
+
+// LastSyncedAtGT applies the GT predicate on the "last_synced_at" field.
+func LastSyncedAtGT(v time.Time) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldGT(FieldLastSyncedAt, v))
+}
+
+// LastSyncedAtGTE applies the GTE predicate on the "last_synced_at" field.
+func LastSyncedAtGTE(v time.Time) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldGTE(FieldLastSyncedAt, v))
+}
+
+// LastSyncedAtLT applies the LT predicate on the "last_synced_at" field.
+func LastSyncedAtLT(v time.Time) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldLT(FieldLastSyncedAt, v))
+}
+
+// LastSyncedAtLTE applies the LTE predicate on the "last_synced_at" field.
+func LastSyncedAtLTE(v time.Time) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldLTE(FieldLastSyncedAt, v))
+}
+
+// LastSyncedAtIsNil applies the IsNil predicate on the "last_synced_at" field.
+func LastSyncedAtIsNil() predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldIsNull(FieldLastSyncedAt))
+}
+
+// LastSyncedAtNotNil applies the NotNil predicate on the "last_synced_at" field.
+func LastSyncedAtNotNil() predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldNotNull(FieldLastSyncedAt))
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.

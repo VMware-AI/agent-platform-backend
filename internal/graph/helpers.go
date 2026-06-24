@@ -615,20 +615,16 @@ func modelGatewaySyncState(s gatewayconnection.Status) model.ModelGatewaySyncSta
 
 // toModelGateway projects a GatewayConnection (+ the live backend-model count) into
 // the console's ModelGateway aggregate. provider/strategy are the console's single
-// supported values; adminUrl is derived as <endpoint>/ui (litellm admin UI);
-// latencyMs is transient (only a live test sets it); lastSyncAt reflects the last
-// status change (updated_at) and is nil until the gateway has ever connected.
-//
-// TODO(reskin M2/M3/M4): these are interim approximations until a real sync-tracking
-// column exists — (M2/M3) sync state/time derive from connection status + updated_at,
-// so a previously-synced gateway that drops to disconnected reads as NEVER, and any
-// unrelated update bumps the apparent sync time; (M4) ModelGatewayInput.adminUrl is
-// not persisted (no column) — the value is always derived here. Mirrors the
-// displayName-in-CreateUserInput interim. Adding a last_synced_at / admin_url column
-// needs an Atlas migration (prod does not auto-migrate).
+// supported values; adminUrl is the operator-set admin_url, falling back to the
+// derived <endpoint>/ui; latencyMs is transient (only a live test sets it);
+// lastSyncAt is the real last_synced_at column (nil until the gateway has ever
+// successfully connected), and never moves on an unrelated edit.
 func toModelGateway(g *ent.GatewayConnection, backendModelCount int) *model.ModelGateway {
-	adminURL := strings.TrimRight(g.Endpoint, "/") + "/ui"
-	gw := &model.ModelGateway{
+	adminURL := g.AdminURL
+	if adminURL == "" {
+		adminURL = strings.TrimRight(g.Endpoint, "/") + "/ui"
+	}
+	return &model.ModelGateway{
 		ID:                    g.ID.String(),
 		Name:                  g.Name,
 		Provider:              model.ModelGatewayProviderLitellm,
@@ -637,13 +633,9 @@ func toModelGateway(g *ent.GatewayConnection, backendModelCount int) *model.Mode
 		BackendModelCount:     backendModelCount,
 		LoadBalancingStrategy: model.LoadBalancingStrategyRoundRobin,
 		AdminURL:              &adminURL,
+		LastSyncAt:            g.LastSyncedAt,
 		LastSyncStatus:        modelGatewaySyncState(g.Status),
 	}
-	if g.Status != gatewayconnection.StatusDisconnected {
-		t := g.UpdatedAt
-		gw.LastSyncAt = &t
-	}
-	return gw
 }
 
 // backendModelCount is the number of registered upstreams the litellm gateway
