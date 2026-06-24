@@ -28,6 +28,10 @@ type GatewayConnection struct {
 	Endpoint string `json:"endpoint,omitempty"`
 	// MasterKeyRef holds the value of the "master_key_ref" field.
 	MasterKeyRef string `json:"master_key_ref,omitempty"`
+	// AdminURL holds the value of the "admin_url" field.
+	AdminURL string `json:"admin_url,omitempty"`
+	// LastSyncedAt holds the value of the "last_synced_at" field.
+	LastSyncedAt *time.Time `json:"last_synced_at,omitempty"`
 	// Status holds the value of the "status" field.
 	Status gatewayconnection.Status `json:"status,omitempty"`
 	// LoadBalanceStrategy holds the value of the "load_balance_strategy" field.
@@ -40,9 +44,9 @@ func (*GatewayConnection) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case gatewayconnection.FieldName, gatewayconnection.FieldEndpoint, gatewayconnection.FieldMasterKeyRef, gatewayconnection.FieldStatus, gatewayconnection.FieldLoadBalanceStrategy:
+		case gatewayconnection.FieldName, gatewayconnection.FieldEndpoint, gatewayconnection.FieldMasterKeyRef, gatewayconnection.FieldAdminURL, gatewayconnection.FieldStatus, gatewayconnection.FieldLoadBalanceStrategy:
 			values[i] = new(sql.NullString)
-		case gatewayconnection.FieldCreatedAt, gatewayconnection.FieldUpdatedAt:
+		case gatewayconnection.FieldCreatedAt, gatewayconnection.FieldUpdatedAt, gatewayconnection.FieldLastSyncedAt:
 			values[i] = new(sql.NullTime)
 		case gatewayconnection.FieldID:
 			values[i] = new(uuid.UUID)
@@ -96,6 +100,19 @@ func (_m *GatewayConnection) assignValues(columns []string, values []any) error 
 				return fmt.Errorf("unexpected type %T for field master_key_ref", values[i])
 			} else if value.Valid {
 				_m.MasterKeyRef = value.String
+			}
+		case gatewayconnection.FieldAdminURL:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field admin_url", values[i])
+			} else if value.Valid {
+				_m.AdminURL = value.String
+			}
+		case gatewayconnection.FieldLastSyncedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field last_synced_at", values[i])
+			} else if value.Valid {
+				_m.LastSyncedAt = new(time.Time)
+				*_m.LastSyncedAt = value.Time
 			}
 		case gatewayconnection.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -159,6 +176,14 @@ func (_m *GatewayConnection) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("master_key_ref=")
 	builder.WriteString(_m.MasterKeyRef)
+	builder.WriteString(", ")
+	builder.WriteString("admin_url=")
+	builder.WriteString(_m.AdminURL)
+	builder.WriteString(", ")
+	if v := _m.LastSyncedAt; v != nil {
+		builder.WriteString("last_synced_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Status))

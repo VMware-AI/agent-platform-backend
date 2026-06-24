@@ -83,6 +83,46 @@ func (_u *GatewayConnectionUpdate) ClearMasterKeyRef() *GatewayConnectionUpdate 
 	return _u
 }
 
+// SetAdminURL sets the "admin_url" field.
+func (_u *GatewayConnectionUpdate) SetAdminURL(v string) *GatewayConnectionUpdate {
+	_u.mutation.SetAdminURL(v)
+	return _u
+}
+
+// SetNillableAdminURL sets the "admin_url" field if the given value is not nil.
+func (_u *GatewayConnectionUpdate) SetNillableAdminURL(v *string) *GatewayConnectionUpdate {
+	if v != nil {
+		_u.SetAdminURL(*v)
+	}
+	return _u
+}
+
+// ClearAdminURL clears the value of the "admin_url" field.
+func (_u *GatewayConnectionUpdate) ClearAdminURL() *GatewayConnectionUpdate {
+	_u.mutation.ClearAdminURL()
+	return _u
+}
+
+// SetLastSyncedAt sets the "last_synced_at" field.
+func (_u *GatewayConnectionUpdate) SetLastSyncedAt(v time.Time) *GatewayConnectionUpdate {
+	_u.mutation.SetLastSyncedAt(v)
+	return _u
+}
+
+// SetNillableLastSyncedAt sets the "last_synced_at" field if the given value is not nil.
+func (_u *GatewayConnectionUpdate) SetNillableLastSyncedAt(v *time.Time) *GatewayConnectionUpdate {
+	if v != nil {
+		_u.SetLastSyncedAt(*v)
+	}
+	return _u
+}
+
+// ClearLastSyncedAt clears the value of the "last_synced_at" field.
+func (_u *GatewayConnectionUpdate) ClearLastSyncedAt() *GatewayConnectionUpdate {
+	_u.mutation.ClearLastSyncedAt()
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *GatewayConnectionUpdate) SetStatus(v gatewayconnection.Status) *GatewayConnectionUpdate {
 	_u.mutation.SetStatus(v)
@@ -210,6 +250,18 @@ func (_u *GatewayConnectionUpdate) sqlSave(ctx context.Context) (_node int, err 
 	if _u.mutation.MasterKeyRefCleared() {
 		_spec.ClearField(gatewayconnection.FieldMasterKeyRef, field.TypeString)
 	}
+	if value, ok := _u.mutation.AdminURL(); ok {
+		_spec.SetField(gatewayconnection.FieldAdminURL, field.TypeString, value)
+	}
+	if _u.mutation.AdminURLCleared() {
+		_spec.ClearField(gatewayconnection.FieldAdminURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.LastSyncedAt(); ok {
+		_spec.SetField(gatewayconnection.FieldLastSyncedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LastSyncedAtCleared() {
+		_spec.ClearField(gatewayconnection.FieldLastSyncedAt, field.TypeTime)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(gatewayconnection.FieldStatus, field.TypeEnum, value)
 	}
@@ -289,6 +341,46 @@ func (_u *GatewayConnectionUpdateOne) SetNillableMasterKeyRef(v *string) *Gatewa
 // ClearMasterKeyRef clears the value of the "master_key_ref" field.
 func (_u *GatewayConnectionUpdateOne) ClearMasterKeyRef() *GatewayConnectionUpdateOne {
 	_u.mutation.ClearMasterKeyRef()
+	return _u
+}
+
+// SetAdminURL sets the "admin_url" field.
+func (_u *GatewayConnectionUpdateOne) SetAdminURL(v string) *GatewayConnectionUpdateOne {
+	_u.mutation.SetAdminURL(v)
+	return _u
+}
+
+// SetNillableAdminURL sets the "admin_url" field if the given value is not nil.
+func (_u *GatewayConnectionUpdateOne) SetNillableAdminURL(v *string) *GatewayConnectionUpdateOne {
+	if v != nil {
+		_u.SetAdminURL(*v)
+	}
+	return _u
+}
+
+// ClearAdminURL clears the value of the "admin_url" field.
+func (_u *GatewayConnectionUpdateOne) ClearAdminURL() *GatewayConnectionUpdateOne {
+	_u.mutation.ClearAdminURL()
+	return _u
+}
+
+// SetLastSyncedAt sets the "last_synced_at" field.
+func (_u *GatewayConnectionUpdateOne) SetLastSyncedAt(v time.Time) *GatewayConnectionUpdateOne {
+	_u.mutation.SetLastSyncedAt(v)
+	return _u
+}
+
+// SetNillableLastSyncedAt sets the "last_synced_at" field if the given value is not nil.
+func (_u *GatewayConnectionUpdateOne) SetNillableLastSyncedAt(v *time.Time) *GatewayConnectionUpdateOne {
+	if v != nil {
+		_u.SetLastSyncedAt(*v)
+	}
+	return _u
+}
+
+// ClearLastSyncedAt clears the value of the "last_synced_at" field.
+func (_u *GatewayConnectionUpdateOne) ClearLastSyncedAt() *GatewayConnectionUpdateOne {
+	_u.mutation.ClearLastSyncedAt()
 	return _u
 }
 
@@ -448,6 +540,18 @@ func (_u *GatewayConnectionUpdateOne) sqlSave(ctx context.Context) (_node *Gatew
 	}
 	if _u.mutation.MasterKeyRefCleared() {
 		_spec.ClearField(gatewayconnection.FieldMasterKeyRef, field.TypeString)
+	}
+	if value, ok := _u.mutation.AdminURL(); ok {
+		_spec.SetField(gatewayconnection.FieldAdminURL, field.TypeString, value)
+	}
+	if _u.mutation.AdminURLCleared() {
+		_spec.ClearField(gatewayconnection.FieldAdminURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.LastSyncedAt(); ok {
+		_spec.SetField(gatewayconnection.FieldLastSyncedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LastSyncedAtCleared() {
+		_spec.ClearField(gatewayconnection.FieldLastSyncedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(gatewayconnection.FieldStatus, field.TypeEnum, value)

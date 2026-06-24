@@ -25,6 +25,10 @@ const (
 	FieldEndpoint = "endpoint"
 	// FieldMasterKeyRef holds the string denoting the master_key_ref field in the database.
 	FieldMasterKeyRef = "master_key_ref"
+	// FieldAdminURL holds the string denoting the admin_url field in the database.
+	FieldAdminURL = "admin_url"
+	// FieldLastSyncedAt holds the string denoting the last_synced_at field in the database.
+	FieldLastSyncedAt = "last_synced_at"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
 	// FieldLoadBalanceStrategy holds the string denoting the load_balance_strategy field in the database.
@@ -41,6 +45,8 @@ var Columns = []string{
 	FieldName,
 	FieldEndpoint,
 	FieldMasterKeyRef,
+	FieldAdminURL,
+	FieldLastSyncedAt,
 	FieldStatus,
 	FieldLoadBalanceStrategy,
 }
@@ -157,6 +163,16 @@ func ByEndpoint(opts ...sql.OrderTermOption) OrderOption {
 // ByMasterKeyRef orders the results by the master_key_ref field.
 func ByMasterKeyRef(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMasterKeyRef, opts...).ToFunc()
+}
+
+// ByAdminURL orders the results by the admin_url field.
+func ByAdminURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAdminURL, opts...).ToFunc()
+}
+
+// ByLastSyncedAt orders the results by the last_synced_at field.
+func ByLastSyncedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastSyncedAt, opts...).ToFunc()
 }
 
 // ByStatus orders the results by the status field.

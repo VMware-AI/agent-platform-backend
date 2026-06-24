@@ -20,6 +20,13 @@ func (GatewayConnection) Fields() []ent.Field {
 		field.String("name").NotEmpty().Unique(),
 		field.String("endpoint").NotEmpty(),
 		field.String("master_key_ref").Optional(), // vault://item-id
+		// admin_url: the litellm admin UI URL the operator enters (console ModelGateway.adminUrl).
+		// Optional — projection falls back to <endpoint>/ui when unset.
+		field.String("admin_url").Optional(),
+		// last_synced_at: when the gateway last successfully connected (set on a
+		// successful connection test). Nil = never synced. Distinct from updated_at
+		// so an unrelated edit does not move the apparent sync time.
+		field.Time("last_synced_at").Optional().Nillable(),
 		field.Enum("status").Values("connected", "disconnected", "error").Default("disconnected"),
 		field.Enum("load_balance_strategy").
 			Values("simple_shuffle", "latency", "usage_v2", "least_busy", "cost").

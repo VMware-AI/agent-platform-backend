@@ -75,6 +75,34 @@ func (_c *GatewayConnectionCreate) SetNillableMasterKeyRef(v *string) *GatewayCo
 	return _c
 }
 
+// SetAdminURL sets the "admin_url" field.
+func (_c *GatewayConnectionCreate) SetAdminURL(v string) *GatewayConnectionCreate {
+	_c.mutation.SetAdminURL(v)
+	return _c
+}
+
+// SetNillableAdminURL sets the "admin_url" field if the given value is not nil.
+func (_c *GatewayConnectionCreate) SetNillableAdminURL(v *string) *GatewayConnectionCreate {
+	if v != nil {
+		_c.SetAdminURL(*v)
+	}
+	return _c
+}
+
+// SetLastSyncedAt sets the "last_synced_at" field.
+func (_c *GatewayConnectionCreate) SetLastSyncedAt(v time.Time) *GatewayConnectionCreate {
+	_c.mutation.SetLastSyncedAt(v)
+	return _c
+}
+
+// SetNillableLastSyncedAt sets the "last_synced_at" field if the given value is not nil.
+func (_c *GatewayConnectionCreate) SetNillableLastSyncedAt(v *time.Time) *GatewayConnectionCreate {
+	if v != nil {
+		_c.SetLastSyncedAt(*v)
+	}
+	return _c
+}
+
 // SetStatus sets the "status" field.
 func (_c *GatewayConnectionCreate) SetStatus(v gatewayconnection.Status) *GatewayConnectionCreate {
 	_c.mutation.SetStatus(v)
@@ -268,6 +296,14 @@ func (_c *GatewayConnectionCreate) createSpec() (*GatewayConnection, *sqlgraph.C
 	if value, ok := _c.mutation.MasterKeyRef(); ok {
 		_spec.SetField(gatewayconnection.FieldMasterKeyRef, field.TypeString, value)
 		_node.MasterKeyRef = value
+	}
+	if value, ok := _c.mutation.AdminURL(); ok {
+		_spec.SetField(gatewayconnection.FieldAdminURL, field.TypeString, value)
+		_node.AdminURL = value
+	}
+	if value, ok := _c.mutation.LastSyncedAt(); ok {
+		_spec.SetField(gatewayconnection.FieldLastSyncedAt, field.TypeTime, value)
+		_node.LastSyncedAt = &value
 	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(gatewayconnection.FieldStatus, field.TypeEnum, value)

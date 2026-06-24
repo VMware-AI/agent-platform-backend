@@ -259,6 +259,8 @@ var (
 		{Name: "name", Type: field.TypeString, Unique: true},
 		{Name: "endpoint", Type: field.TypeString},
 		{Name: "master_key_ref", Type: field.TypeString, Nullable: true},
+		{Name: "admin_url", Type: field.TypeString, Nullable: true},
+		{Name: "last_synced_at", Type: field.TypeTime, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"connected", "disconnected", "error"}, Default: "disconnected"},
 		{Name: "load_balance_strategy", Type: field.TypeEnum, Enums: []string{"simple_shuffle", "latency", "usage_v2", "least_busy", "cost"}, Default: "simple_shuffle"},
 	}
