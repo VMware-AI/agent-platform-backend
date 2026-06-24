@@ -1,9 +1,13 @@
-.PHONY: generate build test lint run tidy migrate-diff migrate-apply migrate-status
+.PHONY: generate schema-dump build test lint run tidy migrate-diff migrate-apply migrate-status
 
 # Regenerate Ent + gqlgen code.
 generate:
 	go generate ./ent/...
 	go run github.com/99designs/gqlgen generate
+
+# Merge every schema/*.graphql module into one reference SDL at docs/schema.graphql.
+schema-dump:
+	go run ./tools/schemadump
 
 tidy:
 	go mod tidy
