@@ -1,29 +1,63 @@
 # Resource pool (vCenter) registration + inventory. See LLD-03 / LLD-06, 0619 第13页.
+# Shape aligned to the console 资源池 page (重蒙皮 P3): entity + connection + payloads.
 
-enum ResourcePoolStatus {
-  connected
-  disconnected
-  error
+# Console connection status is binary (CONNECTED / DISCONNECTED). The ent column
+# keeps a third "error" state for accuracy; the GraphQL projection collapses it
+# to DISCONNECTED (see toModelResourcePool).
+enum PoolConnectionStatus {
+  CONNECTED
+  DISCONNECTED
+}
+
+enum ResourcePoolSortField {
+  NAME
+  ENDPOINT
+  CONNECTION_STATUS
+  DATACENTER_COUNT
+  CLUSTER_COUNT
+  ESXI_HOST_COUNT
+  VM_INSTANCE_COUNT
+  CREATED_AT
+  UPDATED_AT
 }
 
 type ResourcePool {
   id: ID!
   name: String!
-  kind: String!
   endpoint: String!
-  status: ResourcePoolStatus!
+  connectionStatus: PoolConnectionStatus!
   datacenterCount: Int!
   clusterCount: Int!
-  hostCount: Int!
-  vmCount: Int!
+  esxiHostCount: Int!
+  vmInstanceCount: Int!
   createdAt: Time!
+  updatedAt: Time!
 }
 
-input RegisterResourcePoolInput {
+type ResourcePoolConnection {
+  nodes: [ResourcePool!]!
+  totalCount: Int!
+  pageInfo: PageInfo!
+}
+
+input ResourcePoolFilter {
+  nameKeyword: String
+  endpointKeyword: String
+  connectionStatus: PoolConnectionStatus
+}
+
+input ResourcePoolSort {
+  field: ResourcePoolSortField!
+  direction: SortDirection!
+}
+
+input CreateResourcePoolInput {
   name: String!
   endpoint: String!
-  # vCenter (JVC) 用户名/密码(接入表单填写)。后端写入 secret store(Vaultwarden)
-  # 并只存返回的引用,明文不落库;优先于 secretRef。
+  datacenterCount: Int
+  clusterCount: Int
+  # vCenter (JVC) 凭据(可选;真机连接必填,前端表单可后补)。后端写入 secret store
+  # (Vaultwarden)并只存返回的引用,明文不落库;优先于 secretRef。
   username: String
   password: String
   # 已有 secret store 引用(高级/预置);与 username/password 二选一。
@@ -33,22 +67,47 @@ input RegisterResourcePoolInput {
 input UpdateResourcePoolInput {
   name: String
   endpoint: String
-  # 重填凭据(轮换):同 register,写 secret store 后只存引用。
+  datacenterCount: Int
+  clusterCount: Int
+  # 重填凭据(轮换):同 create,写 secret store 后只存引用。
   username: String
   password: String
   secretRef: String
 }
 
+type CreateResourcePoolPayload {
+  pool: ResourcePool!
+}
+
+type UpdateResourcePoolPayload {
+  pool: ResourcePool!
+}
+
+type DeleteResourcePoolPayload {
+  id: ID!
+  deletedName: String!
+}
+
+type SyncResourcePoolPayload {
+  pool: ResourcePool!
+  syncedAt: Time!
+}
+
 extend type Query {
-  resourcePools: [ResourcePool!]! @hasRole(any: [admin])
+  resourcePools(
+    filter: ResourcePoolFilter
+    pagination: Pagination
+    sort: ResourcePoolSort
+  ): ResourcePoolConnection! @hasRole(any: [admin])
+  resourcePool(id: ID!): ResourcePool @hasRole(any: [admin])
 }
 
 extend type Mutation {
-  registerResourcePool(input: RegisterResourcePoolInput!): ResourcePool! @hasRole(any: [admin])
-  updateResourcePool(id: ID!, input: UpdateResourcePoolInput!): ResourcePool! @hasRole(any: [admin])
-  deleteResourcePool(id: ID!): Boolean! @hasRole(any: [admin])
+  createResourcePool(input: CreateResourcePoolInput!): CreateResourcePoolPayload! @hasRole(any: [admin])
+  updateResourcePool(id: ID!, input: UpdateResourcePoolInput!): UpdateResourcePoolPayload! @hasRole(any: [admin])
+  deleteResourcePool(id: ID!): DeleteResourcePoolPayload! @hasRole(any: [admin])
   # Resolve credentials → connect → set status (0619 第13页 连接状态).
   testResourcePoolConnection(id: ID!): ResourcePool! @hasRole(any: [admin])
   # Connect → count datacenters/clusters/hosts/VMs → persist (同步数据).
-  syncResourcePool(id: ID!): ResourcePool! @hasRole(any: [admin])
+  syncResourcePool(id: ID!): SyncResourcePoolPayload! @hasRole(any: [admin])
 }

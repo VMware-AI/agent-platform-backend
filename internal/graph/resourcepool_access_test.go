@@ -24,12 +24,13 @@ func TestRegisterResourcePool_StoresCredentials(t *testing.T) {
 	mr := &mutationResolver{r}
 
 	u, p := "administrator@vsphere.local", "Secret123!"
-	pool, err := mr.RegisterResourcePool(ctx, model.RegisterResourcePoolInput{
+	created, err := mr.CreateResourcePool(ctx, model.CreateResourcePoolInput{
 		Name: "dc1", Endpoint: "https://vc1", Username: &u, Password: &p,
 	})
 	if err != nil {
-		t.Fatalf("register: %v", err)
+		t.Fatalf("create: %v", err)
 	}
+	pool := created.Pool
 	row := r.Ent.ResourcePool.GetX(bg, uuid.MustParse(pool.ID))
 	if !strings.HasPrefix(row.SecretRef, "vault://") {
 		t.Fatalf("secret_ref not a store ref: %q", row.SecretRef)
@@ -42,22 +43,22 @@ func TestRegisterResourcePool_StoresCredentials(t *testing.T) {
 
 	// secretRef-only path: stored verbatim, no Put
 	ref := "vault://preexisting-9"
-	pool2, err := mr.RegisterResourcePool(ctx, model.RegisterResourcePoolInput{
+	created2, err := mr.CreateResourcePool(ctx, model.CreateResourcePoolInput{
 		Name: "dc2", Endpoint: "https://vc2", SecretRef: &ref,
 	})
 	if err != nil {
-		t.Fatalf("register secretRef: %v", err)
+		t.Fatalf("create secretRef: %v", err)
 	}
-	if got := r.Ent.ResourcePool.GetX(bg, uuid.MustParse(pool2.ID)).SecretRef; got != ref {
+	if got := r.Ent.ResourcePool.GetX(bg, uuid.MustParse(created2.Pool.ID)).SecretRef; got != ref {
 		t.Fatalf("secretRef path: %q", got)
 	}
 
 	// no creds → empty secret_ref (pool registered, test-connection will fail later)
-	pool3, err := mr.RegisterResourcePool(ctx, model.RegisterResourcePoolInput{Name: "dc3", Endpoint: "https://vc3"})
+	created3, err := mr.CreateResourcePool(ctx, model.CreateResourcePoolInput{Name: "dc3", Endpoint: "https://vc3"})
 	if err != nil {
-		t.Fatalf("register no-cred: %v", err)
+		t.Fatalf("create no-cred: %v", err)
 	}
-	if got := r.Ent.ResourcePool.GetX(bg, uuid.MustParse(pool3.ID)).SecretRef; got != "" {
+	if got := r.Ent.ResourcePool.GetX(bg, uuid.MustParse(created3.Pool.ID)).SecretRef; got != "" {
 		t.Fatalf("no-cred pool should have empty secret_ref: %q", got)
 	}
 

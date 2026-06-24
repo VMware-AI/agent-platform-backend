@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
@@ -16,9 +17,11 @@ import (
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
-// RegisterResourcePool is the resolver for the registerResourcePool field.
-func (r *mutationResolver) RegisterResourcePool(ctx context.Context, input model.RegisterResourcePoolInput) (*model.ResourcePool, error) {
-	// 接入表单的 vCenter 用户名/密码 → secret store(明文不落库),或既有 secretRef。
+// CreateResourcePool registers a vCenter pool. The 接入表单 username/password are
+// written to the secret store (plaintext never persisted) — or an existing
+// secretRef is reused. Optional seed counts are honored; real counts come from
+// syncResourcePool.
+func (r *mutationResolver) CreateResourcePool(ctx context.Context, input model.CreateResourcePoolInput) (*model.CreateResourcePoolPayload, error) {
 	ref, set, err := r.resolvePoolSecretRef(ctx, input.Name, input.Username, input.Password, input.SecretRef)
 	if err != nil {
 		return nil, err
@@ -29,16 +32,23 @@ func (r *mutationResolver) RegisterResourcePool(ctx context.Context, input model
 	if set {
 		create.SetSecretRef(ref)
 	}
+	if input.DatacenterCount != nil {
+		create.SetDatacenterCount(*input.DatacenterCount)
+	}
+	if input.ClusterCount != nil {
+		create.SetClusterCount(*input.ClusterCount)
+	}
 	p, err := create.Save(ctx)
 	if err != nil {
 		return nil, err
 	}
-	r.audit(ctx, "resource_pool.register", "resource_pool", p.ID.String(), true, actorID(auth.FromContext(ctx)))
-	return toModelResourcePool(p), nil
+	r.audit(ctx, "resource_pool.create", "resource_pool", p.ID.String(), true, actorID(auth.FromContext(ctx)))
+	return &model.CreateResourcePoolPayload{Pool: toModelResourcePool(p)}, nil
 }
 
-// UpdateResourcePool edits a pool's name/endpoint/secretRef.
-func (r *mutationResolver) UpdateResourcePool(ctx context.Context, id string, input model.UpdateResourcePoolInput) (*model.ResourcePool, error) {
+// UpdateResourcePool edits a pool's name/endpoint/counts and (on re-submitted
+// credentials) rotates the secret-store reference.
+func (r *mutationResolver) UpdateResourcePool(ctx context.Context, id string, input model.UpdateResourcePoolInput) (*model.UpdateResourcePoolPayload, error) {
 	pid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid id")
@@ -49,6 +59,12 @@ func (r *mutationResolver) UpdateResourcePool(ctx context.Context, id string, in
 	}
 	if input.Endpoint != nil {
 		u.SetEndpoint(*input.Endpoint)
+	}
+	if input.DatacenterCount != nil {
+		u.SetDatacenterCount(*input.DatacenterCount)
+	}
+	if input.ClusterCount != nil {
+		u.SetClusterCount(*input.ClusterCount)
 	}
 	// Credential rotation: re-submitted username/password → secret store; or a new
 	// explicit secretRef. Untouched when none provided.
@@ -64,20 +80,24 @@ func (r *mutationResolver) UpdateResourcePool(ctx context.Context, id string, in
 		return nil, err
 	}
 	r.audit(ctx, "resource_pool.update", "resource_pool", id, true, actorID(auth.FromContext(ctx)))
-	return toModelResourcePool(p), nil
+	return &model.UpdateResourcePoolPayload{Pool: toModelResourcePool(p)}, nil
 }
 
-// DeleteResourcePool is the resolver for the deleteResourcePool field.
-func (r *mutationResolver) DeleteResourcePool(ctx context.Context, id string) (bool, error) {
+// DeleteResourcePool removes a pool, returning its id and name for the toast.
+func (r *mutationResolver) DeleteResourcePool(ctx context.Context, id string) (*model.DeleteResourcePoolPayload, error) {
 	pid, err := uuid.Parse(id)
 	if err != nil {
-		return false, gqlerror.Errorf("invalid id")
+		return nil, gqlerror.Errorf("invalid id")
+	}
+	p, err := r.Ent.ResourcePool.Get(ctx, pid)
+	if err != nil {
+		return nil, err
 	}
 	if err := r.Ent.ResourcePool.DeleteOneID(pid).Exec(ctx); err != nil {
-		return false, err
+		return nil, err
 	}
 	r.audit(ctx, "resource_pool.delete", "resource_pool", id, true, actorID(auth.FromContext(ctx)))
-	return true, nil
+	return &model.DeleteResourcePoolPayload{ID: id, DeletedName: p.Name}, nil
 }
 
 // TestResourcePoolConnection dials the pool and records connected/error status.
@@ -105,7 +125,7 @@ func (r *mutationResolver) TestResourcePoolConnection(ctx context.Context, id st
 }
 
 // SyncResourcePool dials the pool, counts inventory, and persists it (同步数据).
-func (r *mutationResolver) SyncResourcePool(ctx context.Context, id string) (*model.ResourcePool, error) {
+func (r *mutationResolver) SyncResourcePool(ctx context.Context, id string) (*model.SyncResourcePoolPayload, error) {
 	pid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid id")
@@ -135,18 +155,71 @@ func (r *mutationResolver) SyncResourcePool(ctx context.Context, id string) (*mo
 		return nil, err
 	}
 	r.audit(ctx, "resource_pool.sync", "resource_pool", id, true, actorID(auth.FromContext(ctx)))
-	return toModelResourcePool(pool), nil
+	// updated_at is the persisted sync time (set by ent on Save).
+	return &model.SyncResourcePoolPayload{Pool: toModelResourcePool(pool), SyncedAt: pool.UpdatedAt}, nil
 }
 
-// ResourcePools is the resolver for the resourcePools field.
-func (r *queryResolver) ResourcePools(ctx context.Context) ([]model.ResourcePool, error) {
-	pools, err := r.Ent.ResourcePool.Query().Order(orderNewest).All(ctx)
+// ResourcePools is a filtered/sorted/paged connection of pools (console 资源池 page).
+func (r *queryResolver) ResourcePools(ctx context.Context, filter *model.ResourcePoolFilter, pagination *model.Pagination, sort *model.ResourcePoolSort) (*model.ResourcePoolConnection, error) {
+	base := r.Ent.ResourcePool.Query()
+	if filter != nil {
+		if v := derefString(filter.NameKeyword); v != "" {
+			base = base.Where(resourcepool.NameContainsFold(v))
+		}
+		if v := derefString(filter.EndpointKeyword); v != "" {
+			base = base.Where(resourcepool.EndpointContainsFold(v))
+		}
+		if filter.ConnectionStatus != nil {
+			// Binary console status → ent tri-state: CONNECTED == connected;
+			// DISCONNECTED covers both disconnected and error.
+			if *filter.ConnectionStatus == model.PoolConnectionStatusConnected {
+				base = base.Where(resourcepool.StatusEQ(resourcepool.StatusConnected))
+			} else {
+				base = base.Where(resourcepool.StatusIn(resourcepool.StatusDisconnected, resourcepool.StatusError))
+			}
+		}
+	}
+	total, err := base.Clone().Count(ctx)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.ResourcePool, 0, len(pools))
-	for _, p := range pools {
-		out = append(out, *toModelResourcePool(p))
+	page, pageSize := 1, 20
+	if pagination != nil {
+		if pagination.Page > 0 {
+			page = pagination.Page
+		}
+		if pagination.PageSize > 0 {
+			pageSize = pagination.PageSize
+		}
 	}
-	return out, nil
+	pools, err := applyResourcePoolSort(base.Clone(), sort).Offset((page - 1) * pageSize).Limit(pageSize).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	nodes := make([]model.ResourcePool, 0, len(pools))
+	for _, p := range pools {
+		nodes = append(nodes, *toModelResourcePool(p))
+	}
+	totalPages := (total + pageSize - 1) / pageSize
+	return &model.ResourcePoolConnection{
+		Nodes:      nodes,
+		TotalCount: total,
+		PageInfo:   &model.PageInfo{Page: page, PageSize: pageSize, TotalPages: totalPages},
+	}, nil
+}
+
+// ResourcePool returns one pool by id, or nil when missing (no existence oracle).
+func (r *queryResolver) ResourcePool(ctx context.Context, id string) (*model.ResourcePool, error) {
+	pid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid id")
+	}
+	p, err := r.Ent.ResourcePool.Get(ctx, pid)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return toModelResourcePool(p), nil
 }

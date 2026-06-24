@@ -17,6 +17,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
+	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
@@ -302,17 +303,62 @@ func toModelUser(u *ent.User) *model.User {
 // (secret_ref is intentionally not exposed).
 func toModelResourcePool(p *ent.ResourcePool) *model.ResourcePool {
 	return &model.ResourcePool{
-		ID:              p.ID.String(),
-		Name:            p.Name,
-		Kind:            string(p.Kind),
-		Endpoint:        p.Endpoint,
-		Status:          model.ResourcePoolStatus(string(p.Status)),
-		DatacenterCount: p.DatacenterCount,
-		ClusterCount:    p.ClusterCount,
-		HostCount:       p.HostCount,
-		VMCount:         p.VMCount,
-		CreatedAt:       p.CreatedAt,
+		ID:               p.ID.String(),
+		Name:             p.Name,
+		Endpoint:         p.Endpoint,
+		ConnectionStatus: poolConnStatus(p.Status),
+		DatacenterCount:  p.DatacenterCount,
+		ClusterCount:     p.ClusterCount,
+		EsxiHostCount:    p.HostCount,
+		VMInstanceCount:  p.VMCount,
+		CreatedAt:        p.CreatedAt,
+		UpdatedAt:        p.UpdatedAt,
 	}
+}
+
+// poolConnStatus collapses the ent tri-state (connected/disconnected/error) into
+// the console's binary status: only "connected" reads as CONNECTED; everything
+// else (including error) reads as DISCONNECTED.
+func poolConnStatus(s resourcepool.Status) model.PoolConnectionStatus {
+	if s == resourcepool.StatusConnected {
+		return model.PoolConnectionStatusConnected
+	}
+	return model.PoolConnectionStatusDisconnected
+}
+
+// applyResourcePoolSort orders a pool query by the console's sort field, with a
+// stable id tiebreak. CONNECTION_STATUS sorts on the ent status column; the
+// default (CREATED_AT) and any unmapped field fall back to created_at.
+func applyResourcePoolSort(q *ent.ResourcePoolQuery, sort *model.ResourcePoolSort) *ent.ResourcePoolQuery {
+	if sort == nil {
+		return q.Order(ent.Desc(resourcepool.FieldCreatedAt))
+	}
+	desc := sort.Direction == model.SortDirectionDesc
+	col := ""
+	switch sort.Field {
+	case model.ResourcePoolSortFieldName:
+		col = resourcepool.FieldName
+	case model.ResourcePoolSortFieldEndpoint:
+		col = resourcepool.FieldEndpoint
+	case model.ResourcePoolSortFieldConnectionStatus:
+		col = resourcepool.FieldStatus
+	case model.ResourcePoolSortFieldDatacenterCount:
+		col = resourcepool.FieldDatacenterCount
+	case model.ResourcePoolSortFieldClusterCount:
+		col = resourcepool.FieldClusterCount
+	case model.ResourcePoolSortFieldEsxiHostCount:
+		col = resourcepool.FieldHostCount
+	case model.ResourcePoolSortFieldVMInstanceCount:
+		col = resourcepool.FieldVMCount
+	case model.ResourcePoolSortFieldUpdatedAt:
+		col = resourcepool.FieldUpdatedAt
+	default: // CREATED_AT
+		col = resourcepool.FieldCreatedAt
+	}
+	if desc {
+		return q.Order(ent.Desc(col), ent.Desc(resourcepool.FieldID))
+	}
+	return q.Order(ent.Asc(col), ent.Asc(resourcepool.FieldID))
 }
 
 // toModelVirtualKey maps an ent.VirtualKey to the GraphQL model (omits the secret).

@@ -39,9 +39,10 @@ func deployTestAgent(t *testing.T, r *Resolver) (context.Context, string) {
 	seedActiveTemplate(t, r, "goose")
 	ag, _ := mr.CreateAgent(ownerCtx, model.CreateAgentInput{Name: "snap-goose", AgentType: "goose"})
 	ref := "vault://oc"
-	pool, _ := mr.RegisterResourcePool(adminCtx(), model.RegisterResourcePoolInput{
+	createdPool, _ := mr.CreateResourcePool(adminCtx(), model.CreateResourcePoolInput{
 		Name: "oc1", Endpoint: vsrv.URL.String(), SecretRef: &ref,
 	})
+	pool := createdPool.Pool
 
 	vc, _ := vcenter.Connect(ctx, vsrv.URL.String(), "u", "p", true)
 	vms, _ := vc.ListVMs(ctx)
