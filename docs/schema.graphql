@@ -1,0 +1,853 @@
+# AUTO-GENERATED — do not edit by hand.
+# Complete merged SDL of every schema/*.graphql module (the whole API in one file).
+# Regenerate after any schema change:  make schema-dump
+# Source of truth = the per-module files under schema/.
+
+directive @goField(forceResolver: Boolean, name: String, omittable: Boolean) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
+directive @hasPermission(perm: String!) on FIELD_DEFINITION
+directive @hasRole(any: [RoleName!]!) on FIELD_DEFINITION
+type AccountRoleRef {
+	id: ID!
+	name: String!
+}
+type AccountUser {
+	id: ID!
+	username: String!
+	displayName: String!
+	email: String!
+	role: AccountRoleRef!
+	connectionStatus: ConnectionStatus!
+	lastLoginAt: Time
+	enabled: Boolean!
+	createdAt: Time!
+	updatedAt: Time!
+}
+type Agent {
+	id: ID!
+	name: String!
+	type: String!
+	typeLabel: String! @goField(forceResolver: true)
+	status: AgentStatus!
+	apiKey: AgentApiKey @goField(forceResolver: true)
+	owner: User @goField(forceResolver: true)
+	endpoint: String
+	createdAt: Time!
+	updatedAt: Time!
+}
+type AgentApiKey {
+	id: ID!
+	name: String!
+}
+type AgentConfig {
+	id: ID!
+	name: String!
+	agentType: String!
+	isDefault: Boolean!
+	artifactId: ID
+	knowledge: [Artifact!]! @goField(forceResolver: true)
+	createdAt: Time!
+}
+type AgentConnection {
+	nodes: [Agent!]!
+	totalCount: Int!
+	pageInfo: PageInfo!
+}
+input AgentFilter {
+	status: AgentStatus
+	type: String
+	nameKeyword: String
+	keyKeyword: String
+	ownerKeyword: String
+}
+type AgentSnapshot {
+	name: String!
+	description: String
+	state: String!
+	createdAt: Time!
+}
+input AgentSort {
+	field: AgentSortField!
+	direction: SortDirection!
+}
+enum AgentSortField {
+	NAME
+	TYPE
+	STATUS
+	API_KEY_NAME
+	OWNER
+	CREATED_AT
+	UPDATED_AT
+}
+enum AgentStatus {
+	provisioning
+	running
+	stopped
+	exception
+}
+type AgentTemplate {
+	id: ID!
+	kind: String!
+	display: String!
+	description: String
+	installMethod: InstallMethod!
+	installCommand: String
+	status: AgentTemplateStatus!
+	version: String
+	knowledgeRoot: String
+	knowledgePrompt: String
+	createdAt: Time!
+}
+enum AgentTemplateStatus {
+	active
+	deferred
+}
+type AgentUsage {
+	agentId: ID!
+	inputTokens: Int!
+	outputTokens: Int!
+	cost: Float!
+}
+type Artifact {
+	id: ID!
+	name: String!
+	kind: ArtifactKind!
+	version: String!
+	uri: String!
+	content: String
+	sha256: String
+	metadata: Map
+	createdAt: Time!
+}
+enum ArtifactKind {
+	script
+	config
+	package
+	knowledge
+}
+input AssignUsersToRoleInput {
+	roleId: ID!
+	userIds: [ID!]!
+}
+type AssignUsersToRolePayload {
+	role: Role!
+	assignedCount: Int!
+}
+type AuditConnection {
+	items: [AuditLog!]!
+	total: Int!
+}
+input AuditFilter {
+	actorUserId: ID
+	actionPrefix: String
+	search: String
+}
+type AuditLog {
+	id: ID!
+	actorUserId: ID
+	action: String!
+	resourceType: String
+	resourceId: String
+	ip: String
+	result: String!
+	detail: String
+	createdAt: Time!
+}
+type AuthPayload {
+	token: String!
+	user: User!
+	mustChangePassword: Boolean!
+}
+enum ConnectionStatus {
+	ONLINE
+	OFFLINE
+}
+input CreateAgentConfigInput {
+	name: String!
+	agentType: String!
+	isDefault: Boolean
+	artifactId: ID
+}
+input CreateAgentInput {
+	name: String!
+	agentType: String!
+	configId: ID
+	resourcePoolId: ID
+}
+input CreateCustomRoleInput {
+	name: String!
+}
+input CreateDepartmentInput {
+	tenantId: ID
+	name: String!
+	maxBudget: Float
+}
+input CreateResourcePoolInput {
+	name: String!
+	endpoint: String!
+	datacenterCount: Int
+	clusterCount: Int
+	username: String
+	password: String
+	secretRef: String
+}
+type CreateResourcePoolPayload {
+	pool: ResourcePool!
+}
+input CreateUserInput {
+	username: String!
+	displayName: String!
+	email: String!
+	roleId: ID!
+	passwordMode: PasswordMode!
+	customPassword: String
+	enabled: Boolean = true
+}
+type CreateUserPayload {
+	user: AccountUser!
+	generatedPassword: String
+}
+type CustomRole {
+	id: ID!
+	name: String!
+	isSystem: Boolean!
+	permissions: [String!]!
+	createdAt: Time!
+}
+type DateUsage {
+	date: String!
+	inputTokens: Int!
+	outputTokens: Int!
+	cost: Float!
+}
+type DeleteModelGatewayPayload {
+	deletedID: ID!
+}
+type DeleteResourcePoolPayload {
+	id: ID!
+	deletedName: String!
+}
+type DeleteUserPayload {
+	id: ID!
+}
+type Department {
+	id: ID!
+	tenantId: ID
+	name: String!
+	litellmTeamId: String
+	createdAt: Time!
+}
+input DeployAgentInput {
+	agentId: ID!
+	template: String!
+	vmName: String!
+	resourcePoolId: ID!
+	targetResourcePool: String
+	hostname: String
+	maxBudget: Float
+}
+type DeployedAgent {
+	agent: Agent!
+	virtualKeySecret: String!
+}
+type GatewayConnection {
+	id: ID!
+	name: String!
+	endpoint: String!
+	status: GatewayStatus!
+	loadBalanceStrategy: LoadBalanceStrategy!
+	createdAt: Time!
+}
+enum GatewayStatus {
+	connected
+	disconnected
+	error
+}
+type Image {
+	id: ID!
+	repository: String!
+	tag: String!
+	digest: String
+	signed: Boolean!
+	createdAt: Time!
+}
+enum InstallMethod {
+	offline_tar
+	curl
+	unset
+}
+input IssueVirtualKeyInput {
+	userId: ID!
+	agentId: ID
+	rateLimitPolicyId: ID
+	teamId: String
+	models: [String!]
+	maxBudget: Float
+	rpmLimit: Int
+	tpmLimit: Int
+	alias: String
+}
+type IssuedVirtualKey {
+	virtualKey: VirtualKey!
+	secret: String!
+}
+enum LoadBalanceStrategy {
+	simple_shuffle
+	latency
+	usage_v2
+	least_busy
+	cost
+}
+enum LoadBalancingStrategy {
+	ROUND_ROBIN
+}
+input LoginInput {
+	email: String!
+	password: String!
+}
+scalar Map
+type Membership {
+	id: ID!
+	userId: ID!
+	departmentId: ID!
+	role: MembershipRole!
+}
+enum MembershipRole {
+	user
+	dept_admin
+}
+type MeteringSummary {
+	totalInputTokens: Int!
+	totalOutputTokens: Int!
+	totalCost: Float!
+	byModel: [ModelUsage!]!
+	byAgent: [AgentUsage!]!
+	byDate: [DateUsage!]!
+}
+type ModelGateway {
+	id: ID!
+	name: String!
+	provider: ModelGatewayProvider!
+	endpoint: String!
+	status: ModelGatewayStatus!
+	backendModelCount: Int!
+	loadBalancingStrategy: LoadBalancingStrategy!
+	latencyMs: Int
+	adminUrl: String
+	lastSyncAt: Time
+	lastSyncStatus: ModelGatewaySyncState!
+	lastSyncMessage: String
+}
+type ModelGatewayConnection {
+	nodes: [ModelGateway!]!
+	totalCount: Int!
+}
+input ModelGatewayFilterInput {
+	search: String
+	status: ModelGatewayStatus
+}
+input ModelGatewayInput {
+	name: String!
+	provider: ModelGatewayProvider!
+	endpoint: String!
+	adminUrl: String
+	masterKey: String
+	loadBalancingStrategy: LoadBalancingStrategy!
+}
+enum ModelGatewayProvider {
+	LITELLM
+}
+enum ModelGatewayStatus {
+	CONNECTED
+	DISCONNECTED
+	ERROR
+}
+enum ModelGatewaySyncState {
+	SYNCED
+	SYNCING
+	PARTIAL
+	FAILED
+	NEVER
+}
+type ModelGatewaySyncSummary {
+	state: ModelGatewaySyncState!
+	lastSyncedAt: Time
+	successCount: Int!
+	failedCount: Int!
+	message: String
+}
+type ModelGatewayTestResult {
+	success: Boolean!
+	status: ModelGatewayStatus!
+	latencyMs: Int
+	message: String!
+	testedAt: Time!
+	gateway: ModelGateway!
+}
+type ModelRoute {
+	id: ID!
+	name: String!
+	modelAlias: String!
+	backendGatewayId: ID
+	upstreams: [String!]!
+	strategy: LoadBalanceStrategy!
+	enabled: Boolean!
+	createdAt: Time!
+}
+type ModelUsage {
+	model: String!
+	inputTokens: Int!
+	outputTokens: Int!
+	cost: Float!
+}
+type Mutation {
+	login(input: LoginInput!): AuthPayload!
+	logout: Boolean!
+	changePassword(oldPassword: String!, newPassword: String!): Boolean!
+	createUser(input: CreateUserInput!): CreateUserPayload! @hasRole(any: [admin,tenant_admin])
+	updateUser(id: ID!, input: UpdateUserInput!): AccountUser! @hasRole(any: [admin,tenant_admin])
+	deleteUser(id: ID!): DeleteUserPayload! @hasRole(any: [admin,tenant_admin])
+	resetUserPassword(id: ID!): ResetPasswordPayload! @hasRole(any: [admin,tenant_admin])
+	toggleUserEnabled(id: ID!): ToggleUserEnabledPayload! @hasRole(any: [admin,tenant_admin])
+	assignUsersToRole(input: AssignUsersToRoleInput!): AssignUsersToRolePayload! @hasRole(any: [admin,tenant_admin])
+	upsertAgentTemplate(input: UpsertAgentTemplateInput!): AgentTemplate! @hasRole(any: [admin])
+	createAgent(input: CreateAgentInput!): Agent!
+	setAgentStatus(id: ID!, status: AgentStatus!): Agent!
+	createAgentConfig(input: CreateAgentConfigInput!): AgentConfig! @hasRole(any: [admin,tenant_admin])
+	updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig! @hasRole(any: [admin,tenant_admin])
+	deleteAgentConfig(id: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
+	setDefaultAgentConfig(id: ID!): AgentConfig! @hasRole(any: [admin,tenant_admin])
+	setAgentConfigKnowledge(configId: ID!, knowledgeArtifactIds: [ID!]!): AgentConfig! @hasRole(any: [admin,tenant_admin])
+	upsertArtifact(input: UpsertArtifactInput!): Artifact! @hasRole(any: [admin,tenant_admin])
+	deleteArtifact(id: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
+	upsertSkill(input: UpsertSkillInput!): Skill! @hasRole(any: [admin])
+	deleteSkill(id: ID!): Boolean! @hasRole(any: [admin])
+	upsertImage(input: UpsertImageInput!): Image! @hasRole(any: [admin])
+	deleteImage(id: ID!): Boolean! @hasRole(any: [admin])
+	createDepartment(input: CreateDepartmentInput!): Department! @hasRole(any: [admin,tenant_admin])
+	deleteDepartment(id: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
+	addMembership(userId: ID!, departmentId: ID!, role: MembershipRole): Membership!
+	removeMembership(userId: ID!, departmentId: ID!): Boolean!
+	deployAgent(input: DeployAgentInput!): DeployedAgent!
+	recycleAgent(input: RecycleAgentInput!): Agent!
+	snapshotAgent(input: SnapshotAgentInput!): AgentSnapshot!
+	revertAgentSnapshot(input: RevertAgentSnapshotInput!): Boolean!
+	requestRotation(agentId: ID!, kind: RotationKind!): Boolean!
+	revokeAgentEnrollment(agentId: ID!): Boolean!
+	registerGatewayConnection(input: RegisterGatewayConnectionInput!): GatewayConnection! @hasRole(any: [admin])
+	testGatewayConnection(id: ID!): GatewayStatus! @hasRole(any: [admin])
+	deleteGatewayConnection(id: ID!): Boolean! @hasRole(any: [admin])
+	upsertUpstream(input: UpsertUpstreamInput!): Upstream! @hasPermission(perm: "route:manage")
+	deleteUpstream(id: ID!): Boolean! @hasPermission(perm: "route:manage")
+	upsertModelRoute(input: UpsertModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
+	setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute! @hasPermission(perm: "route:manage")
+	deleteModelRoute(id: ID!): Boolean! @hasPermission(perm: "route:manage")
+	setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier! @hasPermission(perm: "route:manage")
+	recordTokenUsage(input: RecordTokenUsageInput!): TokenUsage! @hasRole(any: [admin])
+	createModelGateway(input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
+	updateModelGateway(id: ID!, input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
+	deleteModelGateway(id: ID!): DeleteModelGatewayPayload! @hasRole(any: [admin])
+	testModelGatewayConnection(id: ID!): ModelGatewayTestResult! @hasRole(any: [admin])
+	recordRequestLog(input: RecordRequestLogInput!): RequestLog! @hasRole(any: [admin])
+	upsertRateLimitPolicy(input: UpsertRateLimitPolicyInput!): RateLimitPolicy! @hasPermission(perm: "route:manage")
+	setRateLimitPolicyEnabled(id: ID!, enabled: Boolean!): RateLimitPolicy! @hasPermission(perm: "route:manage")
+	deleteRateLimitPolicy(id: ID!): Boolean! @hasPermission(perm: "route:manage")
+	createCustomRole(input: CreateCustomRoleInput!): CustomRole! @hasRole(any: [admin,tenant_admin])
+	deleteCustomRole(id: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
+	upsertPermission(key: String!, description: String): Permission! @hasRole(any: [admin])
+	setRolePermissions(roleId: ID!, permissionKeys: [String!]!): CustomRole! @hasRole(any: [admin,tenant_admin])
+	assignUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
+	removeUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
+	createResourcePool(input: CreateResourcePoolInput!): CreateResourcePoolPayload! @hasRole(any: [admin])
+	updateResourcePool(id: ID!, input: UpdateResourcePoolInput!): UpdateResourcePoolPayload! @hasRole(any: [admin])
+	deleteResourcePool(id: ID!): DeleteResourcePoolPayload! @hasRole(any: [admin])
+	testResourcePoolConnection(id: ID!): ResourcePool! @hasRole(any: [admin])
+	syncResourcePool(id: ID!): SyncResourcePoolPayload! @hasRole(any: [admin])
+	issueVirtualKey(input: IssueVirtualKeyInput!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
+	revokeVirtualKey(id: ID!): Boolean! @hasPermission(perm: "key:manage")
+	regenerateVirtualKey(id: ID!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
+	setVirtualKeyEnabled(id: ID!, enabled: Boolean!): VirtualKey! @hasPermission(perm: "key:manage")
+}
+type PageInfo {
+	page: Int!
+	pageSize: Int!
+	totalPages: Int!
+}
+input PageInput {
+	limit: Int = 50
+	offset: Int = 0
+}
+input Pagination {
+	page: Int! = 1
+	pageSize: Int! = 10
+}
+enum PasswordMode {
+	AUTO
+	CUSTOM
+}
+type Permission {
+	id: ID!
+	key: String!
+	description: String
+}
+enum PoolConnectionStatus {
+	CONNECTED
+	DISCONNECTED
+}
+type Query {
+	me: User!
+	auditLogs(filter: AuditFilter, page: PageInput): AuditConnection! @hasPermission(perm: "audit:view")
+	users(filter: UserFilter, pagination: Pagination, sort: UserSort): UserConnection! @hasRole(any: [admin,tenant_admin])
+	roles(pagination: Pagination): RoleConnection! @hasRole(any: [admin,tenant_admin])
+	role(id: ID!): Role @hasRole(any: [admin,tenant_admin])
+	userExists(username: String, email: String): Boolean! @hasRole(any: [admin,tenant_admin])
+	agentTemplates: [AgentTemplate!]!
+	agentConfigs(agentType: String): [AgentConfig!]!
+	agents(filter: AgentFilter, pagination: Pagination, sort: AgentSort): AgentConnection!
+	artifacts(kind: ArtifactKind): [Artifact!]!
+	artifactVersions(name: String!): [Artifact!]!
+	skills: [Skill!]!
+	images: [Image!]!
+	departments: [Department!]! @hasRole(any: [admin,tenant_admin])
+	departmentMembers(departmentId: ID!): [Membership!]!
+	vmTemplates(resourcePoolId: ID!): [VMTemplate!]!
+	agentSnapshots(agentId: ID!): [AgentSnapshot!]!
+	gatewayConnections: [GatewayConnection!]! @hasRole(any: [admin])
+	upstreams: [Upstream!]! @hasPermission(perm: "route:manage")
+	modelRoutes: [ModelRoute!]! @hasPermission(perm: "route:manage")
+	routerTiers: [RouterTier!]! @hasPermission(perm: "route:manage")
+	tokenUsage(userId: ID, page: PageInput): [TokenUsage!]! @hasPermission(perm: "metering:view")
+	meteringSummary(userId: ID): MeteringSummary! @hasPermission(perm: "metering:view")
+	modelGateways(filter: ModelGatewayFilterInput, page: PageInput!): ModelGatewayConnection! @hasRole(any: [admin])
+	modelGatewaySyncSummary: ModelGatewaySyncSummary! @hasRole(any: [admin])
+	requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
+	rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin,tenant_admin])
+	customRoles: [CustomRole!]! @hasRole(any: [admin,tenant_admin])
+	permissions: [Permission!]! @hasRole(any: [admin])
+	userRoles(userId: ID!): [CustomRole!]! @hasRole(any: [admin])
+	resourcePools(filter: ResourcePoolFilter, pagination: Pagination, sort: ResourcePoolSort): ResourcePoolConnection! @hasRole(any: [admin])
+	resourcePool(id: ID!): ResourcePool @hasRole(any: [admin])
+	virtualKeys(userId: ID): [VirtualKey!]! @hasRole(any: [admin])
+}
+type RateLimitPolicy {
+	id: ID!
+	name: String!
+	rpm: Int
+	tpm: Int
+	enabled: Boolean!
+	createdAt: Time!
+}
+input RecordRequestLogInput {
+	requestId: String!
+	userId: ID
+	agentId: ID
+	model: String
+	inputTokens: Int
+	outputTokens: Int
+	latencyMs: Int
+	statusCode: Int!
+	detail: String
+}
+input RecordTokenUsageInput {
+	userId: ID!
+	agentId: ID
+	model: String!
+	inputTokens: Int!
+	outputTokens: Int!
+	cost: Float
+}
+input RecycleAgentInput {
+	agentId: ID!
+	confirm: Boolean!
+}
+input RegisterGatewayConnectionInput {
+	name: String!
+	endpoint: String!
+	masterKey: String
+	masterKeyRef: String
+	loadBalanceStrategy: LoadBalanceStrategy
+}
+type RequestLog {
+	id: ID!
+	requestId: String!
+	userId: ID
+	agentId: ID
+	model: String
+	inputTokens: Int!
+	outputTokens: Int!
+	latencyMs: Int!
+	statusCode: Int!
+	detail: String
+	createdAt: Time!
+}
+input RequestLogFilter {
+	statusCode: Int
+	agentId: ID
+	model: String
+	requestId: String
+}
+type ResetPasswordPayload {
+	user: AccountUser!
+	generatedPassword: String!
+}
+type ResourcePool {
+	id: ID!
+	name: String!
+	endpoint: String!
+	connectionStatus: PoolConnectionStatus!
+	datacenterCount: Int!
+	clusterCount: Int!
+	esxiHostCount: Int!
+	vmInstanceCount: Int!
+	createdAt: Time!
+	updatedAt: Time!
+}
+type ResourcePoolConnection {
+	nodes: [ResourcePool!]!
+	totalCount: Int!
+	pageInfo: PageInfo!
+}
+input ResourcePoolFilter {
+	nameKeyword: String
+	endpointKeyword: String
+	connectionStatus: PoolConnectionStatus
+}
+input ResourcePoolSort {
+	field: ResourcePoolSortField!
+	direction: SortDirection!
+}
+enum ResourcePoolSortField {
+	NAME
+	ENDPOINT
+	CONNECTION_STATUS
+	DATACENTER_COUNT
+	CLUSTER_COUNT
+	ESXI_HOST_COUNT
+	VM_INSTANCE_COUNT
+	CREATED_AT
+	UPDATED_AT
+}
+input RevertAgentSnapshotInput {
+	agentId: ID!
+	snapshotName: String!
+	confirm: Boolean!
+}
+type Role {
+	id: ID!
+	name: String!
+	description: String!
+	userCount: Int!
+	builtIn: Boolean!
+}
+type RoleConnection {
+	nodes: [Role!]!
+	totalCount: Int!
+	pageInfo: PageInfo!
+}
+enum RoleName {
+	admin
+	user
+	observability
+	tenant_admin
+}
+enum RotationKind {
+	rotate_ui_password
+	rotate_os_password
+}
+type RouterTier {
+	id: ID!
+	tier: RouterTierLevel!
+	modelAlias: String!
+}
+enum RouterTierLevel {
+	SIMPLE
+	MEDIUM
+	COMPLEX
+	REASONING
+}
+type Skill {
+	id: ID!
+	name: String!
+	version: String!
+	description: String
+	uri: String!
+	createdAt: Time!
+}
+input SnapshotAgentInput {
+	agentId: ID!
+	name: String!
+	description: String
+}
+enum SortDirection {
+	ASC
+	DESC
+}
+type SyncResourcePoolPayload {
+	pool: ResourcePool!
+	syncedAt: Time!
+}
+scalar Time
+type ToggleUserEnabledPayload {
+	user: AccountUser!
+}
+type TokenUsage {
+	id: ID!
+	userId: ID!
+	agentId: ID
+	model: String!
+	inputTokens: Int!
+	outputTokens: Int!
+	cost: Float!
+	createdAt: Time!
+}
+input UpdateAgentConfigInput {
+	name: String
+	artifactId: ID
+}
+input UpdateResourcePoolInput {
+	name: String
+	endpoint: String
+	datacenterCount: Int
+	clusterCount: Int
+	username: String
+	password: String
+	secretRef: String
+}
+type UpdateResourcePoolPayload {
+	pool: ResourcePool!
+}
+input UpdateUserInput {
+	displayName: String
+	email: String
+	roleId: ID
+	enabled: Boolean
+}
+input UpsertAgentTemplateInput {
+	kind: String!
+	display: String!
+	description: String
+	installMethod: InstallMethod!
+	installCommand: String
+	status: AgentTemplateStatus!
+	version: String
+	knowledgeRoot: String
+	knowledgePrompt: String
+}
+input UpsertArtifactInput {
+	name: String!
+	kind: ArtifactKind!
+	version: String!
+	uri: String!
+	content: String
+	sha256: String
+	metadata: Map
+}
+input UpsertImageInput {
+	repository: String!
+	tag: String!
+	digest: String
+	signed: Boolean
+}
+input UpsertModelRouteInput {
+	name: String!
+	modelAlias: String!
+	backendGatewayId: ID
+	upstreams: [String!]
+	strategy: LoadBalanceStrategy
+	enabled: Boolean
+}
+input UpsertRateLimitPolicyInput {
+	name: String!
+	rpm: Int
+	tpm: Int
+	enabled: Boolean
+}
+input UpsertSkillInput {
+	name: String!
+	version: String!
+	description: String
+	uri: String!
+}
+input UpsertUpstreamInput {
+	name: String!
+	provider: UpstreamProvider!
+	apiBase: String
+	apiKey: String
+	apiKeyRef: String
+	model: String!
+	enabled: Boolean
+}
+type Upstream {
+	id: ID!
+	name: String!
+	provider: UpstreamProvider!
+	apiBase: String
+	model: String!
+	enabled: Boolean!
+	createdAt: Time!
+}
+enum UpstreamProvider {
+	vllm
+	openai
+	anthropic
+	minimax
+	codex
+}
+type User {
+	id: ID!
+	username: String!
+	displayName: String! @goField(forceResolver: true)
+	email: String!
+	role: RoleName!
+	tenantId: ID
+	mustChangePassword: Boolean!
+	isActive: Boolean!
+	lastLoginAt: Time
+	createdAt: Time!
+}
+type UserConnection {
+	nodes: [AccountUser!]!
+	totalCount: Int!
+	pageInfo: PageInfo!
+}
+input UserFilter {
+	usernameKeyword: String
+	roleKeyword: String
+	emailKeyword: String
+	statusKeyword: ConnectionStatus
+	roleId: ID
+}
+input UserSort {
+	field: UserSortField!
+	direction: SortDirection!
+}
+enum UserSortField {
+	USERNAME
+	ROLE
+	EMAIL
+	CONNECTION
+	LAST_LOGIN
+	CREATED_AT
+	UPDATED_AT
+}
+type VMTemplate {
+	name: String!
+	uuid: String!
+}
+type VirtualKey {
+	id: ID!
+	alias: String
+	userId: ID!
+	agentId: ID
+	rateLimitPolicyId: ID
+	teamId: String
+	models: [String!]!
+	maxBudget: Float
+	status: VirtualKeyStatus!
+	expiresAt: Time
+	createdAt: Time!
+}
+enum VirtualKeyStatus {
+	active
+	disabled
+	revoked
+}
