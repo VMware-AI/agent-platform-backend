@@ -185,6 +185,28 @@ func TestModelGateway_TestUsesPerGatewayClient(t *testing.T) {
 	}
 }
 
+// H1 negative path: a gateway with no master key (and no secret store) tests with
+// an empty key rather than crashing.
+func TestModelGateway_TestEmptyKeyWhenNoSecret(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	// r.Secrets left nil; gateway created without MasterKey
+	ctx := adminCtx()
+	mr := &mutationResolver{r}
+	var gotKey = "sentinel"
+	r.GatewayClientFor = func(_ context.Context, _, masterKey string) gateway.ModelManager {
+		gotKey = masterKey
+		return &fakeModelManager{}
+	}
+	g := mkGateway(t, mr, ctx, "gw", "https://llm:4000")
+	if _, err := mr.TestModelGatewayConnection(ctx, g.ID); err != nil {
+		t.Fatalf("test: %v", err)
+	}
+	if gotKey != "" {
+		t.Errorf("master key = %q, want empty (no secret store, no ref)", gotKey)
+	}
+}
+
 // update edits name/endpoint; delete returns the id and removes the row.
 func TestModelGateway_UpdateDelete(t *testing.T) {
 	r, cleanup := newTestResolver(t)
