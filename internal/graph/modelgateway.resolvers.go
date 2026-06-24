@@ -88,28 +88,21 @@ func (r *mutationResolver) TestModelGatewayConnection(ctx context.Context, id st
 	if err != nil {
 		return nil, err
 	}
-	status := gatewayconnection.StatusDisconnected
-	message := "model gateway not configured"
-	var latency *int
-	// TODO(reskin H1): r.GatewayModels is the single app-configured litellm client,
-	// not a per-row client built from g.Endpoint/g.MasterKeyRef. The platform runs
-	// one litellm gateway today (same assumption as TestGatewayConnection); when
-	// multiple gateways are supported, build a per-gateway client here.
-	if r.GatewayModels != nil {
-		start := time.Now()
-		terr := r.GatewayModels.TestConnection(ctx)
-		ms := int(time.Since(start).Milliseconds())
-		latency = &ms
-		if terr == nil {
-			status = gatewayconnection.StatusConnected
-			message = "connection ok"
-		} else {
-			status = gatewayconnection.StatusError
-			// Never echo the raw transport error to the client — it can embed the
-			// endpoint (and any user-info in it). Log the detail server-side only.
-			message = "connection failed"
-			log.Printf("model gateway test failed (id=%s): %v", id, terr)
-		}
+	// Test the gateway under test specifically: a client bound to its own endpoint
+	// and master key (resolved from the secret store), not a process-wide default —
+	// so the result and persisted status reflect this row even with many gateways.
+	status := gatewayconnection.StatusConnected
+	message := "connection ok"
+	start := time.Now()
+	terr := r.gatewayClient(ctx, g).TestConnection(ctx)
+	ms := int(time.Since(start).Milliseconds())
+	latency := &ms
+	if terr != nil {
+		status = gatewayconnection.StatusError
+		// Never echo the raw transport error to the client — it can embed the
+		// endpoint (and any user-info in it). Log the detail server-side only.
+		message = "connection failed"
+		log.Printf("model gateway test failed (id=%s): %v", id, terr)
 	}
 	g, err = r.Ent.GatewayConnection.UpdateOne(g).SetStatus(status).Save(ctx)
 	if err != nil {

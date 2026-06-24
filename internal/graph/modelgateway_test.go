@@ -6,7 +6,9 @@ import (
 	"testing"
 
 	"github.com/VMware-AI/agent-platform-backend/ent/upstream"
+	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
+	"github.com/VMware-AI/agent-platform-backend/internal/secrets"
 )
 
 // mkGateway registers a model gateway via the resolver and returns it (P4 helper).
@@ -75,7 +77,8 @@ func TestModelGateways_Projection(t *testing.T) {
 func TestModelGateway_TestAndSyncSummary(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()
-	r.GatewayModels = &fakeModelManager{} // TestConnection → nil → connected
+	// per-gateway client builder (H1): fake → TestConnection nil → connected
+	r.GatewayClientFor = func(context.Context, string, string) gateway.ModelManager { return &fakeModelManager{} }
 	ctx := adminCtx()
 	mr := &mutationResolver{r}
 	qr := &queryResolver{r}
@@ -101,7 +104,9 @@ func TestModelGateway_TestAndSyncSummary(t *testing.T) {
 	}
 
 	// a failing gateway → ERROR status, summary FAILED (only this one gateway)
-	r.GatewayModels = &fakeModelManager{testErr: errors.New("dial tcp: refused")}
+	r.GatewayClientFor = func(context.Context, string, string) gateway.ModelManager {
+		return &fakeModelManager{testErr: errors.New("dial tcp: refused")}
+	}
 	res2, err := mr.TestModelGatewayConnection(ctx, g.ID)
 	if err != nil {
 		t.Fatalf("test (fail path): %v", err)
@@ -137,13 +142,46 @@ func TestModelGatewaySyncSummary_StateMachine(t *testing.T) {
 	}
 
 	// connect only one → mix of connected + disconnected → PARTIAL (the bug M1 fixed)
-	r.GatewayModels = &fakeModelManager{}
+	r.GatewayClientFor = func(context.Context, string, string) gateway.ModelManager { return &fakeModelManager{} }
 	if _, err := mr.TestModelGatewayConnection(ctx, a.ID); err != nil {
 		t.Fatalf("test a: %v", err)
 	}
 	s, _ := qr.ModelGatewaySyncSummary(ctx)
 	if s.State != model.ModelGatewaySyncStatePartial || s.SuccessCount != 1 {
 		t.Fatalf("connected+disconnected: %+v, want PARTIAL/success=1", s)
+	}
+}
+
+// H1: the connection test must build a client from the gateway's OWN endpoint and
+// its OWN master key (resolved from the secret store), not a process-wide default.
+func TestModelGateway_TestUsesPerGatewayClient(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	r.Secrets = secrets.NewStaticResolver(nil) // a Store: accepts the masterKey on create
+	ctx := adminCtx()
+	mr := &mutationResolver{r}
+
+	var gotEndpoint, gotKey string
+	r.GatewayClientFor = func(_ context.Context, endpoint, masterKey string) gateway.ModelManager {
+		gotEndpoint, gotKey = endpoint, masterKey
+		return &fakeModelManager{}
+	}
+
+	g, err := mr.CreateModelGateway(ctx, model.ModelGatewayInput{
+		Name: "gw", Provider: model.ModelGatewayProviderLitellm, Endpoint: "https://vc-x:4000",
+		LoadBalancingStrategy: model.LoadBalancingStrategyRoundRobin, MasterKey: ptr("sk-secret-xyz"),
+	})
+	if err != nil {
+		t.Fatalf("CreateModelGateway: %v", err)
+	}
+	if _, err := mr.TestModelGatewayConnection(ctx, g.ID); err != nil {
+		t.Fatalf("TestModelGatewayConnection: %v", err)
+	}
+	if gotEndpoint != "https://vc-x:4000" {
+		t.Errorf("per-gateway endpoint = %q, want https://vc-x:4000", gotEndpoint)
+	}
+	if gotKey != "sk-secret-xyz" {
+		t.Errorf("master key not resolved from secret store: %q", gotKey)
 	}
 }
 
