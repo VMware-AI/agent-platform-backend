@@ -1,0 +1,19 @@
+mutation IssueVirtualKey($input: IssueVirtualKeyInput!) {
+    issueVirtualKey(input: $input) {
+      secret
+      virtualKey {
+        ...VirtualKeyFields
+      }
+    }
+  }
+  
+  fragment VirtualKeyFields on VirtualKey {
+    id
+    alias
+    userId
+    agentId
+    rateLimitPolicyId
+    status
+    expiresAt
+    createdAt
+  }

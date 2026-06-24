@@ -1,0 +1,3 @@
+mutation RevokeVirtualKey($id: ID!) {
+    revokeVirtualKey(id: $id)
+  }

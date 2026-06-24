@@ -1,0 +1,3 @@
+mutation DeleteRateLimitPolicy($id: ID!) {
+    deleteRateLimitPolicy(id: $id)
+  }
