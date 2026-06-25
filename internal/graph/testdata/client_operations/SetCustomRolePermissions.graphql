@@ -1,0 +1,13 @@
+mutation SetCustomRolePermissions($roleId: ID!, $permissionKeys: [String!]!) {
+    setRolePermissions(roleId: $roleId, permissionKeys: $permissionKeys) {
+      ...CustomRoleFields
+    }
+  }
+  
+  fragment CustomRoleFields on CustomRole {
+    id
+    name
+    isSystem
+    permissions
+    createdAt
+  }

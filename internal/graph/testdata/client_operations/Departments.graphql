@@ -1,0 +1,13 @@
+query Departments {
+    departments {
+      ...DepartmentFields
+    }
+  }
+  
+  fragment DepartmentFields on Department {
+    id
+    tenantId
+    name
+    litellmTeamId
+    createdAt
+  }

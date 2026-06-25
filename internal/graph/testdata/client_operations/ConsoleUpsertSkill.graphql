@@ -1,0 +1,14 @@
+mutation ConsoleUpsertSkill($input: UpsertSkillInput!) {
+    upsertSkill(input: $input) {
+      ...SkillFields
+    }
+  }
+  
+  fragment SkillFields on Skill {
+    id
+    name
+    version
+    description
+    uri
+    createdAt
+  }

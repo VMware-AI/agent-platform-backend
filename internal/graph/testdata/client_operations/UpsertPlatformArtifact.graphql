@@ -1,0 +1,17 @@
+mutation UpsertPlatformArtifact($input: UpsertArtifactInput!) {
+    upsertArtifact(input: $input) {
+      ...ArtifactFields
+    }
+  }
+  
+  fragment ArtifactFields on Artifact {
+    id
+    name
+    kind
+    version
+    uri
+    content
+    sha256
+    metadata
+    createdAt
+  }

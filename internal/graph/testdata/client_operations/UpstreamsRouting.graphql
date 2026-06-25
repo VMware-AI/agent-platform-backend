@@ -1,0 +1,15 @@
+query UpstreamsRouting {
+    upstreams {
+      ...UpstreamRoutingFields
+    }
+  }
+  
+  fragment UpstreamRoutingFields on Upstream {
+    id
+    name
+    provider
+    apiBase
+    model
+    enabled
+    createdAt
+  }

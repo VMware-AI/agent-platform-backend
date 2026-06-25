@@ -1,0 +1,12 @@
+mutation CreateAgentSnapshot($input: SnapshotAgentInput!) {
+    snapshotAgent(input: $input) {
+      ...AgentSnapshotFields
+    }
+  }
+  
+  fragment AgentSnapshotFields on AgentSnapshot {
+    name
+    description
+    state
+    createdAt
+  }

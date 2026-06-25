@@ -1,0 +1,14 @@
+query ConsoleSkills {
+    skills {
+      ...SkillFields
+    }
+  }
+  
+  fragment SkillFields on Skill {
+    id
+    name
+    version
+    description
+    uri
+    createdAt
+  }

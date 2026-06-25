@@ -1,0 +1,12 @@
+query AgentSnapshotsForLifecycle($agentId: ID!) {
+    agentSnapshots(agentId: $agentId) {
+      ...AgentSnapshotFields
+    }
+  }
+  
+  fragment AgentSnapshotFields on AgentSnapshot {
+    name
+    description
+    state
+    createdAt
+  }

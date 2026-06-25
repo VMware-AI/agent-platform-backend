@@ -1,0 +1,13 @@
+query CustomRolesList {
+    customRoles {
+      ...CustomRoleFields
+    }
+  }
+  
+  fragment CustomRoleFields on CustomRole {
+    id
+    name
+    isSystem
+    permissions
+    createdAt
+  }
