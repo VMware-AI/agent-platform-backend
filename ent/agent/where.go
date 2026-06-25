@@ -100,6 +100,16 @@ func ResourcePoolID(v uuid.UUID) predicate.Agent {
 	return predicate.Agent(sql.FieldEQ(FieldResourcePoolID, v))
 }
 
+// TemplateFamilyID applies equality check predicate on the "template_family_id" field. It's identical to TemplateFamilyIDEQ.
+func TemplateFamilyID(v uuid.UUID) predicate.Agent {
+	return predicate.Agent(sql.FieldEQ(FieldTemplateFamilyID, v))
+}
+
+// TemplateVersionID applies equality check predicate on the "template_version_id" field. It's identical to TemplateVersionIDEQ.
+func TemplateVersionID(v uuid.UUID) predicate.Agent {
+	return predicate.Agent(sql.FieldEQ(FieldTemplateVersionID, v))
+}
+
 // TenantID applies equality check predicate on the "tenant_id" field. It's identical to TenantIDEQ.
 func TenantID(v uuid.UUID) predicate.Agent {
 	return predicate.Agent(sql.FieldEQ(FieldTenantID, v))
@@ -603,6 +613,106 @@ func ResourcePoolIDIsNil() predicate.Agent {
 // ResourcePoolIDNotNil applies the NotNil predicate on the "resource_pool_id" field.
 func ResourcePoolIDNotNil() predicate.Agent {
 	return predicate.Agent(sql.FieldNotNull(FieldResourcePoolID))
+}
+
+// TemplateFamilyIDEQ applies the EQ predicate on the "template_family_id" field.
+func TemplateFamilyIDEQ(v uuid.UUID) predicate.Agent {
+	return predicate.Agent(sql.FieldEQ(FieldTemplateFamilyID, v))
+}
+
+// TemplateFamilyIDNEQ applies the NEQ predicate on the "template_family_id" field.
+func TemplateFamilyIDNEQ(v uuid.UUID) predicate.Agent {
+	return predicate.Agent(sql.FieldNEQ(FieldTemplateFamilyID, v))
+}
+
+// TemplateFamilyIDIn applies the In predicate on the "template_family_id" field.
+func TemplateFamilyIDIn(vs ...uuid.UUID) predicate.Agent {
+	return predicate.Agent(sql.FieldIn(FieldTemplateFamilyID, vs...))
+}
+
+// TemplateFamilyIDNotIn applies the NotIn predicate on the "template_family_id" field.
+func TemplateFamilyIDNotIn(vs ...uuid.UUID) predicate.Agent {
+	return predicate.Agent(sql.FieldNotIn(FieldTemplateFamilyID, vs...))
+}
+
+// TemplateFamilyIDGT applies the GT predicate on the "template_family_id" field.
+func TemplateFamilyIDGT(v uuid.UUID) predicate.Agent {
+	return predicate.Agent(sql.FieldGT(FieldTemplateFamilyID, v))
+}
+
+// TemplateFamilyIDGTE applies the GTE predicate on the "template_family_id" field.
+func TemplateFamilyIDGTE(v uuid.UUID) predicate.Agent {
+	return predicate.Agent(sql.FieldGTE(FieldTemplateFamilyID, v))
+}
+
+// TemplateFamilyIDLT applies the LT predicate on the "template_family_id" field.
+func TemplateFamilyIDLT(v uuid.UUID) predicate.Agent {
+	return predicate.Agent(sql.FieldLT(FieldTemplateFamilyID, v))
+}
+
+// TemplateFamilyIDLTE applies the LTE predicate on the "template_family_id" field.
+func TemplateFamilyIDLTE(v uuid.UUID) predicate.Agent {
+	return predicate.Agent(sql.FieldLTE(FieldTemplateFamilyID, v))
+}
+
+// TemplateFamilyIDIsNil applies the IsNil predicate on the "template_family_id" field.
+func TemplateFamilyIDIsNil() predicate.Agent {
+	return predicate.Agent(sql.FieldIsNull(FieldTemplateFamilyID))
+}
+
+// TemplateFamilyIDNotNil applies the NotNil predicate on the "template_family_id" field.
+func TemplateFamilyIDNotNil() predicate.Agent {
+	return predicate.Agent(sql.FieldNotNull(FieldTemplateFamilyID))
+}
+
+// TemplateVersionIDEQ applies the EQ predicate on the "template_version_id" field.
+func TemplateVersionIDEQ(v uuid.UUID) predicate.Agent {
+	return predicate.Agent(sql.FieldEQ(FieldTemplateVersionID, v))
+}
+
+// TemplateVersionIDNEQ applies the NEQ predicate on the "template_version_id" field.
+func TemplateVersionIDNEQ(v uuid.UUID) predicate.Agent {
+	return predicate.Agent(sql.FieldNEQ(FieldTemplateVersionID, v))
+}
+
+// TemplateVersionIDIn applies the In predicate on the "template_version_id" field.
+func TemplateVersionIDIn(vs ...uuid.UUID) predicate.Agent {
+	return predicate.Agent(sql.FieldIn(FieldTemplateVersionID, vs...))
+}
+
+// TemplateVersionIDNotIn applies the NotIn predicate on the "template_version_id" field.
+func TemplateVersionIDNotIn(vs ...uuid.UUID) predicate.Agent {
+	return predicate.Agent(sql.FieldNotIn(FieldTemplateVersionID, vs...))
+}
+
+// TemplateVersionIDGT applies the GT predicate on the "template_version_id" field.
+func TemplateVersionIDGT(v uuid.UUID) predicate.Agent {
+	return predicate.Agent(sql.FieldGT(FieldTemplateVersionID, v))
+}
+
+// TemplateVersionIDGTE applies the GTE predicate on the "template_version_id" field.
+func TemplateVersionIDGTE(v uuid.UUID) predicate.Agent {
+	return predicate.Agent(sql.FieldGTE(FieldTemplateVersionID, v))
+}
+
+// TemplateVersionIDLT applies the LT predicate on the "template_version_id" field.
+func TemplateVersionIDLT(v uuid.UUID) predicate.Agent {
+	return predicate.Agent(sql.FieldLT(FieldTemplateVersionID, v))
+}
+
+// TemplateVersionIDLTE applies the LTE predicate on the "template_version_id" field.
+func TemplateVersionIDLTE(v uuid.UUID) predicate.Agent {
+	return predicate.Agent(sql.FieldLTE(FieldTemplateVersionID, v))
+}
+
+// TemplateVersionIDIsNil applies the IsNil predicate on the "template_version_id" field.
+func TemplateVersionIDIsNil() predicate.Agent {
+	return predicate.Agent(sql.FieldIsNull(FieldTemplateVersionID))
+}
+
+// TemplateVersionIDNotNil applies the NotNil predicate on the "template_version_id" field.
+func TemplateVersionIDNotNil() predicate.Agent {
+	return predicate.Agent(sql.FieldNotNull(FieldTemplateVersionID))
 }
 
 // TenantIDEQ applies the EQ predicate on the "tenant_id" field.

@@ -38,6 +38,10 @@ type Agent struct {
 	VirtualKeyID *uuid.UUID `json:"virtual_key_id,omitempty"`
 	// ResourcePoolID holds the value of the "resource_pool_id" field.
 	ResourcePoolID *uuid.UUID `json:"resource_pool_id,omitempty"`
+	// TemplateFamilyID holds the value of the "template_family_id" field.
+	TemplateFamilyID *uuid.UUID `json:"template_family_id,omitempty"`
+	// TemplateVersionID holds the value of the "template_version_id" field.
+	TemplateVersionID *uuid.UUID `json:"template_version_id,omitempty"`
 	// TenantID holds the value of the "tenant_id" field.
 	TenantID *uuid.UUID `json:"tenant_id,omitempty"`
 	// EnvironmentID holds the value of the "environment_id" field.
@@ -50,7 +54,7 @@ func (*Agent) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case agent.FieldConfigID, agent.FieldVirtualKeyID, agent.FieldResourcePoolID, agent.FieldTenantID, agent.FieldEnvironmentID:
+		case agent.FieldConfigID, agent.FieldVirtualKeyID, agent.FieldResourcePoolID, agent.FieldTemplateFamilyID, agent.FieldTemplateVersionID, agent.FieldTenantID, agent.FieldEnvironmentID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case agent.FieldName, agent.FieldAgentType, agent.FieldStatus, agent.FieldVMRef:
 			values[i] = new(sql.NullString)
@@ -142,6 +146,20 @@ func (_m *Agent) assignValues(columns []string, values []any) error {
 				_m.ResourcePoolID = new(uuid.UUID)
 				*_m.ResourcePoolID = *value.S.(*uuid.UUID)
 			}
+		case agent.FieldTemplateFamilyID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field template_family_id", values[i])
+			} else if value.Valid {
+				_m.TemplateFamilyID = new(uuid.UUID)
+				*_m.TemplateFamilyID = *value.S.(*uuid.UUID)
+			}
+		case agent.FieldTemplateVersionID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field template_version_id", values[i])
+			} else if value.Valid {
+				_m.TemplateVersionID = new(uuid.UUID)
+				*_m.TemplateVersionID = *value.S.(*uuid.UUID)
+			}
 		case agent.FieldTenantID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field tenant_id", values[i])
@@ -225,6 +243,16 @@ func (_m *Agent) String() string {
 	builder.WriteString(", ")
 	if v := _m.ResourcePoolID; v != nil {
 		builder.WriteString("resource_pool_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.TemplateFamilyID; v != nil {
+		builder.WriteString("template_family_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.TemplateVersionID; v != nil {
+		builder.WriteString("template_version_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")

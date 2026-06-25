@@ -36,8 +36,6 @@ func deployTestAgent(t *testing.T, r *Resolver) (context.Context, string) {
 
 	owner := mkUser(t, mr, ctx, "snapper", "s@x.io", model.RoleNameUser)
 	ownerCtx := userCtx(owner.ID, "user")
-	seedActiveTemplate(t, r, "goose")
-	ag, _ := mr.CreateAgent(ownerCtx, model.CreateAgentInput{Name: "snap-goose", AgentType: "goose"})
 	ref := "vault://oc"
 	createdPool, _ := mr.CreateResourcePool(adminCtx(), model.CreateResourcePoolInput{
 		Name: "oc1", Endpoint: vsrv.URL.String(), SecretRef: &ref,
@@ -47,12 +45,14 @@ func deployTestAgent(t *testing.T, r *Resolver) (context.Context, string) {
 	vc, _ := vcenter.Connect(ctx, vsrv.URL.String(), "u", "p", true)
 	vms, _ := vc.ListVMs(ctx)
 	_ = vc.Logout(ctx)
-	if _, err := mr.DeployAgent(ownerCtx, model.DeployAgentInput{
-		AgentID: ag.ID, Template: vms[0].Name, VMName: "snap-vm", ResourcePoolID: pool.ID,
-	}); err != nil {
+	familyID, versionID := seedOvaFamilyVersion(t, r, "goose", vms[0].Name)
+	dep, err := mr.DeployAgent(ownerCtx, model.DeployAgentInput{
+		Name: "snap-vm", TemplateFamilyID: familyID, TemplateVersionID: versionID, ResourcePoolID: pool.ID,
+	})
+	if err != nil {
 		t.Fatalf("DeployAgent: %v", err)
 	}
-	return ownerCtx, ag.ID
+	return ownerCtx, dep.Agent.ID
 }
 
 func TestSnapshotAgent_Lifecycle_VCSim(t *testing.T) {

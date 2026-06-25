@@ -40,16 +40,20 @@ type AddOvaTemplateVersionPayload struct {
 }
 
 type Agent struct {
-	ID        string       `json:"id"`
-	Name      string       `json:"name"`
-	Type      string       `json:"type"`
-	TypeLabel string       `json:"typeLabel"`
-	Status    AgentStatus  `json:"status"`
-	APIKey    *AgentAPIKey `json:"apiKey,omitempty"`
-	Owner     *User        `json:"owner,omitempty"`
-	Endpoint  *string      `json:"endpoint,omitempty"`
-	CreatedAt time.Time    `json:"createdAt"`
-	UpdatedAt time.Time    `json:"updatedAt"`
+	ID                string            `json:"id"`
+	Name              string            `json:"name"`
+	Type              string            `json:"type"`
+	TypeLabel         string            `json:"typeLabel"`
+	Status            AgentStatus       `json:"status"`
+	APIKey            *AgentAPIKey      `json:"apiKey,omitempty"`
+	Owner             *User             `json:"owner,omitempty"`
+	Endpoint          *string           `json:"endpoint,omitempty"`
+	TemplateFamilyID  *string           `json:"templateFamilyId,omitempty"`
+	TemplateVersionID *string           `json:"templateVersionId,omitempty"`
+	ResourcePoolID    *string           `json:"resourcePoolId,omitempty"`
+	Credentials       *AgentCredentials `json:"credentials,omitempty"`
+	CreatedAt         time.Time         `json:"createdAt"`
+	UpdatedAt         time.Time         `json:"updatedAt"`
 }
 
 type AgentAPIKey struct {
@@ -71,6 +75,10 @@ type AgentConnection struct {
 	Nodes      []Agent   `json:"nodes"`
 	TotalCount int       `json:"totalCount"`
 	PageInfo   *PageInfo `json:"pageInfo"`
+}
+
+type AgentCredentials struct {
+	Username string `json:"username"`
 }
 
 type AgentFilter struct {
@@ -341,18 +349,19 @@ type Department struct {
 }
 
 type DeployAgentInput struct {
-	AgentID            string   `json:"agentId"`
-	Template           string   `json:"template"`
-	VMName             string   `json:"vmName"`
-	ResourcePoolID     string   `json:"resourcePoolId"`
-	TargetResourcePool *string  `json:"targetResourcePool,omitempty"`
-	Hostname           *string  `json:"hostname,omitempty"`
-	MaxBudget          *float64 `json:"maxBudget,omitempty"`
+	Name              string   `json:"name"`
+	TemplateFamilyID  string   `json:"templateFamilyId"`
+	TemplateVersionID string   `json:"templateVersionId"`
+	ResourcePoolID    string   `json:"resourcePoolId"`
+	Hostname          *string  `json:"hostname,omitempty"`
+	MaxBudget         *float64 `json:"maxBudget,omitempty"`
 }
 
 type DeployedAgent struct {
-	Agent            *Agent `json:"agent"`
-	VirtualKeySecret string `json:"virtualKeySecret"`
+	Agent            *Agent              `json:"agent"`
+	VirtualKeySecret string              `json:"virtualKeySecret"`
+	TemplateVersion  *OvaTemplateVersion `json:"templateVersion"`
+	ResourcePool     *ResourcePool       `json:"resourcePool"`
 }
 
 type GatewayConnection struct {

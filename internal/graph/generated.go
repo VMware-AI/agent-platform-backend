@@ -67,16 +67,20 @@ type ComplexityRoot struct {
 	}
 
 	Agent struct {
-		APIKey    func(childComplexity int) int
-		CreatedAt func(childComplexity int) int
-		Endpoint  func(childComplexity int) int
-		ID        func(childComplexity int) int
-		Name      func(childComplexity int) int
-		Owner     func(childComplexity int) int
-		Status    func(childComplexity int) int
-		Type      func(childComplexity int) int
-		TypeLabel func(childComplexity int) int
-		UpdatedAt func(childComplexity int) int
+		APIKey            func(childComplexity int) int
+		CreatedAt         func(childComplexity int) int
+		Credentials       func(childComplexity int) int
+		Endpoint          func(childComplexity int) int
+		ID                func(childComplexity int) int
+		Name              func(childComplexity int) int
+		Owner             func(childComplexity int) int
+		ResourcePoolID    func(childComplexity int) int
+		Status            func(childComplexity int) int
+		TemplateFamilyID  func(childComplexity int) int
+		TemplateVersionID func(childComplexity int) int
+		Type              func(childComplexity int) int
+		TypeLabel         func(childComplexity int) int
+		UpdatedAt         func(childComplexity int) int
 	}
 
 	AgentApiKey struct {
@@ -98,6 +102,10 @@ type ComplexityRoot struct {
 		Nodes      func(childComplexity int) int
 		PageInfo   func(childComplexity int) int
 		TotalCount func(childComplexity int) int
+	}
+
+	AgentCredentials struct {
+		Username func(childComplexity int) int
 	}
 
 	AgentSnapshot struct {
@@ -273,6 +281,8 @@ type ComplexityRoot struct {
 
 	DeployedAgent struct {
 		Agent            func(childComplexity int) int
+		ResourcePool     func(childComplexity int) int
+		TemplateVersion  func(childComplexity int) int
 		VirtualKeySecret func(childComplexity int) int
 	}
 
@@ -736,6 +746,8 @@ type AgentResolver interface {
 
 	APIKey(ctx context.Context, obj *model.Agent) (*model.AgentAPIKey, error)
 	Owner(ctx context.Context, obj *model.Agent) (*model.User, error)
+
+	Credentials(ctx context.Context, obj *model.Agent) (*model.AgentCredentials, error)
 }
 type AgentConfigResolver interface {
 	Knowledge(ctx context.Context, obj *model.AgentConfig) ([]model.Artifact, error)
@@ -974,6 +986,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Agent.CreatedAt(childComplexity), true
+	case "Agent.credentials":
+		if e.ComplexityRoot.Agent.Credentials == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Agent.Credentials(childComplexity), true
 	case "Agent.endpoint":
 		if e.ComplexityRoot.Agent.Endpoint == nil {
 			break
@@ -998,12 +1016,30 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Agent.Owner(childComplexity), true
+	case "Agent.resourcePoolId":
+		if e.ComplexityRoot.Agent.ResourcePoolID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Agent.ResourcePoolID(childComplexity), true
 	case "Agent.status":
 		if e.ComplexityRoot.Agent.Status == nil {
 			break
 		}
 
 		return e.ComplexityRoot.Agent.Status(childComplexity), true
+	case "Agent.templateFamilyId":
+		if e.ComplexityRoot.Agent.TemplateFamilyID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Agent.TemplateFamilyID(childComplexity), true
+	case "Agent.templateVersionId":
+		if e.ComplexityRoot.Agent.TemplateVersionID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Agent.TemplateVersionID(childComplexity), true
 	case "Agent.type":
 		if e.ComplexityRoot.Agent.Type == nil {
 			break
@@ -1097,6 +1133,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.AgentConnection.TotalCount(childComplexity), true
+
+	case "AgentCredentials.username":
+		if e.ComplexityRoot.AgentCredentials.Username == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentCredentials.Username(childComplexity), true
 
 	case "AgentSnapshot.createdAt":
 		if e.ComplexityRoot.AgentSnapshot.CreatedAt == nil {
@@ -1739,6 +1782,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.DeployedAgent.Agent(childComplexity), true
+	case "DeployedAgent.resourcePool":
+		if e.ComplexityRoot.DeployedAgent.ResourcePool == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DeployedAgent.ResourcePool(childComplexity), true
+	case "DeployedAgent.templateVersion":
+		if e.ComplexityRoot.DeployedAgent.TemplateVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DeployedAgent.TemplateVersion(childComplexity), true
 	case "DeployedAgent.virtualKeySecret":
 		if e.ComplexityRoot.DeployedAgent.VirtualKeySecret == nil {
 			break
@@ -4538,6 +4593,15 @@ type Agent {
   owner: User @goField(forceResolver: true)
   # endpoint = the VM ref (moRef/name); null until deployed.
   endpoint: String
+  # Catalog provenance, set when the agent was deployed from an OVA version (智能体
+  # 市场 deploy). Null for agents created directly via createAgent.
+  templateFamilyId: ID
+  templateVersionId: ID
+  # The vCenter resource pool the agent's VM lives in (set at deploy). Null until deployed.
+  resourcePoolId: ID
+  # Run-as credentials for the agent's VM. Currently sources ` + "`" + `username` + "`" + ` from the
+  # owning user (the agent has no separate OS account today); resolver-computed.
+  credentials: AgentCredentials @goField(forceResolver: true)
   createdAt: Time!
   updatedAt: Time!
 }
@@ -4546,6 +4610,12 @@ type Agent {
 type AgentApiKey {
   id: ID!
   name: String!
+}
+
+# Run-as credentials surfaced for a deployed agent. Only ` + "`" + `username` + "`" + ` is exposed;
+# the password is never returned by the API (it is a Sensitive VM secret).
+type AgentCredentials {
+  username: String!
 }
 
 # Connection wrapper for the paged/filtered/sorted agent list (前后端整合契约).
@@ -4851,25 +4921,36 @@ extend type Mutation {
   removeMembership(userId: ID!, departmentId: ID!): Boolean!
 }
 `, BuiltIn: false},
-	{Name: "../../schema/deploy.graphql", Input: `# Agent deployment: provision the VM (gateway key + cloud-init + guestinfo).
-# See LLD-05 §3 + internal/deploy.
+	{Name: "../../schema/deploy.graphql", Input: `# Agent deployment: create a NEW agent from an OVA template version and provision
+# its VM (gateway key + cloud-init + guestinfo). See LLD-05 §3 + internal/deploy.
+#
+# Block 6 reshape (前端为主): the 智能体市场 deploys a fresh agent from a catalog
+# OVA version — it does NOT provision a pre-existing agent. Deploy ISSUES the
+# gateway key itself and returns its secret ONCE (virtualKeySecret); there is no
+# separate marketplace "pick / create a virtual key" step.
 
 type DeployedAgent {
   agent: Agent!
   # The issued virtual-key secret — returned ONCE.
   virtualKeySecret: String!
+  # The catalog version the agent was cloned from + the pool it landed in, so the
+  # console can confirm the deployment without a second round-trip.
+  templateVersion: OvaTemplateVersion!
+  resourcePool: ResourcePool!
 }
 
 input DeployAgentInput {
-  agentId: ID!
-  # Source OVA template VM to clone the agent from (ListTemplates).
-  template: String!
-  # Name to give the newly cloned agent VM.
-  vmName: String!
+  # Display name for the new agent (and its cloned VM).
+  name: String!
+  # The OVA template family (its ` + "`" + `type` + "`" + ` becomes the agent's kind) and the specific
+  # version to clone from (its ` + "`" + `ovaIdentifier` + "`" + ` is the source template).
+  templateFamilyId: ID!
+  templateVersionId: ID!
+  # Target vCenter resource pool to place the clone in.
   resourcePoolId: ID!
-  # Optional vSphere resource pool to place the clone in (empty = template's pool).
-  targetResourcePool: String
+  # Optional cloud-init hostname for the VM (defaults to none).
   hostname: String
+  # Optional per-key spend cap handed to the gateway when issuing the agent's key.
   maxBudget: Float
 }
 
@@ -4915,9 +4996,11 @@ extend type Query {
 }
 
 extend type Mutation {
-  # Owner or admin (checked in resolver). Issues a key, clones the VM from the
-  # template, injects cloud-init, powers on, and marks the agent running. On
-  # failure the VM and key are rolled back (no orphans).
+  # Create a NEW agent from a catalog OVA version and provision its VM. Creates the
+  # agent row (kind from the family), issues a gateway key, clones the VM from the
+  # version's ovaIdentifier, injects cloud-init, powers on, marks it running. On
+  # failure the VM, key and (if needed) the new agent row are rolled back (no
+  # orphans). Any authenticated user (owner = caller).
   deployAgent(input: DeployAgentInput!): DeployedAgent!
 
   # Owner or admin. Destroys the agent's VM, revokes its key, marks it stopped.
@@ -5941,6 +6024,14 @@ func (ec *executionContext) childFields_Agent(ctx context.Context, field graphql
 		return ec.fieldContext_Agent_owner(ctx, field)
 	case "endpoint":
 		return ec.fieldContext_Agent_endpoint(ctx, field)
+	case "templateFamilyId":
+		return ec.fieldContext_Agent_templateFamilyId(ctx, field)
+	case "templateVersionId":
+		return ec.fieldContext_Agent_templateVersionId(ctx, field)
+	case "resourcePoolId":
+		return ec.fieldContext_Agent_resourcePoolId(ctx, field)
+	case "credentials":
+		return ec.fieldContext_Agent_credentials(ctx, field)
 	case "createdAt":
 		return ec.fieldContext_Agent_createdAt(ctx, field)
 	case "updatedAt":
@@ -5989,6 +6080,14 @@ func (ec *executionContext) childFields_AgentConnection(ctx context.Context, fie
 		return ec.fieldContext_AgentConnection_pageInfo(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type AgentConnection", field.Name)
+}
+
+func (ec *executionContext) childFields_AgentCredentials(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "username":
+		return ec.fieldContext_AgentCredentials_username(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type AgentCredentials", field.Name)
 }
 
 func (ec *executionContext) childFields_AgentSnapshot(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -6339,6 +6438,10 @@ func (ec *executionContext) childFields_DeployedAgent(ctx context.Context, field
 		return ec.fieldContext_DeployedAgent_agent(ctx, field)
 	case "virtualKeySecret":
 		return ec.fieldContext_DeployedAgent_virtualKeySecret(ctx, field)
+	case "templateVersion":
+		return ec.fieldContext_DeployedAgent_templateVersion(ctx, field)
+	case "resourcePool":
+		return ec.fieldContext_DeployedAgent_resourcePool(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type DeployedAgent", field.Name)
 }
@@ -9352,6 +9455,107 @@ func (ec *executionContext) fieldContext_Agent_endpoint(_ context.Context, field
 	return graphql.NewScalarFieldContext("Agent", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _Agent_templateFamilyId(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Agent_templateFamilyId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TemplateFamilyID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOID2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Agent_templateFamilyId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Agent", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _Agent_templateVersionId(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Agent_templateVersionId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TemplateVersionID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOID2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Agent_templateVersionId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Agent", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _Agent_resourcePoolId(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Agent_resourcePoolId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ResourcePoolID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOID2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Agent_resourcePoolId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Agent", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _Agent_credentials(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Agent_credentials(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Agent().Credentials(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.AgentCredentials) graphql.Marshaler {
+			return ec.marshalOAgentCredentials2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentCredentials(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Agent_credentials(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Agent",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_AgentCredentials(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Agent_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -9699,6 +9903,29 @@ func (ec *executionContext) fieldContext_AgentConnection_pageInfo(_ context.Cont
 		},
 	}
 	return fc, nil
+}
+
+func (ec *executionContext) _AgentCredentials_username(ctx context.Context, field graphql.CollectedField, obj *model.AgentCredentials) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentCredentials_username(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Username, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentCredentials_username(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentCredentials", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _AgentSnapshot_name(ctx context.Context, field graphql.CollectedField, obj *model.AgentSnapshot) (ret graphql.Marshaler) {
@@ -12181,6 +12408,70 @@ func (ec *executionContext) _DeployedAgent_virtualKeySecret(ctx context.Context,
 }
 func (ec *executionContext) fieldContext_DeployedAgent_virtualKeySecret(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("DeployedAgent", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _DeployedAgent_templateVersion(ctx context.Context, field graphql.CollectedField, obj *model.DeployedAgent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DeployedAgent_templateVersion(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TemplateVersion, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.OvaTemplateVersion) graphql.Marshaler {
+			return ec.marshalNOvaTemplateVersion2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DeployedAgent_templateVersion(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeployedAgent",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_OvaTemplateVersion(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeployedAgent_resourcePool(ctx context.Context, field graphql.CollectedField, obj *model.DeployedAgent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DeployedAgent_resourcePool(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ResourcePool, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ResourcePool) graphql.Marshaler {
+			return ec.marshalNResourcePool2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DeployedAgent_resourcePool(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeployedAgent",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ResourcePool(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _GatewayConnection_id(ctx context.Context, field graphql.CollectedField, obj *model.GatewayConnection) (ret graphql.Marshaler) {
@@ -25332,34 +25623,34 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"agentId", "template", "vmName", "resourcePoolId", "targetResourcePool", "hostname", "maxBudget"}
+	fieldsInOrder := [...]string{"name", "templateFamilyId", "templateVersionId", "resourcePoolId", "hostname", "maxBudget"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "agentId":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("agentId"))
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "templateFamilyId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("templateFamilyId"))
 			data, err := ec.unmarshalNID2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.AgentID = data
-		case "template":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("template"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			it.TemplateFamilyID = data
+		case "templateVersionId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("templateVersionId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.Template = data
-		case "vmName":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("vmName"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.VMName = data
+			it.TemplateVersionID = data
 		case "resourcePoolId":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourcePoolId"))
 			data, err := ec.unmarshalNID2string(ctx, v)
@@ -25367,13 +25658,6 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 				return it, err
 			}
 			it.ResourcePoolID = data
-		case "targetResourcePool":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetResourcePool"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.TargetResourcePool = data
 		case "hostname":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hostname"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -27428,6 +27712,57 @@ func (ec *executionContext) _Agent(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.RequiredNull {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "templateFamilyId":
+			out.Values[i] = ec._Agent_templateFamilyId(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "templateVersionId":
+			out.Values[i] = ec._Agent_templateVersionId(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "resourcePoolId":
+			out.Values[i] = ec._Agent_resourcePoolId(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "credentials":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Agent_credentials(ctx, field, obj)
+				if res == graphql.RequiredNull {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "createdAt":
 			out.Values[i] = ec._Agent_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -27628,6 +27963,45 @@ func (ec *executionContext) _AgentConnection(ctx context.Context, sel ast.Select
 			}
 		case "pageInfo":
 			out.Values[i] = ec._AgentConnection_pageInfo(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var agentCredentialsImplementors = []string{"AgentCredentials"}
+
+func (ec *executionContext) _AgentCredentials(ctx context.Context, sel ast.SelectionSet, obj *model.AgentCredentials) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, agentCredentialsImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AgentCredentials")
+		case "username":
+			out.Values[i] = ec._AgentCredentials_username(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -28964,6 +29338,16 @@ func (ec *executionContext) _DeployedAgent(ctx context.Context, sel ast.Selectio
 			}
 		case "virtualKeySecret":
 			out.Values[i] = ec._DeployedAgent_virtualKeySecret(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "templateVersion":
+			out.Values[i] = ec._DeployedAgent_templateVersion(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "resourcePool":
+			out.Values[i] = ec._DeployedAgent_resourcePool(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -35582,6 +35966,13 @@ func (ec *executionContext) marshalOAgentApiKey2ᚖgithubᚗcomᚋVMwareᚑAIᚋ
 		return graphql.Null
 	}
 	return ec._AgentApiKey(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOAgentCredentials2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentCredentials(ctx context.Context, sel ast.SelectionSet, v *model.AgentCredentials) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._AgentCredentials(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOAgentFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentFilter(ctx context.Context, v any) (*model.AgentFilter, error) {

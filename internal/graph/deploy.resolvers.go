@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/rotationcommand"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
@@ -20,8 +21,12 @@ import (
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
-// DeployAgent provisions the agent's VM: resolve pool credentials → connect
-// vCenter → issue a gateway key + inject cloud-init via guestinfo → mark running.
+// DeployAgent creates a NEW agent from a catalog OVA version and provisions its
+// VM: create the agent row → resolve pool credentials → connect vCenter → issue a
+// gateway key + clone the VM from the version's ovaIdentifier + inject cloud-init
+// via guestinfo → mark running. On any post-create failure the VM, the gateway
+// key and the just-created agent row are all rolled back (no orphans). Block 6
+// reshape: the 智能体市场 deploys a fresh agent (前端为主 contract).
 func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAgentInput) (*model.DeployedAgent, error) {
 	cu := auth.FromContext(ctx)
 	if cu == nil {
@@ -30,34 +35,86 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	if r.Secrets == nil || r.VCenterConnect == nil || r.Gateway == nil {
 		return nil, gqlerror.Errorf("deploy is not configured (gateway/secrets/vcenter required)")
 	}
-
-	agentID, err := uuid.Parse(input.AgentID)
-	if err != nil {
-		return nil, gqlerror.Errorf("invalid agentId")
+	if input.Name == "" {
+		return nil, gqlerror.Errorf("name is required")
 	}
-	ag, err := r.getOwnedAgent(ctx, agentID, cu)
+	ownerID, err := uuid.Parse(cu.ID)
 	if err != nil {
+		return nil, gqlerror.Errorf("invalid current user")
+	}
+
+	// 1) Resolve the catalog family (its `type` = the agent kind) + the chosen
+	//    version (its ova_identifier = the source template) and validate the
+	//    version belongs to the family.
+	familyID, err := uuid.Parse(input.TemplateFamilyID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid templateFamilyId")
+	}
+	versionID, err := uuid.Parse(input.TemplateVersionID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid templateVersionId")
+	}
+	fam, err := r.Ent.OvaTemplateFamily.Get(ctx, familyID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, gqlerror.Errorf("template family not found")
+		}
 		return nil, err
 	}
+	version, err := r.Ent.OvaTemplateVersion.Get(ctx, versionID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, gqlerror.Errorf("template version not found")
+		}
+		return nil, err
+	}
+	verFamily, err := version.QueryFamily().Only(ctx)
+	if err != nil || verFamily.ID != familyID {
+		return nil, gqlerror.Errorf("template version does not belong to the family")
+	}
 
+	// 2) Resolve the target pool + its vCenter credentials.
 	poolID, err := uuid.Parse(input.ResourcePoolID)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid resourcePoolId")
 	}
 	pool, err := r.Ent.ResourcePool.Get(ctx, poolID)
 	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, gqlerror.Errorf("resource pool not found")
+		}
 		return nil, err
 	}
 	if pool.SecretRef == "" {
 		return nil, gqlerror.Errorf("resource pool has no secret_ref")
 	}
-
 	cred, err := r.Secrets.Resolve(ctx, pool.SecretRef)
 	if err != nil {
 		return nil, fmt.Errorf("resolve pool credentials: %w", err)
 	}
+
+	// 3) Create the agent row up front (status=provisioning) so the VM/key are
+	//    always tied to a persisted owner. tenant from the caller's write scope.
+	tenantID, err := writeTenant(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ag, err := r.Ent.Agent.Create().
+		SetName(input.Name).
+		SetAgentType(fam.Type).
+		SetOwnerUserID(ownerID).
+		SetNillableTenantID(tenantID).
+		SetResourcePoolID(poolID).
+		SetTemplateFamilyID(familyID).
+		SetTemplateVersionID(versionID).
+		Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("create agent: %w", err)
+	}
+
 	conn, err := r.VCenterConnect(ctx, pool.Endpoint, cred.Username, cred.Password, r.VCenterInsecure)
 	if err != nil {
+		r.deleteAgentRow(ctx, ag)
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
 		return nil, fmt.Errorf("connect vcenter: %w", err)
 	}
@@ -66,14 +123,18 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	// so it is embedded into cloud-init at deploy — no fetch from the VM (LLD-09).
 	defaultConfig, configPath := r.resolveAgentConfig(ctx, ag)
 
+	// The cloned VM name = the agent name (the console treats name as the handle).
+	vmName := input.Name
+
 	// Issue a one-time agent-manager enroll token (LLD-08 §4.2) and inject it via
 	// guestinfo so the daemon can exchange it for a long-lived VM token on first
 	// boot. vm_id = the VM name (stable per deploy). Skipped if agent-manager is
 	// not configured.
 	var enrollToken string
 	if r.AgentMgr != nil {
-		tok, err := r.AgentMgr.IssueEnrollment(ctx, ag.ID, input.VMName, ag.TenantID)
+		tok, err := r.AgentMgr.IssueEnrollment(ctx, ag.ID, vmName, ag.TenantID)
 		if err != nil {
+			r.deleteAgentRow(ctx, ag)
 			r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
 			return nil, fmt.Errorf("issue enrollment: %w", err)
 		}
@@ -84,29 +145,29 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	res, err := svc.Provision(ctx, deploy.Request{
 		AgentName:        ag.Name,
 		UserID:           ag.OwnerUserID.String(),
-		Template:         input.Template,
-		VMName:           input.VMName,
-		ResourcePool:     derefString(input.TargetResourcePool),
+		Template:         version.OvaIdentifier, // clone from the catalog version's OVA
+		VMName:           vmName,
 		Hostname:         derefString(input.Hostname),
 		MaxBudget:        input.MaxBudget,
 		DefaultConfig:    defaultConfig,
 		ConfigPath:       configPath,
-		VMID:             input.VMName,
+		VMID:             vmName,
 		EnrollToken:      enrollToken,
 		ControlPlaneURL:  r.ControlPlaneURL,
 		KnowledgePackIDs: r.resolveAgentKnowledge(ctx, ag), // LLD-11 K2: 下发知识包引用
 		KnowledgeRoot:    r.resolveKnowledgeRoot(ctx, ag),  // LLD-11 K4: 按 kind 的解包根
 	})
 	if err != nil {
+		// Provision rolls back its own partial work (VM+key); the agent row is ours.
+		r.deleteAgentRow(ctx, ag)
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
 		return nil, fmt.Errorf("provision: %w", err)
 	}
 
 	// Persist the issued key (secret is Sensitive) and mark the agent running.
 	// Provision already succeeded: the VM is running and a live gateway key exists.
-	// If either write below fails we must compensate (destroy VM + revoke key),
-	// else we leak an orphan VM and an ungoverned key — the same invariant
-	// deploy.Service.rollback enforces for failures *inside* Provision.
+	// If either write below fails we must compensate (destroy VM + revoke key +
+	// drop the agent row), else we leak an orphan VM and an ungoverned key.
 	vkCreate := r.Ent.VirtualKey.Create().
 		SetLitellmKey(res.VirtualKey).
 		SetUserID(ag.OwnerUserID).
@@ -117,7 +178,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	}
 	vk, err := vkCreate.Save(ctx)
 	if err != nil {
-		r.rollbackDeploy(ctx, conn, ag, input.VMName, res.VirtualKey)
+		r.rollbackDeployCreate(ctx, conn, ag, vmName, res.VirtualKey)
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
 		return nil, fmt.Errorf("persist virtual key failed: %w", err)
 	}
@@ -125,9 +186,8 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	// breaking the compensation that needs the original row.
 	updated, err := r.Ent.Agent.UpdateOne(ag).
 		SetStatus(agent.StatusRunning).
-		SetVMRef(input.VMName).
+		SetVMRef(vmName).
 		SetVirtualKeyID(vk.ID).
-		SetResourcePoolID(poolID).
 		Save(ctx)
 	if err != nil {
 		// The vk row persisted but the agent didn't finalize; drop the now-dangling
@@ -135,7 +195,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		if delErr := r.Ent.VirtualKey.DeleteOne(vk).Exec(context.WithoutCancel(ctx)); delErr != nil {
 			log.Printf("deploy rollback: delete dangling vk row %s failed: %v", vk.ID, delErr)
 		}
-		r.rollbackDeploy(ctx, conn, ag, input.VMName, res.VirtualKey)
+		r.rollbackDeployCreate(ctx, conn, ag, vmName, res.VirtualKey)
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
 		return nil, fmt.Errorf("finalize agent failed: %w", err)
 	}
@@ -144,6 +204,8 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	return &model.DeployedAgent{
 		Agent:            toModelAgent(updated),
 		VirtualKeySecret: res.VirtualKey,
+		TemplateVersion:  toModelOvaVersion(version, familyID.String()),
+		ResourcePool:     toModelResourcePool(pool),
 	}, nil
 }
 

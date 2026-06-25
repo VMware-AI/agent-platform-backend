@@ -22,6 +22,8 @@ var (
 		{Name: "config_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "virtual_key_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "resource_pool_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "template_family_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "template_version_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "environment_id", Type: field.TypeUUID, Nullable: true},
 	}

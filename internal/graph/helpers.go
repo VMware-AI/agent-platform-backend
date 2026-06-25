@@ -489,6 +489,18 @@ func toModelAgent(a *ent.Agent) *model.Agent {
 		v := a.VMRef
 		m.Endpoint = &v
 	}
+	if a.TemplateFamilyID != nil {
+		s := a.TemplateFamilyID.String()
+		m.TemplateFamilyID = &s
+	}
+	if a.TemplateVersionID != nil {
+		s := a.TemplateVersionID.String()
+		m.TemplateVersionID = &s
+	}
+	if a.ResourcePoolID != nil {
+		s := a.ResourcePoolID.String()
+		m.ResourcePoolID = &s
+	}
 	return m
 }
 
@@ -1202,6 +1214,33 @@ func (r *Resolver) rollbackDeploy(ctx context.Context, conn VCenterClient, ag *e
 	if _, err := r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusException).Save(cctx); err != nil {
 		log.Printf("deploy rollback: mark agent %s exception failed: %v", ag.ID, err)
 	}
+}
+
+// deleteAgentRow drops a freshly-created agent row when its deploy aborts before
+// any VM/key exists (create-from-OVA flow). The row was created by DeployAgent
+// itself, so removing it leaves no orphan. Detached ctx so cleanup runs even if
+// the request ctx was canceled. Failures are logged (never swallowed).
+func (r *Resolver) deleteAgentRow(ctx context.Context, ag *ent.Agent) {
+	if err := r.Ent.Agent.DeleteOne(ag).Exec(context.WithoutCancel(ctx)); err != nil {
+		log.Printf("deploy rollback: delete agent row %s failed: %v", ag.ID, err)
+	}
+}
+
+// rollbackDeployCreate compensates a failed create-from-OVA deploy AFTER the VM
+// and gateway key already exist: destroy the VM, revoke the key, and delete the
+// agent row (it was created by this same deploy and never went live, so unlike
+// rollbackDeploy we drop it rather than mark it exception).
+func (r *Resolver) rollbackDeployCreate(ctx context.Context, conn VCenterClient, ag *ent.Agent, vmName, key string) {
+	cctx := context.WithoutCancel(ctx)
+	if err := conn.Destroy(cctx, vmName); err != nil {
+		log.Printf("deploy rollback: orphan VM %q, destroy failed: %v", vmName, err)
+	}
+	if r.Gateway != nil {
+		if err := r.Gateway.DeleteKey(cctx, key); err != nil {
+			log.Printf("deploy rollback: orphan gateway key, revoke failed: %v", err)
+		}
+	}
+	r.deleteAgentRow(cctx, ag)
 }
 
 // connectAgentVM resolves an agent the caller owns, dials its resource pool's

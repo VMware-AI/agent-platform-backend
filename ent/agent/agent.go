@@ -35,6 +35,10 @@ const (
 	FieldVirtualKeyID = "virtual_key_id"
 	// FieldResourcePoolID holds the string denoting the resource_pool_id field in the database.
 	FieldResourcePoolID = "resource_pool_id"
+	// FieldTemplateFamilyID holds the string denoting the template_family_id field in the database.
+	FieldTemplateFamilyID = "template_family_id"
+	// FieldTemplateVersionID holds the string denoting the template_version_id field in the database.
+	FieldTemplateVersionID = "template_version_id"
 	// FieldTenantID holds the string denoting the tenant_id field in the database.
 	FieldTenantID = "tenant_id"
 	// FieldEnvironmentID holds the string denoting the environment_id field in the database.
@@ -56,6 +60,8 @@ var Columns = []string{
 	FieldConfigID,
 	FieldVirtualKeyID,
 	FieldResourcePoolID,
+	FieldTemplateFamilyID,
+	FieldTemplateVersionID,
 	FieldTenantID,
 	FieldEnvironmentID,
 }
@@ -169,6 +175,16 @@ func ByVirtualKeyID(opts ...sql.OrderTermOption) OrderOption {
 // ByResourcePoolID orders the results by the resource_pool_id field.
 func ByResourcePoolID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldResourcePoolID, opts...).ToFunc()
+}
+
+// ByTemplateFamilyID orders the results by the template_family_id field.
+func ByTemplateFamilyID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTemplateFamilyID, opts...).ToFunc()
+}
+
+// ByTemplateVersionID orders the results by the template_version_id field.
+func ByTemplateVersionID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTemplateVersionID, opts...).ToFunc()
 }
 
 // ByTenantID orders the results by the tenant_id field.

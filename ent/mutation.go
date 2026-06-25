@@ -85,25 +85,27 @@ const (
 // AgentMutation represents an operation that mutates the Agent nodes in the graph.
 type AgentMutation struct {
 	config
-	op               Op
-	typ              string
-	id               *uuid.UUID
-	created_at       *time.Time
-	updated_at       *time.Time
-	name             *string
-	agent_type       *string
-	status           *agent.Status
-	owner_user_id    *uuid.UUID
-	vm_ref           *string
-	config_id        *uuid.UUID
-	virtual_key_id   *uuid.UUID
-	resource_pool_id *uuid.UUID
-	tenant_id        *uuid.UUID
-	environment_id   *uuid.UUID
-	clearedFields    map[string]struct{}
-	done             bool
-	oldValue         func(context.Context) (*Agent, error)
-	predicates       []predicate.Agent
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	created_at          *time.Time
+	updated_at          *time.Time
+	name                *string
+	agent_type          *string
+	status              *agent.Status
+	owner_user_id       *uuid.UUID
+	vm_ref              *string
+	config_id           *uuid.UUID
+	virtual_key_id      *uuid.UUID
+	resource_pool_id    *uuid.UUID
+	template_family_id  *uuid.UUID
+	template_version_id *uuid.UUID
+	tenant_id           *uuid.UUID
+	environment_id      *uuid.UUID
+	clearedFields       map[string]struct{}
+	done                bool
+	oldValue            func(context.Context) (*Agent, error)
+	predicates          []predicate.Agent
 }
 
 var _ ent.Mutation = (*AgentMutation)(nil)
@@ -622,6 +624,104 @@ func (m *AgentMutation) ResetResourcePoolID() {
 	delete(m.clearedFields, agent.FieldResourcePoolID)
 }
 
+// SetTemplateFamilyID sets the "template_family_id" field.
+func (m *AgentMutation) SetTemplateFamilyID(u uuid.UUID) {
+	m.template_family_id = &u
+}
+
+// TemplateFamilyID returns the value of the "template_family_id" field in the mutation.
+func (m *AgentMutation) TemplateFamilyID() (r uuid.UUID, exists bool) {
+	v := m.template_family_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTemplateFamilyID returns the old "template_family_id" field's value of the Agent entity.
+// If the Agent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentMutation) OldTemplateFamilyID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTemplateFamilyID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTemplateFamilyID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTemplateFamilyID: %w", err)
+	}
+	return oldValue.TemplateFamilyID, nil
+}
+
+// ClearTemplateFamilyID clears the value of the "template_family_id" field.
+func (m *AgentMutation) ClearTemplateFamilyID() {
+	m.template_family_id = nil
+	m.clearedFields[agent.FieldTemplateFamilyID] = struct{}{}
+}
+
+// TemplateFamilyIDCleared returns if the "template_family_id" field was cleared in this mutation.
+func (m *AgentMutation) TemplateFamilyIDCleared() bool {
+	_, ok := m.clearedFields[agent.FieldTemplateFamilyID]
+	return ok
+}
+
+// ResetTemplateFamilyID resets all changes to the "template_family_id" field.
+func (m *AgentMutation) ResetTemplateFamilyID() {
+	m.template_family_id = nil
+	delete(m.clearedFields, agent.FieldTemplateFamilyID)
+}
+
+// SetTemplateVersionID sets the "template_version_id" field.
+func (m *AgentMutation) SetTemplateVersionID(u uuid.UUID) {
+	m.template_version_id = &u
+}
+
+// TemplateVersionID returns the value of the "template_version_id" field in the mutation.
+func (m *AgentMutation) TemplateVersionID() (r uuid.UUID, exists bool) {
+	v := m.template_version_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTemplateVersionID returns the old "template_version_id" field's value of the Agent entity.
+// If the Agent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentMutation) OldTemplateVersionID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTemplateVersionID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTemplateVersionID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTemplateVersionID: %w", err)
+	}
+	return oldValue.TemplateVersionID, nil
+}
+
+// ClearTemplateVersionID clears the value of the "template_version_id" field.
+func (m *AgentMutation) ClearTemplateVersionID() {
+	m.template_version_id = nil
+	m.clearedFields[agent.FieldTemplateVersionID] = struct{}{}
+}
+
+// TemplateVersionIDCleared returns if the "template_version_id" field was cleared in this mutation.
+func (m *AgentMutation) TemplateVersionIDCleared() bool {
+	_, ok := m.clearedFields[agent.FieldTemplateVersionID]
+	return ok
+}
+
+// ResetTemplateVersionID resets all changes to the "template_version_id" field.
+func (m *AgentMutation) ResetTemplateVersionID() {
+	m.template_version_id = nil
+	delete(m.clearedFields, agent.FieldTemplateVersionID)
+}
+
 // SetTenantID sets the "tenant_id" field.
 func (m *AgentMutation) SetTenantID(u uuid.UUID) {
 	m.tenant_id = &u
@@ -754,7 +854,7 @@ func (m *AgentMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AgentMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 14)
 	if m.created_at != nil {
 		fields = append(fields, agent.FieldCreatedAt)
 	}
@@ -784,6 +884,12 @@ func (m *AgentMutation) Fields() []string {
 	}
 	if m.resource_pool_id != nil {
 		fields = append(fields, agent.FieldResourcePoolID)
+	}
+	if m.template_family_id != nil {
+		fields = append(fields, agent.FieldTemplateFamilyID)
+	}
+	if m.template_version_id != nil {
+		fields = append(fields, agent.FieldTemplateVersionID)
 	}
 	if m.tenant_id != nil {
 		fields = append(fields, agent.FieldTenantID)
@@ -819,6 +925,10 @@ func (m *AgentMutation) Field(name string) (ent.Value, bool) {
 		return m.VirtualKeyID()
 	case agent.FieldResourcePoolID:
 		return m.ResourcePoolID()
+	case agent.FieldTemplateFamilyID:
+		return m.TemplateFamilyID()
+	case agent.FieldTemplateVersionID:
+		return m.TemplateVersionID()
 	case agent.FieldTenantID:
 		return m.TenantID()
 	case agent.FieldEnvironmentID:
@@ -852,6 +962,10 @@ func (m *AgentMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldVirtualKeyID(ctx)
 	case agent.FieldResourcePoolID:
 		return m.OldResourcePoolID(ctx)
+	case agent.FieldTemplateFamilyID:
+		return m.OldTemplateFamilyID(ctx)
+	case agent.FieldTemplateVersionID:
+		return m.OldTemplateVersionID(ctx)
 	case agent.FieldTenantID:
 		return m.OldTenantID(ctx)
 	case agent.FieldEnvironmentID:
@@ -935,6 +1049,20 @@ func (m *AgentMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetResourcePoolID(v)
 		return nil
+	case agent.FieldTemplateFamilyID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTemplateFamilyID(v)
+		return nil
+	case agent.FieldTemplateVersionID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTemplateVersionID(v)
+		return nil
 	case agent.FieldTenantID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
@@ -991,6 +1119,12 @@ func (m *AgentMutation) ClearedFields() []string {
 	if m.FieldCleared(agent.FieldResourcePoolID) {
 		fields = append(fields, agent.FieldResourcePoolID)
 	}
+	if m.FieldCleared(agent.FieldTemplateFamilyID) {
+		fields = append(fields, agent.FieldTemplateFamilyID)
+	}
+	if m.FieldCleared(agent.FieldTemplateVersionID) {
+		fields = append(fields, agent.FieldTemplateVersionID)
+	}
 	if m.FieldCleared(agent.FieldTenantID) {
 		fields = append(fields, agent.FieldTenantID)
 	}
@@ -1022,6 +1156,12 @@ func (m *AgentMutation) ClearField(name string) error {
 		return nil
 	case agent.FieldResourcePoolID:
 		m.ClearResourcePoolID()
+		return nil
+	case agent.FieldTemplateFamilyID:
+		m.ClearTemplateFamilyID()
+		return nil
+	case agent.FieldTemplateVersionID:
+		m.ClearTemplateVersionID()
 		return nil
 	case agent.FieldTenantID:
 		m.ClearTenantID()
@@ -1066,6 +1206,12 @@ func (m *AgentMutation) ResetField(name string) error {
 		return nil
 	case agent.FieldResourcePoolID:
 		m.ResetResourcePoolID()
+		return nil
+	case agent.FieldTemplateFamilyID:
+		m.ResetTemplateFamilyID()
+		return nil
+	case agent.FieldTemplateVersionID:
+		m.ResetTemplateVersionID()
 		return nil
 	case agent.FieldTenantID:
 		m.ResetTenantID()

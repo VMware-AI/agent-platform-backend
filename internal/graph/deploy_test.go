@@ -27,6 +27,31 @@ func tenantAdminCtx(id, tenantID string) context.Context {
 		&auth.CurrentUser{ID: id, Role: auth.RoleTenantAdmin, TenantID: tenantID})
 }
 
+// seedOvaFamilyVersion creates an OVA template family + one version whose
+// ova_identifier is the source template to clone from. Returns the family id and
+// version id. Used by the create-from-OVA deploy flow tests.
+func seedOvaFamilyVersion(t *testing.T, r *Resolver, kind, ovaIdentifier string) (familyID, versionID string) {
+	t.Helper()
+	ctx := context.Background()
+	fam, err := r.Ent.OvaTemplateFamily.Create().
+		SetName(kind + "-family").
+		SetType(kind).
+		SetDescription("test family").
+		Save(ctx)
+	if err != nil {
+		t.Fatalf("seed ova family: %v", err)
+	}
+	ver, err := r.Ent.OvaTemplateVersion.Create().
+		SetVersion("1.0.0").
+		SetOvaIdentifier(ovaIdentifier).
+		SetFamilyID(fam.ID).
+		Save(ctx)
+	if err != nil {
+		t.Fatalf("seed ova version: %v", err)
+	}
+	return fam.ID.String(), ver.ID.String()
+}
+
 func TestDeployAgent_EndToEnd(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()
@@ -53,15 +78,11 @@ func TestDeployAgent_EndToEnd(t *testing.T) {
 
 	mr := &mutationResolver{r}
 
-	// create owner + agent + pool (pool endpoint points at vcsim)
+	// create owner + pool (pool endpoint points at vcsim); the agent is created BY
+	// DeployAgent from the OVA version (no pre-existing agent).
 	owner := mkUser(t, mr, ctx, "deployer", "d@x.io", model.RoleNameUser)
 	ownerCtx := userCtx(owner.ID, "user")
-	seedActiveTemplate(t, mr.Resolver, "goose")
 
-	ag, err := mr.CreateAgent(ownerCtx, model.CreateAgentInput{Name: "alice-goose", AgentType: "goose"})
-	if err != nil {
-		t.Fatalf("CreateAgent: %v", err)
-	}
 	ref := "vault://oc1"
 	createdPool, err := mr.CreateResourcePool(adminCtx(), model.CreateResourcePoolInput{
 		Name: "oc1", Endpoint: vsrv.URL.String(), SecretRef: &ref,
@@ -71,18 +92,22 @@ func TestDeployAgent_EndToEnd(t *testing.T) {
 	}
 	pool := createdPool.Pool
 
-	// pick a vcsim VM to target
+	// pick a vcsim VM to use as the OVA source template
 	vc, _ := vcenter.Connect(ctx, vsrv.URL.String(), "svc", "pw", true)
 	vms, _ := vc.ListVMs(ctx)
 	_ = vc.Logout(ctx)
 	if len(vms) == 0 {
 		t.Fatal("no vcsim vms")
 	}
+	familyID, versionID := seedOvaFamilyVersion(t, r, "goose", vms[0].Name)
 
 	hostname := "agent-vm-01"
 	dep, err := mr.DeployAgent(ownerCtx, model.DeployAgentInput{
-		AgentID: ag.ID, Template: vms[0].Name, VMName: "agent-alice-deployed",
-		ResourcePoolID: pool.ID, Hostname: &hostname,
+		Name:              "alice-goose",
+		TemplateFamilyID:  familyID,
+		TemplateVersionID: versionID,
+		ResourcePoolID:    pool.ID,
+		Hostname:          &hostname,
 	})
 	if err != nil {
 		t.Fatalf("DeployAgent: %v", err)
@@ -93,8 +118,37 @@ func TestDeployAgent_EndToEnd(t *testing.T) {
 	if dep.Agent.Status != model.AgentStatusRunning {
 		t.Fatalf("agent status = %v, want running", dep.Agent.Status)
 	}
-	if dep.Agent.Endpoint == nil || *dep.Agent.Endpoint != "agent-alice-deployed" {
+	if dep.Agent.Type != "goose" {
+		t.Fatalf("agent type = %q, want goose (from family)", dep.Agent.Type)
+	}
+	// VM name = agent name in the new flow.
+	if dep.Agent.Endpoint == nil || *dep.Agent.Endpoint != "alice-goose" {
 		t.Fatalf("endpoint (vm_ref) not set: %+v", dep.Agent.Endpoint)
+	}
+	// the deployed-agent payload echoes the catalog provenance + target pool.
+	if dep.TemplateVersion == nil || dep.TemplateVersion.ID != versionID {
+		t.Fatalf("templateVersion not returned: %+v", dep.TemplateVersion)
+	}
+	if dep.ResourcePool == nil || dep.ResourcePool.ID != pool.ID {
+		t.Fatalf("resourcePool not returned: %+v", dep.ResourcePool)
+	}
+	if dep.Agent.TemplateFamilyID == nil || *dep.Agent.TemplateFamilyID != familyID {
+		t.Fatalf("agent.templateFamilyId not set: %+v", dep.Agent.TemplateFamilyID)
+	}
+	if dep.Agent.TemplateVersionID == nil || *dep.Agent.TemplateVersionID != versionID {
+		t.Fatalf("agent.templateVersionId not set: %+v", dep.Agent.TemplateVersionID)
+	}
+	if dep.Agent.ResourcePoolID == nil || *dep.Agent.ResourcePoolID != pool.ID {
+		t.Fatalf("agent.resourcePoolId not set: %+v", dep.Agent.ResourcePoolID)
+	}
+
+	// credentials.username sources from the owning user (no separate OS account).
+	creds, err := (&agentResolver{r}).Credentials(ctx, dep.Agent)
+	if err != nil {
+		t.Fatalf("Credentials: %v", err)
+	}
+	if creds == nil || creds.Username != "deployer" {
+		t.Fatalf("credentials.username = %+v, want deployer", creds)
 	}
 
 	// a virtual key row was persisted for the owner
@@ -107,6 +161,50 @@ func TestDeployAgent_EndToEnd(t *testing.T) {
 	kid := uuid.MustParse(keys[0].ID)
 	if tok := r.Ent.VirtualKey.GetX(ctx, kid).LitellmToken; tok != "tok-fake-123" {
 		t.Fatalf("deploy did not persist litellm_token: %q", tok)
+	}
+}
+
+// TestDeployAgent_VersionFamilyMismatch rejects a version that belongs to a
+// different family (guards against a malformed deploy form submission).
+func TestDeployAgent_VersionFamilyMismatch(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	r.Gateway = &fakeGateway{}
+	r.Secrets = secrets.NewStaticResolver(map[string]secrets.Credential{
+		"vault://oc1": {Username: "svc", Password: "pw"},
+	})
+	r.VCenterConnect = func(ctx context.Context, endpoint, user, pass string, insecure bool) (VCenterClient, error) {
+		return &fakeVCenter{}, nil
+	}
+	mr := &mutationResolver{r}
+	owner := mkUser(t, mr, ctx, "mismatcher", "m@x.io", model.RoleNameUser)
+	ownerCtx := userCtx(owner.ID, "user")
+
+	ref := "vault://oc1"
+	createdPool, err := mr.CreateResourcePool(adminCtx(), model.CreateResourcePoolInput{
+		Name: "oc1", Endpoint: "https://vc.example", SecretRef: &ref,
+	})
+	if err != nil {
+		t.Fatalf("CreateResourcePool: %v", err)
+	}
+	famA, _ := seedOvaFamilyVersion(t, r, "goose", "tmpl-a")
+	_, verB := seedOvaFamilyVersion(t, r, "xiaoguai", "tmpl-b")
+
+	// version from family B paired with family A → rejected.
+	_, err = mr.DeployAgent(ownerCtx, model.DeployAgentInput{
+		Name:              "bad-deploy",
+		TemplateFamilyID:  famA,
+		TemplateVersionID: verB,
+		ResourcePoolID:    createdPool.Pool.ID,
+	})
+	if err == nil {
+		t.Fatal("expected mismatch error, got nil")
+	}
+	// no orphan agent row persisted.
+	if n := r.Ent.Agent.Query().CountX(ctx); n != 0 {
+		t.Fatalf("expected 0 agents after rejected deploy, got %d", n)
 	}
 }
 
@@ -200,8 +298,6 @@ func TestRecycleAgent_VCSim(t *testing.T) {
 
 	owner := mkUser(t, mr, ctx, "recycler", "r@x.io", model.RoleNameUser)
 	ownerCtx := userCtx(owner.ID, "user")
-	seedActiveTemplate(t, mr.Resolver, "goose")
-	ag, _ := mr.CreateAgent(ownerCtx, model.CreateAgentInput{Name: "bob-goose", AgentType: "goose"})
 	ref := "vault://oc"
 	createdPool, _ := mr.CreateResourcePool(adminCtx(), model.CreateResourcePoolInput{
 		Name: "oc1", Endpoint: vsrv.URL.String(), SecretRef: &ref,
@@ -211,11 +307,14 @@ func TestRecycleAgent_VCSim(t *testing.T) {
 	vc, _ := vcenter.Connect(ctx, vsrv.URL.String(), "u", "p", true)
 	vms, _ := vc.ListVMs(ctx)
 	_ = vc.Logout(ctx)
-	if _, err := mr.DeployAgent(ownerCtx, model.DeployAgentInput{
-		AgentID: ag.ID, Template: vms[0].Name, VMName: "bob-vm", ResourcePoolID: pool.ID,
-	}); err != nil {
+	familyID, versionID := seedOvaFamilyVersion(t, r, "goose", vms[0].Name)
+	dep, err := mr.DeployAgent(ownerCtx, model.DeployAgentInput{
+		Name: "bob-vm", TemplateFamilyID: familyID, TemplateVersionID: versionID, ResourcePoolID: pool.ID,
+	})
+	if err != nil {
 		t.Fatalf("DeployAgent: %v", err)
 	}
+	ag := dep.Agent
 
 	// confirm=false is rejected (destructive)
 	if _, err := mr.RecycleAgent(ownerCtx, model.RecycleAgentInput{AgentID: ag.ID, Confirm: false}); err == nil {

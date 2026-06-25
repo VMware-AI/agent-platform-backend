@@ -22,6 +22,15 @@ type AccountUser {
 	createdAt: Time!
 	updatedAt: Time!
 }
+input AddOvaTemplateVersionInput {
+	familyId: ID!
+	version: String!
+	ovaIdentifier: String!
+	notes: String
+}
+type AddOvaTemplateVersionPayload {
+	version: OvaTemplateVersion!
+}
 type Agent {
 	id: ID!
 	name: String!
@@ -31,6 +40,10 @@ type Agent {
 	apiKey: AgentApiKey @goField(forceResolver: true)
 	owner: User @goField(forceResolver: true)
 	endpoint: String
+	templateFamilyId: ID
+	templateVersionId: ID
+	resourcePoolId: ID
+	credentials: AgentCredentials @goField(forceResolver: true)
 	createdAt: Time!
 	updatedAt: Time!
 }
@@ -51,6 +64,9 @@ type AgentConnection {
 	nodes: [Agent!]!
 	totalCount: Int!
 	pageInfo: PageInfo!
+}
+type AgentCredentials {
+	username: String!
 }
 input AgentFilter {
 	status: AgentStatus
@@ -105,6 +121,15 @@ type AgentUsage {
 	agentId: ID!
 	inputTokens: Int!
 	outputTokens: Int!
+	cost: Float!
+}
+type AgentUsageRow {
+	agentId: ID!
+	agentName: String!
+	inputTokens: Int!
+	outputTokens: Int!
+	totalTokens: Int!
+	requests: Int!
 	cost: Float!
 }
 type Artifact {
@@ -181,9 +206,37 @@ input CreateDepartmentInput {
 	name: String!
 	maxBudget: Float
 }
+input CreateModelRouteInput {
+	name: String!
+	backendGatewayId: ID
+	gatewayName: String
+	supportedModels: [String!]
+	uiStrategy: ModelRouteStrategy
+	enabled: Boolean
+}
+input CreateOvaTemplateFamilyInput {
+	name: String!
+	type: String!
+	description: String!
+	tools: [String!]!
+	scenarios: [String!]!
+	skills: [String!]!
+	iconShape: String!
+	iconColor: OvaTemplateColor!
+	initialVersion: CreateOvaTemplateVersionInput!
+}
+type CreateOvaTemplateFamilyPayload {
+	family: OvaTemplateFamily!
+}
+input CreateOvaTemplateVersionInput {
+	version: String!
+	ovaIdentifier: String!
+	notes: String
+}
 input CreateResourcePoolInput {
 	name: String!
 	endpoint: String!
+	contentLibraryName: String
 	datacenterCount: Int
 	clusterCount: Int
 	username: String
@@ -213,6 +266,55 @@ type CustomRole {
 	permissions: [String!]!
 	createdAt: Time!
 }
+type DailyUsageRow {
+	date: String!
+	inputTokens: Int!
+	outputTokens: Int!
+	totalTokens: Int!
+	requests: Int!
+	cost: Float!
+}
+enum DashboardAgentStatus {
+	running
+	stopped
+	exception
+}
+type DashboardNotice {
+	id: ID!
+	text: String!
+	status: DashboardNoticeStatus!
+	occurredAt: Time!
+}
+enum DashboardNoticeStatus {
+	success
+	warning
+	danger
+}
+type DashboardOverview {
+	stats: DashboardStats!
+	recentAgents: [DashboardRecentAgent!]!
+	notices: [DashboardNotice!]!
+}
+type DashboardRecentAgent {
+	id: ID!
+	name: String!
+	agentName: String!
+	status: DashboardAgentStatus!
+	createdAt: Time!
+}
+type DashboardStats {
+	totalAgents: Int!
+	runningAgents: Int!
+	stoppedAgents: Int!
+	exceptionAgents: Int!
+	totalVirtualKeys: Int!
+	totalGateways: Int!
+	totalResourcePools: Int!
+	totalUsers: Int!
+	monthlyCalls: Int!
+	monthlyTokens: Int!
+	monthlyCost: Float!
+}
 type DateUsage {
 	date: String!
 	inputTokens: Int!
@@ -237,17 +339,18 @@ type Department {
 	createdAt: Time!
 }
 input DeployAgentInput {
-	agentId: ID!
-	template: String!
-	vmName: String!
+	name: String!
+	templateFamilyId: ID!
+	templateVersionId: ID!
 	resourcePoolId: ID!
-	targetResourcePool: String
 	hostname: String
 	maxBudget: Float
 }
 type DeployedAgent {
 	agent: Agent!
 	virtualKeySecret: String!
+	templateVersion: OvaTemplateVersion!
+	resourcePool: ResourcePool!
 }
 type GatewayConnection {
 	id: ID!
@@ -285,6 +388,7 @@ input IssueVirtualKeyInput {
 	rpmLimit: Int
 	tpmLimit: Int
 	alias: String
+	expiresAt: Time
 }
 type IssuedVirtualKey {
 	virtualKey: VirtualKey!
@@ -315,6 +419,21 @@ enum MembershipRole {
 	user
 	dept_admin
 }
+type MeteringCostSummary {
+	totalCost: Float!
+	monthlyCost: Float!
+}
+type MeteringOverview {
+	range: MeteringTimeRange!
+	totalInputTokens: Int!
+	totalOutputTokens: Int!
+	totalTokens: Int!
+	totalRequests: Int!
+	byAgent: [AgentUsageRow!]!
+	byModel: [ModelUsageRow!]!
+	byDay: [DailyUsageRow!]!
+	cost: MeteringCostSummary!
+}
 type MeteringSummary {
 	totalInputTokens: Int!
 	totalOutputTokens: Int!
@@ -322,6 +441,11 @@ type MeteringSummary {
 	byModel: [ModelUsage!]!
 	byAgent: [AgentUsage!]!
 	byDate: [DateUsage!]!
+}
+enum MeteringTimeRange {
+	LAST_7_DAYS
+	LAST_30_DAYS
+	THIS_MONTH
 }
 type ModelGateway {
 	id: ID!
@@ -336,6 +460,8 @@ type ModelGateway {
 	lastSyncAt: Time
 	lastSyncStatus: ModelGatewaySyncState!
 	lastSyncMessage: String
+	createdAt: Time!
+	updatedAt: Time!
 }
 type ModelGatewayConnection {
 	nodes: [ModelGateway!]!
@@ -355,6 +481,17 @@ input ModelGatewayInput {
 }
 enum ModelGatewayProvider {
 	LITELLM
+}
+input ModelGatewaySort {
+	field: ModelGatewaySortField!
+	direction: SortDirection!
+}
+enum ModelGatewaySortField {
+	NAME
+	ENDPOINT
+	STATUS
+	CREATED_AT
+	UPDATED_AT
 }
 enum ModelGatewayStatus {
 	CONNECTED
@@ -388,15 +525,32 @@ type ModelRoute {
 	name: String!
 	modelAlias: String!
 	backendGatewayId: ID
+	gatewayName: String!
 	upstreams: [String!]!
+	supportedModels: [String!]!
 	strategy: LoadBalanceStrategy!
+	uiStrategy: ModelRouteStrategy!
 	enabled: Boolean!
 	createdAt: Time!
+	updatedAt: Time!
+}
+enum ModelRouteStrategy {
+	ROUND_ROBIN
+	WEIGHTED_ROUND_ROBIN
+	RANDOM
 }
 type ModelUsage {
 	model: String!
 	inputTokens: Int!
 	outputTokens: Int!
+	cost: Float!
+}
+type ModelUsageRow {
+	model: String!
+	inputTokens: Int!
+	outputTokens: Int!
+	totalTokens: Int!
+	requests: Int!
 	cost: Float!
 }
 type Mutation {
@@ -439,6 +593,8 @@ type Mutation {
 	upsertUpstream(input: UpsertUpstreamInput!): Upstream! @hasPermission(perm: "route:manage")
 	deleteUpstream(id: ID!): Boolean! @hasPermission(perm: "route:manage")
 	upsertModelRoute(input: UpsertModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
+	createModelRoute(input: CreateModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
+	updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
 	setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute! @hasPermission(perm: "route:manage")
 	deleteModelRoute(id: ID!): Boolean! @hasPermission(perm: "route:manage")
 	setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier! @hasPermission(perm: "route:manage")
@@ -451,6 +607,8 @@ type Mutation {
 	upsertRateLimitPolicy(input: UpsertRateLimitPolicyInput!): RateLimitPolicy! @hasPermission(perm: "route:manage")
 	setRateLimitPolicyEnabled(id: ID!, enabled: Boolean!): RateLimitPolicy! @hasPermission(perm: "route:manage")
 	deleteRateLimitPolicy(id: ID!): Boolean! @hasPermission(perm: "route:manage")
+	createOvaTemplateFamily(input: CreateOvaTemplateFamilyInput!): CreateOvaTemplateFamilyPayload! @hasRole(any: [admin])
+	addOvaTemplateVersion(input: AddOvaTemplateVersionInput!): AddOvaTemplateVersionPayload! @hasRole(any: [admin])
 	createCustomRole(input: CreateCustomRoleInput!): CustomRole! @hasRole(any: [admin,tenant_admin])
 	deleteCustomRole(id: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
 	upsertPermission(key: String!, description: String): Permission! @hasRole(any: [admin])
@@ -460,12 +618,67 @@ type Mutation {
 	createResourcePool(input: CreateResourcePoolInput!): CreateResourcePoolPayload! @hasRole(any: [admin])
 	updateResourcePool(id: ID!, input: UpdateResourcePoolInput!): UpdateResourcePoolPayload! @hasRole(any: [admin])
 	deleteResourcePool(id: ID!): DeleteResourcePoolPayload! @hasRole(any: [admin])
-	testResourcePoolConnection(id: ID!): ResourcePool! @hasRole(any: [admin])
+	testResourcePoolConnection(input: TestResourcePoolConnectionInput!): ResourcePoolConnectionTest! @hasRole(any: [admin])
 	syncResourcePool(id: ID!): SyncResourcePoolPayload! @hasRole(any: [admin])
 	issueVirtualKey(input: IssueVirtualKeyInput!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
 	revokeVirtualKey(id: ID!): Boolean! @hasPermission(perm: "key:manage")
 	regenerateVirtualKey(id: ID!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
 	setVirtualKeyEnabled(id: ID!, enabled: Boolean!): VirtualKey! @hasPermission(perm: "key:manage")
+}
+enum OvaTemplateColor {
+	BLUE
+	PURPLE
+	ORANGE
+	GREEN
+	RED
+	CYAN
+}
+type OvaTemplateFamily {
+	id: ID!
+	name: String!
+	type: String!
+	description: String!
+	tools: [String!]!
+	skills: [String!]!
+	scenarios: [String!]!
+	iconShape: String!
+	iconColor: OvaTemplateColor!
+	latestVersion: String @goField(forceResolver: true)
+	createdAt: Time!
+	updatedAt: Time!
+	versions: [OvaTemplateVersion!]! @goField(forceResolver: true)
+}
+type OvaTemplateFamilyConnection {
+	nodes: [OvaTemplateFamily!]!
+	totalCount: Int!
+	pageInfo: PageInfo!
+}
+input OvaTemplateFamilyFilter {
+	nameKeyword: String
+	type: String
+}
+input OvaTemplateFamilySort {
+	field: OvaTemplateFamilySortField!
+	direction: SortDirection!
+}
+enum OvaTemplateFamilySortField {
+	OVA_NAME
+	TYPE
+	CREATED_AT
+	UPDATED_AT
+}
+type OvaTemplateVersion {
+	id: ID!
+	familyId: ID! @goField(forceResolver: true)
+	version: String!
+	ovaIdentifier: String!
+	notes: String
+	createdAt: Time!
+}
+type OvaTemplateVersionConnection {
+	nodes: [OvaTemplateVersion!]!
+	totalCount: Int!
+	pageInfo: PageInfo!
 }
 type PageInfo {
 	page: Int!
@@ -507,6 +720,7 @@ type Query {
 	artifactVersions(name: String!): [Artifact!]!
 	skills: [Skill!]!
 	images: [Image!]!
+	dashboardOverview(recentLimit: Int = 5, noticeLimit: Int = 5): DashboardOverview! @hasRole(any: [admin,observability])
 	departments: [Department!]! @hasRole(any: [admin,tenant_admin])
 	departmentMembers(departmentId: ID!): [Membership!]!
 	vmTemplates(resourcePoolId: ID!): [VMTemplate!]!
@@ -517,10 +731,13 @@ type Query {
 	routerTiers: [RouterTier!]! @hasPermission(perm: "route:manage")
 	tokenUsage(userId: ID, page: PageInput): [TokenUsage!]! @hasPermission(perm: "metering:view")
 	meteringSummary(userId: ID): MeteringSummary! @hasPermission(perm: "metering:view")
-	modelGateways(filter: ModelGatewayFilterInput, page: PageInput!): ModelGatewayConnection! @hasRole(any: [admin])
+	meteringOverview(range: MeteringTimeRange = LAST_7_DAYS, userId: ID): MeteringOverview! @hasPermission(perm: "metering:view")
+	modelGateways(filter: ModelGatewayFilterInput, page: PageInput!, sort: ModelGatewaySort): ModelGatewayConnection! @hasRole(any: [admin])
 	modelGatewaySyncSummary: ModelGatewaySyncSummary! @hasRole(any: [admin])
 	requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
 	rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin,tenant_admin])
+	ovaTemplateFamilies(filter: OvaTemplateFamilyFilter, pagination: Pagination, sort: OvaTemplateFamilySort): OvaTemplateFamilyConnection! @hasRole(any: [admin])
+	ovaTemplateVersions(familyId: ID, pagination: Pagination): OvaTemplateVersionConnection! @hasRole(any: [admin])
 	customRoles: [CustomRole!]! @hasRole(any: [admin,tenant_admin])
 	permissions: [Permission!]! @hasRole(any: [admin])
 	userRoles(userId: ID!): [CustomRole!]! @hasRole(any: [admin])
@@ -593,11 +810,14 @@ type ResourcePool {
 	id: ID!
 	name: String!
 	endpoint: String!
+	contentLibraryName: String!
 	connectionStatus: PoolConnectionStatus!
 	datacenterCount: Int!
 	clusterCount: Int!
 	esxiHostCount: Int!
 	vmInstanceCount: Int!
+	syncStatus: ResourcePoolSyncState!
+	lastSyncedAt: Time
 	createdAt: Time!
 	updatedAt: Time!
 }
@@ -605,6 +825,15 @@ type ResourcePoolConnection {
 	nodes: [ResourcePool!]!
 	totalCount: Int!
 	pageInfo: PageInfo!
+}
+type ResourcePoolConnectionDetail {
+	vSphereVersion: String!
+	itemCount: Int!
+}
+type ResourcePoolConnectionTest {
+	ok: Boolean!
+	message: String!
+	detail: ResourcePoolConnectionDetail
 }
 input ResourcePoolFilter {
 	nameKeyword: String
@@ -625,6 +854,13 @@ enum ResourcePoolSortField {
 	VM_INSTANCE_COUNT
 	CREATED_AT
 	UPDATED_AT
+}
+enum ResourcePoolSyncState {
+	SYNCED
+	SYNCING
+	PARTIAL
+	FAILED
+	NEVER
 }
 input RevertAgentSnapshotInput {
 	agentId: ID!
@@ -685,6 +921,11 @@ type SyncResourcePoolPayload {
 	pool: ResourcePool!
 	syncedAt: Time!
 }
+input TestResourcePoolConnectionInput {
+	name: String!
+	endpoint: String!
+	contentLibraryName: String!
+}
 scalar Time
 type ToggleUserEnabledPayload {
 	user: AccountUser!
@@ -703,9 +944,18 @@ input UpdateAgentConfigInput {
 	name: String
 	artifactId: ID
 }
+input UpdateModelRouteInput {
+	name: String
+	backendGatewayId: ID
+	gatewayName: String
+	supportedModels: [String!]
+	uiStrategy: ModelRouteStrategy
+	enabled: Boolean
+}
 input UpdateResourcePoolInput {
 	name: String
 	endpoint: String
+	contentLibraryName: String
 	datacenterCount: Int
 	clusterCount: Int
 	username: String
