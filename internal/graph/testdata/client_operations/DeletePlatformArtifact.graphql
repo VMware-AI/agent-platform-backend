@@ -1,0 +1,3 @@
+mutation DeletePlatformArtifact($id: ID!) {
+    deleteArtifact(id: $id)
+  }

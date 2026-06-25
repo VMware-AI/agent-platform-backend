@@ -1,0 +1,12 @@
+mutation AddMembership($userId: ID!, $departmentId: ID!, $role: MembershipRole) {
+    addMembership(userId: $userId, departmentId: $departmentId, role: $role) {
+      ...MembershipFields
+    }
+  }
+  
+  fragment MembershipFields on Membership {
+    id
+    userId
+    departmentId
+    role
+  }

@@ -1,0 +1,11 @@
+mutation SetRouterTierRouting($tier: RouterTierLevel!, $modelAlias: String!) {
+    setRouterTier(tier: $tier, modelAlias: $modelAlias) {
+      ...RouterTierRoutingFields
+    }
+  }
+  
+  fragment RouterTierRoutingFields on RouterTier {
+    id
+    tier
+    modelAlias
+  }

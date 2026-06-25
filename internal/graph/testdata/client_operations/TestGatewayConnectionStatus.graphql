@@ -1,0 +1,3 @@
+mutation TestGatewayConnectionStatus($id: ID!) {
+    testGatewayConnection(id: $id)
+  }

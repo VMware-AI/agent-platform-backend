@@ -1,0 +1,15 @@
+mutation UpsertUpstreamRouting($input: UpsertUpstreamInput!) {
+    upsertUpstream(input: $input) {
+      ...UpstreamRoutingFields
+    }
+  }
+  
+  fragment UpstreamRoutingFields on Upstream {
+    id
+    name
+    provider
+    apiBase
+    model
+    enabled
+    createdAt
+  }

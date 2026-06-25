@@ -1,0 +1,11 @@
+query RouterTiersRouting {
+    routerTiers {
+      ...RouterTierRoutingFields
+    }
+  }
+  
+  fragment RouterTierRoutingFields on RouterTier {
+    id
+    tier
+    modelAlias
+  }

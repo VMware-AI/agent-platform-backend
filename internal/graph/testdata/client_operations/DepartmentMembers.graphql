@@ -1,0 +1,12 @@
+query DepartmentMembers($departmentId: ID!) {
+    departmentMembers(departmentId: $departmentId) {
+      ...MembershipFields
+    }
+  }
+  
+  fragment MembershipFields on Membership {
+    id
+    userId
+    departmentId
+    role
+  }

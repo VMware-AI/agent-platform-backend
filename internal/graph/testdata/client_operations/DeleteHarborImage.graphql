@@ -1,0 +1,3 @@
+mutation DeleteHarborImage($id: ID!) {
+    deleteImage(id: $id)
+  }

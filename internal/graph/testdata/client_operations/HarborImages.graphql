@@ -1,0 +1,14 @@
+query HarborImages {
+    images {
+      ...ImageFields
+    }
+  }
+  
+  fragment ImageFields on Image {
+    id
+    repository
+    tag
+    digest
+    signed
+    createdAt
+  }

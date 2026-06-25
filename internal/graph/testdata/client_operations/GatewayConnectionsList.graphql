@@ -1,0 +1,14 @@
+query GatewayConnectionsList {
+    gatewayConnections {
+      ...GatewayConnectionEntryFields
+    }
+  }
+  
+  fragment GatewayConnectionEntryFields on GatewayConnection {
+    id
+    name
+    endpoint
+    status
+    loadBalanceStrategy
+    createdAt
+  }

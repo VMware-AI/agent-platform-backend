@@ -1,0 +1,11 @@
+mutation UpsertPermissionEntry($key: String!, $description: String) {
+    upsertPermission(key: $key, description: $description) {
+      ...PermissionFields
+    }
+  }
+  
+  fragment PermissionFields on Permission {
+    id
+    key
+    description
+  }

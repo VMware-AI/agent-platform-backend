@@ -1,0 +1,3 @@
+mutation RevertAgentSnapshotState($input: RevertAgentSnapshotInput!) {
+    revertAgentSnapshot(input: $input)
+  }

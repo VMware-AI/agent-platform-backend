@@ -343,6 +343,7 @@ input DeployAgentInput {
 	templateFamilyId: ID!
 	templateVersionId: ID!
 	resourcePoolId: ID!
+	targetResourcePool: String
 	hostname: String
 	maxBudget: Float
 }
@@ -581,7 +582,7 @@ type Mutation {
 	deleteDepartment(id: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
 	addMembership(userId: ID!, departmentId: ID!, role: MembershipRole): Membership!
 	removeMembership(userId: ID!, departmentId: ID!): Boolean!
-	deployAgent(input: DeployAgentInput!): DeployedAgent!
+	deployAgent(input: DeployAgentInput!): DeployedAgent! @hasRole(any: [admin])
 	recycleAgent(input: RecycleAgentInput!): Agent!
 	snapshotAgent(input: SnapshotAgentInput!): AgentSnapshot!
 	revertAgentSnapshot(input: RevertAgentSnapshotInput!): Boolean!
@@ -592,11 +593,11 @@ type Mutation {
 	deleteGatewayConnection(id: ID!): Boolean! @hasRole(any: [admin])
 	upsertUpstream(input: UpsertUpstreamInput!): Upstream! @hasPermission(perm: "route:manage")
 	deleteUpstream(id: ID!): Boolean! @hasPermission(perm: "route:manage")
-	upsertModelRoute(input: UpsertModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
-	createModelRoute(input: CreateModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
-	updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
-	setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute! @hasPermission(perm: "route:manage")
-	deleteModelRoute(id: ID!): Boolean! @hasPermission(perm: "route:manage")
+	upsertModelRoute(input: UpsertModelRouteInput!): ModelRoute! @hasRole(any: [admin])
+	createModelRoute(input: CreateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
+	updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
+	setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute! @hasRole(any: [admin])
+	deleteModelRoute(id: ID!): Boolean! @hasRole(any: [admin])
 	setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier! @hasPermission(perm: "route:manage")
 	recordTokenUsage(input: RecordTokenUsageInput!): TokenUsage! @hasRole(any: [admin])
 	createModelGateway(input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
@@ -724,10 +725,11 @@ type Query {
 	departments: [Department!]! @hasRole(any: [admin,tenant_admin])
 	departmentMembers(departmentId: ID!): [Membership!]!
 	vmTemplates(resourcePoolId: ID!): [VMTemplate!]!
+	vsphereResourcePools(resourcePoolId: ID!): [VsphereResourcePool!]! @hasRole(any: [admin])
 	agentSnapshots(agentId: ID!): [AgentSnapshot!]!
 	gatewayConnections: [GatewayConnection!]! @hasRole(any: [admin])
 	upstreams: [Upstream!]! @hasPermission(perm: "route:manage")
-	modelRoutes: [ModelRoute!]! @hasPermission(perm: "route:manage")
+	modelRoutes: [ModelRoute!]! @hasRole(any: [admin])
 	routerTiers: [RouterTier!]! @hasPermission(perm: "route:manage")
 	tokenUsage(userId: ID, page: PageInput): [TokenUsage!]! @hasPermission(perm: "metering:view")
 	meteringSummary(userId: ID): MeteringSummary! @hasPermission(perm: "metering:view")
@@ -736,6 +738,7 @@ type Query {
 	modelGatewaySyncSummary: ModelGatewaySyncSummary! @hasRole(any: [admin])
 	requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
 	rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin,tenant_admin])
+	requestMetrics(from: Time!, to: Time!, granularity: RequestMetricsBucketGranularity!, filter: RequestMetricsFilter): RequestMetrics! @hasPermission(perm: "audit:view")
 	ovaTemplateFamilies(filter: OvaTemplateFamilyFilter, pagination: Pagination, sort: OvaTemplateFamilySort): OvaTemplateFamilyConnection! @hasRole(any: [admin])
 	ovaTemplateVersions(familyId: ID, pagination: Pagination): OvaTemplateVersionConnection! @hasRole(any: [admin])
 	customRoles: [CustomRole!]! @hasRole(any: [admin,tenant_admin])
@@ -801,6 +804,41 @@ input RequestLogFilter {
 	agentId: ID
 	model: String
 	requestId: String
+}
+type RequestMetrics {
+	rangeStart: Time!
+	rangeEnd: Time!
+	granularity: RequestMetricsBucketGranularity!
+	buckets: [RequestMetricsBucket!]!
+	summary: RequestMetricsSummary!
+}
+type RequestMetricsBucket {
+	timestamp: Time!
+	requestCount: Int!
+	errorCount: Int!
+	avgLatencyMs: Int!
+	p95LatencyMs: Int!
+	inputTokensTotal: Int!
+	outputTokensTotal: Int!
+}
+enum RequestMetricsBucketGranularity {
+	MINUTE
+	HOUR
+	DAY
+}
+input RequestMetricsFilter {
+	statusCode: Int
+	agentId: ID
+	model: String
+}
+type RequestMetricsSummary {
+	totalRequests: Int!
+	totalErrors: Int!
+	errorRate: Float!
+	avgLatencyMs: Int!
+	p95LatencyMs: Int!
+	totalInputTokens: Int!
+	totalOutputTokens: Int!
 }
 type ResetPasswordPayload {
 	user: AccountUser!
@@ -1100,4 +1138,8 @@ enum VirtualKeyStatus {
 	active
 	disabled
 	revoked
+}
+type VsphereResourcePool {
+	name: String!
+	path: String!
 }

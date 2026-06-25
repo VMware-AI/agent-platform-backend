@@ -1,0 +1,3 @@
+mutation DeleteUpstreamRouting($id: ID!) {
+    deleteUpstream(id: $id)
+  }

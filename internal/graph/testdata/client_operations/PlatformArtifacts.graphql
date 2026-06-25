@@ -1,0 +1,17 @@
+query PlatformArtifacts($kind: ArtifactKind) {
+    artifacts(kind: $kind) {
+      ...ArtifactFields
+    }
+  }
+  
+  fragment ArtifactFields on Artifact {
+    id
+    name
+    kind
+    version
+    uri
+    content
+    sha256
+    metadata
+    createdAt
+  }

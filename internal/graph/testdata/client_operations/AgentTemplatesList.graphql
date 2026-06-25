@@ -1,0 +1,19 @@
+query AgentTemplatesList {
+    agentTemplates {
+      ...AgentTemplateFields
+    }
+  }
+  
+  fragment AgentTemplateFields on AgentTemplate {
+    id
+    kind
+    display
+    description
+    installMethod
+    installCommand
+    status
+    version
+    knowledgeRoot
+    knowledgePrompt
+    createdAt
+  }

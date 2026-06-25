@@ -1,0 +1,13 @@
+mutation CreateDepartment($input: CreateDepartmentInput!) {
+    createDepartment(input: $input) {
+      ...DepartmentFields
+    }
+  }
+  
+  fragment DepartmentFields on Department {
+    id
+    tenantId
+    name
+    litellmTeamId
+    createdAt
+  }

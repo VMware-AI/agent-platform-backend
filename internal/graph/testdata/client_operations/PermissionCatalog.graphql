@@ -1,0 +1,11 @@
+query PermissionCatalog {
+    permissions {
+      ...PermissionFields
+    }
+  }
+  
+  fragment PermissionFields on Permission {
+    id
+    key
+    description
+  }
