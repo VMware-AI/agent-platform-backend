@@ -59,6 +59,9 @@ type DashboardOverview {
 
 extend type Query {
   # The console overview page. recentLimit/noticeLimit cap the two lists (默认 5).
+  # Figures are platform-global (counts/notices are not tenant-scoped yet), so this
+  # is restricted to platform roles — exposing it to tenant_admin would leak other
+  # tenants' counts/usage/audit. Per-tenant dashboard scoping is future work (C1).
   dashboardOverview(recentLimit: Int = 5, noticeLimit: Int = 5): DashboardOverview!
-    @hasRole(any: [admin, tenant_admin, observability])
+    @hasRole(any: [admin, observability])
 }

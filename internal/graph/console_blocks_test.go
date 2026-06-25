@@ -146,6 +146,27 @@ func ptrF(f float64) *float64 { return &f }
 
 // TestDashboardOverview verifies the overview counts agents by status, surfaces the
 // newest agent, derives notices from audit logs, and totals the current month.
+// Regression: an empty current month (SUM(cost) over zero rows → NULL) must not
+// error meteringOverview — the monthlyUsageTotals fix scans NULL-safely.
+func TestMeteringOverviewEmptyMonth(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := adminCtx()
+	qr := &queryResolver{r}
+
+	ov, err := qr.MeteringOverview(ctx, nil, nil)
+	if err != nil {
+		t.Fatalf("meteringOverview on empty data: %v", err)
+	}
+	if ov.Cost == nil || ov.Cost.MonthlyCost != 0 || ov.Cost.TotalCost != 0 {
+		t.Fatalf("expected zero cost on empty data, got %+v", ov.Cost)
+	}
+	if len(ov.ByAgent) != 0 || len(ov.ByModel) != 0 || len(ov.ByDay) != 0 {
+		t.Fatalf("expected empty rows, got byAgent=%d byModel=%d byDay=%d",
+			len(ov.ByAgent), len(ov.ByModel), len(ov.ByDay))
+	}
+}
+
 func TestDashboardOverview(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()

@@ -4518,8 +4518,11 @@ type DashboardOverview {
 
 extend type Query {
   # The console overview page. recentLimit/noticeLimit cap the two lists (默认 5).
+  # Figures are platform-global (counts/notices are not tenant-scoped yet), so this
+  # is restricted to platform roles — exposing it to tenant_admin would leak other
+  # tenants' counts/usage/audit. Per-tenant dashboard scoping is future work (C1).
   dashboardOverview(recentLimit: Int = 5, noticeLimit: Int = 5): DashboardOverview!
-    @hasRole(any: [admin, tenant_admin, observability])
+    @hasRole(any: [admin, observability])
 }
 `, BuiltIn: false},
 	{Name: "../../schema/department.graphql", Input: `# Departments (部门 = litellm team) + memberships. See doc43 / LLD-01.
@@ -18296,7 +18299,7 @@ func (ec *executionContext) _Query_dashboardOverview(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin", "observability"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "observability"})
 				if err != nil {
 					var zeroVal *model.DashboardOverview
 					return zeroVal, err

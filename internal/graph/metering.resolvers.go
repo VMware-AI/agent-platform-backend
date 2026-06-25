@@ -252,8 +252,10 @@ func (r *queryResolver) MeteringOverview(ctx context.Context, rangeArg *model.Me
 		return nil, err
 	}
 	monthStart := startOfMonth(time.Now())
-	monthlyCost, err := monthQ.Where(tokenusage.CreatedAtGTE(monthStart)).
-		Aggregate(ent.Sum(tokenusage.FieldCost)).Float64(ctx)
+	// monthlyUsageTotals scans into a struct slice, so an empty current month
+	// (SUM(cost) over zero rows → NULL) yields 0 instead of erroring the way a
+	// single-column .Float64() does on the NULL scan.
+	_, _, monthlyCost, err := r.monthlyUsageTotals(ctx, monthQ.Where(tokenusage.CreatedAtGTE(monthStart)))
 	if err != nil {
 		return nil, err
 	}
