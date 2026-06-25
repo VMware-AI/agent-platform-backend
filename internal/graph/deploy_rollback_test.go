@@ -24,6 +24,9 @@ func (f *fakeVCenter) CloneFromTemplate(context.Context, vcenter.CloneSpec) (*vc
 	return &vcenter.VMInfo{}, nil
 }
 func (f *fakeVCenter) ListTemplates(context.Context) ([]vcenter.VMInfo, error) { return nil, nil }
+func (f *fakeVCenter) ListResourcePools(context.Context) ([]vcenter.ResourcePoolInfo, error) {
+	return nil, nil
+}
 func (f *fakeVCenter) SetGuestinfo(context.Context, string, map[string]string) error {
 	return nil
 }

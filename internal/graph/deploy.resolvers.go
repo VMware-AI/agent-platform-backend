@@ -424,6 +424,37 @@ func (r *queryResolver) VMTemplates(ctx context.Context, resourcePoolID string) 
 	return out, nil
 }
 
+// VsphereResourcePools lists the placement resource pools in a platform resource
+// pool's vCenter, powering the deploy form's placement picker. A true OVA
+// template has no source pool, so a real deploy must pick one of these for
+// targetResourcePool. Mirrors VMTemplates: it dials the same vCenter with the
+// pool's privileged credentials. The @hasRole(any: [admin]) schema directive
+// gates it to admins (no cross-tenant inventory enumeration).
+func (r *queryResolver) VsphereResourcePools(ctx context.Context, resourcePoolID string) ([]model.VsphereResourcePool, error) {
+	poolID, err := uuid.Parse(resourcePoolID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid resourcePoolId")
+	}
+	pool, err := r.Ent.ResourcePool.Get(ctx, poolID)
+	if err != nil {
+		return nil, err
+	}
+	conn, err := r.connectPool(ctx, pool)
+	if err != nil {
+		return nil, fmt.Errorf("connect vcenter: %w", err)
+	}
+	defer func() { _ = conn.Logout(ctx) }()
+	pools, err := conn.ListResourcePools(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list resource pools: %w", err)
+	}
+	out := make([]model.VsphereResourcePool, 0, len(pools))
+	for _, p := range pools {
+		out = append(out, model.VsphereResourcePool{Name: p.Name, Path: p.Path})
+	}
+	return out, nil
+}
+
 // AgentSnapshots lists the agent VM's snapshots. Owner/admin.
 func (r *queryResolver) AgentSnapshots(ctx context.Context, agentID string) ([]model.AgentSnapshot, error) {
 	cu := auth.FromContext(ctx)

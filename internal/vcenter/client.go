@@ -263,6 +263,53 @@ func (c *Client) ListTemplates(ctx context.Context) ([]VMInfo, error) {
 	return out, nil
 }
 
+// ResourcePoolInfo is a placement resource pool offered to the deploy form.
+// Path is the inventory path (e.g. "/DC0/host/DC0_C0/Resources") that
+// CloneFromTemplate's finder.ResourcePool resolves — full path so it stays
+// unambiguous across multiple datacenters. Name is the human label.
+type ResourcePoolInfo struct {
+	Name string
+	Path string
+}
+
+// ListResourcePools enumerates every resource pool visible to the account, as
+// placement targets for a clone (LLD-03 §4 部署: a true OVA template has no
+// source pool, so a deploy must pick a placement pool). Mirrors ListTemplates:
+// it dials the same vCenter and returns name + inventory path. The path is the
+// value CloneFromTemplate's CloneSpec.ResourcePool expects.
+//
+// Pools are enumerated per-datacenter and returned with their FULL inventory
+// path (e.g. "/DC0/host/DC0_C0/Resources"), so two datacenters that both have a
+// "Resources" pool stay distinct and the path round-trips through placement.
+func (c *Client) ListResourcePools(ctx context.Context) ([]ResourcePoolInfo, error) {
+	finder := find.NewFinder(c.vc.Client, true)
+	dcs, err := finder.DatacenterList(ctx, "*")
+	if err != nil {
+		if _, ok := err.(*find.NotFoundError); ok {
+			return []ResourcePoolInfo{}, nil
+		}
+		return nil, fmt.Errorf("vcenter: list datacenters: %w", err)
+	}
+	out := make([]ResourcePoolInfo, 0)
+	for _, dc := range dcs {
+		// Scope the finder to this datacenter so the wildcard pool search is
+		// unambiguous (a root-level "*" errors with "please specify a datacenter"
+		// when more than one exists).
+		dcFinder := find.NewFinder(c.vc.Client, true).SetDatacenter(dc)
+		pools, err := dcFinder.ResourcePoolList(ctx, "*")
+		if err != nil {
+			if _, ok := err.(*find.NotFoundError); ok {
+				continue // datacenter with no compute/pools — skip, not an error
+			}
+			return nil, fmt.Errorf("vcenter: list resource pools in %q: %w", dc.InventoryPath, err)
+		}
+		for _, p := range pools {
+			out = append(out, ResourcePoolInfo{Name: p.Name(), Path: p.InventoryPath})
+		}
+	}
+	return out, nil
+}
+
 // MarkAsTemplate converts a powered-off VM into a template, making it available
 // to clone agents from (LLD-03 §4; the OVA-build → template step).
 func (c *Client) MarkAsTemplate(ctx context.Context, vmName string) error {

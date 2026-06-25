@@ -20,6 +20,7 @@ import (
 type VCenterClient interface {
 	CloneFromTemplate(ctx context.Context, spec vcenter.CloneSpec) (*vcenter.VMInfo, error)
 	ListTemplates(ctx context.Context) ([]vcenter.VMInfo, error)
+	ListResourcePools(ctx context.Context) ([]vcenter.ResourcePoolInfo, error)
 	SetGuestinfo(ctx context.Context, vmName string, kv map[string]string) error
 	PowerOn(ctx context.Context, vmName string) error
 	Destroy(ctx context.Context, vmName string) error

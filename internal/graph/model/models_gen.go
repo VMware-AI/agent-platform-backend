@@ -942,6 +942,11 @@ type VirtualKey struct {
 	CreatedAt         time.Time        `json:"createdAt"`
 }
 
+type VsphereResourcePool struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+}
+
 type AgentSortField string
 
 const (

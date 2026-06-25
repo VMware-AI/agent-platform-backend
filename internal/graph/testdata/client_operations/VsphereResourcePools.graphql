@@ -1,0 +1,6 @@
+query VsphereResourcePools($resourcePoolId: ID!) {
+    vsphereResourcePools(resourcePoolId: $resourcePoolId) {
+      name
+      path
+    }
+  }
