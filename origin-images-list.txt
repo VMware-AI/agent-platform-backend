@@ -1,0 +1,7 @@
+# image version of 2026-06-25
+litellm/litellm:v1.89.4
+postgres:16
+redis:7
+prom/prometheus:v3.5.4
+golang:1.25 
+debian:12.12-slim

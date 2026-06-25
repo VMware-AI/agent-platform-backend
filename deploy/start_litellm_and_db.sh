@@ -4,9 +4,8 @@
 # stays minimal. Idempotent: re-running reuses the existing .env + volumes.
 #
 #   ./start.sh                       # bring it up (generates .env on first run)
-#   MINIMAX_API_KEY=sk-... ./start.sh # also seed your minimax key into .env
 #   ./start.sh down                  # stop + remove containers (keeps the pg volume)
-#   ./start.sh nuke                  # stop + remove containers AND the pg volume
+#   ./start.sh clean                  # stop + remove containers AND the pg volume
 #
 # After it's up, point the backend at it (the script prints the exact line):
 #   LITELLM_BASE_URL=http://localhost:4000 LITELLM_MASTER_KEY=<printed> make run
@@ -17,9 +16,9 @@ compose() { docker compose "$@"; }
 
 case "${1:-up}" in
   down) compose down; echo "litellm stopped (pg volume kept)."; exit 0 ;;
-  nuke) compose down -v; echo "litellm stopped + pg volume removed."; exit 0 ;;
+  clean) compose down -v; echo "litellm stopped + pg volume removed."; exit 0 ;;
   up) ;;
-  *) echo "usage: $0 [up|down|nuke]"; exit 2 ;;
+  *) echo "usage: $0 [up|down|clean]"; exit 2 ;;
 esac
 
 # 1) Ensure .env exists with a master key (auto-generated) + salt. Never committed.
@@ -28,20 +27,11 @@ if [[ ! -f .env ]]; then
   {
     echo "LITELLM_MASTER_KEY=sk-local-$(openssl rand -hex 12)"
     echo "LITELLM_SALT_KEY=local-salt-$(openssl rand -hex 12)"
-    echo "MINIMAX_API_KEY=${MINIMAX_API_KEY:-}"
   } > .env
-elif [[ -n "${MINIMAX_API_KEY:-}" ]]; then
-  # refresh the minimax key from the environment without touching the master key
-  if grep -q '^MINIMAX_API_KEY=' .env; then
-    # portable in-place edit (macOS + GNU sed)
-    sed -i.bak "s|^MINIMAX_API_KEY=.*|MINIMAX_API_KEY=${MINIMAX_API_KEY}|" .env && rm -f .env.bak
-  else
-    echo "MINIMAX_API_KEY=${MINIMAX_API_KEY}" >> .env
-  fi
 fi
 
 # 2) Bring up the stack.
-echo "starting litellm + postgres…"
+echo "starting litellm + postgres + redis + prometheus…"
 compose up -d
 
 # 3) Wait for litellm to report alive.
@@ -63,6 +53,7 @@ cat <<EOF
  Master key:             ${MASTER_KEY}
 
  Point the backend at it:
+   LITELLM_ADMIN_URL=http://localhost:4000/ui
    LITELLM_BASE_URL=http://localhost:4000 \\
    LITELLM_MASTER_KEY=${MASTER_KEY} \\
    ALLOWED_ORIGINS=http://localhost:5173 \\

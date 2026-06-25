@@ -6,14 +6,12 @@ is the **control plane** — it pushes the model list and mints virtual keys via
 litellm's admin API. This stack lets you test that integration locally **without a
 VM** (just Docker).
 
-## 1. Start litellm
+## 1. Start litellm + pgsql of backend
 
 **Quick start (recommended):**
 ```bash
-cd deploy/litellm
+cd deploy/standalone
 ./start.sh                          # auto-generates .env (master key) + brings it up
-# or seed your minimax key at the same time:
-MINIMAX_API_KEY=sk-... ./start.sh
 # ./start.sh down   (stop, keep pg)   |   ./start.sh nuke   (stop + wipe pg)
 ```
 It prints the master key and the exact `make run` line for the backend.

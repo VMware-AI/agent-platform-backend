@@ -1,4 +1,12 @@
-.PHONY: generate schema-dump build test lint run tidy migrate-diff migrate-apply migrate-status
+.PHONY: generate schema-dump build test lint run tidy migrate-diff migrate-apply migrate-status build-images release-images
+
+# Image build/push settings.
+IMAGE     ?= agent-platform-backend
+REGISTRY  ?= quay.io/vmware-ai
+PLATFORMS ?= linux/amd64,linux/arm64
+BUILDER   ?= agent-platform-builder
+VERSION   := $(shell cat VERSION)
+TAG       := $(VERSION)-$(shell date -u +%Y%m%d)
 
 # Regenerate Ent + gqlgen code.
 generate:
@@ -45,3 +53,24 @@ migrate-apply:
 # Show applied/pending status + drift:
 migrate-status:
 	atlas migrate status --env ent --url "$(DATABASE_URL)"
+
+# Multi-arch build (no push). Loads a manifest list into the local docker
+# daemon so `docker run --platform …` works for either arch.
+build-images:
+	docker buildx create --name $(BUILDER) --use --driver docker-container 2>/dev/null || true
+	docker buildx build \
+		--builder $(BUILDER) \
+		--platform $(PLATFORMS) \
+		--tag $(REGISTRY)/$(IMAGE):$(TAG) \
+		--load \
+		.
+
+# Multi-arch build + push to $(REGISTRY). Depends on build-images so a failed
+# build never reaches the registry (pushes are not undo-able).
+release-images: build-images
+	docker buildx build \
+		--builder $(BUILDER) \
+		--platform $(PLATFORMS) \
+		--tag $(REGISTRY)/$(IMAGE):$(TAG) \
+		--push \
+		.
