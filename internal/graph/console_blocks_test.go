@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 )
 
@@ -142,3 +143,50 @@ func TestMeteringOverview(t *testing.T) {
 }
 
 func ptrF(f float64) *float64 { return &f }
+
+// TestDashboardOverview verifies the overview counts agents by status, surfaces the
+// newest agent, derives notices from audit logs, and totals the current month.
+func TestDashboardOverview(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := adminCtx()
+	qr := &queryResolver{r}
+	mr := &mutationResolver{r}
+
+	owner := uuid.New()
+	if _, err := r.Ent.Agent.Create().SetName("claw-agent-v1").SetAgentType("openclaw").
+		SetOwnerUserID(owner).SetStatus(agent.StatusRunning).Save(ctx); err != nil {
+		t.Fatalf("agent running: %v", err)
+	}
+	if _, err := r.Ent.Agent.Create().SetName("hermes-pro").SetAgentType("hermes").
+		SetOwnerUserID(owner).SetStatus(agent.StatusException).Save(ctx); err != nil {
+		t.Fatalf("agent exception: %v", err)
+	}
+
+	// A usage row this month → monthlyCalls/tokens/cost > 0.
+	uid := uuid.NewString()
+	if _, err := mr.RecordTokenUsage(ctx, model.RecordTokenUsageInput{
+		UserID: uid, Model: "gpt-4o", InputTokens: 100, OutputTokens: 200, Cost: ptrF(2.0),
+	}); err != nil {
+		t.Fatalf("record usage: %v", err)
+	}
+	// RecordTokenUsage doesn't audit, so write one notice source explicitly.
+	r.audit(ctx, "resource_pool.test", "resource_pool", "rp1", true, "")
+
+	ov, err := qr.DashboardOverview(ctx, nil, nil)
+	if err != nil {
+		t.Fatalf("DashboardOverview: %v", err)
+	}
+	if ov.Stats.TotalAgents != 2 || ov.Stats.RunningAgents != 1 || ov.Stats.ExceptionAgents != 1 {
+		t.Fatalf("agent counts wrong: %+v", ov.Stats)
+	}
+	if ov.Stats.MonthlyCalls != 1 || ov.Stats.MonthlyTokens != 300 || ov.Stats.MonthlyCost != 2.0 {
+		t.Fatalf("monthly totals wrong: %+v", ov.Stats)
+	}
+	if len(ov.RecentAgents) != 2 {
+		t.Fatalf("expected 2 recent agents, got %d", len(ov.RecentAgents))
+	}
+	if len(ov.Notices) == 0 || ov.Notices[0].Status != model.DashboardNoticeStatusSuccess {
+		t.Fatalf("notices not derived from audit logs: %+v", ov.Notices)
+	}
+}

@@ -1,0 +1,30 @@
+query DashboardOverview($recentLimit: Int, $noticeLimit: Int) {
+    dashboardOverview(recentLimit: $recentLimit, noticeLimit: $noticeLimit) {
+      stats {
+        totalAgents
+        runningAgents
+        stoppedAgents
+        exceptionAgents
+        totalVirtualKeys
+        totalGateways
+        totalResourcePools
+        totalUsers
+        monthlyCalls
+        monthlyTokens
+        monthlyCost
+      }
+      recentAgents {
+        id
+        name
+        agentName
+        status
+        createdAt
+      }
+      notices {
+        id
+        text
+        status
+        occurredAt
+      }
+    }
+  }

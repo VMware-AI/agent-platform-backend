@@ -1,0 +1,38 @@
+query MeteringOverview($range: MeteringTimeRange, $userId: ID) {
+    meteringOverview(range: $range, userId: $userId) {
+      range
+      totalInputTokens
+      totalOutputTokens
+      totalTokens
+      totalRequests
+      byAgent {
+        agentId
+        agentName
+        inputTokens
+        outputTokens
+        totalTokens
+        requests
+        cost
+      }
+      byModel {
+        model
+        inputTokens
+        outputTokens
+        totalTokens
+        requests
+        cost
+      }
+      byDay {
+        date
+        inputTokens
+        outputTokens
+        totalTokens
+        requests
+        cost
+      }
+      cost {
+        totalCost
+        monthlyCost
+      }
+    }
+  }

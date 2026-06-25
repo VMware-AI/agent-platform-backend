@@ -244,6 +244,41 @@ type DailyUsageRow struct {
 	Cost         float64 `json:"cost"`
 }
 
+type DashboardNotice struct {
+	ID         string                `json:"id"`
+	Text       string                `json:"text"`
+	Status     DashboardNoticeStatus `json:"status"`
+	OccurredAt time.Time             `json:"occurredAt"`
+}
+
+type DashboardOverview struct {
+	Stats        *DashboardStats        `json:"stats"`
+	RecentAgents []DashboardRecentAgent `json:"recentAgents"`
+	Notices      []DashboardNotice      `json:"notices"`
+}
+
+type DashboardRecentAgent struct {
+	ID        string               `json:"id"`
+	Name      string               `json:"name"`
+	AgentName string               `json:"agentName"`
+	Status    DashboardAgentStatus `json:"status"`
+	CreatedAt time.Time            `json:"createdAt"`
+}
+
+type DashboardStats struct {
+	TotalAgents        int     `json:"totalAgents"`
+	RunningAgents      int     `json:"runningAgents"`
+	StoppedAgents      int     `json:"stoppedAgents"`
+	ExceptionAgents    int     `json:"exceptionAgents"`
+	TotalVirtualKeys   int     `json:"totalVirtualKeys"`
+	TotalGateways      int     `json:"totalGateways"`
+	TotalResourcePools int     `json:"totalResourcePools"`
+	TotalUsers         int     `json:"totalUsers"`
+	MonthlyCalls       int     `json:"monthlyCalls"`
+	MonthlyTokens      int     `json:"monthlyTokens"`
+	MonthlyCost        float64 `json:"monthlyCost"`
+}
+
 type DateUsage struct {
 	Date         string  `json:"date"`
 	InputTokens  int     `json:"inputTokens"`
@@ -1105,6 +1140,120 @@ func (e *ConnectionStatus) UnmarshalJSON(b []byte) error {
 }
 
 func (e ConnectionStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type DashboardAgentStatus string
+
+const (
+	DashboardAgentStatusRunning   DashboardAgentStatus = "running"
+	DashboardAgentStatusStopped   DashboardAgentStatus = "stopped"
+	DashboardAgentStatusException DashboardAgentStatus = "exception"
+)
+
+var AllDashboardAgentStatus = []DashboardAgentStatus{
+	DashboardAgentStatusRunning,
+	DashboardAgentStatusStopped,
+	DashboardAgentStatusException,
+}
+
+func (e DashboardAgentStatus) IsValid() bool {
+	switch e {
+	case DashboardAgentStatusRunning, DashboardAgentStatusStopped, DashboardAgentStatusException:
+		return true
+	}
+	return false
+}
+
+func (e DashboardAgentStatus) String() string {
+	return string(e)
+}
+
+func (e *DashboardAgentStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = DashboardAgentStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid DashboardAgentStatus", str)
+	}
+	return nil
+}
+
+func (e DashboardAgentStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *DashboardAgentStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e DashboardAgentStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type DashboardNoticeStatus string
+
+const (
+	DashboardNoticeStatusSuccess DashboardNoticeStatus = "success"
+	DashboardNoticeStatusWarning DashboardNoticeStatus = "warning"
+	DashboardNoticeStatusDanger  DashboardNoticeStatus = "danger"
+)
+
+var AllDashboardNoticeStatus = []DashboardNoticeStatus{
+	DashboardNoticeStatusSuccess,
+	DashboardNoticeStatusWarning,
+	DashboardNoticeStatusDanger,
+}
+
+func (e DashboardNoticeStatus) IsValid() bool {
+	switch e {
+	case DashboardNoticeStatusSuccess, DashboardNoticeStatusWarning, DashboardNoticeStatusDanger:
+		return true
+	}
+	return false
+}
+
+func (e DashboardNoticeStatus) String() string {
+	return string(e)
+}
+
+func (e *DashboardNoticeStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = DashboardNoticeStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid DashboardNoticeStatus", str)
+	}
+	return nil
+}
+
+func (e DashboardNoticeStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *DashboardNoticeStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e DashboardNoticeStatus) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

@@ -511,6 +511,70 @@ func applyTemplateOptionals(m *ent.AgentTemplateMutation, input model.UpsertAgen
 	}
 }
 
+// clampLimit normalizes an optional list-limit into [1, max], defaulting to def.
+func clampLimit(p *int, def, max int) int {
+	n := def
+	if p != nil {
+		n = *p
+	}
+	if n < 1 {
+		n = def
+	}
+	if n > max {
+		n = max
+	}
+	return n
+}
+
+// dashboardAgentStatus projects the ent agent status onto the console's 3-state
+// overview badge. provisioning is not yet running, so it surfaces as stopped.
+func dashboardAgentStatus(s agent.Status) model.DashboardAgentStatus {
+	switch s {
+	case agent.StatusRunning:
+		return model.DashboardAgentStatusRunning
+	case agent.StatusException:
+		return model.DashboardAgentStatusException
+	default: // stopped + provisioning
+		return model.DashboardAgentStatusStopped
+	}
+}
+
+// noticeText renders a human-readable system-notice line from an audit log's
+// action + resource type, marked succeeded/failed. e.g. ("resource_pool.test",
+// "resource_pool", success) → "resource_pool.test on resource_pool succeeded".
+func noticeText(action, resourceType string, status model.DashboardNoticeStatus) string {
+	verb := "succeeded"
+	if status == model.DashboardNoticeStatusDanger {
+		verb = "failed"
+	}
+	if resourceType != "" {
+		return fmt.Sprintf("%s on %s %s", action, resourceType, verb)
+	}
+	return fmt.Sprintf("%s %s", action, verb)
+}
+
+// monthlyUsageTotals sums input/output tokens and cost over the given TokenUsage
+// query, returning zeros when there are no rows (the aggregate scan yields no row
+// on an empty table for some drivers).
+func (r *Resolver) monthlyUsageTotals(ctx context.Context, q *ent.TokenUsageQuery) (in, out int, cost float64, err error) {
+	var agg []struct {
+		In   int     `json:"in"`
+		Out  int     `json:"out"`
+		Cost float64 `json:"cost"`
+	}
+	if err = q.Clone().Aggregate(
+		ent.As(ent.Sum(tokenusage.FieldInputTokens), "in"),
+		ent.As(ent.Sum(tokenusage.FieldOutputTokens), "out"),
+		ent.As(ent.Sum(tokenusage.FieldCost), "cost"),
+	).Scan(ctx, &agg); err != nil {
+		return 0, 0, 0, err
+	}
+	if len(agg) == 1 {
+		return agg[0].In, agg[0].Out, agg[0].Cost, nil
+	}
+	return 0, 0, 0, nil
+}
+
 // scopedTokenUsageQuery builds a TokenUsage query confined to the caller's tenant
 // (tenant-admin → own tenant; admin → all) and environment (when env_scope is on),
 // optionally narrowed to one user. Shared by the metering aggregations so they all
