@@ -76,6 +76,12 @@ func (_c *OvaTemplateVersionCreate) SetNillableNotes(v *string) *OvaTemplateVers
 	return _c
 }
 
+// SetFamilyID sets the "family_id" field.
+func (_c *OvaTemplateVersionCreate) SetFamilyID(v uuid.UUID) *OvaTemplateVersionCreate {
+	_c.mutation.SetFamilyID(v)
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *OvaTemplateVersionCreate) SetID(v uuid.UUID) *OvaTemplateVersionCreate {
 	_c.mutation.SetID(v)
@@ -87,12 +93,6 @@ func (_c *OvaTemplateVersionCreate) SetNillableID(v *uuid.UUID) *OvaTemplateVers
 	if v != nil {
 		_c.SetID(*v)
 	}
-	return _c
-}
-
-// SetFamilyID sets the "family" edge to the OvaTemplateFamily entity by ID.
-func (_c *OvaTemplateVersionCreate) SetFamilyID(id uuid.UUID) *OvaTemplateVersionCreate {
-	_c.mutation.SetFamilyID(id)
 	return _c
 }
 
@@ -174,6 +174,9 @@ func (_c *OvaTemplateVersionCreate) check() error {
 			return &ValidationError{Name: "ova_identifier", err: fmt.Errorf(`ent: validator failed for field "OvaTemplateVersion.ova_identifier": %w`, err)}
 		}
 	}
+	if _, ok := _c.mutation.FamilyID(); !ok {
+		return &ValidationError{Name: "family_id", err: errors.New(`ent: missing required field "OvaTemplateVersion.family_id"`)}
+	}
 	if len(_c.mutation.FamilyIDs()) == 0 {
 		return &ValidationError{Name: "family", err: errors.New(`ent: missing required edge "OvaTemplateVersion.family"`)}
 	}
@@ -246,7 +249,7 @@ func (_c *OvaTemplateVersionCreate) createSpec() (*OvaTemplateVersion, *sqlgraph
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.ova_template_family_versions = &nodes[0]
+		_node.FamilyID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

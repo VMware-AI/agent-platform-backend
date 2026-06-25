@@ -363,7 +363,7 @@ var (
 		{Name: "version", Type: field.TypeString},
 		{Name: "ova_identifier", Type: field.TypeString},
 		{Name: "notes", Type: field.TypeString, Nullable: true},
-		{Name: "ova_template_family_versions", Type: field.TypeUUID},
+		{Name: "family_id", Type: field.TypeUUID},
 	}
 	// OvaTemplateVersionsTable holds the schema information for the "ova_template_versions" table.
 	OvaTemplateVersionsTable = &schema.Table{
@@ -376,6 +376,13 @@ var (
 				Columns:    []*schema.Column{OvaTemplateVersionsColumns[6]},
 				RefColumns: []*schema.Column{OvaTemplateFamiliesColumns[0]},
 				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "ovatemplateversion_family_id",
+				Unique:  false,
+				Columns: []*schema.Column{OvaTemplateVersionsColumns[6]},
 			},
 		},
 	}

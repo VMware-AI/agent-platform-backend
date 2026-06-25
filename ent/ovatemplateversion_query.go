@@ -25,7 +25,6 @@ type OvaTemplateVersionQuery struct {
 	inters     []Interceptor
 	predicates []predicate.OvaTemplateVersion
 	withFamily *OvaTemplateFamilyQuery
-	withFKs    bool
 	modifiers  []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -373,18 +372,11 @@ func (_q *OvaTemplateVersionQuery) prepareQuery(ctx context.Context) error {
 func (_q *OvaTemplateVersionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*OvaTemplateVersion, error) {
 	var (
 		nodes       = []*OvaTemplateVersion{}
-		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
 			_q.withFamily != nil,
 		}
 	)
-	if _q.withFamily != nil {
-		withFKs = true
-	}
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, ovatemplateversion.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*OvaTemplateVersion).scanValues(nil, columns)
 	}
@@ -419,10 +411,7 @@ func (_q *OvaTemplateVersionQuery) loadFamily(ctx context.Context, query *OvaTem
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*OvaTemplateVersion)
 	for i := range nodes {
-		if nodes[i].ova_template_family_versions == nil {
-			continue
-		}
-		fk := *nodes[i].ova_template_family_versions
+		fk := nodes[i].FamilyID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -439,7 +428,7 @@ func (_q *OvaTemplateVersionQuery) loadFamily(ctx context.Context, query *OvaTem
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "ova_template_family_versions" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "family_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -475,6 +464,9 @@ func (_q *OvaTemplateVersionQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != ovatemplateversion.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withFamily != nil {
+			_spec.Node.AddColumnOnce(ovatemplateversion.FieldFamilyID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

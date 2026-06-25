@@ -46,7 +46,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "ovatemplateversion" package.
 	VersionsInverseTable = "ova_template_versions"
 	// VersionsColumn is the table column denoting the versions relation/edge.
-	VersionsColumn = "ova_template_family_versions"
+	VersionsColumn = "family_id"
 )
 
 // Columns holds all SQL columns for ovatemplatefamily fields.

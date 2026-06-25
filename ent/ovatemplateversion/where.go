@@ -81,6 +81,11 @@ func Notes(v string) predicate.OvaTemplateVersion {
 	return predicate.OvaTemplateVersion(sql.FieldEQ(FieldNotes, v))
 }
 
+// FamilyID applies equality check predicate on the "family_id" field. It's identical to FamilyIDEQ.
+func FamilyID(v uuid.UUID) predicate.OvaTemplateVersion {
+	return predicate.OvaTemplateVersion(sql.FieldEQ(FieldFamilyID, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.OvaTemplateVersion {
 	return predicate.OvaTemplateVersion(sql.FieldEQ(FieldCreatedAt, v))
@@ -364,6 +369,26 @@ func NotesEqualFold(v string) predicate.OvaTemplateVersion {
 // NotesContainsFold applies the ContainsFold predicate on the "notes" field.
 func NotesContainsFold(v string) predicate.OvaTemplateVersion {
 	return predicate.OvaTemplateVersion(sql.FieldContainsFold(FieldNotes, v))
+}
+
+// FamilyIDEQ applies the EQ predicate on the "family_id" field.
+func FamilyIDEQ(v uuid.UUID) predicate.OvaTemplateVersion {
+	return predicate.OvaTemplateVersion(sql.FieldEQ(FieldFamilyID, v))
+}
+
+// FamilyIDNEQ applies the NEQ predicate on the "family_id" field.
+func FamilyIDNEQ(v uuid.UUID) predicate.OvaTemplateVersion {
+	return predicate.OvaTemplateVersion(sql.FieldNEQ(FieldFamilyID, v))
+}
+
+// FamilyIDIn applies the In predicate on the "family_id" field.
+func FamilyIDIn(vs ...uuid.UUID) predicate.OvaTemplateVersion {
+	return predicate.OvaTemplateVersion(sql.FieldIn(FieldFamilyID, vs...))
+}
+
+// FamilyIDNotIn applies the NotIn predicate on the "family_id" field.
+func FamilyIDNotIn(vs ...uuid.UUID) predicate.OvaTemplateVersion {
+	return predicate.OvaTemplateVersion(sql.FieldNotIn(FieldFamilyID, vs...))
 }
 
 // HasFamily applies the HasEdge predicate on the "family" edge.

@@ -84,8 +84,17 @@ func (r *mutationResolver) AddOvaTemplateVersion(ctx context.Context, input mode
 }
 
 // LatestVersion returns the version string of the family's most recently created
-// version, or nil when the family has none.
+// version, or nil when the family has none. When the list resolver eager-loaded
+// the versions (obj.Versions non-nil), it derives from them (no extra query);
+// otherwise it falls back to a scoped lazy query for the single-entity path.
 func (r *ovaTemplateFamilyResolver) LatestVersion(ctx context.Context, obj *model.OvaTemplateFamily) (*string, error) {
+	if obj.Versions != nil { // eager-loaded by OvaTemplateFamilies (newest-first)
+		if len(obj.Versions) == 0 {
+			return nil, nil
+		}
+		latest := obj.Versions[0].Version
+		return &latest, nil
+	}
 	fid, err := uuid.Parse(obj.ID)
 	if err != nil {
 		return nil, err
@@ -101,8 +110,13 @@ func (r *ovaTemplateFamilyResolver) LatestVersion(ctx context.Context, obj *mode
 	return &out, nil
 }
 
-// Versions lazily loads the family's versions, newest-first.
+// Versions returns the family's versions, newest-first. Served from the eager-load
+// (obj.Versions non-nil, set by OvaTemplateFamilies) when present — no per-family
+// query — and falls back to a lazy load for the single-entity path.
 func (r *ovaTemplateFamilyResolver) Versions(ctx context.Context, obj *model.OvaTemplateFamily) ([]model.OvaTemplateVersion, error) {
+	if obj.Versions != nil { // eager-loaded by OvaTemplateFamilies (newest-first)
+		return obj.Versions, nil
+	}
 	fid, err := uuid.Parse(obj.ID)
 	if err != nil {
 		return nil, err
@@ -151,13 +165,18 @@ func (r *queryResolver) OvaTemplateFamilies(ctx context.Context, filter *model.O
 		return nil, err
 	}
 	page, pageSize := ovaPage(pagination)
-	fams, err := applyOvaFamilySort(base.Clone(), sort).Offset((page - 1) * pageSize).Limit(pageSize).All(ctx)
+	// Eager-load each family's versions (newest-first) in ONE query so the per-row
+	// Versions/LatestVersion field resolvers don't issue ~2N follow-up queries
+	// (the OVA marketplace N+1). The loaded edge pre-populates the model nodes.
+	fams, err := applyOvaFamilySort(base.Clone(), sort).
+		WithVersions(func(q *ent.OvaTemplateVersionQuery) { orderVersionsNewest(q) }).
+		Offset((page - 1) * pageSize).Limit(pageSize).All(ctx)
 	if err != nil {
 		return nil, err
 	}
 	nodes := make([]model.OvaTemplateFamily, 0, len(fams))
 	for _, f := range fams {
-		nodes = append(nodes, *toModelOvaFamily(f))
+		nodes = append(nodes, *toModelOvaFamilyWithVersions(f, f.Edges.Versions))
 	}
 	totalPages := (total + pageSize - 1) / pageSize
 	return &model.OvaTemplateFamilyConnection{
