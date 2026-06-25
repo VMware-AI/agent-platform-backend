@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/url"
+	"regexp"
 	"time"
 
 	"github.com/google/uuid"
@@ -737,6 +738,23 @@ func derefString(p *string) string {
 		return *p
 	}
 	return ""
+}
+
+// vmNameInvalidChars matches characters that are not safe in a vSphere VM name;
+// they are collapsed to a single dash. vCenter disallows the special chars
+// %/\?*:|"<> among others, so we keep only word chars, dot and dash.
+var vmNameInvalidChars = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
+
+// uniqueVMName derives a collision-free vCenter VM name from the agent's display
+// name + the first 8 chars of its (unique) id. The display name alone can repeat
+// across agents, which would collide on the VM clone; the id suffix disambiguates.
+// The result is sanitized to a valid vSphere VM name.
+func uniqueVMName(displayName string, id uuid.UUID) string {
+	base := strings.Trim(vmNameInvalidChars.ReplaceAllString(displayName, "-"), "-")
+	if base == "" {
+		base = "agent"
+	}
+	return base + "-" + id.String()[:8]
 }
 
 // parseOptionalUUID parses an optional id input into a *uuid.UUID. nil input →

@@ -121,9 +121,15 @@ func TestDeployAgent_EndToEnd(t *testing.T) {
 	if dep.Agent.Type != "goose" {
 		t.Fatalf("agent type = %q, want goose (from family)", dep.Agent.Type)
 	}
-	// VM name = agent name in the new flow.
-	if dep.Agent.Endpoint == nil || *dep.Agent.Endpoint != "alice-goose" {
-		t.Fatalf("endpoint (vm_ref) not set: %+v", dep.Agent.Endpoint)
+	// VM name is UNIQUE: display-name prefix + first 8 of the new agent id, so two
+	// agents sharing a display name don't collide on the clone. The display name
+	// itself stays unchanged.
+	if dep.Agent.Name != "alice-goose" {
+		t.Fatalf("display name = %q, want alice-goose", dep.Agent.Name)
+	}
+	wantVM := "alice-goose-" + dep.Agent.ID[:8]
+	if dep.Agent.Endpoint == nil || *dep.Agent.Endpoint != wantVM {
+		t.Fatalf("endpoint (vm_ref) = %+v, want %q", dep.Agent.Endpoint, wantVM)
 	}
 	// the deployed-agent payload echoes the catalog provenance + target pool.
 	if dep.TemplateVersion == nil || dep.TemplateVersion.ID != versionID {
@@ -315,6 +321,11 @@ func TestRecycleAgent_VCSim(t *testing.T) {
 		t.Fatalf("DeployAgent: %v", err)
 	}
 	ag := dep.Agent
+	// The cloned VM carries the UNIQUE name (display + id8), not the display name.
+	if ag.Endpoint == nil {
+		t.Fatal("deployed agent has no vm_ref")
+	}
+	vmRef := *ag.Endpoint
 
 	// confirm=false is rejected (destructive)
 	if _, err := mr.RecycleAgent(ownerCtx, model.RecycleAgentInput{AgentID: ag.ID, Confirm: false}); err == nil {
@@ -334,7 +345,7 @@ func TestRecycleAgent_VCSim(t *testing.T) {
 	after, _ := vc2.ListVMs(ctx)
 	_ = vc2.Logout(ctx)
 	for _, vm := range after {
-		if vm.Name == "bob-vm" {
+		if vm.Name == vmRef {
 			t.Fatal("agent VM not destroyed on recycle")
 		}
 	}

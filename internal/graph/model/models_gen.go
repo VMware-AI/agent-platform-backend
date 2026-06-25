@@ -349,12 +349,13 @@ type Department struct {
 }
 
 type DeployAgentInput struct {
-	Name              string   `json:"name"`
-	TemplateFamilyID  string   `json:"templateFamilyId"`
-	TemplateVersionID string   `json:"templateVersionId"`
-	ResourcePoolID    string   `json:"resourcePoolId"`
-	Hostname          *string  `json:"hostname,omitempty"`
-	MaxBudget         *float64 `json:"maxBudget,omitempty"`
+	Name               string   `json:"name"`
+	TemplateFamilyID   string   `json:"templateFamilyId"`
+	TemplateVersionID  string   `json:"templateVersionId"`
+	ResourcePoolID     string   `json:"resourcePoolId"`
+	TargetResourcePool *string  `json:"targetResourcePool,omitempty"`
+	Hostname           *string  `json:"hostname,omitempty"`
+	MaxBudget          *float64 `json:"maxBudget,omitempty"`
 }
 
 type DeployedAgent struct {

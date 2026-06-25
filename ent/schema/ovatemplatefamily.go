@@ -37,7 +37,9 @@ func (OvaTemplateFamily) Fields() []ent.Field {
 	}
 }
 
-// Edges: a family owns its versions; deleting a family cascades to its versions.
+// Edges: a family owns its versions. The FK is ON DELETE NO ACTION and there is
+// no family-delete mutation today, so deleting a family does NOT cascade to its
+// versions (a delete would be blocked by the FK while versions exist).
 func (OvaTemplateFamily) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("versions", OvaTemplateVersion.Type),

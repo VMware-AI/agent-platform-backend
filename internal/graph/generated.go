@@ -4948,6 +4948,13 @@ input DeployAgentInput {
   templateVersionId: ID!
   # Target vCenter resource pool to place the clone in.
   resourcePoolId: ID!
+  # Optional vSphere resource-pool name to place the VM clone in. A true OVA
+  # template has NO source resource pool, so vCenter's CloneFromTemplate requires
+  # an explicit placement pool for real deploys ("source has no resource pool;
+  # specify resourcePool"). Empty = inherit the source template's pool (only works
+  # when the source is a regular VM, e.g. vcsim). Optional to keep the contract
+  # backward-compatible.
+  targetResourcePool: String
   # Optional cloud-init hostname for the VM (defaults to none).
   hostname: String
   # Optional per-key spend cap handed to the gateway when issuing the agent's key.
@@ -5000,8 +5007,9 @@ extend type Mutation {
   # agent row (kind from the family), issues a gateway key, clones the VM from the
   # version's ovaIdentifier, injects cloud-init, powers on, marks it running. On
   # failure the VM, key and (if needed) the new agent row are rolled back (no
-  # orphans). Any authenticated user (owner = caller).
-  deployAgent(input: DeployAgentInput!): DeployedAgent!
+  # orphans). Admin-only: the 智能体市场 (and its OVA catalog queries) are gated to
+  # admins, so deploy is consistently admin-only too (owner = the admin caller).
+  deployAgent(input: DeployAgentInput!): DeployedAgent! @hasRole(any: [admin])
 
   # Owner or admin. Destroys the agent's VM, revokes its key, marks it stopped.
   # confirm must be true (double-confirm on a destructive operation).
@@ -16035,7 +16043,25 @@ func (ec *executionContext) _Mutation_deployAgent(ctx context.Context, field gra
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Mutation().DeployAgent(ctx, fc.Args["input"].(model.DeployAgentInput))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.DeployedAgent
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.DeployedAgent
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
 		func(ctx context.Context, selections ast.SelectionSet, v *model.DeployedAgent) graphql.Marshaler {
 			return ec.marshalNDeployedAgent2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDeployedAgent(ctx, selections, v)
 		},
@@ -25623,7 +25649,7 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "templateFamilyId", "templateVersionId", "resourcePoolId", "hostname", "maxBudget"}
+	fieldsInOrder := [...]string{"name", "templateFamilyId", "templateVersionId", "resourcePoolId", "targetResourcePool", "hostname", "maxBudget"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -25658,6 +25684,13 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 				return it, err
 			}
 			it.ResourcePoolID = data
+		case "targetResourcePool":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetResourcePool"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.TargetResourcePool = data
 		case "hostname":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hostname"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)

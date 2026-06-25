@@ -123,8 +123,10 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	// so it is embedded into cloud-init at deploy — no fetch from the VM (LLD-09).
 	defaultConfig, configPath := r.resolveAgentConfig(ctx, ag)
 
-	// The cloned VM name = the agent name (the console treats name as the handle).
-	vmName := input.Name
+	// Derive a UNIQUE vCenter VM name so two agents that share a display name do
+	// not collide on the clone. The agent's DISPLAY name stays input.Name; only
+	// the VM gets the suffix. Sanitized to a valid vSphere VM name.
+	vmName := uniqueVMName(input.Name, ag.ID)
 
 	// Issue a one-time agent-manager enroll token (LLD-08 §4.2) and inject it via
 	// guestinfo so the daemon can exchange it for a long-lived VM token on first
@@ -143,10 +145,15 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 
 	svc := &deploy.Service{Gateway: r.Gateway, VCenter: conn, GatewayURL: r.GatewayURL}
 	res, err := svc.Provision(ctx, deploy.Request{
-		AgentName:        ag.Name,
-		UserID:           ag.OwnerUserID.String(),
-		Template:         version.OvaIdentifier, // clone from the catalog version's OVA
-		VMName:           vmName,
+		AgentName: ag.Name,
+		UserID:    ag.OwnerUserID.String(),
+		Template:  version.OvaIdentifier, // clone from the catalog version's OVA
+		VMName:    vmName,
+		// vSphere placement pool. A true OVA template has no source resource pool,
+		// so a real deploy MUST supply one or CloneFromTemplate fails ("source has
+		// no resource pool; specify resourcePool"). Empty = inherit the source's
+		// pool (only valid when the source is a regular VM, e.g. vcsim).
+		ResourcePool:     derefString(input.TargetResourcePool),
 		Hostname:         derefString(input.Hostname),
 		MaxBudget:        input.MaxBudget,
 		DefaultConfig:    defaultConfig,
