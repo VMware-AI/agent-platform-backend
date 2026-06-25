@@ -559,6 +559,7 @@ type ComplexityRoot struct {
 		Permissions             func(childComplexity int) int
 		RateLimitPolicies       func(childComplexity int) int
 		RequestLogs             func(childComplexity int, filter *model.RequestLogFilter, page *model.PageInput) int
+		RequestMetrics          func(childComplexity int, from time.Time, to time.Time, granularity model.RequestMetricsBucketGranularity, filter *model.RequestMetricsFilter) int
 		ResourcePool            func(childComplexity int, id string) int
 		ResourcePools           func(childComplexity int, filter *model.ResourcePoolFilter, pagination *model.Pagination, sort *model.ResourcePoolSort) int
 		Role                    func(childComplexity int, id string) int
@@ -596,6 +597,34 @@ type ComplexityRoot struct {
 		RequestID    func(childComplexity int) int
 		StatusCode   func(childComplexity int) int
 		UserID       func(childComplexity int) int
+	}
+
+	RequestMetrics struct {
+		Buckets     func(childComplexity int) int
+		Granularity func(childComplexity int) int
+		RangeEnd    func(childComplexity int) int
+		RangeStart  func(childComplexity int) int
+		Summary     func(childComplexity int) int
+	}
+
+	RequestMetricsBucket struct {
+		AvgLatencyMs      func(childComplexity int) int
+		ErrorCount        func(childComplexity int) int
+		InputTokensTotal  func(childComplexity int) int
+		OutputTokensTotal func(childComplexity int) int
+		P95LatencyMs      func(childComplexity int) int
+		RequestCount      func(childComplexity int) int
+		Timestamp         func(childComplexity int) int
+	}
+
+	RequestMetricsSummary struct {
+		AvgLatencyMs      func(childComplexity int) int
+		ErrorRate         func(childComplexity int) int
+		P95LatencyMs      func(childComplexity int) int
+		TotalErrors       func(childComplexity int) int
+		TotalInputTokens  func(childComplexity int) int
+		TotalOutputTokens func(childComplexity int) int
+		TotalRequests     func(childComplexity int) int
 	}
 
 	ResetPasswordPayload struct {
@@ -869,6 +898,7 @@ type QueryResolver interface {
 	ModelGatewaySyncSummary(ctx context.Context) (*model.ModelGatewaySyncSummary, error)
 	RequestLogs(ctx context.Context, filter *model.RequestLogFilter, page *model.PageInput) ([]model.RequestLog, error)
 	RateLimitPolicies(ctx context.Context) ([]model.RateLimitPolicy, error)
+	RequestMetrics(ctx context.Context, from time.Time, to time.Time, granularity model.RequestMetricsBucketGranularity, filter *model.RequestMetricsFilter) (*model.RequestMetrics, error)
 	OvaTemplateFamilies(ctx context.Context, filter *model.OvaTemplateFamilyFilter, pagination *model.Pagination, sort *model.OvaTemplateFamilySort) (*model.OvaTemplateFamilyConnection, error)
 	OvaTemplateVersions(ctx context.Context, familyID *string, pagination *model.Pagination) (*model.OvaTemplateVersionConnection, error)
 	CustomRoles(ctx context.Context) ([]model.CustomRole, error)
@@ -3499,6 +3529,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.RequestLogs(childComplexity, args["filter"].(*model.RequestLogFilter), args["page"].(*model.PageInput)), true
+	case "Query.requestMetrics":
+		if e.ComplexityRoot.Query.RequestMetrics == nil {
+			break
+		}
+
+		args, err := ec.field_Query_requestMetrics_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.RequestMetrics(childComplexity, args["from"].(time.Time), args["to"].(time.Time), args["granularity"].(model.RequestMetricsBucketGranularity), args["filter"].(*model.RequestMetricsFilter)), true
 	case "Query.resourcePool":
 		if e.ComplexityRoot.Query.ResourcePool == nil {
 			break
@@ -3742,6 +3783,123 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.RequestLog.UserID(childComplexity), true
+
+	case "RequestMetrics.buckets":
+		if e.ComplexityRoot.RequestMetrics.Buckets == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetrics.Buckets(childComplexity), true
+	case "RequestMetrics.granularity":
+		if e.ComplexityRoot.RequestMetrics.Granularity == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetrics.Granularity(childComplexity), true
+	case "RequestMetrics.rangeEnd":
+		if e.ComplexityRoot.RequestMetrics.RangeEnd == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetrics.RangeEnd(childComplexity), true
+	case "RequestMetrics.rangeStart":
+		if e.ComplexityRoot.RequestMetrics.RangeStart == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetrics.RangeStart(childComplexity), true
+	case "RequestMetrics.summary":
+		if e.ComplexityRoot.RequestMetrics.Summary == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetrics.Summary(childComplexity), true
+
+	case "RequestMetricsBucket.avgLatencyMs":
+		if e.ComplexityRoot.RequestMetricsBucket.AvgLatencyMs == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetricsBucket.AvgLatencyMs(childComplexity), true
+	case "RequestMetricsBucket.errorCount":
+		if e.ComplexityRoot.RequestMetricsBucket.ErrorCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetricsBucket.ErrorCount(childComplexity), true
+	case "RequestMetricsBucket.inputTokensTotal":
+		if e.ComplexityRoot.RequestMetricsBucket.InputTokensTotal == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetricsBucket.InputTokensTotal(childComplexity), true
+	case "RequestMetricsBucket.outputTokensTotal":
+		if e.ComplexityRoot.RequestMetricsBucket.OutputTokensTotal == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetricsBucket.OutputTokensTotal(childComplexity), true
+	case "RequestMetricsBucket.p95LatencyMs":
+		if e.ComplexityRoot.RequestMetricsBucket.P95LatencyMs == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetricsBucket.P95LatencyMs(childComplexity), true
+	case "RequestMetricsBucket.requestCount":
+		if e.ComplexityRoot.RequestMetricsBucket.RequestCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetricsBucket.RequestCount(childComplexity), true
+	case "RequestMetricsBucket.timestamp":
+		if e.ComplexityRoot.RequestMetricsBucket.Timestamp == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetricsBucket.Timestamp(childComplexity), true
+
+	case "RequestMetricsSummary.avgLatencyMs":
+		if e.ComplexityRoot.RequestMetricsSummary.AvgLatencyMs == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetricsSummary.AvgLatencyMs(childComplexity), true
+	case "RequestMetricsSummary.errorRate":
+		if e.ComplexityRoot.RequestMetricsSummary.ErrorRate == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetricsSummary.ErrorRate(childComplexity), true
+	case "RequestMetricsSummary.p95LatencyMs":
+		if e.ComplexityRoot.RequestMetricsSummary.P95LatencyMs == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetricsSummary.P95LatencyMs(childComplexity), true
+	case "RequestMetricsSummary.totalErrors":
+		if e.ComplexityRoot.RequestMetricsSummary.TotalErrors == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetricsSummary.TotalErrors(childComplexity), true
+	case "RequestMetricsSummary.totalInputTokens":
+		if e.ComplexityRoot.RequestMetricsSummary.TotalInputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetricsSummary.TotalInputTokens(childComplexity), true
+	case "RequestMetricsSummary.totalOutputTokens":
+		if e.ComplexityRoot.RequestMetricsSummary.TotalOutputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetricsSummary.TotalOutputTokens(childComplexity), true
+	case "RequestMetricsSummary.totalRequests":
+		if e.ComplexityRoot.RequestMetricsSummary.TotalRequests == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetricsSummary.TotalRequests(childComplexity), true
 
 	case "ResetPasswordPayload.generatedPassword":
 		if e.ComplexityRoot.ResetPasswordPayload.GeneratedPassword == nil {
@@ -4321,6 +4479,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputRecycleAgentInput,
 		ec.unmarshalInputRegisterGatewayConnectionInput,
 		ec.unmarshalInputRequestLogFilter,
+		ec.unmarshalInputRequestMetricsFilter,
 		ec.unmarshalInputResourcePoolFilter,
 		ec.unmarshalInputResourcePoolSort,
 		ec.unmarshalInputRevertAgentSnapshotInput,
@@ -5522,6 +5681,42 @@ input RequestLogFilter {
   requestId: String
 }
 
+enum RequestMetricsBucketGranularity { MINUTE HOUR DAY }
+
+type RequestMetricsBucket {
+  timestamp: Time!
+  requestCount: Int!
+  errorCount: Int!
+  avgLatencyMs: Int!
+  p95LatencyMs: Int!
+  inputTokensTotal: Int!
+  outputTokensTotal: Int!
+}
+
+type RequestMetricsSummary {
+  totalRequests: Int!
+  totalErrors: Int!
+  errorRate: Float!
+  avgLatencyMs: Int!
+  p95LatencyMs: Int!
+  totalInputTokens: Int!
+  totalOutputTokens: Int!
+}
+
+type RequestMetrics {
+  rangeStart: Time!
+  rangeEnd: Time!
+  granularity: RequestMetricsBucketGranularity!
+  buckets: [RequestMetricsBucket!]!
+  summary: RequestMetricsSummary!
+}
+
+input RequestMetricsFilter {
+  statusCode: Int
+  agentId: ID
+  model: String
+}
+
 type RateLimitPolicy {
   id: ID!
   name: String!
@@ -5541,6 +5736,7 @@ input UpsertRateLimitPolicyInput {
 extend type Query {
   requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
   rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin, tenant_admin])
+  requestMetrics(from: Time!, to: Time!, granularity: RequestMetricsBucketGranularity!, filter: RequestMetricsFilter): RequestMetrics! @hasPermission(perm: "audit:view")
 }
 
 extend type Mutation {
@@ -6902,6 +7098,62 @@ func (ec *executionContext) childFields_RequestLog(ctx context.Context, field gr
 		return ec.fieldContext_RequestLog_createdAt(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type RequestLog", field.Name)
+}
+
+func (ec *executionContext) childFields_RequestMetrics(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "rangeStart":
+		return ec.fieldContext_RequestMetrics_rangeStart(ctx, field)
+	case "rangeEnd":
+		return ec.fieldContext_RequestMetrics_rangeEnd(ctx, field)
+	case "granularity":
+		return ec.fieldContext_RequestMetrics_granularity(ctx, field)
+	case "buckets":
+		return ec.fieldContext_RequestMetrics_buckets(ctx, field)
+	case "summary":
+		return ec.fieldContext_RequestMetrics_summary(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type RequestMetrics", field.Name)
+}
+
+func (ec *executionContext) childFields_RequestMetricsBucket(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "timestamp":
+		return ec.fieldContext_RequestMetricsBucket_timestamp(ctx, field)
+	case "requestCount":
+		return ec.fieldContext_RequestMetricsBucket_requestCount(ctx, field)
+	case "errorCount":
+		return ec.fieldContext_RequestMetricsBucket_errorCount(ctx, field)
+	case "avgLatencyMs":
+		return ec.fieldContext_RequestMetricsBucket_avgLatencyMs(ctx, field)
+	case "p95LatencyMs":
+		return ec.fieldContext_RequestMetricsBucket_p95LatencyMs(ctx, field)
+	case "inputTokensTotal":
+		return ec.fieldContext_RequestMetricsBucket_inputTokensTotal(ctx, field)
+	case "outputTokensTotal":
+		return ec.fieldContext_RequestMetricsBucket_outputTokensTotal(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type RequestMetricsBucket", field.Name)
+}
+
+func (ec *executionContext) childFields_RequestMetricsSummary(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "totalRequests":
+		return ec.fieldContext_RequestMetricsSummary_totalRequests(ctx, field)
+	case "totalErrors":
+		return ec.fieldContext_RequestMetricsSummary_totalErrors(ctx, field)
+	case "errorRate":
+		return ec.fieldContext_RequestMetricsSummary_errorRate(ctx, field)
+	case "avgLatencyMs":
+		return ec.fieldContext_RequestMetricsSummary_avgLatencyMs(ctx, field)
+	case "p95LatencyMs":
+		return ec.fieldContext_RequestMetricsSummary_p95LatencyMs(ctx, field)
+	case "totalInputTokens":
+		return ec.fieldContext_RequestMetricsSummary_totalInputTokens(ctx, field)
+	case "totalOutputTokens":
+		return ec.fieldContext_RequestMetricsSummary_totalOutputTokens(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type RequestMetricsSummary", field.Name)
 }
 
 func (ec *executionContext) childFields_ResetPasswordPayload(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -8757,6 +9009,44 @@ func (ec *executionContext) field_Query_requestLogs_args(ctx context.Context, ra
 		return nil, err
 	}
 	args["page"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_requestMetrics_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "from",
+		func(ctx context.Context, v any) (time.Time, error) {
+			return ec.unmarshalNTime2timeᚐTime(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["from"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "to",
+		func(ctx context.Context, v any) (time.Time, error) {
+			return ec.unmarshalNTime2timeᚐTime(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["to"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "granularity",
+		func(ctx context.Context, v any) (model.RequestMetricsBucketGranularity, error) {
+			return ec.unmarshalNRequestMetricsBucketGranularity2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestMetricsBucketGranularity(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["granularity"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
+		func(ctx context.Context, v any) (*model.RequestMetricsFilter, error) {
+			return ec.unmarshalORequestMetricsFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestMetricsFilter(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["filter"] = arg3
 	return args, nil
 }
 
@@ -20973,6 +21263,68 @@ func (ec *executionContext) fieldContext_Query_rateLimitPolicies(_ context.Conte
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_requestMetrics(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_requestMetrics(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().RequestMetrics(ctx, fc.Args["from"].(time.Time), fc.Args["to"].(time.Time), fc.Args["granularity"].(model.RequestMetricsBucketGranularity), fc.Args["filter"].(*model.RequestMetricsFilter))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				perm, err := ec.unmarshalNString2string(ctx, "audit:view")
+				if err != nil {
+					var zeroVal *model.RequestMetrics
+					return zeroVal, err
+				}
+				if ec.Directives.HasPermission == nil {
+					var zeroVal *model.RequestMetrics
+					return zeroVal, errors.New("directive hasPermission is not implemented")
+				}
+				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.RequestMetrics) graphql.Marshaler {
+			return ec.marshalNRequestMetrics2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestMetrics(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_requestMetrics(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_RequestMetrics(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_requestMetrics_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_ovaTemplateFamilies(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -21910,6 +22262,461 @@ func (ec *executionContext) _RequestLog_createdAt(ctx context.Context, field gra
 }
 func (ec *executionContext) fieldContext_RequestLog_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("RequestLog", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _RequestMetrics_rangeStart(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetrics) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetrics_rangeStart(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RangeStart, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetrics_rangeStart(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestMetrics", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _RequestMetrics_rangeEnd(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetrics) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetrics_rangeEnd(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RangeEnd, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetrics_rangeEnd(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestMetrics", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _RequestMetrics_granularity(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetrics) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetrics_granularity(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Granularity, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.RequestMetricsBucketGranularity) graphql.Marshaler {
+			return ec.marshalNRequestMetricsBucketGranularity2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestMetricsBucketGranularity(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetrics_granularity(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestMetrics", field, false, false, errors.New("field of type RequestMetricsBucketGranularity does not have child fields"))
+}
+
+func (ec *executionContext) _RequestMetrics_buckets(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetrics) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetrics_buckets(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Buckets, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.RequestMetricsBucket) graphql.Marshaler {
+			return ec.marshalNRequestMetricsBucket2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestMetricsBucketᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetrics_buckets(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RequestMetrics",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_RequestMetricsBucket(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RequestMetrics_summary(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetrics) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetrics_summary(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Summary, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.RequestMetricsSummary) graphql.Marshaler {
+			return ec.marshalNRequestMetricsSummary2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestMetricsSummary(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetrics_summary(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RequestMetrics",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_RequestMetricsSummary(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RequestMetricsBucket_timestamp(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetricsBucket) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetricsBucket_timestamp(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Timestamp, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetricsBucket_timestamp(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestMetricsBucket", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _RequestMetricsBucket_requestCount(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetricsBucket) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetricsBucket_requestCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RequestCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetricsBucket_requestCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestMetricsBucket", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RequestMetricsBucket_errorCount(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetricsBucket) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetricsBucket_errorCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ErrorCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetricsBucket_errorCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestMetricsBucket", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RequestMetricsBucket_avgLatencyMs(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetricsBucket) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetricsBucket_avgLatencyMs(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.AvgLatencyMs, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetricsBucket_avgLatencyMs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestMetricsBucket", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RequestMetricsBucket_p95LatencyMs(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetricsBucket) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetricsBucket_p95LatencyMs(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.P95LatencyMs, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetricsBucket_p95LatencyMs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestMetricsBucket", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RequestMetricsBucket_inputTokensTotal(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetricsBucket) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetricsBucket_inputTokensTotal(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.InputTokensTotal, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetricsBucket_inputTokensTotal(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestMetricsBucket", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RequestMetricsBucket_outputTokensTotal(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetricsBucket) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetricsBucket_outputTokensTotal(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OutputTokensTotal, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetricsBucket_outputTokensTotal(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestMetricsBucket", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RequestMetricsSummary_totalRequests(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetricsSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetricsSummary_totalRequests(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalRequests, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetricsSummary_totalRequests(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestMetricsSummary", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RequestMetricsSummary_totalErrors(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetricsSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetricsSummary_totalErrors(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalErrors, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetricsSummary_totalErrors(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestMetricsSummary", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RequestMetricsSummary_errorRate(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetricsSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetricsSummary_errorRate(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ErrorRate, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetricsSummary_errorRate(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestMetricsSummary", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _RequestMetricsSummary_avgLatencyMs(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetricsSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetricsSummary_avgLatencyMs(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.AvgLatencyMs, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetricsSummary_avgLatencyMs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestMetricsSummary", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RequestMetricsSummary_p95LatencyMs(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetricsSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetricsSummary_p95LatencyMs(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.P95LatencyMs, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetricsSummary_p95LatencyMs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestMetricsSummary", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RequestMetricsSummary_totalInputTokens(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetricsSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetricsSummary_totalInputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalInputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetricsSummary_totalInputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestMetricsSummary", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RequestMetricsSummary_totalOutputTokens(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetricsSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetricsSummary_totalOutputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalOutputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetricsSummary_totalOutputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestMetricsSummary", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
 func (ec *executionContext) _ResetPasswordPayload_user(ctx context.Context, field graphql.CollectedField, obj *model.ResetPasswordPayload) (ret graphql.Marshaler) {
@@ -26619,6 +27426,50 @@ func (ec *executionContext) unmarshalInputRequestLogFilter(ctx context.Context, 
 				return it, err
 			}
 			it.RequestID = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputRequestMetricsFilter(ctx context.Context, obj any) (model.RequestMetricsFilter, error) {
+	var it model.RequestMetricsFilter
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"statusCode", "agentId", "model"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "statusCode":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("statusCode"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.StatusCode = data
+		case "agentId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("agentId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.AgentID = data
+		case "model":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("model"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Model = data
 		}
 	}
 	return it, nil
@@ -32152,6 +33003,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "requestMetrics":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_requestMetrics(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "ovaTemplateFamilies":
 			field := field
 
@@ -32492,6 +33365,203 @@ func (ec *executionContext) _RequestLog(ctx context.Context, sel ast.SelectionSe
 			}
 		case "createdAt":
 			out.Values[i] = ec._RequestLog_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var requestMetricsImplementors = []string{"RequestMetrics"}
+
+func (ec *executionContext) _RequestMetrics(ctx context.Context, sel ast.SelectionSet, obj *model.RequestMetrics) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, requestMetricsImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RequestMetrics")
+		case "rangeStart":
+			out.Values[i] = ec._RequestMetrics_rangeStart(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "rangeEnd":
+			out.Values[i] = ec._RequestMetrics_rangeEnd(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "granularity":
+			out.Values[i] = ec._RequestMetrics_granularity(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "buckets":
+			out.Values[i] = ec._RequestMetrics_buckets(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "summary":
+			out.Values[i] = ec._RequestMetrics_summary(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var requestMetricsBucketImplementors = []string{"RequestMetricsBucket"}
+
+func (ec *executionContext) _RequestMetricsBucket(ctx context.Context, sel ast.SelectionSet, obj *model.RequestMetricsBucket) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, requestMetricsBucketImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RequestMetricsBucket")
+		case "timestamp":
+			out.Values[i] = ec._RequestMetricsBucket_timestamp(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "requestCount":
+			out.Values[i] = ec._RequestMetricsBucket_requestCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "errorCount":
+			out.Values[i] = ec._RequestMetricsBucket_errorCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "avgLatencyMs":
+			out.Values[i] = ec._RequestMetricsBucket_avgLatencyMs(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "p95LatencyMs":
+			out.Values[i] = ec._RequestMetricsBucket_p95LatencyMs(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "inputTokensTotal":
+			out.Values[i] = ec._RequestMetricsBucket_inputTokensTotal(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "outputTokensTotal":
+			out.Values[i] = ec._RequestMetricsBucket_outputTokensTotal(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var requestMetricsSummaryImplementors = []string{"RequestMetricsSummary"}
+
+func (ec *executionContext) _RequestMetricsSummary(ctx context.Context, sel ast.SelectionSet, obj *model.RequestMetricsSummary) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, requestMetricsSummaryImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RequestMetricsSummary")
+		case "totalRequests":
+			out.Values[i] = ec._RequestMetricsSummary_totalRequests(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalErrors":
+			out.Values[i] = ec._RequestMetricsSummary_totalErrors(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "errorRate":
+			out.Values[i] = ec._RequestMetricsSummary_errorRate(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "avgLatencyMs":
+			out.Values[i] = ec._RequestMetricsSummary_avgLatencyMs(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "p95LatencyMs":
+			out.Values[i] = ec._RequestMetricsSummary_p95LatencyMs(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalInputTokens":
+			out.Values[i] = ec._RequestMetricsSummary_totalInputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalOutputTokens":
+			out.Values[i] = ec._RequestMetricsSummary_totalOutputTokens(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -35496,6 +36566,60 @@ func (ec *executionContext) marshalNRequestLog2ᚖgithubᚗcomᚋVMwareᚑAIᚋa
 	return ec._RequestLog(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNRequestMetrics2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestMetrics(ctx context.Context, sel ast.SelectionSet, v model.RequestMetrics) graphql.Marshaler {
+	return ec._RequestMetrics(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNRequestMetrics2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestMetrics(ctx context.Context, sel ast.SelectionSet, v *model.RequestMetrics) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._RequestMetrics(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNRequestMetricsBucket2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestMetricsBucket(ctx context.Context, sel ast.SelectionSet, v model.RequestMetricsBucket) graphql.Marshaler {
+	return ec._RequestMetricsBucket(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNRequestMetricsBucket2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestMetricsBucketᚄ(ctx context.Context, sel ast.SelectionSet, v []model.RequestMetricsBucket) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNRequestMetricsBucket2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestMetricsBucket(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNRequestMetricsBucketGranularity2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestMetricsBucketGranularity(ctx context.Context, v any) (model.RequestMetricsBucketGranularity, error) {
+	var res model.RequestMetricsBucketGranularity
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNRequestMetricsBucketGranularity2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestMetricsBucketGranularity(ctx context.Context, sel ast.SelectionSet, v model.RequestMetricsBucketGranularity) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) marshalNRequestMetricsSummary2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestMetricsSummary(ctx context.Context, sel ast.SelectionSet, v *model.RequestMetricsSummary) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._RequestMetricsSummary(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNResetPasswordPayload2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResetPasswordPayload(ctx context.Context, sel ast.SelectionSet, v model.ResetPasswordPayload) graphql.Marshaler {
 	return ec._ResetPasswordPayload(ctx, sel, &v)
 }
@@ -36602,6 +37726,14 @@ func (ec *executionContext) unmarshalORequestLogFilter2ᚖgithubᚗcomᚋVMware�
 		return nil, nil
 	}
 	res, err := ec.unmarshalInputRequestLogFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalORequestMetricsFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestMetricsFilter(ctx context.Context, v any) (*model.RequestMetricsFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputRequestMetricsFilter(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 

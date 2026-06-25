@@ -1,0 +1,30 @@
+query RequestMetrics(
+    $from: Time!
+    $to: Time!
+    $granularity: RequestMetricsBucketGranularity!
+    $filter: RequestMetricsFilter
+  ) {
+    requestMetrics(from: $from, to: $to, granularity: $granularity, filter: $filter) {
+      rangeStart
+      rangeEnd
+      granularity
+      summary {
+        totalRequests
+        totalErrors
+        errorRate
+        avgLatencyMs
+        p95LatencyMs
+        totalInputTokens
+        totalOutputTokens
+      }
+      buckets {
+        timestamp
+        requestCount
+        errorCount
+        avgLatencyMs
+        p95LatencyMs
+        inputTokensTotal
+        outputTokensTotal
+      }
+    }
+  }
