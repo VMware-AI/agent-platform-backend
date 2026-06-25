@@ -25,7 +25,6 @@ var authExemptFields = map[string]string{
 	"createAgent":           "owner = caller",
 	"setAgentStatus":        "owner oracle (getOwnedAgent)",
 	"agentTemplates":        "public catalog read",
-	"deployAgent":           "owner/admin in resolver (getOwnedAgent)",
 	"recycleAgent":          "owner/admin in resolver",
 	"vmTemplates":           "inline admin-only check",
 	"agentSnapshots":        "owner/admin in resolver",

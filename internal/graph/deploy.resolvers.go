@@ -431,6 +431,12 @@ func (r *queryResolver) VMTemplates(ctx context.Context, resourcePoolID string) 
 // pool's privileged credentials. The @hasRole(any: [admin]) schema directive
 // gates it to admins (no cross-tenant inventory enumeration).
 func (r *queryResolver) VsphereResourcePools(ctx context.Context, resourcePoolID string) ([]model.VsphereResourcePool, error) {
+	// Belt-and-suspenders: mirror VMTemplates' inline admin gate in addition to the
+	// @hasRole(any: [admin]) SDL directive, so dropping the directive can't fail open.
+	cu := auth.FromContext(ctx)
+	if cu == nil || cu.Role != auth.RoleAdmin {
+		return nil, gqlerror.Errorf("forbidden: admin only")
+	}
 	poolID, err := uuid.Parse(resourcePoolID)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid resourcePoolId")

@@ -5220,7 +5220,9 @@ input UpdateModelRouteInput {
 extend type Query {
   gatewayConnections: [GatewayConnection!]! @hasRole(any: [admin])
   upstreams: [Upstream!]! @hasPermission(perm: "route:manage")
-  modelRoutes: [ModelRoute!]! @hasPermission(perm: "route:manage")
+  # Model routes are platform-global gateway config (no tenant_id), so admin-only —
+  # tenant-admin must not read/write another tenant's routes (no scoping exists).
+  modelRoutes: [ModelRoute!]! @hasRole(any: [admin])
   routerTiers: [RouterTier!]! @hasPermission(perm: "route:manage")
 }
 
@@ -5231,13 +5233,16 @@ extend type Mutation {
 
   upsertUpstream(input: UpsertUpstreamInput!): Upstream! @hasPermission(perm: "route:manage")
   deleteUpstream(id: ID!): Boolean! @hasPermission(perm: "route:manage")
-  upsertModelRoute(input: UpsertModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
+  # Model routes are platform-global gateway config (no tenant_id) → admin-only,
+  # mirroring modelGateways. tenant-admin holds "route:manage" but has no tenant
+  # scoping here, so a permission gate would leak cross-tenant read/write.
+  upsertModelRoute(input: UpsertModelRouteInput!): ModelRoute! @hasRole(any: [admin])
   # Console 模型路由 page CRUD (创建/编辑路由). create mints a new route by id;
   # update edits an existing one by id (distinct from the name-keyed upsert above).
-  createModelRoute(input: CreateModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
-  updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
-  setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute! @hasPermission(perm: "route:manage")
-  deleteModelRoute(id: ID!): Boolean! @hasPermission(perm: "route:manage")
+  createModelRoute(input: CreateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
+  updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
+  setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute! @hasRole(any: [admin])
+  deleteModelRoute(id: ID!): Boolean! @hasRole(any: [admin])
 
   # The difficulty router: map a tier to a model alias → syncs litellm Complexity Router.
   setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier! @hasPermission(perm: "route:manage")
@@ -16712,16 +16717,16 @@ func (ec *executionContext) _Mutation_upsertModelRoute(ctx context.Context, fiel
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				perm, err := ec.unmarshalNString2string(ctx, "route:manage")
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.ModelRoute
 					return zeroVal, err
 				}
-				if ec.Directives.HasPermission == nil {
+				if ec.Directives.HasRole == nil {
 					var zeroVal *model.ModelRoute
-					return zeroVal, errors.New("directive hasPermission is not implemented")
+					return zeroVal, errors.New("directive hasRole is not implemented")
 				}
-				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
 			}
 
 			next = directive1
@@ -16774,16 +16779,16 @@ func (ec *executionContext) _Mutation_createModelRoute(ctx context.Context, fiel
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				perm, err := ec.unmarshalNString2string(ctx, "route:manage")
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.ModelRoute
 					return zeroVal, err
 				}
-				if ec.Directives.HasPermission == nil {
+				if ec.Directives.HasRole == nil {
 					var zeroVal *model.ModelRoute
-					return zeroVal, errors.New("directive hasPermission is not implemented")
+					return zeroVal, errors.New("directive hasRole is not implemented")
 				}
-				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
 			}
 
 			next = directive1
@@ -16836,16 +16841,16 @@ func (ec *executionContext) _Mutation_updateModelRoute(ctx context.Context, fiel
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				perm, err := ec.unmarshalNString2string(ctx, "route:manage")
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.ModelRoute
 					return zeroVal, err
 				}
-				if ec.Directives.HasPermission == nil {
+				if ec.Directives.HasRole == nil {
 					var zeroVal *model.ModelRoute
-					return zeroVal, errors.New("directive hasPermission is not implemented")
+					return zeroVal, errors.New("directive hasRole is not implemented")
 				}
-				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
 			}
 
 			next = directive1
@@ -16898,16 +16903,16 @@ func (ec *executionContext) _Mutation_setModelRouteEnabled(ctx context.Context, 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				perm, err := ec.unmarshalNString2string(ctx, "route:manage")
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.ModelRoute
 					return zeroVal, err
 				}
-				if ec.Directives.HasPermission == nil {
+				if ec.Directives.HasRole == nil {
 					var zeroVal *model.ModelRoute
-					return zeroVal, errors.New("directive hasPermission is not implemented")
+					return zeroVal, errors.New("directive hasRole is not implemented")
 				}
-				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
 			}
 
 			next = directive1
@@ -16960,16 +16965,16 @@ func (ec *executionContext) _Mutation_deleteModelRoute(ctx context.Context, fiel
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				perm, err := ec.unmarshalNString2string(ctx, "route:manage")
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
 				}
-				if ec.Directives.HasPermission == nil {
+				if ec.Directives.HasRole == nil {
 					var zeroVal bool
-					return zeroVal, errors.New("directive hasPermission is not implemented")
+					return zeroVal, errors.New("directive hasRole is not implemented")
 				}
-				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
 			}
 
 			next = directive1
@@ -20473,16 +20478,16 @@ func (ec *executionContext) _Query_modelRoutes(ctx context.Context, field graphq
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				perm, err := ec.unmarshalNString2string(ctx, "route:manage")
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal []model.ModelRoute
 					return zeroVal, err
 				}
-				if ec.Directives.HasPermission == nil {
+				if ec.Directives.HasRole == nil {
 					var zeroVal []model.ModelRoute
-					return zeroVal, errors.New("directive hasPermission is not implemented")
+					return zeroVal, errors.New("directive hasRole is not implemented")
 				}
-				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
 			}
 
 			next = directive1
