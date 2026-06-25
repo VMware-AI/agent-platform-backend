@@ -103,6 +103,16 @@ type AgentUsage struct {
 	Cost         float64 `json:"cost"`
 }
 
+type AgentUsageRow struct {
+	AgentID      string  `json:"agentId"`
+	AgentName    string  `json:"agentName"`
+	InputTokens  int     `json:"inputTokens"`
+	OutputTokens int     `json:"outputTokens"`
+	TotalTokens  int     `json:"totalTokens"`
+	Requests     int     `json:"requests"`
+	Cost         float64 `json:"cost"`
+}
+
 type Artifact struct {
 	ID        string         `json:"id"`
 	Name      string         `json:"name"`
@@ -225,6 +235,15 @@ type CustomRole struct {
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
+type DailyUsageRow struct {
+	Date         string  `json:"date"`
+	InputTokens  int     `json:"inputTokens"`
+	OutputTokens int     `json:"outputTokens"`
+	TotalTokens  int     `json:"totalTokens"`
+	Requests     int     `json:"requests"`
+	Cost         float64 `json:"cost"`
+}
+
 type DateUsage struct {
 	Date         string  `json:"date"`
 	InputTokens  int     `json:"inputTokens"`
@@ -316,6 +335,23 @@ type Membership struct {
 	Role         MembershipRole `json:"role"`
 }
 
+type MeteringCostSummary struct {
+	TotalCost   float64 `json:"totalCost"`
+	MonthlyCost float64 `json:"monthlyCost"`
+}
+
+type MeteringOverview struct {
+	Range             MeteringTimeRange    `json:"range"`
+	TotalInputTokens  int                  `json:"totalInputTokens"`
+	TotalOutputTokens int                  `json:"totalOutputTokens"`
+	TotalTokens       int                  `json:"totalTokens"`
+	TotalRequests     int                  `json:"totalRequests"`
+	ByAgent           []AgentUsageRow      `json:"byAgent"`
+	ByModel           []ModelUsageRow      `json:"byModel"`
+	ByDay             []DailyUsageRow      `json:"byDay"`
+	Cost              *MeteringCostSummary `json:"cost"`
+}
+
 type MeteringSummary struct {
 	TotalInputTokens  int          `json:"totalInputTokens"`
 	TotalOutputTokens int          `json:"totalOutputTokens"`
@@ -402,6 +438,15 @@ type ModelUsage struct {
 	Model        string  `json:"model"`
 	InputTokens  int     `json:"inputTokens"`
 	OutputTokens int     `json:"outputTokens"`
+	Cost         float64 `json:"cost"`
+}
+
+type ModelUsageRow struct {
+	Model        string  `json:"model"`
+	InputTokens  int     `json:"inputTokens"`
+	OutputTokens int     `json:"outputTokens"`
+	TotalTokens  int     `json:"totalTokens"`
+	Requests     int     `json:"requests"`
 	Cost         float64 `json:"cost"`
 }
 
@@ -1343,6 +1388,63 @@ func (e *MembershipRole) UnmarshalJSON(b []byte) error {
 }
 
 func (e MembershipRole) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type MeteringTimeRange string
+
+const (
+	MeteringTimeRangeLast7Days  MeteringTimeRange = "LAST_7_DAYS"
+	MeteringTimeRangeLast30Days MeteringTimeRange = "LAST_30_DAYS"
+	MeteringTimeRangeThisMonth  MeteringTimeRange = "THIS_MONTH"
+)
+
+var AllMeteringTimeRange = []MeteringTimeRange{
+	MeteringTimeRangeLast7Days,
+	MeteringTimeRangeLast30Days,
+	MeteringTimeRangeThisMonth,
+}
+
+func (e MeteringTimeRange) IsValid() bool {
+	switch e {
+	case MeteringTimeRangeLast7Days, MeteringTimeRangeLast30Days, MeteringTimeRangeThisMonth:
+		return true
+	}
+	return false
+}
+
+func (e MeteringTimeRange) String() string {
+	return string(e)
+}
+
+func (e *MeteringTimeRange) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = MeteringTimeRange(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid MeteringTimeRange", str)
+	}
+	return nil
+}
+
+func (e MeteringTimeRange) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *MeteringTimeRange) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e MeteringTimeRange) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

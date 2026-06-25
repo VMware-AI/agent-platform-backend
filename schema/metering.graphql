@@ -50,10 +50,73 @@ input RecordTokenUsageInput {
   cost: Float
 }
 
+# Time window for the metering center (计量中心 time-range selector). LAST_30_DAYS /
+# THIS_MONTH map to a concrete [from,to); LAST_7_DAYS is the default.
+enum MeteringTimeRange {
+  LAST_7_DAYS
+  LAST_30_DAYS
+  THIS_MONTH
+}
+
+# Per-agent usage row for the metering 智能体用量 table. Adds requests (row count =
+# usage events) and a display name on top of the token/cost sums.
+type AgentUsageRow {
+  agentId: ID!
+  agentName: String!
+  inputTokens: Int!
+  outputTokens: Int!
+  totalTokens: Int!
+  requests: Int!
+  cost: Float!
+}
+
+# Per-model usage row for the metering 模型用量 table.
+type ModelUsageRow {
+  model: String!
+  inputTokens: Int!
+  outputTokens: Int!
+  totalTokens: Int!
+  requests: Int!
+  cost: Float!
+}
+
+# Per-day usage row for the metering 每日用量/趋势 table+chart (date = YYYY-MM-DD).
+type DailyUsageRow {
+  date: String!
+  inputTokens: Int!
+  outputTokens: Int!
+  totalTokens: Int!
+  requests: Int!
+  cost: Float!
+}
+
+# Cost summary cards (计费概览): total cost over the selected range, plus the
+# current calendar month's cost (the "本月" card).
+type MeteringCostSummary {
+  totalCost: Float!
+  monthlyCost: Float!
+}
+
+# Everything the metering center renders for one time range (计量中心).
+type MeteringOverview {
+  range: MeteringTimeRange!
+  totalInputTokens: Int!
+  totalOutputTokens: Int!
+  totalTokens: Int!
+  totalRequests: Int!
+  byAgent: [AgentUsageRow!]!
+  byModel: [ModelUsageRow!]!
+  byDay: [DailyUsageRow!]!
+  cost: MeteringCostSummary!
+}
+
 extend type Query {
   # metering:view permission (admin + observability).
   tokenUsage(userId: ID, page: PageInput): [TokenUsage!]! @hasPermission(perm: "metering:view")
   meteringSummary(userId: ID): MeteringSummary! @hasPermission(perm: "metering:view")
+  # Aggregated metering for the console 计量中心 over a time range (默认近7天).
+  meteringOverview(range: MeteringTimeRange = LAST_7_DAYS, userId: ID): MeteringOverview!
+    @hasPermission(perm: "metering:view")
 }
 
 extend type Mutation {

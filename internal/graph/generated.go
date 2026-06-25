@@ -122,6 +122,16 @@ type ComplexityRoot struct {
 		OutputTokens func(childComplexity int) int
 	}
 
+	AgentUsageRow struct {
+		AgentID      func(childComplexity int) int
+		AgentName    func(childComplexity int) int
+		Cost         func(childComplexity int) int
+		InputTokens  func(childComplexity int) int
+		OutputTokens func(childComplexity int) int
+		Requests     func(childComplexity int) int
+		TotalTokens  func(childComplexity int) int
+	}
+
 	Artifact struct {
 		Content   func(childComplexity int) int
 		CreatedAt func(childComplexity int) int
@@ -177,6 +187,15 @@ type ComplexityRoot struct {
 		IsSystem    func(childComplexity int) int
 		Name        func(childComplexity int) int
 		Permissions func(childComplexity int) int
+	}
+
+	DailyUsageRow struct {
+		Cost         func(childComplexity int) int
+		Date         func(childComplexity int) int
+		InputTokens  func(childComplexity int) int
+		OutputTokens func(childComplexity int) int
+		Requests     func(childComplexity int) int
+		TotalTokens  func(childComplexity int) int
 	}
 
 	DateUsage struct {
@@ -240,6 +259,23 @@ type ComplexityRoot struct {
 		ID           func(childComplexity int) int
 		Role         func(childComplexity int) int
 		UserID       func(childComplexity int) int
+	}
+
+	MeteringCostSummary struct {
+		MonthlyCost func(childComplexity int) int
+		TotalCost   func(childComplexity int) int
+	}
+
+	MeteringOverview struct {
+		ByAgent           func(childComplexity int) int
+		ByDay             func(childComplexity int) int
+		ByModel           func(childComplexity int) int
+		Cost              func(childComplexity int) int
+		Range             func(childComplexity int) int
+		TotalInputTokens  func(childComplexity int) int
+		TotalOutputTokens func(childComplexity int) int
+		TotalRequests     func(childComplexity int) int
+		TotalTokens       func(childComplexity int) int
 	}
 
 	MeteringSummary struct {
@@ -310,6 +346,15 @@ type ComplexityRoot struct {
 		InputTokens  func(childComplexity int) int
 		Model        func(childComplexity int) int
 		OutputTokens func(childComplexity int) int
+	}
+
+	ModelUsageRow struct {
+		Cost         func(childComplexity int) int
+		InputTokens  func(childComplexity int) int
+		Model        func(childComplexity int) int
+		OutputTokens func(childComplexity int) int
+		Requests     func(childComplexity int) int
+		TotalTokens  func(childComplexity int) int
 	}
 
 	Mutation struct {
@@ -409,6 +454,7 @@ type ComplexityRoot struct {
 		GatewayConnections      func(childComplexity int) int
 		Images                  func(childComplexity int) int
 		Me                      func(childComplexity int) int
+		MeteringOverview        func(childComplexity int, rangeArg *model.MeteringTimeRange, userID *string) int
 		MeteringSummary         func(childComplexity int, userID *string) int
 		ModelGatewaySyncSummary func(childComplexity int) int
 		ModelGateways           func(childComplexity int, filter *model.ModelGatewayFilterInput, page model.PageInput, sort *model.ModelGatewaySort) int
@@ -701,6 +747,7 @@ type QueryResolver interface {
 	RouterTiers(ctx context.Context) ([]model.RouterTier, error)
 	TokenUsage(ctx context.Context, userID *string, page *model.PageInput) ([]model.TokenUsage, error)
 	MeteringSummary(ctx context.Context, userID *string) (*model.MeteringSummary, error)
+	MeteringOverview(ctx context.Context, rangeArg *model.MeteringTimeRange, userID *string) (*model.MeteringOverview, error)
 	ModelGateways(ctx context.Context, filter *model.ModelGatewayFilterInput, page model.PageInput, sort *model.ModelGatewaySort) (*model.ModelGatewayConnection, error)
 	ModelGatewaySyncSummary(ctx context.Context) (*model.ModelGatewaySyncSummary, error)
 	RequestLogs(ctx context.Context, filter *model.RequestLogFilter, page *model.PageInput) ([]model.RequestLog, error)
@@ -1061,6 +1108,49 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.AgentUsage.OutputTokens(childComplexity), true
 
+	case "AgentUsageRow.agentId":
+		if e.ComplexityRoot.AgentUsageRow.AgentID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentUsageRow.AgentID(childComplexity), true
+	case "AgentUsageRow.agentName":
+		if e.ComplexityRoot.AgentUsageRow.AgentName == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentUsageRow.AgentName(childComplexity), true
+	case "AgentUsageRow.cost":
+		if e.ComplexityRoot.AgentUsageRow.Cost == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentUsageRow.Cost(childComplexity), true
+	case "AgentUsageRow.inputTokens":
+		if e.ComplexityRoot.AgentUsageRow.InputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentUsageRow.InputTokens(childComplexity), true
+	case "AgentUsageRow.outputTokens":
+		if e.ComplexityRoot.AgentUsageRow.OutputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentUsageRow.OutputTokens(childComplexity), true
+	case "AgentUsageRow.requests":
+		if e.ComplexityRoot.AgentUsageRow.Requests == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentUsageRow.Requests(childComplexity), true
+	case "AgentUsageRow.totalTokens":
+		if e.ComplexityRoot.AgentUsageRow.TotalTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentUsageRow.TotalTokens(childComplexity), true
+
 	case "Artifact.content":
 		if e.ComplexityRoot.Artifact.Content == nil {
 			break
@@ -1266,6 +1356,43 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.CustomRole.Permissions(childComplexity), true
+
+	case "DailyUsageRow.cost":
+		if e.ComplexityRoot.DailyUsageRow.Cost == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DailyUsageRow.Cost(childComplexity), true
+	case "DailyUsageRow.date":
+		if e.ComplexityRoot.DailyUsageRow.Date == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DailyUsageRow.Date(childComplexity), true
+	case "DailyUsageRow.inputTokens":
+		if e.ComplexityRoot.DailyUsageRow.InputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DailyUsageRow.InputTokens(childComplexity), true
+	case "DailyUsageRow.outputTokens":
+		if e.ComplexityRoot.DailyUsageRow.OutputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DailyUsageRow.OutputTokens(childComplexity), true
+	case "DailyUsageRow.requests":
+		if e.ComplexityRoot.DailyUsageRow.Requests == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DailyUsageRow.Requests(childComplexity), true
+	case "DailyUsageRow.totalTokens":
+		if e.ComplexityRoot.DailyUsageRow.TotalTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DailyUsageRow.TotalTokens(childComplexity), true
 
 	case "DateUsage.cost":
 		if e.ComplexityRoot.DateUsage.Cost == nil {
@@ -1474,6 +1601,74 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Membership.UserID(childComplexity), true
+
+	case "MeteringCostSummary.monthlyCost":
+		if e.ComplexityRoot.MeteringCostSummary.MonthlyCost == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringCostSummary.MonthlyCost(childComplexity), true
+	case "MeteringCostSummary.totalCost":
+		if e.ComplexityRoot.MeteringCostSummary.TotalCost == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringCostSummary.TotalCost(childComplexity), true
+
+	case "MeteringOverview.byAgent":
+		if e.ComplexityRoot.MeteringOverview.ByAgent == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringOverview.ByAgent(childComplexity), true
+	case "MeteringOverview.byDay":
+		if e.ComplexityRoot.MeteringOverview.ByDay == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringOverview.ByDay(childComplexity), true
+	case "MeteringOverview.byModel":
+		if e.ComplexityRoot.MeteringOverview.ByModel == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringOverview.ByModel(childComplexity), true
+	case "MeteringOverview.cost":
+		if e.ComplexityRoot.MeteringOverview.Cost == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringOverview.Cost(childComplexity), true
+	case "MeteringOverview.range":
+		if e.ComplexityRoot.MeteringOverview.Range == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringOverview.Range(childComplexity), true
+	case "MeteringOverview.totalInputTokens":
+		if e.ComplexityRoot.MeteringOverview.TotalInputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringOverview.TotalInputTokens(childComplexity), true
+	case "MeteringOverview.totalOutputTokens":
+		if e.ComplexityRoot.MeteringOverview.TotalOutputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringOverview.TotalOutputTokens(childComplexity), true
+	case "MeteringOverview.totalRequests":
+		if e.ComplexityRoot.MeteringOverview.TotalRequests == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringOverview.TotalRequests(childComplexity), true
+	case "MeteringOverview.totalTokens":
+		if e.ComplexityRoot.MeteringOverview.TotalTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringOverview.TotalTokens(childComplexity), true
 
 	case "MeteringSummary.byAgent":
 		if e.ComplexityRoot.MeteringSummary.ByAgent == nil {
@@ -1775,6 +1970,43 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelUsage.OutputTokens(childComplexity), true
+
+	case "ModelUsageRow.cost":
+		if e.ComplexityRoot.ModelUsageRow.Cost == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelUsageRow.Cost(childComplexity), true
+	case "ModelUsageRow.inputTokens":
+		if e.ComplexityRoot.ModelUsageRow.InputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelUsageRow.InputTokens(childComplexity), true
+	case "ModelUsageRow.model":
+		if e.ComplexityRoot.ModelUsageRow.Model == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelUsageRow.Model(childComplexity), true
+	case "ModelUsageRow.outputTokens":
+		if e.ComplexityRoot.ModelUsageRow.OutputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelUsageRow.OutputTokens(childComplexity), true
+	case "ModelUsageRow.requests":
+		if e.ComplexityRoot.ModelUsageRow.Requests == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelUsageRow.Requests(childComplexity), true
+	case "ModelUsageRow.totalTokens":
+		if e.ComplexityRoot.ModelUsageRow.TotalTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelUsageRow.TotalTokens(childComplexity), true
 
 	case "Mutation.addMembership":
 		if e.ComplexityRoot.Mutation.AddMembership == nil {
@@ -2672,6 +2904,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Me(childComplexity), true
+	case "Query.meteringOverview":
+		if e.ComplexityRoot.Query.MeteringOverview == nil {
+			break
+		}
+
+		args, err := ec.field_Query_meteringOverview_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.MeteringOverview(childComplexity, args["range"].(*model.MeteringTimeRange), args["userId"].(*string)), true
 	case "Query.meteringSummary":
 		if e.ComplexityRoot.Query.MeteringSummary == nil {
 			break
@@ -4374,10 +4617,73 @@ input RecordTokenUsageInput {
   cost: Float
 }
 
+# Time window for the metering center (计量中心 time-range selector). LAST_30_DAYS /
+# THIS_MONTH map to a concrete [from,to); LAST_7_DAYS is the default.
+enum MeteringTimeRange {
+  LAST_7_DAYS
+  LAST_30_DAYS
+  THIS_MONTH
+}
+
+# Per-agent usage row for the metering 智能体用量 table. Adds requests (row count =
+# usage events) and a display name on top of the token/cost sums.
+type AgentUsageRow {
+  agentId: ID!
+  agentName: String!
+  inputTokens: Int!
+  outputTokens: Int!
+  totalTokens: Int!
+  requests: Int!
+  cost: Float!
+}
+
+# Per-model usage row for the metering 模型用量 table.
+type ModelUsageRow {
+  model: String!
+  inputTokens: Int!
+  outputTokens: Int!
+  totalTokens: Int!
+  requests: Int!
+  cost: Float!
+}
+
+# Per-day usage row for the metering 每日用量/趋势 table+chart (date = YYYY-MM-DD).
+type DailyUsageRow {
+  date: String!
+  inputTokens: Int!
+  outputTokens: Int!
+  totalTokens: Int!
+  requests: Int!
+  cost: Float!
+}
+
+# Cost summary cards (计费概览): total cost over the selected range, plus the
+# current calendar month's cost (the "本月" card).
+type MeteringCostSummary {
+  totalCost: Float!
+  monthlyCost: Float!
+}
+
+# Everything the metering center renders for one time range (计量中心).
+type MeteringOverview {
+  range: MeteringTimeRange!
+  totalInputTokens: Int!
+  totalOutputTokens: Int!
+  totalTokens: Int!
+  totalRequests: Int!
+  byAgent: [AgentUsageRow!]!
+  byModel: [ModelUsageRow!]!
+  byDay: [DailyUsageRow!]!
+  cost: MeteringCostSummary!
+}
+
 extend type Query {
   # metering:view permission (admin + observability).
   tokenUsage(userId: ID, page: PageInput): [TokenUsage!]! @hasPermission(perm: "metering:view")
   meteringSummary(userId: ID): MeteringSummary! @hasPermission(perm: "metering:view")
+  # Aggregated metering for the console 计量中心 over a time range (默认近7天).
+  meteringOverview(range: MeteringTimeRange = LAST_7_DAYS, userId: ID): MeteringOverview!
+    @hasPermission(perm: "metering:view")
 }
 
 extend type Mutation {
@@ -5074,6 +5380,26 @@ func (ec *executionContext) childFields_AgentUsage(ctx context.Context, field gr
 	return nil, fmt.Errorf("no field named %q was found under type AgentUsage", field.Name)
 }
 
+func (ec *executionContext) childFields_AgentUsageRow(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "agentId":
+		return ec.fieldContext_AgentUsageRow_agentId(ctx, field)
+	case "agentName":
+		return ec.fieldContext_AgentUsageRow_agentName(ctx, field)
+	case "inputTokens":
+		return ec.fieldContext_AgentUsageRow_inputTokens(ctx, field)
+	case "outputTokens":
+		return ec.fieldContext_AgentUsageRow_outputTokens(ctx, field)
+	case "totalTokens":
+		return ec.fieldContext_AgentUsageRow_totalTokens(ctx, field)
+	case "requests":
+		return ec.fieldContext_AgentUsageRow_requests(ctx, field)
+	case "cost":
+		return ec.fieldContext_AgentUsageRow_cost(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type AgentUsageRow", field.Name)
+}
+
 func (ec *executionContext) childFields_Artifact(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -5186,6 +5512,24 @@ func (ec *executionContext) childFields_CustomRole(ctx context.Context, field gr
 		return ec.fieldContext_CustomRole_createdAt(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type CustomRole", field.Name)
+}
+
+func (ec *executionContext) childFields_DailyUsageRow(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "date":
+		return ec.fieldContext_DailyUsageRow_date(ctx, field)
+	case "inputTokens":
+		return ec.fieldContext_DailyUsageRow_inputTokens(ctx, field)
+	case "outputTokens":
+		return ec.fieldContext_DailyUsageRow_outputTokens(ctx, field)
+	case "totalTokens":
+		return ec.fieldContext_DailyUsageRow_totalTokens(ctx, field)
+	case "requests":
+		return ec.fieldContext_DailyUsageRow_requests(ctx, field)
+	case "cost":
+		return ec.fieldContext_DailyUsageRow_cost(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type DailyUsageRow", field.Name)
 }
 
 func (ec *executionContext) childFields_DateUsage(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -5312,6 +5656,40 @@ func (ec *executionContext) childFields_Membership(ctx context.Context, field gr
 		return ec.fieldContext_Membership_role(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Membership", field.Name)
+}
+
+func (ec *executionContext) childFields_MeteringCostSummary(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "totalCost":
+		return ec.fieldContext_MeteringCostSummary_totalCost(ctx, field)
+	case "monthlyCost":
+		return ec.fieldContext_MeteringCostSummary_monthlyCost(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type MeteringCostSummary", field.Name)
+}
+
+func (ec *executionContext) childFields_MeteringOverview(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "range":
+		return ec.fieldContext_MeteringOverview_range(ctx, field)
+	case "totalInputTokens":
+		return ec.fieldContext_MeteringOverview_totalInputTokens(ctx, field)
+	case "totalOutputTokens":
+		return ec.fieldContext_MeteringOverview_totalOutputTokens(ctx, field)
+	case "totalTokens":
+		return ec.fieldContext_MeteringOverview_totalTokens(ctx, field)
+	case "totalRequests":
+		return ec.fieldContext_MeteringOverview_totalRequests(ctx, field)
+	case "byAgent":
+		return ec.fieldContext_MeteringOverview_byAgent(ctx, field)
+	case "byModel":
+		return ec.fieldContext_MeteringOverview_byModel(ctx, field)
+	case "byDay":
+		return ec.fieldContext_MeteringOverview_byDay(ctx, field)
+	case "cost":
+		return ec.fieldContext_MeteringOverview_cost(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type MeteringOverview", field.Name)
 }
 
 func (ec *executionContext) childFields_MeteringSummary(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -5452,6 +5830,24 @@ func (ec *executionContext) childFields_ModelUsage(ctx context.Context, field gr
 		return ec.fieldContext_ModelUsage_cost(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type ModelUsage", field.Name)
+}
+
+func (ec *executionContext) childFields_ModelUsageRow(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "model":
+		return ec.fieldContext_ModelUsageRow_model(ctx, field)
+	case "inputTokens":
+		return ec.fieldContext_ModelUsageRow_inputTokens(ctx, field)
+	case "outputTokens":
+		return ec.fieldContext_ModelUsageRow_outputTokens(ctx, field)
+	case "totalTokens":
+		return ec.fieldContext_ModelUsageRow_totalTokens(ctx, field)
+	case "requests":
+		return ec.fieldContext_ModelUsageRow_requests(ctx, field)
+	case "cost":
+		return ec.fieldContext_ModelUsageRow_cost(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type ModelUsageRow", field.Name)
 }
 
 func (ec *executionContext) childFields_PageInfo(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -7180,6 +7576,28 @@ func (ec *executionContext) field_Query_departmentMembers_args(ctx context.Conte
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_meteringOverview_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "range",
+		func(ctx context.Context, v any) (*model.MeteringTimeRange, error) {
+			return ec.unmarshalOMeteringTimeRange2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringTimeRange(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["range"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "userId",
+		func(ctx context.Context, v any) (*string, error) {
+			return ec.unmarshalOID2ᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["userId"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_meteringSummary_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -8767,6 +9185,167 @@ func (ec *executionContext) fieldContext_AgentUsage_cost(_ context.Context, fiel
 	return graphql.NewScalarFieldContext("AgentUsage", field, false, false, errors.New("field of type Float does not have child fields"))
 }
 
+func (ec *executionContext) _AgentUsageRow_agentId(ctx context.Context, field graphql.CollectedField, obj *model.AgentUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentUsageRow_agentId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.AgentID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentUsageRow_agentId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentUsageRow", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _AgentUsageRow_agentName(ctx context.Context, field graphql.CollectedField, obj *model.AgentUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentUsageRow_agentName(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.AgentName, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentUsageRow_agentName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentUsageRow", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _AgentUsageRow_inputTokens(ctx context.Context, field graphql.CollectedField, obj *model.AgentUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentUsageRow_inputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.InputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentUsageRow_inputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _AgentUsageRow_outputTokens(ctx context.Context, field graphql.CollectedField, obj *model.AgentUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentUsageRow_outputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OutputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentUsageRow_outputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _AgentUsageRow_totalTokens(ctx context.Context, field graphql.CollectedField, obj *model.AgentUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentUsageRow_totalTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentUsageRow_totalTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _AgentUsageRow_requests(ctx context.Context, field graphql.CollectedField, obj *model.AgentUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentUsageRow_requests(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Requests, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentUsageRow_requests(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _AgentUsageRow_cost(ctx context.Context, field graphql.CollectedField, obj *model.AgentUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentUsageRow_cost(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Cost, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentUsageRow_cost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentUsageRow", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
 func (ec *executionContext) _Artifact_id(ctx context.Context, field graphql.CollectedField, obj *model.Artifact) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -9571,6 +10150,144 @@ func (ec *executionContext) fieldContext_CustomRole_createdAt(_ context.Context,
 	return graphql.NewScalarFieldContext("CustomRole", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
+func (ec *executionContext) _DailyUsageRow_date(ctx context.Context, field graphql.CollectedField, obj *model.DailyUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DailyUsageRow_date(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Date, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DailyUsageRow_date(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DailyUsageRow", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _DailyUsageRow_inputTokens(ctx context.Context, field graphql.CollectedField, obj *model.DailyUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DailyUsageRow_inputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.InputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DailyUsageRow_inputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DailyUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DailyUsageRow_outputTokens(ctx context.Context, field graphql.CollectedField, obj *model.DailyUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DailyUsageRow_outputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OutputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DailyUsageRow_outputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DailyUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DailyUsageRow_totalTokens(ctx context.Context, field graphql.CollectedField, obj *model.DailyUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DailyUsageRow_totalTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DailyUsageRow_totalTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DailyUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DailyUsageRow_requests(ctx context.Context, field graphql.CollectedField, obj *model.DailyUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DailyUsageRow_requests(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Requests, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DailyUsageRow_requests(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DailyUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DailyUsageRow_cost(ctx context.Context, field graphql.CollectedField, obj *model.DailyUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DailyUsageRow_cost(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Cost, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DailyUsageRow_cost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DailyUsageRow", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
 func (ec *executionContext) _DateUsage_date(ctx context.Context, field graphql.CollectedField, obj *model.DateUsage) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -10346,6 +11063,295 @@ func (ec *executionContext) _Membership_role(ctx context.Context, field graphql.
 }
 func (ec *executionContext) fieldContext_Membership_role(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Membership", field, false, false, errors.New("field of type MembershipRole does not have child fields"))
+}
+
+func (ec *executionContext) _MeteringCostSummary_totalCost(ctx context.Context, field graphql.CollectedField, obj *model.MeteringCostSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringCostSummary_totalCost(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalCost, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringCostSummary_totalCost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("MeteringCostSummary", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _MeteringCostSummary_monthlyCost(ctx context.Context, field graphql.CollectedField, obj *model.MeteringCostSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringCostSummary_monthlyCost(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.MonthlyCost, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringCostSummary_monthlyCost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("MeteringCostSummary", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _MeteringOverview_range(ctx context.Context, field graphql.CollectedField, obj *model.MeteringOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringOverview_range(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Range, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.MeteringTimeRange) graphql.Marshaler {
+			return ec.marshalNMeteringTimeRange2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringTimeRange(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringOverview_range(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("MeteringOverview", field, false, false, errors.New("field of type MeteringTimeRange does not have child fields"))
+}
+
+func (ec *executionContext) _MeteringOverview_totalInputTokens(ctx context.Context, field graphql.CollectedField, obj *model.MeteringOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringOverview_totalInputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalInputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringOverview_totalInputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("MeteringOverview", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _MeteringOverview_totalOutputTokens(ctx context.Context, field graphql.CollectedField, obj *model.MeteringOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringOverview_totalOutputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalOutputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringOverview_totalOutputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("MeteringOverview", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _MeteringOverview_totalTokens(ctx context.Context, field graphql.CollectedField, obj *model.MeteringOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringOverview_totalTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringOverview_totalTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("MeteringOverview", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _MeteringOverview_totalRequests(ctx context.Context, field graphql.CollectedField, obj *model.MeteringOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringOverview_totalRequests(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalRequests, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringOverview_totalRequests(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("MeteringOverview", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _MeteringOverview_byAgent(ctx context.Context, field graphql.CollectedField, obj *model.MeteringOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringOverview_byAgent(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ByAgent, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.AgentUsageRow) graphql.Marshaler {
+			return ec.marshalNAgentUsageRow2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentUsageRowᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringOverview_byAgent(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MeteringOverview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_AgentUsageRow(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MeteringOverview_byModel(ctx context.Context, field graphql.CollectedField, obj *model.MeteringOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringOverview_byModel(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ByModel, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.ModelUsageRow) graphql.Marshaler {
+			return ec.marshalNModelUsageRow2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelUsageRowᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringOverview_byModel(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MeteringOverview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ModelUsageRow(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MeteringOverview_byDay(ctx context.Context, field graphql.CollectedField, obj *model.MeteringOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringOverview_byDay(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ByDay, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.DailyUsageRow) graphql.Marshaler {
+			return ec.marshalNDailyUsageRow2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDailyUsageRowᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringOverview_byDay(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MeteringOverview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_DailyUsageRow(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MeteringOverview_cost(ctx context.Context, field graphql.CollectedField, obj *model.MeteringOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringOverview_cost(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Cost, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.MeteringCostSummary) graphql.Marshaler {
+			return ec.marshalNMeteringCostSummary2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringCostSummary(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringOverview_cost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MeteringOverview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_MeteringCostSummary(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _MeteringSummary_totalInputTokens(ctx context.Context, field graphql.CollectedField, obj *model.MeteringSummary) (ret graphql.Marshaler) {
@@ -11518,6 +12524,144 @@ func (ec *executionContext) _ModelUsage_cost(ctx context.Context, field graphql.
 }
 func (ec *executionContext) fieldContext_ModelUsage_cost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ModelUsage", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _ModelUsageRow_model(ctx context.Context, field graphql.CollectedField, obj *model.ModelUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelUsageRow_model(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Model, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelUsageRow_model(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelUsageRow", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ModelUsageRow_inputTokens(ctx context.Context, field graphql.CollectedField, obj *model.ModelUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelUsageRow_inputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.InputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelUsageRow_inputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ModelUsageRow_outputTokens(ctx context.Context, field graphql.CollectedField, obj *model.ModelUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelUsageRow_outputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OutputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelUsageRow_outputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ModelUsageRow_totalTokens(ctx context.Context, field graphql.CollectedField, obj *model.ModelUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelUsageRow_totalTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelUsageRow_totalTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ModelUsageRow_requests(ctx context.Context, field graphql.CollectedField, obj *model.ModelUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelUsageRow_requests(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Requests, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelUsageRow_requests(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ModelUsageRow_cost(ctx context.Context, field graphql.CollectedField, obj *model.ModelUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelUsageRow_cost(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Cost, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelUsageRow_cost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelUsageRow", field, false, false, errors.New("field of type Float does not have child fields"))
 }
 
 func (ec *executionContext) _Mutation_login(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -16733,6 +17877,68 @@ func (ec *executionContext) fieldContext_Query_meteringSummary(ctx context.Conte
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_meteringSummary_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_meteringOverview(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_meteringOverview(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().MeteringOverview(ctx, fc.Args["range"].(*model.MeteringTimeRange), fc.Args["userId"].(*string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				perm, err := ec.unmarshalNString2string(ctx, "metering:view")
+				if err != nil {
+					var zeroVal *model.MeteringOverview
+					return zeroVal, err
+				}
+				if ec.Directives.HasPermission == nil {
+					var zeroVal *model.MeteringOverview
+					return zeroVal, errors.New("directive hasPermission is not implemented")
+				}
+				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.MeteringOverview) graphql.Marshaler {
+			return ec.marshalNMeteringOverview2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringOverview(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_meteringOverview(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_MeteringOverview(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_meteringOverview_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -23880,6 +25086,75 @@ func (ec *executionContext) _AgentUsage(ctx context.Context, sel ast.SelectionSe
 	return out
 }
 
+var agentUsageRowImplementors = []string{"AgentUsageRow"}
+
+func (ec *executionContext) _AgentUsageRow(ctx context.Context, sel ast.SelectionSet, obj *model.AgentUsageRow) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, agentUsageRowImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AgentUsageRow")
+		case "agentId":
+			out.Values[i] = ec._AgentUsageRow_agentId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "agentName":
+			out.Values[i] = ec._AgentUsageRow_agentName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "inputTokens":
+			out.Values[i] = ec._AgentUsageRow_inputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "outputTokens":
+			out.Values[i] = ec._AgentUsageRow_outputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalTokens":
+			out.Values[i] = ec._AgentUsageRow_totalTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "requests":
+			out.Values[i] = ec._AgentUsageRow_requests(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cost":
+			out.Values[i] = ec._AgentUsageRow_cost(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var artifactImplementors = []string{"Artifact"}
 
 func (ec *executionContext) _Artifact(ctx context.Context, sel ast.SelectionSet, obj *model.Artifact) graphql.Marshaler {
@@ -24291,6 +25566,70 @@ func (ec *executionContext) _CustomRole(ctx context.Context, sel ast.SelectionSe
 			}
 		case "createdAt":
 			out.Values[i] = ec._CustomRole_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var dailyUsageRowImplementors = []string{"DailyUsageRow"}
+
+func (ec *executionContext) _DailyUsageRow(ctx context.Context, sel ast.SelectionSet, obj *model.DailyUsageRow) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, dailyUsageRowImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DailyUsageRow")
+		case "date":
+			out.Values[i] = ec._DailyUsageRow_date(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "inputTokens":
+			out.Values[i] = ec._DailyUsageRow_inputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "outputTokens":
+			out.Values[i] = ec._DailyUsageRow_outputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalTokens":
+			out.Values[i] = ec._DailyUsageRow_totalTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "requests":
+			out.Values[i] = ec._DailyUsageRow_requests(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cost":
+			out.Values[i] = ec._DailyUsageRow_cost(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -24822,6 +26161,129 @@ func (ec *executionContext) _Membership(ctx context.Context, sel ast.SelectionSe
 	return out
 }
 
+var meteringCostSummaryImplementors = []string{"MeteringCostSummary"}
+
+func (ec *executionContext) _MeteringCostSummary(ctx context.Context, sel ast.SelectionSet, obj *model.MeteringCostSummary) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, meteringCostSummaryImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("MeteringCostSummary")
+		case "totalCost":
+			out.Values[i] = ec._MeteringCostSummary_totalCost(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "monthlyCost":
+			out.Values[i] = ec._MeteringCostSummary_monthlyCost(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var meteringOverviewImplementors = []string{"MeteringOverview"}
+
+func (ec *executionContext) _MeteringOverview(ctx context.Context, sel ast.SelectionSet, obj *model.MeteringOverview) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, meteringOverviewImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("MeteringOverview")
+		case "range":
+			out.Values[i] = ec._MeteringOverview_range(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalInputTokens":
+			out.Values[i] = ec._MeteringOverview_totalInputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalOutputTokens":
+			out.Values[i] = ec._MeteringOverview_totalOutputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalTokens":
+			out.Values[i] = ec._MeteringOverview_totalTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalRequests":
+			out.Values[i] = ec._MeteringOverview_totalRequests(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "byAgent":
+			out.Values[i] = ec._MeteringOverview_byAgent(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "byModel":
+			out.Values[i] = ec._MeteringOverview_byModel(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "byDay":
+			out.Values[i] = ec._MeteringOverview_byDay(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cost":
+			out.Values[i] = ec._MeteringOverview_cost(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var meteringSummaryImplementors = []string{"MeteringSummary"}
 
 func (ec *executionContext) _MeteringSummary(ctx context.Context, sel ast.SelectionSet, obj *model.MeteringSummary) graphql.Marshaler {
@@ -25279,6 +26741,70 @@ func (ec *executionContext) _ModelUsage(ctx context.Context, sel ast.SelectionSe
 			}
 		case "cost":
 			out.Values[i] = ec._ModelUsage_cost(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var modelUsageRowImplementors = []string{"ModelUsageRow"}
+
+func (ec *executionContext) _ModelUsageRow(ctx context.Context, sel ast.SelectionSet, obj *model.ModelUsageRow) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, modelUsageRowImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ModelUsageRow")
+		case "model":
+			out.Values[i] = ec._ModelUsageRow_model(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "inputTokens":
+			out.Values[i] = ec._ModelUsageRow_inputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "outputTokens":
+			out.Values[i] = ec._ModelUsageRow_outputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalTokens":
+			out.Values[i] = ec._ModelUsageRow_totalTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "requests":
+			out.Values[i] = ec._ModelUsageRow_requests(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cost":
+			out.Values[i] = ec._ModelUsageRow_cost(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -26434,6 +27960,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_meteringSummary(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "meteringOverview":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_meteringOverview(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -28546,6 +30094,26 @@ func (ec *executionContext) marshalNAgentUsage2ᚕgithubᚗcomᚋVMwareᚑAIᚋa
 	return ret
 }
 
+func (ec *executionContext) marshalNAgentUsageRow2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentUsageRow(ctx context.Context, sel ast.SelectionSet, v model.AgentUsageRow) graphql.Marshaler {
+	return ec._AgentUsageRow(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNAgentUsageRow2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentUsageRowᚄ(ctx context.Context, sel ast.SelectionSet, v []model.AgentUsageRow) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNAgentUsageRow2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentUsageRow(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) marshalNArtifact2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐArtifact(ctx context.Context, sel ast.SelectionSet, v model.Artifact) graphql.Marshaler {
 	return ec._Artifact(ctx, sel, &v)
 }
@@ -28770,6 +30338,26 @@ func (ec *executionContext) marshalNCustomRole2ᚖgithubᚗcomᚋVMwareᚑAIᚋa
 		return graphql.Null
 	}
 	return ec._CustomRole(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNDailyUsageRow2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDailyUsageRow(ctx context.Context, sel ast.SelectionSet, v model.DailyUsageRow) graphql.Marshaler {
+	return ec._DailyUsageRow(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNDailyUsageRow2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDailyUsageRowᚄ(ctx context.Context, sel ast.SelectionSet, v []model.DailyUsageRow) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNDailyUsageRow2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDailyUsageRow(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalNDateUsage2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDateUsage(ctx context.Context, sel ast.SelectionSet, v model.DateUsage) graphql.Marshaler {
@@ -29125,6 +30713,30 @@ func (ec *executionContext) marshalNMembershipRole2githubᚗcomᚋVMwareᚑAIᚋ
 	return v
 }
 
+func (ec *executionContext) marshalNMeteringCostSummary2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringCostSummary(ctx context.Context, sel ast.SelectionSet, v *model.MeteringCostSummary) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._MeteringCostSummary(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNMeteringOverview2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringOverview(ctx context.Context, sel ast.SelectionSet, v model.MeteringOverview) graphql.Marshaler {
+	return ec._MeteringOverview(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNMeteringOverview2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringOverview(ctx context.Context, sel ast.SelectionSet, v *model.MeteringOverview) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._MeteringOverview(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNMeteringSummary2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringSummary(ctx context.Context, sel ast.SelectionSet, v model.MeteringSummary) graphql.Marshaler {
 	return ec._MeteringSummary(ctx, sel, &v)
 }
@@ -29137,6 +30749,16 @@ func (ec *executionContext) marshalNMeteringSummary2ᚖgithubᚗcomᚋVMwareᚑA
 		return graphql.Null
 	}
 	return ec._MeteringSummary(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNMeteringTimeRange2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringTimeRange(ctx context.Context, v any) (model.MeteringTimeRange, error) {
+	var res model.MeteringTimeRange
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNMeteringTimeRange2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringTimeRange(ctx context.Context, sel ast.SelectionSet, v model.MeteringTimeRange) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) marshalNModelGateway2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGateway(ctx context.Context, sel ast.SelectionSet, v model.ModelGateway) graphql.Marshaler {
@@ -29305,6 +30927,26 @@ func (ec *executionContext) marshalNModelUsage2ᚕgithubᚗcomᚋVMwareᚑAIᚋa
 		fc := graphql.GetFieldContext(ctx)
 		fc.Result = &v[i]
 		return ec.marshalNModelUsage2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelUsage(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNModelUsageRow2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelUsageRow(ctx context.Context, sel ast.SelectionSet, v model.ModelUsageRow) graphql.Marshaler {
+	return ec._ModelUsageRow(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNModelUsageRow2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelUsageRowᚄ(ctx context.Context, sel ast.SelectionSet, v []model.ModelUsageRow) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNModelUsageRow2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelUsageRow(ctx, sel, v[i])
 	})
 
 	for _, e := range ret {
@@ -30417,6 +32059,22 @@ func (ec *executionContext) unmarshalOMembershipRole2ᚖgithubᚗcomᚋVMwareᚑ
 }
 
 func (ec *executionContext) marshalOMembershipRole2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMembershipRole(ctx context.Context, sel ast.SelectionSet, v *model.MembershipRole) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
+func (ec *executionContext) unmarshalOMeteringTimeRange2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringTimeRange(ctx context.Context, v any) (*model.MeteringTimeRange, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.MeteringTimeRange)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOMeteringTimeRange2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringTimeRange(ctx context.Context, sel ast.SelectionSet, v *model.MeteringTimeRange) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
