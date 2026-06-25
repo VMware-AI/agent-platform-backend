@@ -29,11 +29,12 @@ type OvaTemplateVersion struct {
 	OvaIdentifier string `json:"ova_identifier,omitempty"`
 	// Notes holds the value of the "notes" field.
 	Notes *string `json:"notes,omitempty"`
+	// FamilyID holds the value of the "family_id" field.
+	FamilyID uuid.UUID `json:"family_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the OvaTemplateVersionQuery when eager-loading is set.
-	Edges                        OvaTemplateVersionEdges `json:"edges"`
-	ova_template_family_versions *uuid.UUID
-	selectValues                 sql.SelectValues
+	Edges        OvaTemplateVersionEdges `json:"edges"`
+	selectValues sql.SelectValues
 }
 
 // OvaTemplateVersionEdges holds the relations/edges for other nodes in the graph.
@@ -65,10 +66,8 @@ func (*OvaTemplateVersion) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case ovatemplateversion.FieldCreatedAt, ovatemplateversion.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case ovatemplateversion.FieldID:
+		case ovatemplateversion.FieldID, ovatemplateversion.FieldFamilyID:
 			values[i] = new(uuid.UUID)
-		case ovatemplateversion.ForeignKeys[0]: // ova_template_family_versions
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -121,12 +120,11 @@ func (_m *OvaTemplateVersion) assignValues(columns []string, values []any) error
 				_m.Notes = new(string)
 				*_m.Notes = value.String
 			}
-		case ovatemplateversion.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field ova_template_family_versions", values[i])
-			} else if value.Valid {
-				_m.ova_template_family_versions = new(uuid.UUID)
-				*_m.ova_template_family_versions = *value.S.(*uuid.UUID)
+		case ovatemplateversion.FieldFamilyID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field family_id", values[i])
+			} else if value != nil {
+				_m.FamilyID = *value
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -185,6 +183,9 @@ func (_m *OvaTemplateVersion) String() string {
 		builder.WriteString("notes=")
 		builder.WriteString(*v)
 	}
+	builder.WriteString(", ")
+	builder.WriteString("family_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.FamilyID))
 	builder.WriteByte(')')
 	return builder.String()
 }

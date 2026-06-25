@@ -25,6 +25,8 @@ const (
 	FieldOvaIdentifier = "ova_identifier"
 	// FieldNotes holds the string denoting the notes field in the database.
 	FieldNotes = "notes"
+	// FieldFamilyID holds the string denoting the family_id field in the database.
+	FieldFamilyID = "family_id"
 	// EdgeFamily holds the string denoting the family edge name in mutations.
 	EdgeFamily = "family"
 	// Table holds the table name of the ovatemplateversion in the database.
@@ -35,7 +37,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "ovatemplatefamily" package.
 	FamilyInverseTable = "ova_template_families"
 	// FamilyColumn is the table column denoting the family relation/edge.
-	FamilyColumn = "ova_template_family_versions"
+	FamilyColumn = "family_id"
 )
 
 // Columns holds all SQL columns for ovatemplateversion fields.
@@ -46,23 +48,13 @@ var Columns = []string{
 	FieldVersion,
 	FieldOvaIdentifier,
 	FieldNotes,
-}
-
-// ForeignKeys holds the SQL foreign-keys that are owned by the "ova_template_versions"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"ova_template_family_versions",
+	FieldFamilyID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -115,6 +107,11 @@ func ByOvaIdentifier(opts ...sql.OrderTermOption) OrderOption {
 // ByNotes orders the results by the notes field.
 func ByNotes(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldNotes, opts...).ToFunc()
+}
+
+// ByFamilyID orders the results by the family_id field.
+func ByFamilyID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFamilyID, opts...).ToFunc()
 }
 
 // ByFamilyField orders the results by family field.

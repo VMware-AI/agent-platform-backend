@@ -56,6 +56,25 @@ func toModelOvaFamily(f *ent.OvaTemplateFamily) *model.OvaTemplateFamily {
 	}
 }
 
+// toModelOvaFamilyWithVersions is toModelOvaFamily plus the eager-loaded versions
+// edge (newest-first), pre-populating Versions and LatestVersion so the per-family
+// field resolvers serve from the loaded data instead of re-querying (kills the
+// N+1). `loaded` must be the family's versions sorted newest-first; pass a non-nil
+// (possibly empty) slice so the field resolver can tell "loaded, none" from "lazy".
+func toModelOvaFamilyWithVersions(f *ent.OvaTemplateFamily, loaded []*ent.OvaTemplateVersion) *model.OvaTemplateFamily {
+	m := toModelOvaFamily(f)
+	vers := make([]model.OvaTemplateVersion, 0, len(loaded))
+	for _, v := range loaded {
+		vers = append(vers, *toModelOvaVersion(v, m.ID))
+	}
+	m.Versions = vers // non-nil ⇒ "versions eager-loaded" sentinel for the resolvers
+	if len(vers) > 0 {
+		latest := vers[0].Version // loaded is newest-first → [0] is the latest
+		m.LatestVersion = &latest
+	}
+	return m
+}
+
 // toModelOvaVersion maps an ent.OvaTemplateVersion to the GraphQL model. familyID
 // is supplied by the caller (the version's owning family), avoiding a second edge
 // load when it is already known; the field resolver fills it otherwise.

@@ -85,9 +85,17 @@ func (_u *OvaTemplateVersionUpdate) ClearNotes() *OvaTemplateVersionUpdate {
 	return _u
 }
 
-// SetFamilyID sets the "family" edge to the OvaTemplateFamily entity by ID.
-func (_u *OvaTemplateVersionUpdate) SetFamilyID(id uuid.UUID) *OvaTemplateVersionUpdate {
-	_u.mutation.SetFamilyID(id)
+// SetFamilyID sets the "family_id" field.
+func (_u *OvaTemplateVersionUpdate) SetFamilyID(v uuid.UUID) *OvaTemplateVersionUpdate {
+	_u.mutation.SetFamilyID(v)
+	return _u
+}
+
+// SetNillableFamilyID sets the "family_id" field if the given value is not nil.
+func (_u *OvaTemplateVersionUpdate) SetNillableFamilyID(v *uuid.UUID) *OvaTemplateVersionUpdate {
+	if v != nil {
+		_u.SetFamilyID(*v)
+	}
 	return _u
 }
 
@@ -299,9 +307,17 @@ func (_u *OvaTemplateVersionUpdateOne) ClearNotes() *OvaTemplateVersionUpdateOne
 	return _u
 }
 
-// SetFamilyID sets the "family" edge to the OvaTemplateFamily entity by ID.
-func (_u *OvaTemplateVersionUpdateOne) SetFamilyID(id uuid.UUID) *OvaTemplateVersionUpdateOne {
-	_u.mutation.SetFamilyID(id)
+// SetFamilyID sets the "family_id" field.
+func (_u *OvaTemplateVersionUpdateOne) SetFamilyID(v uuid.UUID) *OvaTemplateVersionUpdateOne {
+	_u.mutation.SetFamilyID(v)
+	return _u
+}
+
+// SetNillableFamilyID sets the "family_id" field if the given value is not nil.
+func (_u *OvaTemplateVersionUpdateOne) SetNillableFamilyID(v *uuid.UUID) *OvaTemplateVersionUpdateOne {
+	if v != nil {
+		_u.SetFamilyID(*v)
+	}
 	return _u
 }
 

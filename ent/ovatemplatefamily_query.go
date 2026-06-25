@@ -419,7 +419,9 @@ func (_q *OvaTemplateFamilyQuery) loadVersions(ctx context.Context, query *OvaTe
 			init(nodes[i])
 		}
 	}
-	query.withFKs = true
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(ovatemplateversion.FieldFamilyID)
+	}
 	query.Where(predicate.OvaTemplateVersion(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(ovatemplatefamily.VersionsColumn), fks...))
 	}))
@@ -428,13 +430,10 @@ func (_q *OvaTemplateFamilyQuery) loadVersions(ctx context.Context, query *OvaTe
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.ova_template_family_versions
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "ova_template_family_versions" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		fk := n.FamilyID
+		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "ova_template_family_versions" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "family_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

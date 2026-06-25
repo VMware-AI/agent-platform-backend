@@ -133,6 +133,28 @@ func TestOvaTemplateCatalog(t *testing.T) {
 		t.Fatalf("pageInfo wrong: %+v", all.PageInfo)
 	}
 
+	// The list resolver eager-loads versions: the Versions/LatestVersion field
+	// resolvers must serve the pre-loaded data (newest-first) without re-querying,
+	// matching the lazy single-entity path (N+1 fix: identical behavior).
+	goose := &all.Nodes[0] // "Goose Agent": 1.0.0 + 1.1.0
+	gv, err := famR.Versions(ctx, goose)
+	if err != nil {
+		t.Fatalf("Versions (eager): %v", err)
+	}
+	if len(gv) != 2 || gv[0].Version != "1.1.0" || gv[1].Version != "1.0.0" {
+		t.Fatalf("eager versions not newest-first: %+v", gv)
+	}
+	if gv[0].FamilyID != goose.ID {
+		t.Fatalf("eager version familyId = %q, want %q", gv[0].FamilyID, goose.ID)
+	}
+	glv, err := famR.LatestVersion(ctx, goose)
+	if err != nil {
+		t.Fatalf("LatestVersion (eager): %v", err)
+	}
+	if glv == nil || *glv != "1.1.0" {
+		t.Fatalf("eager latestVersion = %v, want 1.1.0", glv)
+	}
+
 	// filter by nameKeyword.
 	byName, err := qr.OvaTemplateFamilies(ctx, &model.OvaTemplateFamilyFilter{NameKeyword: ptr("xiao")}, nil, nil)
 	if err != nil {

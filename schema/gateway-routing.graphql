@@ -132,7 +132,9 @@ input UpdateModelRouteInput {
 extend type Query {
   gatewayConnections: [GatewayConnection!]! @hasRole(any: [admin])
   upstreams: [Upstream!]! @hasPermission(perm: "route:manage")
-  modelRoutes: [ModelRoute!]! @hasPermission(perm: "route:manage")
+  # Model routes are platform-global gateway config (no tenant_id), so admin-only —
+  # tenant-admin must not read/write another tenant's routes (no scoping exists).
+  modelRoutes: [ModelRoute!]! @hasRole(any: [admin])
   routerTiers: [RouterTier!]! @hasPermission(perm: "route:manage")
 }
 
@@ -143,13 +145,16 @@ extend type Mutation {
 
   upsertUpstream(input: UpsertUpstreamInput!): Upstream! @hasPermission(perm: "route:manage")
   deleteUpstream(id: ID!): Boolean! @hasPermission(perm: "route:manage")
-  upsertModelRoute(input: UpsertModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
+  # Model routes are platform-global gateway config (no tenant_id) → admin-only,
+  # mirroring modelGateways. tenant-admin holds "route:manage" but has no tenant
+  # scoping here, so a permission gate would leak cross-tenant read/write.
+  upsertModelRoute(input: UpsertModelRouteInput!): ModelRoute! @hasRole(any: [admin])
   # Console 模型路由 page CRUD (创建/编辑路由). create mints a new route by id;
   # update edits an existing one by id (distinct from the name-keyed upsert above).
-  createModelRoute(input: CreateModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
-  updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
-  setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute! @hasPermission(perm: "route:manage")
-  deleteModelRoute(id: ID!): Boolean! @hasPermission(perm: "route:manage")
+  createModelRoute(input: CreateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
+  updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
+  setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute! @hasRole(any: [admin])
+  deleteModelRoute(id: ID!): Boolean! @hasRole(any: [admin])
 
   # The difficulty router: map a tier to a model alias → syncs litellm Complexity Router.
   setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier! @hasPermission(perm: "route:manage")
