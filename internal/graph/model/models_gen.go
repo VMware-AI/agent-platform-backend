@@ -667,6 +667,40 @@ type RequestLogFilter struct {
 	RequestID  *string `json:"requestId,omitempty"`
 }
 
+type RequestMetrics struct {
+	RangeStart  time.Time                       `json:"rangeStart"`
+	RangeEnd    time.Time                       `json:"rangeEnd"`
+	Granularity RequestMetricsBucketGranularity `json:"granularity"`
+	Buckets     []RequestMetricsBucket          `json:"buckets"`
+	Summary     *RequestMetricsSummary          `json:"summary"`
+}
+
+type RequestMetricsBucket struct {
+	Timestamp         time.Time `json:"timestamp"`
+	RequestCount      int       `json:"requestCount"`
+	ErrorCount        int       `json:"errorCount"`
+	AvgLatencyMs      int       `json:"avgLatencyMs"`
+	P95LatencyMs      int       `json:"p95LatencyMs"`
+	InputTokensTotal  int       `json:"inputTokensTotal"`
+	OutputTokensTotal int       `json:"outputTokensTotal"`
+}
+
+type RequestMetricsFilter struct {
+	StatusCode *int    `json:"statusCode,omitempty"`
+	AgentID    *string `json:"agentId,omitempty"`
+	Model      *string `json:"model,omitempty"`
+}
+
+type RequestMetricsSummary struct {
+	TotalRequests     int     `json:"totalRequests"`
+	TotalErrors       int     `json:"totalErrors"`
+	ErrorRate         float64 `json:"errorRate"`
+	AvgLatencyMs      int     `json:"avgLatencyMs"`
+	P95LatencyMs      int     `json:"p95LatencyMs"`
+	TotalInputTokens  int     `json:"totalInputTokens"`
+	TotalOutputTokens int     `json:"totalOutputTokens"`
+}
+
 type ResetPasswordPayload struct {
 	User              *AccountUser `json:"user"`
 	GeneratedPassword string       `json:"generatedPassword"`
@@ -2210,6 +2244,63 @@ func (e *PoolConnectionStatus) UnmarshalJSON(b []byte) error {
 }
 
 func (e PoolConnectionStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type RequestMetricsBucketGranularity string
+
+const (
+	RequestMetricsBucketGranularityMinute RequestMetricsBucketGranularity = "MINUTE"
+	RequestMetricsBucketGranularityHour   RequestMetricsBucketGranularity = "HOUR"
+	RequestMetricsBucketGranularityDay    RequestMetricsBucketGranularity = "DAY"
+)
+
+var AllRequestMetricsBucketGranularity = []RequestMetricsBucketGranularity{
+	RequestMetricsBucketGranularityMinute,
+	RequestMetricsBucketGranularityHour,
+	RequestMetricsBucketGranularityDay,
+}
+
+func (e RequestMetricsBucketGranularity) IsValid() bool {
+	switch e {
+	case RequestMetricsBucketGranularityMinute, RequestMetricsBucketGranularityHour, RequestMetricsBucketGranularityDay:
+		return true
+	}
+	return false
+}
+
+func (e RequestMetricsBucketGranularity) String() string {
+	return string(e)
+}
+
+func (e *RequestMetricsBucketGranularity) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = RequestMetricsBucketGranularity(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid RequestMetricsBucketGranularity", str)
+	}
+	return nil
+}
+
+func (e RequestMetricsBucketGranularity) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *RequestMetricsBucketGranularity) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e RequestMetricsBucketGranularity) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

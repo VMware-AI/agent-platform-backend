@@ -7,6 +7,7 @@ package graph
 
 import (
 	"context"
+	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
@@ -222,4 +223,12 @@ func (r *queryResolver) RateLimitPolicies(ctx context.Context) ([]model.RateLimi
 		out = append(out, *toModelRateLimitPolicy(p))
 	}
 	return out, nil
+}
+
+// RequestMetrics returns windowed, gap-filled request-traffic metrics bucketed
+// by the requested granularity. The heavy lifting (validation, tenant scoping,
+// pushed-down aggregation, gap-fill) lives in requestmetrics.go to keep this
+// resolver file focused.
+func (r *queryResolver) RequestMetrics(ctx context.Context, from time.Time, to time.Time, granularity model.RequestMetricsBucketGranularity, filter *model.RequestMetricsFilter) (*model.RequestMetrics, error) {
+	return r.requestMetrics(ctx, from, to, granularity, filter)
 }

@@ -33,6 +33,42 @@ input RequestLogFilter {
   requestId: String
 }
 
+enum RequestMetricsBucketGranularity { MINUTE HOUR DAY }
+
+type RequestMetricsBucket {
+  timestamp: Time!
+  requestCount: Int!
+  errorCount: Int!
+  avgLatencyMs: Int!
+  p95LatencyMs: Int!
+  inputTokensTotal: Int!
+  outputTokensTotal: Int!
+}
+
+type RequestMetricsSummary {
+  totalRequests: Int!
+  totalErrors: Int!
+  errorRate: Float!
+  avgLatencyMs: Int!
+  p95LatencyMs: Int!
+  totalInputTokens: Int!
+  totalOutputTokens: Int!
+}
+
+type RequestMetrics {
+  rangeStart: Time!
+  rangeEnd: Time!
+  granularity: RequestMetricsBucketGranularity!
+  buckets: [RequestMetricsBucket!]!
+  summary: RequestMetricsSummary!
+}
+
+input RequestMetricsFilter {
+  statusCode: Int
+  agentId: ID
+  model: String
+}
+
 type RateLimitPolicy {
   id: ID!
   name: String!
@@ -52,6 +88,7 @@ input UpsertRateLimitPolicyInput {
 extend type Query {
   requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
   rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin, tenant_admin])
+  requestMetrics(from: Time!, to: Time!, granularity: RequestMetricsBucketGranularity!, filter: RequestMetricsFilter): RequestMetrics! @hasPermission(perm: "audit:view")
 }
 
 extend type Mutation {
