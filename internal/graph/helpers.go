@@ -476,15 +476,19 @@ func toModelAgentConfig(c *ent.AgentConfig) *model.AgentConfig {
 
 // toModelAgent maps the scalar Agent fields. type→agent_type, endpoint→vm_ref.
 // typeLabel/owner/apiKey are populated lazily by agentResolver field resolvers
-// (前后端整合契约).
+// (前后端整合契约). The FK ids (OwnerUserID/VirtualKeyID) are carried on the model
+// as Go-only fields so those lazy resolvers never re-fetch the agent row (N+1
+// kill); they batch only the related User/VirtualKey via the request loaders.
 func toModelAgent(a *ent.Agent) *model.Agent {
 	m := &model.Agent{
-		ID:        a.ID.String(),
-		Name:      a.Name,
-		Type:      a.AgentType,
-		Status:    model.AgentStatus(string(a.Status)),
-		CreatedAt: a.CreatedAt,
-		UpdatedAt: a.UpdatedAt,
+		ID:           a.ID.String(),
+		Name:         a.Name,
+		Type:         a.AgentType,
+		Status:       model.AgentStatus(string(a.Status)),
+		CreatedAt:    a.CreatedAt,
+		UpdatedAt:    a.UpdatedAt,
+		OwnerUserID:  a.OwnerUserID,
+		VirtualKeyID: a.VirtualKeyID,
 	}
 	if a.VMRef != "" {
 		v := a.VMRef
@@ -1339,24 +1343,6 @@ func (r *Resolver) resolveAgentKnowledge(ctx context.Context, ag *ent.Agent) []s
 		ids = append(ids, a.ID.String())
 	}
 	return ids
-}
-
-// agentForField reloads the ent.Agent backing a resolved Agent field (owner/apiKey
-// need its FK columns, which are not GraphQL fields). Returns nil (no error) if the
-// row vanished between the list query and the field resolution.
-func (r *agentResolver) agentForField(ctx context.Context, id string) (*ent.Agent, error) {
-	aid, err := uuid.Parse(id)
-	if err != nil {
-		return nil, nil
-	}
-	ag, err := r.Ent.Agent.Get(ctx, aid)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return ag, nil
 }
 
 // applyAgentSort orders the agent query per the requested field (前后端整合契约),

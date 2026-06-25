@@ -32,34 +32,26 @@ func (r *agentResolver) TypeLabel(ctx context.Context, obj *model.Agent) (string
 }
 
 // APIKey resolves the agent's gateway virtual key (id + display alias), or nil
-// when the agent has none (not yet deployed). The parent agent was already
-// authorized by the Agents query, so we load by the agent's own id.
+// when the agent has none (not yet deployed) or the key was deleted. The FK id is
+// carried on the model by toModelAgent, so this never re-fetches the agent; the
+// VirtualKey row is batched across the page via the request loader (N+1 kill).
 func (r *agentResolver) APIKey(ctx context.Context, obj *model.Agent) (*model.AgentAPIKey, error) {
-	ag, err := r.agentForField(ctx, obj.ID)
-	if err != nil || ag == nil || ag.VirtualKeyID == nil {
-		return nil, err
+	if obj.VirtualKeyID == nil {
+		return nil, nil
 	}
-	vk, err := r.Ent.VirtualKey.Get(ctx, *ag.VirtualKeyID)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, nil
-		}
+	vk, err := r.loadVirtualKey(ctx, *obj.VirtualKeyID)
+	if err != nil || vk == nil {
 		return nil, err
 	}
 	return &model.AgentAPIKey{ID: vk.ID.String(), Name: vk.Alias}, nil
 }
 
-// Owner resolves the agent's owner User, or nil if the owning user is gone.
+// Owner resolves the agent's owner User, or nil if the owning user is gone. The
+// FK id is carried on the model, so no agent re-fetch; the User row is batched
+// across the page via the request loader (N+1 kill).
 func (r *agentResolver) Owner(ctx context.Context, obj *model.Agent) (*model.User, error) {
-	ag, err := r.agentForField(ctx, obj.ID)
-	if err != nil || ag == nil {
-		return nil, err
-	}
-	u, err := r.Ent.User.Get(ctx, ag.OwnerUserID)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, nil
-		}
+	u, err := r.loadUser(ctx, obj.OwnerUserID)
+	if err != nil || u == nil {
 		return nil, err
 	}
 	return toModelUser(u), nil
@@ -68,17 +60,11 @@ func (r *agentResolver) Owner(ctx context.Context, obj *model.Agent) (*model.Use
 // Credentials is the resolver for the credentials field. The agent has no
 // separate OS account today, so `username` is sourced from the owning user — the
 // account the agent runs as. The password is never exposed (Sensitive VM secret),
-// so only `username` is returned. Nil if the agent or its owner is gone.
+// so only `username` is returned. Nil if the owner is gone. The User row is
+// batched via the request loader and shared with the Owner resolver (N+1 kill).
 func (r *agentResolver) Credentials(ctx context.Context, obj *model.Agent) (*model.AgentCredentials, error) {
-	ag, err := r.agentForField(ctx, obj.ID)
-	if err != nil || ag == nil {
-		return nil, err
-	}
-	u, err := r.Ent.User.Get(ctx, ag.OwnerUserID)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, nil
-		}
+	u, err := r.loadUser(ctx, obj.OwnerUserID)
+	if err != nil || u == nil {
 		return nil, err
 	}
 	return &model.AgentCredentials{Username: u.Username}, nil
@@ -486,6 +472,10 @@ func (r *queryResolver) Agents(ctx context.Context, filter *model.AgentFilter, p
 	if err != nil {
 		return nil, err
 	}
+	// Pre-batch the page's owners + virtual keys into the request cache so the
+	// per-row owner/apiKey/credentials field resolvers read from it instead of
+	// issuing one User.Get + one VirtualKey.Get per agent (N+1 elimination).
+	r.primeAgentRelations(ctx, as)
 	nodes := make([]model.Agent, 0, len(as))
 	for _, a := range as {
 		nodes = append(nodes, *toModelAgent(a))
