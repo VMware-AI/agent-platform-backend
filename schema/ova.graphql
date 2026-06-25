@@ -1,0 +1,120 @@
+# Agent Marketplace — OVA template catalog (Block 6a). The console 智能体市场
+# browses families (metadata + icon) each owning N versioned OVA images. This
+# block covers the CATALOG only; deploy + marketplace virtual-key ops are a later
+# phase (intentionally deferred). The catalog is platform-global (admin-gated).
+
+# Fixed marketplace card palette (console-defined).
+enum OvaTemplateColor {
+  BLUE
+  PURPLE
+  ORANGE
+  GREEN
+  RED
+  CYAN
+}
+
+type OvaTemplateVersion {
+  id: ID!
+  # Owning family id (resolved from the family edge).
+  familyId: ID! @goField(forceResolver: true)
+  version: String!
+  ovaIdentifier: String!
+  notes: String
+  createdAt: Time!
+}
+
+type OvaTemplateFamily {
+  id: ID!
+  name: String!
+  type: String!
+  description: String!
+  tools: [String!]!
+  skills: [String!]!
+  scenarios: [String!]!
+  iconShape: String!
+  iconColor: OvaTemplateColor!
+  # Version string of the most recently created version, or null when none.
+  latestVersion: String @goField(forceResolver: true)
+  createdAt: Time!
+  updatedAt: Time!
+  # All versions, newest-first.
+  versions: [OvaTemplateVersion!]! @goField(forceResolver: true)
+}
+
+type OvaTemplateFamilyConnection {
+  nodes: [OvaTemplateFamily!]!
+  totalCount: Int!
+  pageInfo: PageInfo!
+}
+
+type OvaTemplateVersionConnection {
+  nodes: [OvaTemplateVersion!]!
+  totalCount: Int!
+  pageInfo: PageInfo!
+}
+
+input OvaTemplateFamilyFilter {
+  nameKeyword: String
+  type: String
+}
+
+enum OvaTemplateFamilySortField {
+  OVA_NAME
+  TYPE
+  CREATED_AT
+  UPDATED_AT
+}
+
+input OvaTemplateFamilySort {
+  field: OvaTemplateFamilySortField!
+  direction: SortDirection!
+}
+
+input CreateOvaTemplateVersionInput {
+  version: String!
+  ovaIdentifier: String!
+  notes: String
+}
+
+input CreateOvaTemplateFamilyInput {
+  name: String!
+  type: String!
+  description: String!
+  tools: [String!]!
+  scenarios: [String!]!
+  skills: [String!]!
+  iconShape: String!
+  iconColor: OvaTemplateColor!
+  initialVersion: CreateOvaTemplateVersionInput!
+}
+
+input AddOvaTemplateVersionInput {
+  familyId: ID!
+  version: String!
+  ovaIdentifier: String!
+  notes: String
+}
+
+type CreateOvaTemplateFamilyPayload {
+  family: OvaTemplateFamily!
+}
+
+type AddOvaTemplateVersionPayload {
+  version: OvaTemplateVersion!
+}
+
+extend type Query {
+  ovaTemplateFamilies(
+    filter: OvaTemplateFamilyFilter
+    pagination: Pagination
+    sort: OvaTemplateFamilySort
+  ): OvaTemplateFamilyConnection! @hasRole(any: [admin])
+  ovaTemplateVersions(familyId: ID, pagination: Pagination): OvaTemplateVersionConnection! @hasRole(any: [admin])
+}
+
+extend type Mutation {
+  # Create a family + its initial version in one transaction.
+  createOvaTemplateFamily(input: CreateOvaTemplateFamilyInput!): CreateOvaTemplateFamilyPayload! @hasRole(any: [admin])
+  # Append a version to an existing family (errors if the family is missing).
+  addOvaTemplateVersion(input: AddOvaTemplateVersionInput!): AddOvaTemplateVersionPayload! @hasRole(any: [admin])
+}

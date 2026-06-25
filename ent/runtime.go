@@ -18,6 +18,8 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/image"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/modelroute"
+	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplatefamily"
+	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplateversion"
 	"github.com/VMware-AI/agent-platform-backend/ent/permission"
 	"github.com/VMware-AI/agent-platform-backend/ent/ratelimitpolicy"
 	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
@@ -364,6 +366,68 @@ func init() {
 	modelrouteDescID := modelrouteFields[0].Descriptor()
 	// modelroute.DefaultID holds the default value on creation for the id field.
 	modelroute.DefaultID = modelrouteDescID.Default.(func() uuid.UUID)
+	ovatemplatefamilyMixin := schema.OvaTemplateFamily{}.Mixin()
+	ovatemplatefamilyMixinFields0 := ovatemplatefamilyMixin[0].Fields()
+	_ = ovatemplatefamilyMixinFields0
+	ovatemplatefamilyFields := schema.OvaTemplateFamily{}.Fields()
+	_ = ovatemplatefamilyFields
+	// ovatemplatefamilyDescCreatedAt is the schema descriptor for created_at field.
+	ovatemplatefamilyDescCreatedAt := ovatemplatefamilyMixinFields0[0].Descriptor()
+	// ovatemplatefamily.DefaultCreatedAt holds the default value on creation for the created_at field.
+	ovatemplatefamily.DefaultCreatedAt = ovatemplatefamilyDescCreatedAt.Default.(func() time.Time)
+	// ovatemplatefamilyDescUpdatedAt is the schema descriptor for updated_at field.
+	ovatemplatefamilyDescUpdatedAt := ovatemplatefamilyMixinFields0[1].Descriptor()
+	// ovatemplatefamily.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	ovatemplatefamily.DefaultUpdatedAt = ovatemplatefamilyDescUpdatedAt.Default.(func() time.Time)
+	// ovatemplatefamily.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	ovatemplatefamily.UpdateDefaultUpdatedAt = ovatemplatefamilyDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// ovatemplatefamilyDescName is the schema descriptor for name field.
+	ovatemplatefamilyDescName := ovatemplatefamilyFields[1].Descriptor()
+	// ovatemplatefamily.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	ovatemplatefamily.NameValidator = ovatemplatefamilyDescName.Validators[0].(func(string) error)
+	// ovatemplatefamilyDescType is the schema descriptor for type field.
+	ovatemplatefamilyDescType := ovatemplatefamilyFields[2].Descriptor()
+	// ovatemplatefamily.TypeValidator is a validator for the "type" field. It is called by the builders before save.
+	ovatemplatefamily.TypeValidator = ovatemplatefamilyDescType.Validators[0].(func(string) error)
+	// ovatemplatefamilyDescDescription is the schema descriptor for description field.
+	ovatemplatefamilyDescDescription := ovatemplatefamilyFields[3].Descriptor()
+	// ovatemplatefamily.DefaultDescription holds the default value on creation for the description field.
+	ovatemplatefamily.DefaultDescription = ovatemplatefamilyDescDescription.Default.(string)
+	// ovatemplatefamilyDescIconShape is the schema descriptor for icon_shape field.
+	ovatemplatefamilyDescIconShape := ovatemplatefamilyFields[7].Descriptor()
+	// ovatemplatefamily.DefaultIconShape holds the default value on creation for the icon_shape field.
+	ovatemplatefamily.DefaultIconShape = ovatemplatefamilyDescIconShape.Default.(string)
+	// ovatemplatefamilyDescID is the schema descriptor for id field.
+	ovatemplatefamilyDescID := ovatemplatefamilyFields[0].Descriptor()
+	// ovatemplatefamily.DefaultID holds the default value on creation for the id field.
+	ovatemplatefamily.DefaultID = ovatemplatefamilyDescID.Default.(func() uuid.UUID)
+	ovatemplateversionMixin := schema.OvaTemplateVersion{}.Mixin()
+	ovatemplateversionMixinFields0 := ovatemplateversionMixin[0].Fields()
+	_ = ovatemplateversionMixinFields0
+	ovatemplateversionFields := schema.OvaTemplateVersion{}.Fields()
+	_ = ovatemplateversionFields
+	// ovatemplateversionDescCreatedAt is the schema descriptor for created_at field.
+	ovatemplateversionDescCreatedAt := ovatemplateversionMixinFields0[0].Descriptor()
+	// ovatemplateversion.DefaultCreatedAt holds the default value on creation for the created_at field.
+	ovatemplateversion.DefaultCreatedAt = ovatemplateversionDescCreatedAt.Default.(func() time.Time)
+	// ovatemplateversionDescUpdatedAt is the schema descriptor for updated_at field.
+	ovatemplateversionDescUpdatedAt := ovatemplateversionMixinFields0[1].Descriptor()
+	// ovatemplateversion.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	ovatemplateversion.DefaultUpdatedAt = ovatemplateversionDescUpdatedAt.Default.(func() time.Time)
+	// ovatemplateversion.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	ovatemplateversion.UpdateDefaultUpdatedAt = ovatemplateversionDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// ovatemplateversionDescVersion is the schema descriptor for version field.
+	ovatemplateversionDescVersion := ovatemplateversionFields[1].Descriptor()
+	// ovatemplateversion.VersionValidator is a validator for the "version" field. It is called by the builders before save.
+	ovatemplateversion.VersionValidator = ovatemplateversionDescVersion.Validators[0].(func(string) error)
+	// ovatemplateversionDescOvaIdentifier is the schema descriptor for ova_identifier field.
+	ovatemplateversionDescOvaIdentifier := ovatemplateversionFields[2].Descriptor()
+	// ovatemplateversion.OvaIdentifierValidator is a validator for the "ova_identifier" field. It is called by the builders before save.
+	ovatemplateversion.OvaIdentifierValidator = ovatemplateversionDescOvaIdentifier.Validators[0].(func(string) error)
+	// ovatemplateversionDescID is the schema descriptor for id field.
+	ovatemplateversionDescID := ovatemplateversionFields[0].Descriptor()
+	// ovatemplateversion.DefaultID holds the default value on creation for the id field.
+	ovatemplateversion.DefaultID = ovatemplateversionDescID.Default.(func() uuid.UUID)
 	permissionFields := schema.Permission{}.Fields()
 	_ = permissionFields
 	// permissionDescKey is the schema descriptor for key field.

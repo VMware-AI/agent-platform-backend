@@ -45,6 +45,12 @@ type Membership func(*sql.Selector)
 // ModelRoute is the predicate function for modelroute builders.
 type ModelRoute func(*sql.Selector)
 
+// OvaTemplateFamily is the predicate function for ovatemplatefamily builders.
+type OvaTemplateFamily func(*sql.Selector)
+
+// OvaTemplateVersion is the predicate function for ovatemplateversion builders.
+type OvaTemplateVersion func(*sql.Selector)
+
 // Permission is the predicate function for permission builders.
 type Permission func(*sql.Selector)
 

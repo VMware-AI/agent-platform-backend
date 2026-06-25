@@ -24,6 +24,8 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/image"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/modelroute"
+	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplatefamily"
+	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplateversion"
 	"github.com/VMware-AI/agent-platform-backend/ent/permission"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
 	"github.com/VMware-AI/agent-platform-backend/ent/ratelimitpolicy"
@@ -50,32 +52,34 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeAgent             = "Agent"
-	TypeAgentConfig       = "AgentConfig"
-	TypeAgentEnrollment   = "AgentEnrollment"
-	TypeAgentHeartbeat    = "AgentHeartbeat"
-	TypeAgentTemplate     = "AgentTemplate"
-	TypeArtifact          = "Artifact"
-	TypeAuditLog          = "AuditLog"
-	TypeDepartment        = "Department"
-	TypeEnvironment       = "Environment"
-	TypeGatewayConnection = "GatewayConnection"
-	TypeImage             = "Image"
-	TypeMembership        = "Membership"
-	TypeModelRoute        = "ModelRoute"
-	TypePermission        = "Permission"
-	TypeRateLimitPolicy   = "RateLimitPolicy"
-	TypeRequestLog        = "RequestLog"
-	TypeResourcePool      = "ResourcePool"
-	TypeRole              = "Role"
-	TypeRotationCommand   = "RotationCommand"
-	TypeRouterTier        = "RouterTier"
-	TypeSkill             = "Skill"
-	TypeTenant            = "Tenant"
-	TypeTokenUsage        = "TokenUsage"
-	TypeUpstream          = "Upstream"
-	TypeUser              = "User"
-	TypeVirtualKey        = "VirtualKey"
+	TypeAgent              = "Agent"
+	TypeAgentConfig        = "AgentConfig"
+	TypeAgentEnrollment    = "AgentEnrollment"
+	TypeAgentHeartbeat     = "AgentHeartbeat"
+	TypeAgentTemplate      = "AgentTemplate"
+	TypeArtifact           = "Artifact"
+	TypeAuditLog           = "AuditLog"
+	TypeDepartment         = "Department"
+	TypeEnvironment        = "Environment"
+	TypeGatewayConnection  = "GatewayConnection"
+	TypeImage              = "Image"
+	TypeMembership         = "Membership"
+	TypeModelRoute         = "ModelRoute"
+	TypeOvaTemplateFamily  = "OvaTemplateFamily"
+	TypeOvaTemplateVersion = "OvaTemplateVersion"
+	TypePermission         = "Permission"
+	TypeRateLimitPolicy    = "RateLimitPolicy"
+	TypeRequestLog         = "RequestLog"
+	TypeResourcePool       = "ResourcePool"
+	TypeRole               = "Role"
+	TypeRotationCommand    = "RotationCommand"
+	TypeRouterTier         = "RouterTier"
+	TypeSkill              = "Skill"
+	TypeTenant             = "Tenant"
+	TypeTokenUsage         = "TokenUsage"
+	TypeUpstream           = "Upstream"
+	TypeUser               = "User"
+	TypeVirtualKey         = "VirtualKey"
 )
 
 // AgentMutation represents an operation that mutates the Agent nodes in the graph.
@@ -10632,6 +10636,1665 @@ func (m *ModelRouteMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *ModelRouteMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown ModelRoute edge %s", name)
+}
+
+// OvaTemplateFamilyMutation represents an operation that mutates the OvaTemplateFamily nodes in the graph.
+type OvaTemplateFamilyMutation struct {
+	config
+	op              Op
+	typ             string
+	id              *uuid.UUID
+	created_at      *time.Time
+	updated_at      *time.Time
+	name            *string
+	_type           *string
+	description     *string
+	tools           *[]string
+	appendtools     []string
+	skills          *[]string
+	appendskills    []string
+	scenarios       *[]string
+	appendscenarios []string
+	icon_shape      *string
+	icon_color      *ovatemplatefamily.IconColor
+	clearedFields   map[string]struct{}
+	versions        map[uuid.UUID]struct{}
+	removedversions map[uuid.UUID]struct{}
+	clearedversions bool
+	done            bool
+	oldValue        func(context.Context) (*OvaTemplateFamily, error)
+	predicates      []predicate.OvaTemplateFamily
+}
+
+var _ ent.Mutation = (*OvaTemplateFamilyMutation)(nil)
+
+// ovatemplatefamilyOption allows management of the mutation configuration using functional options.
+type ovatemplatefamilyOption func(*OvaTemplateFamilyMutation)
+
+// newOvaTemplateFamilyMutation creates new mutation for the OvaTemplateFamily entity.
+func newOvaTemplateFamilyMutation(c config, op Op, opts ...ovatemplatefamilyOption) *OvaTemplateFamilyMutation {
+	m := &OvaTemplateFamilyMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeOvaTemplateFamily,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withOvaTemplateFamilyID sets the ID field of the mutation.
+func withOvaTemplateFamilyID(id uuid.UUID) ovatemplatefamilyOption {
+	return func(m *OvaTemplateFamilyMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *OvaTemplateFamily
+		)
+		m.oldValue = func(ctx context.Context) (*OvaTemplateFamily, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().OvaTemplateFamily.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withOvaTemplateFamily sets the old OvaTemplateFamily of the mutation.
+func withOvaTemplateFamily(node *OvaTemplateFamily) ovatemplatefamilyOption {
+	return func(m *OvaTemplateFamilyMutation) {
+		m.oldValue = func(context.Context) (*OvaTemplateFamily, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m OvaTemplateFamilyMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m OvaTemplateFamilyMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of OvaTemplateFamily entities.
+func (m *OvaTemplateFamilyMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *OvaTemplateFamilyMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *OvaTemplateFamilyMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().OvaTemplateFamily.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *OvaTemplateFamilyMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *OvaTemplateFamilyMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the OvaTemplateFamily entity.
+// If the OvaTemplateFamily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OvaTemplateFamilyMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *OvaTemplateFamilyMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *OvaTemplateFamilyMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *OvaTemplateFamilyMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the OvaTemplateFamily entity.
+// If the OvaTemplateFamily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OvaTemplateFamilyMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *OvaTemplateFamilyMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetName sets the "name" field.
+func (m *OvaTemplateFamilyMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *OvaTemplateFamilyMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the OvaTemplateFamily entity.
+// If the OvaTemplateFamily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OvaTemplateFamilyMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *OvaTemplateFamilyMutation) ResetName() {
+	m.name = nil
+}
+
+// SetType sets the "type" field.
+func (m *OvaTemplateFamilyMutation) SetType(s string) {
+	m._type = &s
+}
+
+// GetType returns the value of the "type" field in the mutation.
+func (m *OvaTemplateFamilyMutation) GetType() (r string, exists bool) {
+	v := m._type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldType returns the old "type" field's value of the OvaTemplateFamily entity.
+// If the OvaTemplateFamily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OvaTemplateFamilyMutation) OldType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldType: %w", err)
+	}
+	return oldValue.Type, nil
+}
+
+// ResetType resets all changes to the "type" field.
+func (m *OvaTemplateFamilyMutation) ResetType() {
+	m._type = nil
+}
+
+// SetDescription sets the "description" field.
+func (m *OvaTemplateFamilyMutation) SetDescription(s string) {
+	m.description = &s
+}
+
+// Description returns the value of the "description" field in the mutation.
+func (m *OvaTemplateFamilyMutation) Description() (r string, exists bool) {
+	v := m.description
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDescription returns the old "description" field's value of the OvaTemplateFamily entity.
+// If the OvaTemplateFamily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OvaTemplateFamilyMutation) OldDescription(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDescription requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDescription: %w", err)
+	}
+	return oldValue.Description, nil
+}
+
+// ResetDescription resets all changes to the "description" field.
+func (m *OvaTemplateFamilyMutation) ResetDescription() {
+	m.description = nil
+}
+
+// SetTools sets the "tools" field.
+func (m *OvaTemplateFamilyMutation) SetTools(s []string) {
+	m.tools = &s
+	m.appendtools = nil
+}
+
+// Tools returns the value of the "tools" field in the mutation.
+func (m *OvaTemplateFamilyMutation) Tools() (r []string, exists bool) {
+	v := m.tools
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTools returns the old "tools" field's value of the OvaTemplateFamily entity.
+// If the OvaTemplateFamily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OvaTemplateFamilyMutation) OldTools(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTools is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTools requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTools: %w", err)
+	}
+	return oldValue.Tools, nil
+}
+
+// AppendTools adds s to the "tools" field.
+func (m *OvaTemplateFamilyMutation) AppendTools(s []string) {
+	m.appendtools = append(m.appendtools, s...)
+}
+
+// AppendedTools returns the list of values that were appended to the "tools" field in this mutation.
+func (m *OvaTemplateFamilyMutation) AppendedTools() ([]string, bool) {
+	if len(m.appendtools) == 0 {
+		return nil, false
+	}
+	return m.appendtools, true
+}
+
+// ClearTools clears the value of the "tools" field.
+func (m *OvaTemplateFamilyMutation) ClearTools() {
+	m.tools = nil
+	m.appendtools = nil
+	m.clearedFields[ovatemplatefamily.FieldTools] = struct{}{}
+}
+
+// ToolsCleared returns if the "tools" field was cleared in this mutation.
+func (m *OvaTemplateFamilyMutation) ToolsCleared() bool {
+	_, ok := m.clearedFields[ovatemplatefamily.FieldTools]
+	return ok
+}
+
+// ResetTools resets all changes to the "tools" field.
+func (m *OvaTemplateFamilyMutation) ResetTools() {
+	m.tools = nil
+	m.appendtools = nil
+	delete(m.clearedFields, ovatemplatefamily.FieldTools)
+}
+
+// SetSkills sets the "skills" field.
+func (m *OvaTemplateFamilyMutation) SetSkills(s []string) {
+	m.skills = &s
+	m.appendskills = nil
+}
+
+// Skills returns the value of the "skills" field in the mutation.
+func (m *OvaTemplateFamilyMutation) Skills() (r []string, exists bool) {
+	v := m.skills
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSkills returns the old "skills" field's value of the OvaTemplateFamily entity.
+// If the OvaTemplateFamily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OvaTemplateFamilyMutation) OldSkills(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSkills is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSkills requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSkills: %w", err)
+	}
+	return oldValue.Skills, nil
+}
+
+// AppendSkills adds s to the "skills" field.
+func (m *OvaTemplateFamilyMutation) AppendSkills(s []string) {
+	m.appendskills = append(m.appendskills, s...)
+}
+
+// AppendedSkills returns the list of values that were appended to the "skills" field in this mutation.
+func (m *OvaTemplateFamilyMutation) AppendedSkills() ([]string, bool) {
+	if len(m.appendskills) == 0 {
+		return nil, false
+	}
+	return m.appendskills, true
+}
+
+// ClearSkills clears the value of the "skills" field.
+func (m *OvaTemplateFamilyMutation) ClearSkills() {
+	m.skills = nil
+	m.appendskills = nil
+	m.clearedFields[ovatemplatefamily.FieldSkills] = struct{}{}
+}
+
+// SkillsCleared returns if the "skills" field was cleared in this mutation.
+func (m *OvaTemplateFamilyMutation) SkillsCleared() bool {
+	_, ok := m.clearedFields[ovatemplatefamily.FieldSkills]
+	return ok
+}
+
+// ResetSkills resets all changes to the "skills" field.
+func (m *OvaTemplateFamilyMutation) ResetSkills() {
+	m.skills = nil
+	m.appendskills = nil
+	delete(m.clearedFields, ovatemplatefamily.FieldSkills)
+}
+
+// SetScenarios sets the "scenarios" field.
+func (m *OvaTemplateFamilyMutation) SetScenarios(s []string) {
+	m.scenarios = &s
+	m.appendscenarios = nil
+}
+
+// Scenarios returns the value of the "scenarios" field in the mutation.
+func (m *OvaTemplateFamilyMutation) Scenarios() (r []string, exists bool) {
+	v := m.scenarios
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldScenarios returns the old "scenarios" field's value of the OvaTemplateFamily entity.
+// If the OvaTemplateFamily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OvaTemplateFamilyMutation) OldScenarios(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldScenarios is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldScenarios requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldScenarios: %w", err)
+	}
+	return oldValue.Scenarios, nil
+}
+
+// AppendScenarios adds s to the "scenarios" field.
+func (m *OvaTemplateFamilyMutation) AppendScenarios(s []string) {
+	m.appendscenarios = append(m.appendscenarios, s...)
+}
+
+// AppendedScenarios returns the list of values that were appended to the "scenarios" field in this mutation.
+func (m *OvaTemplateFamilyMutation) AppendedScenarios() ([]string, bool) {
+	if len(m.appendscenarios) == 0 {
+		return nil, false
+	}
+	return m.appendscenarios, true
+}
+
+// ClearScenarios clears the value of the "scenarios" field.
+func (m *OvaTemplateFamilyMutation) ClearScenarios() {
+	m.scenarios = nil
+	m.appendscenarios = nil
+	m.clearedFields[ovatemplatefamily.FieldScenarios] = struct{}{}
+}
+
+// ScenariosCleared returns if the "scenarios" field was cleared in this mutation.
+func (m *OvaTemplateFamilyMutation) ScenariosCleared() bool {
+	_, ok := m.clearedFields[ovatemplatefamily.FieldScenarios]
+	return ok
+}
+
+// ResetScenarios resets all changes to the "scenarios" field.
+func (m *OvaTemplateFamilyMutation) ResetScenarios() {
+	m.scenarios = nil
+	m.appendscenarios = nil
+	delete(m.clearedFields, ovatemplatefamily.FieldScenarios)
+}
+
+// SetIconShape sets the "icon_shape" field.
+func (m *OvaTemplateFamilyMutation) SetIconShape(s string) {
+	m.icon_shape = &s
+}
+
+// IconShape returns the value of the "icon_shape" field in the mutation.
+func (m *OvaTemplateFamilyMutation) IconShape() (r string, exists bool) {
+	v := m.icon_shape
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIconShape returns the old "icon_shape" field's value of the OvaTemplateFamily entity.
+// If the OvaTemplateFamily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OvaTemplateFamilyMutation) OldIconShape(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIconShape is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIconShape requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIconShape: %w", err)
+	}
+	return oldValue.IconShape, nil
+}
+
+// ResetIconShape resets all changes to the "icon_shape" field.
+func (m *OvaTemplateFamilyMutation) ResetIconShape() {
+	m.icon_shape = nil
+}
+
+// SetIconColor sets the "icon_color" field.
+func (m *OvaTemplateFamilyMutation) SetIconColor(oc ovatemplatefamily.IconColor) {
+	m.icon_color = &oc
+}
+
+// IconColor returns the value of the "icon_color" field in the mutation.
+func (m *OvaTemplateFamilyMutation) IconColor() (r ovatemplatefamily.IconColor, exists bool) {
+	v := m.icon_color
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIconColor returns the old "icon_color" field's value of the OvaTemplateFamily entity.
+// If the OvaTemplateFamily object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OvaTemplateFamilyMutation) OldIconColor(ctx context.Context) (v ovatemplatefamily.IconColor, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIconColor is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIconColor requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIconColor: %w", err)
+	}
+	return oldValue.IconColor, nil
+}
+
+// ResetIconColor resets all changes to the "icon_color" field.
+func (m *OvaTemplateFamilyMutation) ResetIconColor() {
+	m.icon_color = nil
+}
+
+// AddVersionIDs adds the "versions" edge to the OvaTemplateVersion entity by ids.
+func (m *OvaTemplateFamilyMutation) AddVersionIDs(ids ...uuid.UUID) {
+	if m.versions == nil {
+		m.versions = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.versions[ids[i]] = struct{}{}
+	}
+}
+
+// ClearVersions clears the "versions" edge to the OvaTemplateVersion entity.
+func (m *OvaTemplateFamilyMutation) ClearVersions() {
+	m.clearedversions = true
+}
+
+// VersionsCleared reports if the "versions" edge to the OvaTemplateVersion entity was cleared.
+func (m *OvaTemplateFamilyMutation) VersionsCleared() bool {
+	return m.clearedversions
+}
+
+// RemoveVersionIDs removes the "versions" edge to the OvaTemplateVersion entity by IDs.
+func (m *OvaTemplateFamilyMutation) RemoveVersionIDs(ids ...uuid.UUID) {
+	if m.removedversions == nil {
+		m.removedversions = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.versions, ids[i])
+		m.removedversions[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedVersions returns the removed IDs of the "versions" edge to the OvaTemplateVersion entity.
+func (m *OvaTemplateFamilyMutation) RemovedVersionsIDs() (ids []uuid.UUID) {
+	for id := range m.removedversions {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// VersionsIDs returns the "versions" edge IDs in the mutation.
+func (m *OvaTemplateFamilyMutation) VersionsIDs() (ids []uuid.UUID) {
+	for id := range m.versions {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetVersions resets all changes to the "versions" edge.
+func (m *OvaTemplateFamilyMutation) ResetVersions() {
+	m.versions = nil
+	m.clearedversions = false
+	m.removedversions = nil
+}
+
+// Where appends a list predicates to the OvaTemplateFamilyMutation builder.
+func (m *OvaTemplateFamilyMutation) Where(ps ...predicate.OvaTemplateFamily) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the OvaTemplateFamilyMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *OvaTemplateFamilyMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.OvaTemplateFamily, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *OvaTemplateFamilyMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *OvaTemplateFamilyMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (OvaTemplateFamily).
+func (m *OvaTemplateFamilyMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *OvaTemplateFamilyMutation) Fields() []string {
+	fields := make([]string, 0, 10)
+	if m.created_at != nil {
+		fields = append(fields, ovatemplatefamily.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, ovatemplatefamily.FieldUpdatedAt)
+	}
+	if m.name != nil {
+		fields = append(fields, ovatemplatefamily.FieldName)
+	}
+	if m._type != nil {
+		fields = append(fields, ovatemplatefamily.FieldType)
+	}
+	if m.description != nil {
+		fields = append(fields, ovatemplatefamily.FieldDescription)
+	}
+	if m.tools != nil {
+		fields = append(fields, ovatemplatefamily.FieldTools)
+	}
+	if m.skills != nil {
+		fields = append(fields, ovatemplatefamily.FieldSkills)
+	}
+	if m.scenarios != nil {
+		fields = append(fields, ovatemplatefamily.FieldScenarios)
+	}
+	if m.icon_shape != nil {
+		fields = append(fields, ovatemplatefamily.FieldIconShape)
+	}
+	if m.icon_color != nil {
+		fields = append(fields, ovatemplatefamily.FieldIconColor)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *OvaTemplateFamilyMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case ovatemplatefamily.FieldCreatedAt:
+		return m.CreatedAt()
+	case ovatemplatefamily.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case ovatemplatefamily.FieldName:
+		return m.Name()
+	case ovatemplatefamily.FieldType:
+		return m.GetType()
+	case ovatemplatefamily.FieldDescription:
+		return m.Description()
+	case ovatemplatefamily.FieldTools:
+		return m.Tools()
+	case ovatemplatefamily.FieldSkills:
+		return m.Skills()
+	case ovatemplatefamily.FieldScenarios:
+		return m.Scenarios()
+	case ovatemplatefamily.FieldIconShape:
+		return m.IconShape()
+	case ovatemplatefamily.FieldIconColor:
+		return m.IconColor()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *OvaTemplateFamilyMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case ovatemplatefamily.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case ovatemplatefamily.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case ovatemplatefamily.FieldName:
+		return m.OldName(ctx)
+	case ovatemplatefamily.FieldType:
+		return m.OldType(ctx)
+	case ovatemplatefamily.FieldDescription:
+		return m.OldDescription(ctx)
+	case ovatemplatefamily.FieldTools:
+		return m.OldTools(ctx)
+	case ovatemplatefamily.FieldSkills:
+		return m.OldSkills(ctx)
+	case ovatemplatefamily.FieldScenarios:
+		return m.OldScenarios(ctx)
+	case ovatemplatefamily.FieldIconShape:
+		return m.OldIconShape(ctx)
+	case ovatemplatefamily.FieldIconColor:
+		return m.OldIconColor(ctx)
+	}
+	return nil, fmt.Errorf("unknown OvaTemplateFamily field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *OvaTemplateFamilyMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case ovatemplatefamily.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case ovatemplatefamily.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case ovatemplatefamily.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case ovatemplatefamily.FieldType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetType(v)
+		return nil
+	case ovatemplatefamily.FieldDescription:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDescription(v)
+		return nil
+	case ovatemplatefamily.FieldTools:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTools(v)
+		return nil
+	case ovatemplatefamily.FieldSkills:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSkills(v)
+		return nil
+	case ovatemplatefamily.FieldScenarios:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetScenarios(v)
+		return nil
+	case ovatemplatefamily.FieldIconShape:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIconShape(v)
+		return nil
+	case ovatemplatefamily.FieldIconColor:
+		v, ok := value.(ovatemplatefamily.IconColor)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIconColor(v)
+		return nil
+	}
+	return fmt.Errorf("unknown OvaTemplateFamily field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *OvaTemplateFamilyMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *OvaTemplateFamilyMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *OvaTemplateFamilyMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown OvaTemplateFamily numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *OvaTemplateFamilyMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(ovatemplatefamily.FieldTools) {
+		fields = append(fields, ovatemplatefamily.FieldTools)
+	}
+	if m.FieldCleared(ovatemplatefamily.FieldSkills) {
+		fields = append(fields, ovatemplatefamily.FieldSkills)
+	}
+	if m.FieldCleared(ovatemplatefamily.FieldScenarios) {
+		fields = append(fields, ovatemplatefamily.FieldScenarios)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *OvaTemplateFamilyMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *OvaTemplateFamilyMutation) ClearField(name string) error {
+	switch name {
+	case ovatemplatefamily.FieldTools:
+		m.ClearTools()
+		return nil
+	case ovatemplatefamily.FieldSkills:
+		m.ClearSkills()
+		return nil
+	case ovatemplatefamily.FieldScenarios:
+		m.ClearScenarios()
+		return nil
+	}
+	return fmt.Errorf("unknown OvaTemplateFamily nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *OvaTemplateFamilyMutation) ResetField(name string) error {
+	switch name {
+	case ovatemplatefamily.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case ovatemplatefamily.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case ovatemplatefamily.FieldName:
+		m.ResetName()
+		return nil
+	case ovatemplatefamily.FieldType:
+		m.ResetType()
+		return nil
+	case ovatemplatefamily.FieldDescription:
+		m.ResetDescription()
+		return nil
+	case ovatemplatefamily.FieldTools:
+		m.ResetTools()
+		return nil
+	case ovatemplatefamily.FieldSkills:
+		m.ResetSkills()
+		return nil
+	case ovatemplatefamily.FieldScenarios:
+		m.ResetScenarios()
+		return nil
+	case ovatemplatefamily.FieldIconShape:
+		m.ResetIconShape()
+		return nil
+	case ovatemplatefamily.FieldIconColor:
+		m.ResetIconColor()
+		return nil
+	}
+	return fmt.Errorf("unknown OvaTemplateFamily field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *OvaTemplateFamilyMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.versions != nil {
+		edges = append(edges, ovatemplatefamily.EdgeVersions)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *OvaTemplateFamilyMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case ovatemplatefamily.EdgeVersions:
+		ids := make([]ent.Value, 0, len(m.versions))
+		for id := range m.versions {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *OvaTemplateFamilyMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.removedversions != nil {
+		edges = append(edges, ovatemplatefamily.EdgeVersions)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *OvaTemplateFamilyMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case ovatemplatefamily.EdgeVersions:
+		ids := make([]ent.Value, 0, len(m.removedversions))
+		for id := range m.removedversions {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *OvaTemplateFamilyMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedversions {
+		edges = append(edges, ovatemplatefamily.EdgeVersions)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *OvaTemplateFamilyMutation) EdgeCleared(name string) bool {
+	switch name {
+	case ovatemplatefamily.EdgeVersions:
+		return m.clearedversions
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *OvaTemplateFamilyMutation) ClearEdge(name string) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown OvaTemplateFamily unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *OvaTemplateFamilyMutation) ResetEdge(name string) error {
+	switch name {
+	case ovatemplatefamily.EdgeVersions:
+		m.ResetVersions()
+		return nil
+	}
+	return fmt.Errorf("unknown OvaTemplateFamily edge %s", name)
+}
+
+// OvaTemplateVersionMutation represents an operation that mutates the OvaTemplateVersion nodes in the graph.
+type OvaTemplateVersionMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *uuid.UUID
+	created_at     *time.Time
+	updated_at     *time.Time
+	version        *string
+	ova_identifier *string
+	notes          *string
+	clearedFields  map[string]struct{}
+	family         *uuid.UUID
+	clearedfamily  bool
+	done           bool
+	oldValue       func(context.Context) (*OvaTemplateVersion, error)
+	predicates     []predicate.OvaTemplateVersion
+}
+
+var _ ent.Mutation = (*OvaTemplateVersionMutation)(nil)
+
+// ovatemplateversionOption allows management of the mutation configuration using functional options.
+type ovatemplateversionOption func(*OvaTemplateVersionMutation)
+
+// newOvaTemplateVersionMutation creates new mutation for the OvaTemplateVersion entity.
+func newOvaTemplateVersionMutation(c config, op Op, opts ...ovatemplateversionOption) *OvaTemplateVersionMutation {
+	m := &OvaTemplateVersionMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeOvaTemplateVersion,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withOvaTemplateVersionID sets the ID field of the mutation.
+func withOvaTemplateVersionID(id uuid.UUID) ovatemplateversionOption {
+	return func(m *OvaTemplateVersionMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *OvaTemplateVersion
+		)
+		m.oldValue = func(ctx context.Context) (*OvaTemplateVersion, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().OvaTemplateVersion.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withOvaTemplateVersion sets the old OvaTemplateVersion of the mutation.
+func withOvaTemplateVersion(node *OvaTemplateVersion) ovatemplateversionOption {
+	return func(m *OvaTemplateVersionMutation) {
+		m.oldValue = func(context.Context) (*OvaTemplateVersion, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m OvaTemplateVersionMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m OvaTemplateVersionMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of OvaTemplateVersion entities.
+func (m *OvaTemplateVersionMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *OvaTemplateVersionMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *OvaTemplateVersionMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().OvaTemplateVersion.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *OvaTemplateVersionMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *OvaTemplateVersionMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the OvaTemplateVersion entity.
+// If the OvaTemplateVersion object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OvaTemplateVersionMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *OvaTemplateVersionMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *OvaTemplateVersionMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *OvaTemplateVersionMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the OvaTemplateVersion entity.
+// If the OvaTemplateVersion object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OvaTemplateVersionMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *OvaTemplateVersionMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetVersion sets the "version" field.
+func (m *OvaTemplateVersionMutation) SetVersion(s string) {
+	m.version = &s
+}
+
+// Version returns the value of the "version" field in the mutation.
+func (m *OvaTemplateVersionMutation) Version() (r string, exists bool) {
+	v := m.version
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVersion returns the old "version" field's value of the OvaTemplateVersion entity.
+// If the OvaTemplateVersion object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OvaTemplateVersionMutation) OldVersion(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVersion is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVersion requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVersion: %w", err)
+	}
+	return oldValue.Version, nil
+}
+
+// ResetVersion resets all changes to the "version" field.
+func (m *OvaTemplateVersionMutation) ResetVersion() {
+	m.version = nil
+}
+
+// SetOvaIdentifier sets the "ova_identifier" field.
+func (m *OvaTemplateVersionMutation) SetOvaIdentifier(s string) {
+	m.ova_identifier = &s
+}
+
+// OvaIdentifier returns the value of the "ova_identifier" field in the mutation.
+func (m *OvaTemplateVersionMutation) OvaIdentifier() (r string, exists bool) {
+	v := m.ova_identifier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOvaIdentifier returns the old "ova_identifier" field's value of the OvaTemplateVersion entity.
+// If the OvaTemplateVersion object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OvaTemplateVersionMutation) OldOvaIdentifier(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOvaIdentifier is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOvaIdentifier requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOvaIdentifier: %w", err)
+	}
+	return oldValue.OvaIdentifier, nil
+}
+
+// ResetOvaIdentifier resets all changes to the "ova_identifier" field.
+func (m *OvaTemplateVersionMutation) ResetOvaIdentifier() {
+	m.ova_identifier = nil
+}
+
+// SetNotes sets the "notes" field.
+func (m *OvaTemplateVersionMutation) SetNotes(s string) {
+	m.notes = &s
+}
+
+// Notes returns the value of the "notes" field in the mutation.
+func (m *OvaTemplateVersionMutation) Notes() (r string, exists bool) {
+	v := m.notes
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNotes returns the old "notes" field's value of the OvaTemplateVersion entity.
+// If the OvaTemplateVersion object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OvaTemplateVersionMutation) OldNotes(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNotes is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNotes requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNotes: %w", err)
+	}
+	return oldValue.Notes, nil
+}
+
+// ClearNotes clears the value of the "notes" field.
+func (m *OvaTemplateVersionMutation) ClearNotes() {
+	m.notes = nil
+	m.clearedFields[ovatemplateversion.FieldNotes] = struct{}{}
+}
+
+// NotesCleared returns if the "notes" field was cleared in this mutation.
+func (m *OvaTemplateVersionMutation) NotesCleared() bool {
+	_, ok := m.clearedFields[ovatemplateversion.FieldNotes]
+	return ok
+}
+
+// ResetNotes resets all changes to the "notes" field.
+func (m *OvaTemplateVersionMutation) ResetNotes() {
+	m.notes = nil
+	delete(m.clearedFields, ovatemplateversion.FieldNotes)
+}
+
+// SetFamilyID sets the "family" edge to the OvaTemplateFamily entity by id.
+func (m *OvaTemplateVersionMutation) SetFamilyID(id uuid.UUID) {
+	m.family = &id
+}
+
+// ClearFamily clears the "family" edge to the OvaTemplateFamily entity.
+func (m *OvaTemplateVersionMutation) ClearFamily() {
+	m.clearedfamily = true
+}
+
+// FamilyCleared reports if the "family" edge to the OvaTemplateFamily entity was cleared.
+func (m *OvaTemplateVersionMutation) FamilyCleared() bool {
+	return m.clearedfamily
+}
+
+// FamilyID returns the "family" edge ID in the mutation.
+func (m *OvaTemplateVersionMutation) FamilyID() (id uuid.UUID, exists bool) {
+	if m.family != nil {
+		return *m.family, true
+	}
+	return
+}
+
+// FamilyIDs returns the "family" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// FamilyID instead. It exists only for internal usage by the builders.
+func (m *OvaTemplateVersionMutation) FamilyIDs() (ids []uuid.UUID) {
+	if id := m.family; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetFamily resets all changes to the "family" edge.
+func (m *OvaTemplateVersionMutation) ResetFamily() {
+	m.family = nil
+	m.clearedfamily = false
+}
+
+// Where appends a list predicates to the OvaTemplateVersionMutation builder.
+func (m *OvaTemplateVersionMutation) Where(ps ...predicate.OvaTemplateVersion) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the OvaTemplateVersionMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *OvaTemplateVersionMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.OvaTemplateVersion, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *OvaTemplateVersionMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *OvaTemplateVersionMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (OvaTemplateVersion).
+func (m *OvaTemplateVersionMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *OvaTemplateVersionMutation) Fields() []string {
+	fields := make([]string, 0, 5)
+	if m.created_at != nil {
+		fields = append(fields, ovatemplateversion.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, ovatemplateversion.FieldUpdatedAt)
+	}
+	if m.version != nil {
+		fields = append(fields, ovatemplateversion.FieldVersion)
+	}
+	if m.ova_identifier != nil {
+		fields = append(fields, ovatemplateversion.FieldOvaIdentifier)
+	}
+	if m.notes != nil {
+		fields = append(fields, ovatemplateversion.FieldNotes)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *OvaTemplateVersionMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case ovatemplateversion.FieldCreatedAt:
+		return m.CreatedAt()
+	case ovatemplateversion.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case ovatemplateversion.FieldVersion:
+		return m.Version()
+	case ovatemplateversion.FieldOvaIdentifier:
+		return m.OvaIdentifier()
+	case ovatemplateversion.FieldNotes:
+		return m.Notes()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *OvaTemplateVersionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case ovatemplateversion.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case ovatemplateversion.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case ovatemplateversion.FieldVersion:
+		return m.OldVersion(ctx)
+	case ovatemplateversion.FieldOvaIdentifier:
+		return m.OldOvaIdentifier(ctx)
+	case ovatemplateversion.FieldNotes:
+		return m.OldNotes(ctx)
+	}
+	return nil, fmt.Errorf("unknown OvaTemplateVersion field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *OvaTemplateVersionMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case ovatemplateversion.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case ovatemplateversion.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case ovatemplateversion.FieldVersion:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVersion(v)
+		return nil
+	case ovatemplateversion.FieldOvaIdentifier:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOvaIdentifier(v)
+		return nil
+	case ovatemplateversion.FieldNotes:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNotes(v)
+		return nil
+	}
+	return fmt.Errorf("unknown OvaTemplateVersion field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *OvaTemplateVersionMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *OvaTemplateVersionMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *OvaTemplateVersionMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown OvaTemplateVersion numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *OvaTemplateVersionMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(ovatemplateversion.FieldNotes) {
+		fields = append(fields, ovatemplateversion.FieldNotes)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *OvaTemplateVersionMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *OvaTemplateVersionMutation) ClearField(name string) error {
+	switch name {
+	case ovatemplateversion.FieldNotes:
+		m.ClearNotes()
+		return nil
+	}
+	return fmt.Errorf("unknown OvaTemplateVersion nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *OvaTemplateVersionMutation) ResetField(name string) error {
+	switch name {
+	case ovatemplateversion.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case ovatemplateversion.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case ovatemplateversion.FieldVersion:
+		m.ResetVersion()
+		return nil
+	case ovatemplateversion.FieldOvaIdentifier:
+		m.ResetOvaIdentifier()
+		return nil
+	case ovatemplateversion.FieldNotes:
+		m.ResetNotes()
+		return nil
+	}
+	return fmt.Errorf("unknown OvaTemplateVersion field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *OvaTemplateVersionMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.family != nil {
+		edges = append(edges, ovatemplateversion.EdgeFamily)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *OvaTemplateVersionMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case ovatemplateversion.EdgeFamily:
+		if id := m.family; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *OvaTemplateVersionMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *OvaTemplateVersionMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *OvaTemplateVersionMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedfamily {
+		edges = append(edges, ovatemplateversion.EdgeFamily)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *OvaTemplateVersionMutation) EdgeCleared(name string) bool {
+	switch name {
+	case ovatemplateversion.EdgeFamily:
+		return m.clearedfamily
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *OvaTemplateVersionMutation) ClearEdge(name string) error {
+	switch name {
+	case ovatemplateversion.EdgeFamily:
+		m.ClearFamily()
+		return nil
+	}
+	return fmt.Errorf("unknown OvaTemplateVersion unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *OvaTemplateVersionMutation) ResetEdge(name string) error {
+	switch name {
+	case ovatemplateversion.EdgeFamily:
+		m.ResetFamily()
+		return nil
+	}
+	return fmt.Errorf("unknown OvaTemplateVersion edge %s", name)
 }
 
 // PermissionMutation represents an operation that mutates the Permission nodes in the graph.

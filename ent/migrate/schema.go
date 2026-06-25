@@ -333,6 +333,50 @@ var (
 		Columns:    ModelRoutesColumns,
 		PrimaryKey: []*schema.Column{ModelRoutesColumns[0]},
 	}
+	// OvaTemplateFamiliesColumns holds the columns for the "ova_template_families" table.
+	OvaTemplateFamiliesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "name", Type: field.TypeString},
+		{Name: "type", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString, Default: ""},
+		{Name: "tools", Type: field.TypeJSON, Nullable: true},
+		{Name: "skills", Type: field.TypeJSON, Nullable: true},
+		{Name: "scenarios", Type: field.TypeJSON, Nullable: true},
+		{Name: "icon_shape", Type: field.TypeString, Default: ""},
+		{Name: "icon_color", Type: field.TypeEnum, Enums: []string{"BLUE", "PURPLE", "ORANGE", "GREEN", "RED", "CYAN"}, Default: "BLUE"},
+	}
+	// OvaTemplateFamiliesTable holds the schema information for the "ova_template_families" table.
+	OvaTemplateFamiliesTable = &schema.Table{
+		Name:       "ova_template_families",
+		Columns:    OvaTemplateFamiliesColumns,
+		PrimaryKey: []*schema.Column{OvaTemplateFamiliesColumns[0]},
+	}
+	// OvaTemplateVersionsColumns holds the columns for the "ova_template_versions" table.
+	OvaTemplateVersionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "version", Type: field.TypeString},
+		{Name: "ova_identifier", Type: field.TypeString},
+		{Name: "notes", Type: field.TypeString, Nullable: true},
+		{Name: "ova_template_family_versions", Type: field.TypeUUID},
+	}
+	// OvaTemplateVersionsTable holds the schema information for the "ova_template_versions" table.
+	OvaTemplateVersionsTable = &schema.Table{
+		Name:       "ova_template_versions",
+		Columns:    OvaTemplateVersionsColumns,
+		PrimaryKey: []*schema.Column{OvaTemplateVersionsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "ova_template_versions_ova_template_families_versions",
+				Columns:    []*schema.Column{OvaTemplateVersionsColumns[6]},
+				RefColumns: []*schema.Column{OvaTemplateFamiliesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
 	// PermissionsColumns holds the columns for the "permissions" table.
 	PermissionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -770,6 +814,8 @@ var (
 		ImagesTable,
 		MembershipsTable,
 		ModelRoutesTable,
+		OvaTemplateFamiliesTable,
+		OvaTemplateVersionsTable,
 		PermissionsTable,
 		RateLimitPoliciesTable,
 		RequestLogsTable,
@@ -790,6 +836,7 @@ var (
 )
 
 func init() {
+	OvaTemplateVersionsTable.ForeignKeys[0].RefTable = OvaTemplateFamiliesTable
 	AgentConfigKnowledgeTable.ForeignKeys[0].RefTable = AgentConfigsTable
 	AgentConfigKnowledgeTable.ForeignKeys[1].RefTable = ArtifactsTable
 	RolePermissionsTable.ForeignKeys[0].RefTable = RolesTable

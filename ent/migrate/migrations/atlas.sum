@@ -1,4 +1,4 @@
-h1:UjbNpWEsQk9GWKiRhNl5q4WTyOi83bAhlPeuHIeqpgY=
+h1:hr5wLzOfKG0HRgIKnXGiMkvJgvJ2g7/noDM40aa+HK0=
 20260621044227_baseline_plus_litellm_token.sql h1:iTLsV8voIrOm1TU0ohXku2Sn672dmDPkVUicQlsmrjc=
 20260621074547_artifact_inline_content.sql h1:BhzEiRK7nBOEHupwNzk4+8QNVVUNPeUGG8O2rdIggus=
 20260621083202_agent_enrollment_heartbeat_rotation.sql h1:uC4TghDghqOt+HWyFcrDzPjKgX8lvqKSr89l9k45GH0=
@@ -8,3 +8,4 @@ h1:UjbNpWEsQk9GWKiRhNl5q4WTyOi83bAhlPeuHIeqpgY=
 20260622010149_agent_template_knowledge_convention.sql h1:/aiHN3vZy5FSkqHhgPPSqanph9IgSVKFHfioNLQyb3E=
 20260624103553_model_gateway_admin_url_and_last_synced_at.sql h1:+G4pmkTPEwvUMl3/Pq/m6y7zugi4ROr5oJaBJHaxDds=
 20260624115927_resource_pool_last_synced_at.sql h1:A1fVU9oA/VUWjIawKkXuFLvntLEhdmtzA3sTUlCcKNY=
+20260625013937_ova_template_catalog.sql h1:kTHg3+pHCuSgyyfuoLh9PYy/z4w1lnrUN/3zJhDmyTk=

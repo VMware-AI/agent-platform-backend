@@ -44,14 +44,11 @@ if (existsSync(OUT)) {
 }
 
 // Operations the console already ships but the backend hasn't implemented yet
-// (Block 6 — agent marketplace / deploy / OVA templates). Skipped so the
-// contract test stays green for everything that IS implemented; remove an entry
-// here the moment its backend op lands so drift is caught again.
+// (Block 6 — agent marketplace deploy + marketplace virtual-key ops). Skipped so
+// the contract test stays green for everything that IS implemented; remove an
+// entry here the moment its backend op lands so drift is caught again.
+// The OVA-template catalog (Block 6a) is now implemented and contract-tested.
 const DEFERRED = new Set([
-  'OvaTemplateFamilies',
-  'OvaTemplateVersions',
-  'CreateOvaTemplateFamily',
-  'AddOvaTemplateVersion',
   'DeployAgent',
   'AvailableVirtualKeys',
   'CreateVirtualKey',

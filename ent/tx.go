@@ -38,6 +38,10 @@ type Tx struct {
 	Membership *MembershipClient
 	// ModelRoute is the client for interacting with the ModelRoute builders.
 	ModelRoute *ModelRouteClient
+	// OvaTemplateFamily is the client for interacting with the OvaTemplateFamily builders.
+	OvaTemplateFamily *OvaTemplateFamilyClient
+	// OvaTemplateVersion is the client for interacting with the OvaTemplateVersion builders.
+	OvaTemplateVersion *OvaTemplateVersionClient
 	// Permission is the client for interacting with the Permission builders.
 	Permission *PermissionClient
 	// RateLimitPolicy is the client for interacting with the RateLimitPolicy builders.
@@ -208,6 +212,8 @@ func (tx *Tx) init() {
 	tx.Image = NewImageClient(tx.config)
 	tx.Membership = NewMembershipClient(tx.config)
 	tx.ModelRoute = NewModelRouteClient(tx.config)
+	tx.OvaTemplateFamily = NewOvaTemplateFamilyClient(tx.config)
+	tx.OvaTemplateVersion = NewOvaTemplateVersionClient(tx.config)
 	tx.Permission = NewPermissionClient(tx.config)
 	tx.RateLimitPolicy = NewRateLimitPolicyClient(tx.config)
 	tx.RequestLog = NewRequestLogClient(tx.config)

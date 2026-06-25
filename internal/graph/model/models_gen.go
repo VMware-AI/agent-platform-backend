@@ -28,6 +28,17 @@ type AccountUser struct {
 	UpdatedAt        time.Time        `json:"updatedAt"`
 }
 
+type AddOvaTemplateVersionInput struct {
+	FamilyID      string  `json:"familyId"`
+	Version       string  `json:"version"`
+	OvaIdentifier string  `json:"ovaIdentifier"`
+	Notes         *string `json:"notes,omitempty"`
+}
+
+type AddOvaTemplateVersionPayload struct {
+	Version *OvaTemplateVersion `json:"version"`
+}
+
 type Agent struct {
 	ID        string       `json:"id"`
 	Name      string       `json:"name"`
@@ -195,6 +206,28 @@ type CreateModelRouteInput struct {
 	SupportedModels  []string            `json:"supportedModels,omitempty"`
 	UIStrategy       *ModelRouteStrategy `json:"uiStrategy,omitempty"`
 	Enabled          *bool               `json:"enabled,omitempty"`
+}
+
+type CreateOvaTemplateFamilyInput struct {
+	Name           string                         `json:"name"`
+	Type           string                         `json:"type"`
+	Description    string                         `json:"description"`
+	Tools          []string                       `json:"tools"`
+	Scenarios      []string                       `json:"scenarios"`
+	Skills         []string                       `json:"skills"`
+	IconShape      string                         `json:"iconShape"`
+	IconColor      OvaTemplateColor               `json:"iconColor"`
+	InitialVersion *CreateOvaTemplateVersionInput `json:"initialVersion"`
+}
+
+type CreateOvaTemplateFamilyPayload struct {
+	Family *OvaTemplateFamily `json:"family"`
+}
+
+type CreateOvaTemplateVersionInput struct {
+	Version       string  `json:"version"`
+	OvaIdentifier string  `json:"ovaIdentifier"`
+	Notes         *string `json:"notes,omitempty"`
 }
 
 type CreateResourcePoolInput struct {
@@ -486,6 +519,53 @@ type ModelUsageRow struct {
 }
 
 type Mutation struct {
+}
+
+type OvaTemplateFamily struct {
+	ID            string               `json:"id"`
+	Name          string               `json:"name"`
+	Type          string               `json:"type"`
+	Description   string               `json:"description"`
+	Tools         []string             `json:"tools"`
+	Skills        []string             `json:"skills"`
+	Scenarios     []string             `json:"scenarios"`
+	IconShape     string               `json:"iconShape"`
+	IconColor     OvaTemplateColor     `json:"iconColor"`
+	LatestVersion *string              `json:"latestVersion,omitempty"`
+	CreatedAt     time.Time            `json:"createdAt"`
+	UpdatedAt     time.Time            `json:"updatedAt"`
+	Versions      []OvaTemplateVersion `json:"versions"`
+}
+
+type OvaTemplateFamilyConnection struct {
+	Nodes      []OvaTemplateFamily `json:"nodes"`
+	TotalCount int                 `json:"totalCount"`
+	PageInfo   *PageInfo           `json:"pageInfo"`
+}
+
+type OvaTemplateFamilyFilter struct {
+	NameKeyword *string `json:"nameKeyword,omitempty"`
+	Type        *string `json:"type,omitempty"`
+}
+
+type OvaTemplateFamilySort struct {
+	Field     OvaTemplateFamilySortField `json:"field"`
+	Direction SortDirection              `json:"direction"`
+}
+
+type OvaTemplateVersion struct {
+	ID            string    `json:"id"`
+	FamilyID      string    `json:"familyId"`
+	Version       string    `json:"version"`
+	OvaIdentifier string    `json:"ovaIdentifier"`
+	Notes         *string   `json:"notes,omitempty"`
+	CreatedAt     time.Time `json:"createdAt"`
+}
+
+type OvaTemplateVersionConnection struct {
+	Nodes      []OvaTemplateVersion `json:"nodes"`
+	TotalCount int                  `json:"totalCount"`
+	PageInfo   *PageInfo            `json:"pageInfo"`
 }
 
 type PageInfo struct {
@@ -1883,6 +1963,128 @@ func (e *ModelRouteStrategy) UnmarshalJSON(b []byte) error {
 }
 
 func (e ModelRouteStrategy) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type OvaTemplateColor string
+
+const (
+	OvaTemplateColorBlue   OvaTemplateColor = "BLUE"
+	OvaTemplateColorPurple OvaTemplateColor = "PURPLE"
+	OvaTemplateColorOrange OvaTemplateColor = "ORANGE"
+	OvaTemplateColorGreen  OvaTemplateColor = "GREEN"
+	OvaTemplateColorRed    OvaTemplateColor = "RED"
+	OvaTemplateColorCyan   OvaTemplateColor = "CYAN"
+)
+
+var AllOvaTemplateColor = []OvaTemplateColor{
+	OvaTemplateColorBlue,
+	OvaTemplateColorPurple,
+	OvaTemplateColorOrange,
+	OvaTemplateColorGreen,
+	OvaTemplateColorRed,
+	OvaTemplateColorCyan,
+}
+
+func (e OvaTemplateColor) IsValid() bool {
+	switch e {
+	case OvaTemplateColorBlue, OvaTemplateColorPurple, OvaTemplateColorOrange, OvaTemplateColorGreen, OvaTemplateColorRed, OvaTemplateColorCyan:
+		return true
+	}
+	return false
+}
+
+func (e OvaTemplateColor) String() string {
+	return string(e)
+}
+
+func (e *OvaTemplateColor) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = OvaTemplateColor(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid OvaTemplateColor", str)
+	}
+	return nil
+}
+
+func (e OvaTemplateColor) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *OvaTemplateColor) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e OvaTemplateColor) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type OvaTemplateFamilySortField string
+
+const (
+	OvaTemplateFamilySortFieldOvaName   OvaTemplateFamilySortField = "OVA_NAME"
+	OvaTemplateFamilySortFieldType      OvaTemplateFamilySortField = "TYPE"
+	OvaTemplateFamilySortFieldCreatedAt OvaTemplateFamilySortField = "CREATED_AT"
+	OvaTemplateFamilySortFieldUpdatedAt OvaTemplateFamilySortField = "UPDATED_AT"
+)
+
+var AllOvaTemplateFamilySortField = []OvaTemplateFamilySortField{
+	OvaTemplateFamilySortFieldOvaName,
+	OvaTemplateFamilySortFieldType,
+	OvaTemplateFamilySortFieldCreatedAt,
+	OvaTemplateFamilySortFieldUpdatedAt,
+}
+
+func (e OvaTemplateFamilySortField) IsValid() bool {
+	switch e {
+	case OvaTemplateFamilySortFieldOvaName, OvaTemplateFamilySortFieldType, OvaTemplateFamilySortFieldCreatedAt, OvaTemplateFamilySortFieldUpdatedAt:
+		return true
+	}
+	return false
+}
+
+func (e OvaTemplateFamilySortField) String() string {
+	return string(e)
+}
+
+func (e *OvaTemplateFamilySortField) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = OvaTemplateFamilySortField(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid OvaTemplateFamilySortField", str)
+	}
+	return nil
+}
+
+func (e OvaTemplateFamilySortField) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *OvaTemplateFamilySortField) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e OvaTemplateFamilySortField) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

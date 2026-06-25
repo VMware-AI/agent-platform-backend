@@ -1,0 +1,30 @@
+fragment OvaTemplateFamilyFields on OvaTemplateFamily {
+    id
+    name
+    type
+    description
+    tools
+    skills
+    scenarios
+    iconShape
+    iconColor
+    latestVersion
+    createdAt
+    updatedAt
+    versions {
+      id
+      familyId
+      version
+      ovaIdentifier
+      notes
+      createdAt
+    }
+  }
+
+  mutation CreateOvaTemplateFamily($input: CreateOvaTemplateFamilyInput!) {
+    createOvaTemplateFamily(input: $input) {
+      family {
+        ...OvaTemplateFamilyFields
+      }
+    }
+  }

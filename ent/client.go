@@ -29,6 +29,8 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/image"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/modelroute"
+	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplatefamily"
+	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplateversion"
 	"github.com/VMware-AI/agent-platform-backend/ent/permission"
 	"github.com/VMware-AI/agent-platform-backend/ent/ratelimitpolicy"
 	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
@@ -75,6 +77,10 @@ type Client struct {
 	Membership *MembershipClient
 	// ModelRoute is the client for interacting with the ModelRoute builders.
 	ModelRoute *ModelRouteClient
+	// OvaTemplateFamily is the client for interacting with the OvaTemplateFamily builders.
+	OvaTemplateFamily *OvaTemplateFamilyClient
+	// OvaTemplateVersion is the client for interacting with the OvaTemplateVersion builders.
+	OvaTemplateVersion *OvaTemplateVersionClient
 	// Permission is the client for interacting with the Permission builders.
 	Permission *PermissionClient
 	// RateLimitPolicy is the client for interacting with the RateLimitPolicy builders.
@@ -125,6 +131,8 @@ func (c *Client) init() {
 	c.Image = NewImageClient(c.config)
 	c.Membership = NewMembershipClient(c.config)
 	c.ModelRoute = NewModelRouteClient(c.config)
+	c.OvaTemplateFamily = NewOvaTemplateFamilyClient(c.config)
+	c.OvaTemplateVersion = NewOvaTemplateVersionClient(c.config)
 	c.Permission = NewPermissionClient(c.config)
 	c.RateLimitPolicy = NewRateLimitPolicyClient(c.config)
 	c.RequestLog = NewRequestLogClient(c.config)
@@ -228,34 +236,36 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:               ctx,
-		config:            cfg,
-		Agent:             NewAgentClient(cfg),
-		AgentConfig:       NewAgentConfigClient(cfg),
-		AgentEnrollment:   NewAgentEnrollmentClient(cfg),
-		AgentHeartbeat:    NewAgentHeartbeatClient(cfg),
-		AgentTemplate:     NewAgentTemplateClient(cfg),
-		Artifact:          NewArtifactClient(cfg),
-		AuditLog:          NewAuditLogClient(cfg),
-		Department:        NewDepartmentClient(cfg),
-		Environment:       NewEnvironmentClient(cfg),
-		GatewayConnection: NewGatewayConnectionClient(cfg),
-		Image:             NewImageClient(cfg),
-		Membership:        NewMembershipClient(cfg),
-		ModelRoute:        NewModelRouteClient(cfg),
-		Permission:        NewPermissionClient(cfg),
-		RateLimitPolicy:   NewRateLimitPolicyClient(cfg),
-		RequestLog:        NewRequestLogClient(cfg),
-		ResourcePool:      NewResourcePoolClient(cfg),
-		Role:              NewRoleClient(cfg),
-		RotationCommand:   NewRotationCommandClient(cfg),
-		RouterTier:        NewRouterTierClient(cfg),
-		Skill:             NewSkillClient(cfg),
-		Tenant:            NewTenantClient(cfg),
-		TokenUsage:        NewTokenUsageClient(cfg),
-		Upstream:          NewUpstreamClient(cfg),
-		User:              NewUserClient(cfg),
-		VirtualKey:        NewVirtualKeyClient(cfg),
+		ctx:                ctx,
+		config:             cfg,
+		Agent:              NewAgentClient(cfg),
+		AgentConfig:        NewAgentConfigClient(cfg),
+		AgentEnrollment:    NewAgentEnrollmentClient(cfg),
+		AgentHeartbeat:     NewAgentHeartbeatClient(cfg),
+		AgentTemplate:      NewAgentTemplateClient(cfg),
+		Artifact:           NewArtifactClient(cfg),
+		AuditLog:           NewAuditLogClient(cfg),
+		Department:         NewDepartmentClient(cfg),
+		Environment:        NewEnvironmentClient(cfg),
+		GatewayConnection:  NewGatewayConnectionClient(cfg),
+		Image:              NewImageClient(cfg),
+		Membership:         NewMembershipClient(cfg),
+		ModelRoute:         NewModelRouteClient(cfg),
+		OvaTemplateFamily:  NewOvaTemplateFamilyClient(cfg),
+		OvaTemplateVersion: NewOvaTemplateVersionClient(cfg),
+		Permission:         NewPermissionClient(cfg),
+		RateLimitPolicy:    NewRateLimitPolicyClient(cfg),
+		RequestLog:         NewRequestLogClient(cfg),
+		ResourcePool:       NewResourcePoolClient(cfg),
+		Role:               NewRoleClient(cfg),
+		RotationCommand:    NewRotationCommandClient(cfg),
+		RouterTier:         NewRouterTierClient(cfg),
+		Skill:              NewSkillClient(cfg),
+		Tenant:             NewTenantClient(cfg),
+		TokenUsage:         NewTokenUsageClient(cfg),
+		Upstream:           NewUpstreamClient(cfg),
+		User:               NewUserClient(cfg),
+		VirtualKey:         NewVirtualKeyClient(cfg),
 	}, nil
 }
 
@@ -273,34 +283,36 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:               ctx,
-		config:            cfg,
-		Agent:             NewAgentClient(cfg),
-		AgentConfig:       NewAgentConfigClient(cfg),
-		AgentEnrollment:   NewAgentEnrollmentClient(cfg),
-		AgentHeartbeat:    NewAgentHeartbeatClient(cfg),
-		AgentTemplate:     NewAgentTemplateClient(cfg),
-		Artifact:          NewArtifactClient(cfg),
-		AuditLog:          NewAuditLogClient(cfg),
-		Department:        NewDepartmentClient(cfg),
-		Environment:       NewEnvironmentClient(cfg),
-		GatewayConnection: NewGatewayConnectionClient(cfg),
-		Image:             NewImageClient(cfg),
-		Membership:        NewMembershipClient(cfg),
-		ModelRoute:        NewModelRouteClient(cfg),
-		Permission:        NewPermissionClient(cfg),
-		RateLimitPolicy:   NewRateLimitPolicyClient(cfg),
-		RequestLog:        NewRequestLogClient(cfg),
-		ResourcePool:      NewResourcePoolClient(cfg),
-		Role:              NewRoleClient(cfg),
-		RotationCommand:   NewRotationCommandClient(cfg),
-		RouterTier:        NewRouterTierClient(cfg),
-		Skill:             NewSkillClient(cfg),
-		Tenant:            NewTenantClient(cfg),
-		TokenUsage:        NewTokenUsageClient(cfg),
-		Upstream:          NewUpstreamClient(cfg),
-		User:              NewUserClient(cfg),
-		VirtualKey:        NewVirtualKeyClient(cfg),
+		ctx:                ctx,
+		config:             cfg,
+		Agent:              NewAgentClient(cfg),
+		AgentConfig:        NewAgentConfigClient(cfg),
+		AgentEnrollment:    NewAgentEnrollmentClient(cfg),
+		AgentHeartbeat:     NewAgentHeartbeatClient(cfg),
+		AgentTemplate:      NewAgentTemplateClient(cfg),
+		Artifact:           NewArtifactClient(cfg),
+		AuditLog:           NewAuditLogClient(cfg),
+		Department:         NewDepartmentClient(cfg),
+		Environment:        NewEnvironmentClient(cfg),
+		GatewayConnection:  NewGatewayConnectionClient(cfg),
+		Image:              NewImageClient(cfg),
+		Membership:         NewMembershipClient(cfg),
+		ModelRoute:         NewModelRouteClient(cfg),
+		OvaTemplateFamily:  NewOvaTemplateFamilyClient(cfg),
+		OvaTemplateVersion: NewOvaTemplateVersionClient(cfg),
+		Permission:         NewPermissionClient(cfg),
+		RateLimitPolicy:    NewRateLimitPolicyClient(cfg),
+		RequestLog:         NewRequestLogClient(cfg),
+		ResourcePool:       NewResourcePoolClient(cfg),
+		Role:               NewRoleClient(cfg),
+		RotationCommand:    NewRotationCommandClient(cfg),
+		RouterTier:         NewRouterTierClient(cfg),
+		Skill:              NewSkillClient(cfg),
+		Tenant:             NewTenantClient(cfg),
+		TokenUsage:         NewTokenUsageClient(cfg),
+		Upstream:           NewUpstreamClient(cfg),
+		User:               NewUserClient(cfg),
+		VirtualKey:         NewVirtualKeyClient(cfg),
 	}, nil
 }
 
@@ -332,9 +344,10 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Agent, c.AgentConfig, c.AgentEnrollment, c.AgentHeartbeat, c.AgentTemplate,
 		c.Artifact, c.AuditLog, c.Department, c.Environment, c.GatewayConnection,
-		c.Image, c.Membership, c.ModelRoute, c.Permission, c.RateLimitPolicy,
-		c.RequestLog, c.ResourcePool, c.Role, c.RotationCommand, c.RouterTier, c.Skill,
-		c.Tenant, c.TokenUsage, c.Upstream, c.User, c.VirtualKey,
+		c.Image, c.Membership, c.ModelRoute, c.OvaTemplateFamily, c.OvaTemplateVersion,
+		c.Permission, c.RateLimitPolicy, c.RequestLog, c.ResourcePool, c.Role,
+		c.RotationCommand, c.RouterTier, c.Skill, c.Tenant, c.TokenUsage, c.Upstream,
+		c.User, c.VirtualKey,
 	} {
 		n.Use(hooks...)
 	}
@@ -346,9 +359,10 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Agent, c.AgentConfig, c.AgentEnrollment, c.AgentHeartbeat, c.AgentTemplate,
 		c.Artifact, c.AuditLog, c.Department, c.Environment, c.GatewayConnection,
-		c.Image, c.Membership, c.ModelRoute, c.Permission, c.RateLimitPolicy,
-		c.RequestLog, c.ResourcePool, c.Role, c.RotationCommand, c.RouterTier, c.Skill,
-		c.Tenant, c.TokenUsage, c.Upstream, c.User, c.VirtualKey,
+		c.Image, c.Membership, c.ModelRoute, c.OvaTemplateFamily, c.OvaTemplateVersion,
+		c.Permission, c.RateLimitPolicy, c.RequestLog, c.ResourcePool, c.Role,
+		c.RotationCommand, c.RouterTier, c.Skill, c.Tenant, c.TokenUsage, c.Upstream,
+		c.User, c.VirtualKey,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -383,6 +397,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Membership.mutate(ctx, m)
 	case *ModelRouteMutation:
 		return c.ModelRoute.mutate(ctx, m)
+	case *OvaTemplateFamilyMutation:
+		return c.OvaTemplateFamily.mutate(ctx, m)
+	case *OvaTemplateVersionMutation:
+		return c.OvaTemplateVersion.mutate(ctx, m)
 	case *PermissionMutation:
 		return c.Permission.mutate(ctx, m)
 	case *RateLimitPolicyMutation:
@@ -2172,6 +2190,304 @@ func (c *ModelRouteClient) mutate(ctx context.Context, m *ModelRouteMutation) (V
 		return (&ModelRouteDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown ModelRoute mutation op: %q", m.Op())
+	}
+}
+
+// OvaTemplateFamilyClient is a client for the OvaTemplateFamily schema.
+type OvaTemplateFamilyClient struct {
+	config
+}
+
+// NewOvaTemplateFamilyClient returns a client for the OvaTemplateFamily from the given config.
+func NewOvaTemplateFamilyClient(c config) *OvaTemplateFamilyClient {
+	return &OvaTemplateFamilyClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `ovatemplatefamily.Hooks(f(g(h())))`.
+func (c *OvaTemplateFamilyClient) Use(hooks ...Hook) {
+	c.hooks.OvaTemplateFamily = append(c.hooks.OvaTemplateFamily, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `ovatemplatefamily.Intercept(f(g(h())))`.
+func (c *OvaTemplateFamilyClient) Intercept(interceptors ...Interceptor) {
+	c.inters.OvaTemplateFamily = append(c.inters.OvaTemplateFamily, interceptors...)
+}
+
+// Create returns a builder for creating a OvaTemplateFamily entity.
+func (c *OvaTemplateFamilyClient) Create() *OvaTemplateFamilyCreate {
+	mutation := newOvaTemplateFamilyMutation(c.config, OpCreate)
+	return &OvaTemplateFamilyCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of OvaTemplateFamily entities.
+func (c *OvaTemplateFamilyClient) CreateBulk(builders ...*OvaTemplateFamilyCreate) *OvaTemplateFamilyCreateBulk {
+	return &OvaTemplateFamilyCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *OvaTemplateFamilyClient) MapCreateBulk(slice any, setFunc func(*OvaTemplateFamilyCreate, int)) *OvaTemplateFamilyCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &OvaTemplateFamilyCreateBulk{err: fmt.Errorf("calling to OvaTemplateFamilyClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*OvaTemplateFamilyCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &OvaTemplateFamilyCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for OvaTemplateFamily.
+func (c *OvaTemplateFamilyClient) Update() *OvaTemplateFamilyUpdate {
+	mutation := newOvaTemplateFamilyMutation(c.config, OpUpdate)
+	return &OvaTemplateFamilyUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *OvaTemplateFamilyClient) UpdateOne(_m *OvaTemplateFamily) *OvaTemplateFamilyUpdateOne {
+	mutation := newOvaTemplateFamilyMutation(c.config, OpUpdateOne, withOvaTemplateFamily(_m))
+	return &OvaTemplateFamilyUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *OvaTemplateFamilyClient) UpdateOneID(id uuid.UUID) *OvaTemplateFamilyUpdateOne {
+	mutation := newOvaTemplateFamilyMutation(c.config, OpUpdateOne, withOvaTemplateFamilyID(id))
+	return &OvaTemplateFamilyUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for OvaTemplateFamily.
+func (c *OvaTemplateFamilyClient) Delete() *OvaTemplateFamilyDelete {
+	mutation := newOvaTemplateFamilyMutation(c.config, OpDelete)
+	return &OvaTemplateFamilyDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *OvaTemplateFamilyClient) DeleteOne(_m *OvaTemplateFamily) *OvaTemplateFamilyDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *OvaTemplateFamilyClient) DeleteOneID(id uuid.UUID) *OvaTemplateFamilyDeleteOne {
+	builder := c.Delete().Where(ovatemplatefamily.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &OvaTemplateFamilyDeleteOne{builder}
+}
+
+// Query returns a query builder for OvaTemplateFamily.
+func (c *OvaTemplateFamilyClient) Query() *OvaTemplateFamilyQuery {
+	return &OvaTemplateFamilyQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeOvaTemplateFamily},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a OvaTemplateFamily entity by its id.
+func (c *OvaTemplateFamilyClient) Get(ctx context.Context, id uuid.UUID) (*OvaTemplateFamily, error) {
+	return c.Query().Where(ovatemplatefamily.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *OvaTemplateFamilyClient) GetX(ctx context.Context, id uuid.UUID) *OvaTemplateFamily {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryVersions queries the versions edge of a OvaTemplateFamily.
+func (c *OvaTemplateFamilyClient) QueryVersions(_m *OvaTemplateFamily) *OvaTemplateVersionQuery {
+	query := (&OvaTemplateVersionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(ovatemplatefamily.Table, ovatemplatefamily.FieldID, id),
+			sqlgraph.To(ovatemplateversion.Table, ovatemplateversion.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ovatemplatefamily.VersionsTable, ovatemplatefamily.VersionsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *OvaTemplateFamilyClient) Hooks() []Hook {
+	return c.hooks.OvaTemplateFamily
+}
+
+// Interceptors returns the client interceptors.
+func (c *OvaTemplateFamilyClient) Interceptors() []Interceptor {
+	return c.inters.OvaTemplateFamily
+}
+
+func (c *OvaTemplateFamilyClient) mutate(ctx context.Context, m *OvaTemplateFamilyMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&OvaTemplateFamilyCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&OvaTemplateFamilyUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&OvaTemplateFamilyUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&OvaTemplateFamilyDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown OvaTemplateFamily mutation op: %q", m.Op())
+	}
+}
+
+// OvaTemplateVersionClient is a client for the OvaTemplateVersion schema.
+type OvaTemplateVersionClient struct {
+	config
+}
+
+// NewOvaTemplateVersionClient returns a client for the OvaTemplateVersion from the given config.
+func NewOvaTemplateVersionClient(c config) *OvaTemplateVersionClient {
+	return &OvaTemplateVersionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `ovatemplateversion.Hooks(f(g(h())))`.
+func (c *OvaTemplateVersionClient) Use(hooks ...Hook) {
+	c.hooks.OvaTemplateVersion = append(c.hooks.OvaTemplateVersion, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `ovatemplateversion.Intercept(f(g(h())))`.
+func (c *OvaTemplateVersionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.OvaTemplateVersion = append(c.inters.OvaTemplateVersion, interceptors...)
+}
+
+// Create returns a builder for creating a OvaTemplateVersion entity.
+func (c *OvaTemplateVersionClient) Create() *OvaTemplateVersionCreate {
+	mutation := newOvaTemplateVersionMutation(c.config, OpCreate)
+	return &OvaTemplateVersionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of OvaTemplateVersion entities.
+func (c *OvaTemplateVersionClient) CreateBulk(builders ...*OvaTemplateVersionCreate) *OvaTemplateVersionCreateBulk {
+	return &OvaTemplateVersionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *OvaTemplateVersionClient) MapCreateBulk(slice any, setFunc func(*OvaTemplateVersionCreate, int)) *OvaTemplateVersionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &OvaTemplateVersionCreateBulk{err: fmt.Errorf("calling to OvaTemplateVersionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*OvaTemplateVersionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &OvaTemplateVersionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for OvaTemplateVersion.
+func (c *OvaTemplateVersionClient) Update() *OvaTemplateVersionUpdate {
+	mutation := newOvaTemplateVersionMutation(c.config, OpUpdate)
+	return &OvaTemplateVersionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *OvaTemplateVersionClient) UpdateOne(_m *OvaTemplateVersion) *OvaTemplateVersionUpdateOne {
+	mutation := newOvaTemplateVersionMutation(c.config, OpUpdateOne, withOvaTemplateVersion(_m))
+	return &OvaTemplateVersionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *OvaTemplateVersionClient) UpdateOneID(id uuid.UUID) *OvaTemplateVersionUpdateOne {
+	mutation := newOvaTemplateVersionMutation(c.config, OpUpdateOne, withOvaTemplateVersionID(id))
+	return &OvaTemplateVersionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for OvaTemplateVersion.
+func (c *OvaTemplateVersionClient) Delete() *OvaTemplateVersionDelete {
+	mutation := newOvaTemplateVersionMutation(c.config, OpDelete)
+	return &OvaTemplateVersionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *OvaTemplateVersionClient) DeleteOne(_m *OvaTemplateVersion) *OvaTemplateVersionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *OvaTemplateVersionClient) DeleteOneID(id uuid.UUID) *OvaTemplateVersionDeleteOne {
+	builder := c.Delete().Where(ovatemplateversion.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &OvaTemplateVersionDeleteOne{builder}
+}
+
+// Query returns a query builder for OvaTemplateVersion.
+func (c *OvaTemplateVersionClient) Query() *OvaTemplateVersionQuery {
+	return &OvaTemplateVersionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeOvaTemplateVersion},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a OvaTemplateVersion entity by its id.
+func (c *OvaTemplateVersionClient) Get(ctx context.Context, id uuid.UUID) (*OvaTemplateVersion, error) {
+	return c.Query().Where(ovatemplateversion.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *OvaTemplateVersionClient) GetX(ctx context.Context, id uuid.UUID) *OvaTemplateVersion {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryFamily queries the family edge of a OvaTemplateVersion.
+func (c *OvaTemplateVersionClient) QueryFamily(_m *OvaTemplateVersion) *OvaTemplateFamilyQuery {
+	query := (&OvaTemplateFamilyClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(ovatemplateversion.Table, ovatemplateversion.FieldID, id),
+			sqlgraph.To(ovatemplatefamily.Table, ovatemplatefamily.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ovatemplateversion.FamilyTable, ovatemplateversion.FamilyColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *OvaTemplateVersionClient) Hooks() []Hook {
+	return c.hooks.OvaTemplateVersion
+}
+
+// Interceptors returns the client interceptors.
+func (c *OvaTemplateVersionClient) Interceptors() []Interceptor {
+	return c.inters.OvaTemplateVersion
+}
+
+func (c *OvaTemplateVersionClient) mutate(ctx context.Context, m *OvaTemplateVersionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&OvaTemplateVersionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&OvaTemplateVersionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&OvaTemplateVersionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&OvaTemplateVersionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown OvaTemplateVersion mutation op: %q", m.Op())
 	}
 }
 
@@ -3973,15 +4289,15 @@ type (
 	hooks struct {
 		Agent, AgentConfig, AgentEnrollment, AgentHeartbeat, AgentTemplate, Artifact,
 		AuditLog, Department, Environment, GatewayConnection, Image, Membership,
-		ModelRoute, Permission, RateLimitPolicy, RequestLog, ResourcePool, Role,
-		RotationCommand, RouterTier, Skill, Tenant, TokenUsage, Upstream, User,
-		VirtualKey []ent.Hook
+		ModelRoute, OvaTemplateFamily, OvaTemplateVersion, Permission, RateLimitPolicy,
+		RequestLog, ResourcePool, Role, RotationCommand, RouterTier, Skill, Tenant,
+		TokenUsage, Upstream, User, VirtualKey []ent.Hook
 	}
 	inters struct {
 		Agent, AgentConfig, AgentEnrollment, AgentHeartbeat, AgentTemplate, Artifact,
 		AuditLog, Department, Environment, GatewayConnection, Image, Membership,
-		ModelRoute, Permission, RateLimitPolicy, RequestLog, ResourcePool, Role,
-		RotationCommand, RouterTier, Skill, Tenant, TokenUsage, Upstream, User,
-		VirtualKey []ent.Interceptor
+		ModelRoute, OvaTemplateFamily, OvaTemplateVersion, Permission, RateLimitPolicy,
+		RequestLog, ResourcePool, Role, RotationCommand, RouterTier, Skill, Tenant,
+		TokenUsage, Upstream, User, VirtualKey []ent.Interceptor
 	}
 )

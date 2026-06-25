@@ -25,6 +25,8 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/image"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/modelroute"
+	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplatefamily"
+	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplateversion"
 	"github.com/VMware-AI/agent-platform-backend/ent/permission"
 	"github.com/VMware-AI/agent-platform-backend/ent/ratelimitpolicy"
 	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
@@ -98,32 +100,34 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			agent.Table:             agent.ValidColumn,
-			agentconfig.Table:       agentconfig.ValidColumn,
-			agentenrollment.Table:   agentenrollment.ValidColumn,
-			agentheartbeat.Table:    agentheartbeat.ValidColumn,
-			agenttemplate.Table:     agenttemplate.ValidColumn,
-			artifact.Table:          artifact.ValidColumn,
-			auditlog.Table:          auditlog.ValidColumn,
-			department.Table:        department.ValidColumn,
-			environment.Table:       environment.ValidColumn,
-			gatewayconnection.Table: gatewayconnection.ValidColumn,
-			image.Table:             image.ValidColumn,
-			membership.Table:        membership.ValidColumn,
-			modelroute.Table:        modelroute.ValidColumn,
-			permission.Table:        permission.ValidColumn,
-			ratelimitpolicy.Table:   ratelimitpolicy.ValidColumn,
-			requestlog.Table:        requestlog.ValidColumn,
-			resourcepool.Table:      resourcepool.ValidColumn,
-			role.Table:              role.ValidColumn,
-			rotationcommand.Table:   rotationcommand.ValidColumn,
-			routertier.Table:        routertier.ValidColumn,
-			skill.Table:             skill.ValidColumn,
-			tenant.Table:            tenant.ValidColumn,
-			tokenusage.Table:        tokenusage.ValidColumn,
-			upstream.Table:          upstream.ValidColumn,
-			user.Table:              user.ValidColumn,
-			virtualkey.Table:        virtualkey.ValidColumn,
+			agent.Table:              agent.ValidColumn,
+			agentconfig.Table:        agentconfig.ValidColumn,
+			agentenrollment.Table:    agentenrollment.ValidColumn,
+			agentheartbeat.Table:     agentheartbeat.ValidColumn,
+			agenttemplate.Table:      agenttemplate.ValidColumn,
+			artifact.Table:           artifact.ValidColumn,
+			auditlog.Table:           auditlog.ValidColumn,
+			department.Table:         department.ValidColumn,
+			environment.Table:        environment.ValidColumn,
+			gatewayconnection.Table:  gatewayconnection.ValidColumn,
+			image.Table:              image.ValidColumn,
+			membership.Table:         membership.ValidColumn,
+			modelroute.Table:         modelroute.ValidColumn,
+			ovatemplatefamily.Table:  ovatemplatefamily.ValidColumn,
+			ovatemplateversion.Table: ovatemplateversion.ValidColumn,
+			permission.Table:         permission.ValidColumn,
+			ratelimitpolicy.Table:    ratelimitpolicy.ValidColumn,
+			requestlog.Table:         requestlog.ValidColumn,
+			resourcepool.Table:       resourcepool.ValidColumn,
+			role.Table:               role.ValidColumn,
+			rotationcommand.Table:    rotationcommand.ValidColumn,
+			routertier.Table:         routertier.ValidColumn,
+			skill.Table:              skill.ValidColumn,
+			tenant.Table:             tenant.ValidColumn,
+			tokenusage.Table:         tokenusage.ValidColumn,
+			upstream.Table:           upstream.ValidColumn,
+			user.Table:               user.ValidColumn,
+			virtualkey.Table:         virtualkey.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)
