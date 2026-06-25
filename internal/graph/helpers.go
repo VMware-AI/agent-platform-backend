@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
+	"net/url"
 	"time"
 
 	"github.com/google/uuid"
@@ -306,10 +308,11 @@ func toModelUser(u *ent.User) *model.User {
 // (secret_ref is intentionally not exposed).
 func toModelResourcePool(p *ent.ResourcePool) *model.ResourcePool {
 	return &model.ResourcePool{
-		ID:               p.ID.String(),
-		Name:             p.Name,
-		Endpoint:         p.Endpoint,
-		ConnectionStatus: poolConnStatus(p.Status),
+		ID:                 p.ID.String(),
+		Name:               p.Name,
+		Endpoint:           p.Endpoint,
+		ContentLibraryName: p.ContentLibraryName,
+		ConnectionStatus:   poolConnStatus(p.Status),
 		DatacenterCount:  p.DatacenterCount,
 		ClusterCount:     p.ClusterCount,
 		EsxiHostCount:    p.HostCount,
@@ -867,6 +870,59 @@ func (r *Resolver) modelCustomRole(ctx context.Context, role *ent.Role) (*model.
 		ID: role.ID.String(), Name: role.Name, IsSystem: role.IsSystem,
 		Permissions: keys, CreatedAt: role.CreatedAt,
 	}, nil
+}
+
+// poolProbeTimeout bounds the pre-save reachability dial (testResourcePoolConnection).
+const poolProbeTimeout = 5 * time.Second
+
+// defaultVCenterPort is the HTTPS port a vCenter endpoint listens on; used when the
+// operator's endpoint omits an explicit port.
+const defaultVCenterPort = "443"
+
+// parseEndpointHostPort validates a resource-pool endpoint (a host, host:port, or
+// https URL) and returns a "host:port" suitable for net.Dial. It rejects empty or
+// malformed input — the boundary validation for the credential-less probe — and
+// defaults the port to vCenter HTTPS (443) when none is given.
+func parseEndpointHostPort(endpoint string) (string, error) {
+	e := strings.TrimSpace(endpoint)
+	if e == "" {
+		return "", fmt.Errorf("endpoint is required")
+	}
+	// Accept a full URL (https://host[:port][/path]) or a bare host[:port].
+	host := e
+	if strings.Contains(e, "://") {
+		u, err := url.Parse(e)
+		if err != nil || u.Host == "" {
+			return "", fmt.Errorf("endpoint %q is not a valid URL", endpoint)
+		}
+		host = u.Host
+	}
+	// Split host:port; default the port when absent.
+	h, p, err := net.SplitHostPort(host)
+	if err != nil {
+		// No port present (or another error) — treat the whole thing as the host.
+		h, p = host, defaultVCenterPort
+	}
+	if strings.TrimSpace(h) == "" {
+		return "", fmt.Errorf("endpoint %q has no host", endpoint)
+	}
+	return net.JoinHostPort(h, p), nil
+}
+
+// dialReachable performs a bounded TCP dial to confirm an endpoint is reachable.
+// LIMITATION: this is a transport-level reachability check only — it does NOT
+// complete a TLS handshake or authenticate, so it cannot verify the endpoint is
+// actually a vCenter or that the supplied credentials work. That full check
+// happens later, with credentials, in syncResourcePool.
+func dialReachable(ctx context.Context, hostPort string) error {
+	d := net.Dialer{Timeout: poolProbeTimeout}
+	dctx, cancel := context.WithTimeout(ctx, poolProbeTimeout)
+	defer cancel()
+	conn, err := d.DialContext(dctx, "tcp", hostPort)
+	if err != nil {
+		return err
+	}
+	return conn.Close()
 }
 
 // connectPool resolves a resource pool's credentials and dials its vCenter.

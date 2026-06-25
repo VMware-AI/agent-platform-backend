@@ -75,6 +75,11 @@ func Endpoint(v string) predicate.ResourcePool {
 	return predicate.ResourcePool(sql.FieldEQ(FieldEndpoint, v))
 }
 
+// ContentLibraryName applies equality check predicate on the "content_library_name" field. It's identical to ContentLibraryNameEQ.
+func ContentLibraryName(v string) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldEQ(FieldContentLibraryName, v))
+}
+
 // SecretRef applies equality check predicate on the "secret_ref" field. It's identical to SecretRefEQ.
 func SecretRef(v string) predicate.ResourcePool {
 	return predicate.ResourcePool(sql.FieldEQ(FieldSecretRef, v))
@@ -363,6 +368,81 @@ func StatusIn(vs ...Status) predicate.ResourcePool {
 // StatusNotIn applies the NotIn predicate on the "status" field.
 func StatusNotIn(vs ...Status) predicate.ResourcePool {
 	return predicate.ResourcePool(sql.FieldNotIn(FieldStatus, vs...))
+}
+
+// ContentLibraryNameEQ applies the EQ predicate on the "content_library_name" field.
+func ContentLibraryNameEQ(v string) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldEQ(FieldContentLibraryName, v))
+}
+
+// ContentLibraryNameNEQ applies the NEQ predicate on the "content_library_name" field.
+func ContentLibraryNameNEQ(v string) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldNEQ(FieldContentLibraryName, v))
+}
+
+// ContentLibraryNameIn applies the In predicate on the "content_library_name" field.
+func ContentLibraryNameIn(vs ...string) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldIn(FieldContentLibraryName, vs...))
+}
+
+// ContentLibraryNameNotIn applies the NotIn predicate on the "content_library_name" field.
+func ContentLibraryNameNotIn(vs ...string) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldNotIn(FieldContentLibraryName, vs...))
+}
+
+// ContentLibraryNameGT applies the GT predicate on the "content_library_name" field.
+func ContentLibraryNameGT(v string) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldGT(FieldContentLibraryName, v))
+}
+
+// ContentLibraryNameGTE applies the GTE predicate on the "content_library_name" field.
+func ContentLibraryNameGTE(v string) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldGTE(FieldContentLibraryName, v))
+}
+
+// ContentLibraryNameLT applies the LT predicate on the "content_library_name" field.
+func ContentLibraryNameLT(v string) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldLT(FieldContentLibraryName, v))
+}
+
+// ContentLibraryNameLTE applies the LTE predicate on the "content_library_name" field.
+func ContentLibraryNameLTE(v string) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldLTE(FieldContentLibraryName, v))
+}
+
+// ContentLibraryNameContains applies the Contains predicate on the "content_library_name" field.
+func ContentLibraryNameContains(v string) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldContains(FieldContentLibraryName, v))
+}
+
+// ContentLibraryNameHasPrefix applies the HasPrefix predicate on the "content_library_name" field.
+func ContentLibraryNameHasPrefix(v string) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldHasPrefix(FieldContentLibraryName, v))
+}
+
+// ContentLibraryNameHasSuffix applies the HasSuffix predicate on the "content_library_name" field.
+func ContentLibraryNameHasSuffix(v string) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldHasSuffix(FieldContentLibraryName, v))
+}
+
+// ContentLibraryNameIsNil applies the IsNil predicate on the "content_library_name" field.
+func ContentLibraryNameIsNil() predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldIsNull(FieldContentLibraryName))
+}
+
+// ContentLibraryNameNotNil applies the NotNil predicate on the "content_library_name" field.
+func ContentLibraryNameNotNil() predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldNotNull(FieldContentLibraryName))
+}
+
+// ContentLibraryNameEqualFold applies the EqualFold predicate on the "content_library_name" field.
+func ContentLibraryNameEqualFold(v string) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldEqualFold(FieldContentLibraryName, v))
+}
+
+// ContentLibraryNameContainsFold applies the ContainsFold predicate on the "content_library_name" field.
+func ContentLibraryNameContainsFold(v string) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldContainsFold(FieldContentLibraryName, v))
 }
 
 // SecretRefEQ applies the EQ predicate on the "secret_ref" field.

@@ -1,0 +1,58 @@
+fragment OvaTemplateVersionFields on OvaTemplateVersion {
+    id
+    familyId
+    version
+    ovaIdentifier
+    notes
+    createdAt
+  }
+
+  
+  fragment VirtualKeyFields on VirtualKey {
+    id
+    alias
+    userId
+    agentId
+    rateLimitPolicyId
+    status
+    expiresAt
+    createdAt
+  }
+
+  mutation DeployAgent($input: DeployAgentInput!) {
+    deployAgent(input: $input) {
+      agent {
+        id
+        name
+        type
+        status
+        endpoint
+        createdAt
+        updatedAt
+        apiKey {
+          id
+          name
+        }
+        credentials {
+          username
+        }
+        templateFamilyId
+        templateVersionId
+        resourcePoolId
+      }
+      virtualKey {
+        ...VirtualKeyFields
+      }
+      templateVersion {
+        ...OvaTemplateVersionFields
+      }
+      resourcePool {
+        id
+        name
+        endpoint
+        connectionStatus
+        syncStatus
+        lastSyncedAt
+      }
+    }
+  }

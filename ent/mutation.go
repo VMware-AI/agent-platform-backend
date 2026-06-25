@@ -12903,31 +12903,32 @@ func (m *RequestLogMutation) ResetEdge(name string) error {
 // ResourcePoolMutation represents an operation that mutates the ResourcePool nodes in the graph.
 type ResourcePoolMutation struct {
 	config
-	op                  Op
-	typ                 string
-	id                  *uuid.UUID
-	created_at          *time.Time
-	updated_at          *time.Time
-	name                *string
-	kind                *resourcepool.Kind
-	endpoint            *string
-	status              *resourcepool.Status
-	secret_ref          *string
-	datacenter_count    *int
-	adddatacenter_count *int
-	cluster_count       *int
-	addcluster_count    *int
-	host_count          *int
-	addhost_count       *int
-	vm_count            *int
-	addvm_count         *int
-	last_synced_at      *time.Time
-	tenant_id           *uuid.UUID
-	environment_id      *uuid.UUID
-	clearedFields       map[string]struct{}
-	done                bool
-	oldValue            func(context.Context) (*ResourcePool, error)
-	predicates          []predicate.ResourcePool
+	op                   Op
+	typ                  string
+	id                   *uuid.UUID
+	created_at           *time.Time
+	updated_at           *time.Time
+	name                 *string
+	kind                 *resourcepool.Kind
+	endpoint             *string
+	status               *resourcepool.Status
+	content_library_name *string
+	secret_ref           *string
+	datacenter_count     *int
+	adddatacenter_count  *int
+	cluster_count        *int
+	addcluster_count     *int
+	host_count           *int
+	addhost_count        *int
+	vm_count             *int
+	addvm_count          *int
+	last_synced_at       *time.Time
+	tenant_id            *uuid.UUID
+	environment_id       *uuid.UUID
+	clearedFields        map[string]struct{}
+	done                 bool
+	oldValue             func(context.Context) (*ResourcePool, error)
+	predicates           []predicate.ResourcePool
 }
 
 var _ ent.Mutation = (*ResourcePoolMutation)(nil)
@@ -13248,6 +13249,55 @@ func (m *ResourcePoolMutation) OldStatus(ctx context.Context) (v resourcepool.St
 // ResetStatus resets all changes to the "status" field.
 func (m *ResourcePoolMutation) ResetStatus() {
 	m.status = nil
+}
+
+// SetContentLibraryName sets the "content_library_name" field.
+func (m *ResourcePoolMutation) SetContentLibraryName(s string) {
+	m.content_library_name = &s
+}
+
+// ContentLibraryName returns the value of the "content_library_name" field in the mutation.
+func (m *ResourcePoolMutation) ContentLibraryName() (r string, exists bool) {
+	v := m.content_library_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldContentLibraryName returns the old "content_library_name" field's value of the ResourcePool entity.
+// If the ResourcePool object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ResourcePoolMutation) OldContentLibraryName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldContentLibraryName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldContentLibraryName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldContentLibraryName: %w", err)
+	}
+	return oldValue.ContentLibraryName, nil
+}
+
+// ClearContentLibraryName clears the value of the "content_library_name" field.
+func (m *ResourcePoolMutation) ClearContentLibraryName() {
+	m.content_library_name = nil
+	m.clearedFields[resourcepool.FieldContentLibraryName] = struct{}{}
+}
+
+// ContentLibraryNameCleared returns if the "content_library_name" field was cleared in this mutation.
+func (m *ResourcePoolMutation) ContentLibraryNameCleared() bool {
+	_, ok := m.clearedFields[resourcepool.FieldContentLibraryName]
+	return ok
+}
+
+// ResetContentLibraryName resets all changes to the "content_library_name" field.
+func (m *ResourcePoolMutation) ResetContentLibraryName() {
+	m.content_library_name = nil
+	delete(m.clearedFields, resourcepool.FieldContentLibraryName)
 }
 
 // SetSecretRef sets the "secret_ref" field.
@@ -13704,7 +13754,7 @@ func (m *ResourcePoolMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ResourcePoolMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 15)
 	if m.created_at != nil {
 		fields = append(fields, resourcepool.FieldCreatedAt)
 	}
@@ -13722,6 +13772,9 @@ func (m *ResourcePoolMutation) Fields() []string {
 	}
 	if m.status != nil {
 		fields = append(fields, resourcepool.FieldStatus)
+	}
+	if m.content_library_name != nil {
+		fields = append(fields, resourcepool.FieldContentLibraryName)
 	}
 	if m.secret_ref != nil {
 		fields = append(fields, resourcepool.FieldSecretRef)
@@ -13767,6 +13820,8 @@ func (m *ResourcePoolMutation) Field(name string) (ent.Value, bool) {
 		return m.Endpoint()
 	case resourcepool.FieldStatus:
 		return m.Status()
+	case resourcepool.FieldContentLibraryName:
+		return m.ContentLibraryName()
 	case resourcepool.FieldSecretRef:
 		return m.SecretRef()
 	case resourcepool.FieldDatacenterCount:
@@ -13804,6 +13859,8 @@ func (m *ResourcePoolMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldEndpoint(ctx)
 	case resourcepool.FieldStatus:
 		return m.OldStatus(ctx)
+	case resourcepool.FieldContentLibraryName:
+		return m.OldContentLibraryName(ctx)
 	case resourcepool.FieldSecretRef:
 		return m.OldSecretRef(ctx)
 	case resourcepool.FieldDatacenterCount:
@@ -13870,6 +13927,13 @@ func (m *ResourcePoolMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetStatus(v)
+		return nil
+	case resourcepool.FieldContentLibraryName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetContentLibraryName(v)
 		return nil
 	case resourcepool.FieldSecretRef:
 		v, ok := value.(string)
@@ -14008,6 +14072,9 @@ func (m *ResourcePoolMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *ResourcePoolMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(resourcepool.FieldContentLibraryName) {
+		fields = append(fields, resourcepool.FieldContentLibraryName)
+	}
 	if m.FieldCleared(resourcepool.FieldSecretRef) {
 		fields = append(fields, resourcepool.FieldSecretRef)
 	}
@@ -14034,6 +14101,9 @@ func (m *ResourcePoolMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ResourcePoolMutation) ClearField(name string) error {
 	switch name {
+	case resourcepool.FieldContentLibraryName:
+		m.ClearContentLibraryName()
+		return nil
 	case resourcepool.FieldSecretRef:
 		m.ClearSecretRef()
 		return nil
@@ -14071,6 +14141,9 @@ func (m *ResourcePoolMutation) ResetField(name string) error {
 		return nil
 	case resourcepool.FieldStatus:
 		m.ResetStatus()
+		return nil
+	case resourcepool.FieldContentLibraryName:
+		m.ResetContentLibraryName()
 		return nil
 	case resourcepool.FieldSecretRef:
 		m.ResetSecretRef()

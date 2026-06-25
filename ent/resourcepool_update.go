@@ -92,6 +92,26 @@ func (_u *ResourcePoolUpdate) SetNillableStatus(v *resourcepool.Status) *Resourc
 	return _u
 }
 
+// SetContentLibraryName sets the "content_library_name" field.
+func (_u *ResourcePoolUpdate) SetContentLibraryName(v string) *ResourcePoolUpdate {
+	_u.mutation.SetContentLibraryName(v)
+	return _u
+}
+
+// SetNillableContentLibraryName sets the "content_library_name" field if the given value is not nil.
+func (_u *ResourcePoolUpdate) SetNillableContentLibraryName(v *string) *ResourcePoolUpdate {
+	if v != nil {
+		_u.SetContentLibraryName(*v)
+	}
+	return _u
+}
+
+// ClearContentLibraryName clears the value of the "content_library_name" field.
+func (_u *ResourcePoolUpdate) ClearContentLibraryName() *ResourcePoolUpdate {
+	_u.mutation.ClearContentLibraryName()
+	return _u
+}
+
 // SetSecretRef sets the "secret_ref" field.
 func (_u *ResourcePoolUpdate) SetSecretRef(v string) *ResourcePoolUpdate {
 	_u.mutation.SetSecretRef(v)
@@ -375,6 +395,12 @@ func (_u *ResourcePoolUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(resourcepool.FieldStatus, field.TypeEnum, value)
 	}
+	if value, ok := _u.mutation.ContentLibraryName(); ok {
+		_spec.SetField(resourcepool.FieldContentLibraryName, field.TypeString, value)
+	}
+	if _u.mutation.ContentLibraryNameCleared() {
+		_spec.ClearField(resourcepool.FieldContentLibraryName, field.TypeString)
+	}
 	if value, ok := _u.mutation.SecretRef(); ok {
 		_spec.SetField(resourcepool.FieldSecretRef, field.TypeString, value)
 	}
@@ -504,6 +530,26 @@ func (_u *ResourcePoolUpdateOne) SetNillableStatus(v *resourcepool.Status) *Reso
 	if v != nil {
 		_u.SetStatus(*v)
 	}
+	return _u
+}
+
+// SetContentLibraryName sets the "content_library_name" field.
+func (_u *ResourcePoolUpdateOne) SetContentLibraryName(v string) *ResourcePoolUpdateOne {
+	_u.mutation.SetContentLibraryName(v)
+	return _u
+}
+
+// SetNillableContentLibraryName sets the "content_library_name" field if the given value is not nil.
+func (_u *ResourcePoolUpdateOne) SetNillableContentLibraryName(v *string) *ResourcePoolUpdateOne {
+	if v != nil {
+		_u.SetContentLibraryName(*v)
+	}
+	return _u
+}
+
+// ClearContentLibraryName clears the value of the "content_library_name" field.
+func (_u *ResourcePoolUpdateOne) ClearContentLibraryName() *ResourcePoolUpdateOne {
+	_u.mutation.ClearContentLibraryName()
 	return _u
 }
 
@@ -819,6 +865,12 @@ func (_u *ResourcePoolUpdateOne) sqlSave(ctx context.Context) (_node *ResourcePo
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(resourcepool.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.ContentLibraryName(); ok {
+		_spec.SetField(resourcepool.FieldContentLibraryName, field.TypeString, value)
+	}
+	if _u.mutation.ContentLibraryNameCleared() {
+		_spec.ClearField(resourcepool.FieldContentLibraryName, field.TypeString)
 	}
 	if value, ok := _u.mutation.SecretRef(); ok {
 		_spec.SetField(resourcepool.FieldSecretRef, field.TypeString, value)

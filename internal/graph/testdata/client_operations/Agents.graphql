@@ -4,7 +4,6 @@ query Agents($filter: AgentFilter, $pagination: Pagination, $sort: AgentSort) {
         id
         name
         type
-        typeLabel
         status
         apiKey {
           id

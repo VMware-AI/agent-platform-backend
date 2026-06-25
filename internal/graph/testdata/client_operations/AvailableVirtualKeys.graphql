@@ -1,0 +1,16 @@
+fragment VirtualKeyFields on VirtualKey {
+    id
+    alias
+    userId
+    agentId
+    rateLimitPolicyId
+    status
+    expiresAt
+    createdAt
+  }
+
+  query AvailableVirtualKeys($modelGatewayId: ID) {
+    availableVirtualKeys(modelGatewayId: $modelGatewayId) {
+      ...VirtualKeyFields
+    }
+  }

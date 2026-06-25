@@ -30,6 +30,8 @@ type ResourcePool struct {
 	Endpoint string `json:"endpoint,omitempty"`
 	// Status holds the value of the "status" field.
 	Status resourcepool.Status `json:"status,omitempty"`
+	// ContentLibraryName holds the value of the "content_library_name" field.
+	ContentLibraryName string `json:"content_library_name,omitempty"`
 	// SecretRef holds the value of the "secret_ref" field.
 	SecretRef string `json:"secret_ref,omitempty"`
 	// DatacenterCount holds the value of the "datacenter_count" field.
@@ -58,7 +60,7 @@ func (*ResourcePool) scanValues(columns []string) ([]any, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case resourcepool.FieldDatacenterCount, resourcepool.FieldClusterCount, resourcepool.FieldHostCount, resourcepool.FieldVMCount:
 			values[i] = new(sql.NullInt64)
-		case resourcepool.FieldName, resourcepool.FieldKind, resourcepool.FieldEndpoint, resourcepool.FieldStatus, resourcepool.FieldSecretRef:
+		case resourcepool.FieldName, resourcepool.FieldKind, resourcepool.FieldEndpoint, resourcepool.FieldStatus, resourcepool.FieldContentLibraryName, resourcepool.FieldSecretRef:
 			values[i] = new(sql.NullString)
 		case resourcepool.FieldCreatedAt, resourcepool.FieldUpdatedAt, resourcepool.FieldLastSyncedAt:
 			values[i] = new(sql.NullTime)
@@ -120,6 +122,12 @@ func (_m *ResourcePool) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
 				_m.Status = resourcepool.Status(value.String)
+			}
+		case resourcepool.FieldContentLibraryName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field content_library_name", values[i])
+			} else if value.Valid {
+				_m.ContentLibraryName = value.String
 			}
 		case resourcepool.FieldSecretRef:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -225,6 +233,9 @@ func (_m *ResourcePool) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Status))
+	builder.WriteString(", ")
+	builder.WriteString("content_library_name=")
+	builder.WriteString(_m.ContentLibraryName)
 	builder.WriteString(", ")
 	builder.WriteString("secret_ref=")
 	builder.WriteString(_m.SecretRef)

@@ -27,6 +27,8 @@ const (
 	FieldEndpoint = "endpoint"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// FieldContentLibraryName holds the string denoting the content_library_name field in the database.
+	FieldContentLibraryName = "content_library_name"
 	// FieldSecretRef holds the string denoting the secret_ref field in the database.
 	FieldSecretRef = "secret_ref"
 	// FieldDatacenterCount holds the string denoting the datacenter_count field in the database.
@@ -56,6 +58,7 @@ var Columns = []string{
 	FieldKind,
 	FieldEndpoint,
 	FieldStatus,
+	FieldContentLibraryName,
 	FieldSecretRef,
 	FieldDatacenterCount,
 	FieldClusterCount,
@@ -87,6 +90,8 @@ var (
 	NameValidator func(string) error
 	// EndpointValidator is a validator for the "endpoint" field. It is called by the builders before save.
 	EndpointValidator func(string) error
+	// DefaultContentLibraryName holds the default value on creation for the "content_library_name" field.
+	DefaultContentLibraryName string
 	// DefaultDatacenterCount holds the default value on creation for the "datacenter_count" field.
 	DefaultDatacenterCount int
 	// DatacenterCountValidator is a validator for the "datacenter_count" field. It is called by the builders before save.
@@ -195,6 +200,11 @@ func ByEndpoint(opts ...sql.OrderTermOption) OrderOption {
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByContentLibraryName orders the results by the content_library_name field.
+func ByContentLibraryName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldContentLibraryName, opts...).ToFunc()
 }
 
 // BySecretRef orders the results by the secret_ref field.

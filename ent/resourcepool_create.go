@@ -89,6 +89,20 @@ func (_c *ResourcePoolCreate) SetNillableStatus(v *resourcepool.Status) *Resourc
 	return _c
 }
 
+// SetContentLibraryName sets the "content_library_name" field.
+func (_c *ResourcePoolCreate) SetContentLibraryName(v string) *ResourcePoolCreate {
+	_c.mutation.SetContentLibraryName(v)
+	return _c
+}
+
+// SetNillableContentLibraryName sets the "content_library_name" field if the given value is not nil.
+func (_c *ResourcePoolCreate) SetNillableContentLibraryName(v *string) *ResourcePoolCreate {
+	if v != nil {
+		_c.SetContentLibraryName(*v)
+	}
+	return _c
+}
+
 // SetSecretRef sets the "secret_ref" field.
 func (_c *ResourcePoolCreate) SetSecretRef(v string) *ResourcePoolCreate {
 	_c.mutation.SetSecretRef(v)
@@ -266,6 +280,10 @@ func (_c *ResourcePoolCreate) defaults() {
 		v := resourcepool.DefaultStatus
 		_c.mutation.SetStatus(v)
 	}
+	if _, ok := _c.mutation.ContentLibraryName(); !ok {
+		v := resourcepool.DefaultContentLibraryName
+		_c.mutation.SetContentLibraryName(v)
+	}
 	if _, ok := _c.mutation.DatacenterCount(); !ok {
 		v := resourcepool.DefaultDatacenterCount
 		_c.mutation.SetDatacenterCount(v)
@@ -418,6 +436,10 @@ func (_c *ResourcePoolCreate) createSpec() (*ResourcePool, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(resourcepool.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
+	}
+	if value, ok := _c.mutation.ContentLibraryName(); ok {
+		_spec.SetField(resourcepool.FieldContentLibraryName, field.TypeString, value)
+		_node.ContentLibraryName = value
 	}
 	if value, ok := _c.mutation.SecretRef(); ok {
 		_spec.SetField(resourcepool.FieldSecretRef, field.TypeString, value)

@@ -1,0 +1,22 @@
+fragment OvaTemplateVersionFields on OvaTemplateVersion {
+    id
+    familyId
+    version
+    ovaIdentifier
+    notes
+    createdAt
+  }
+
+  query OvaTemplateVersions($familyId: ID, $pagination: Pagination) {
+    ovaTemplateVersions(familyId: $familyId, pagination: $pagination) {
+      nodes {
+        ...OvaTemplateVersionFields
+      }
+      totalCount
+      pageInfo {
+        page
+        pageSize
+        totalPages
+      }
+    }
+  }

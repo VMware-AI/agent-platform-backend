@@ -1,0 +1,19 @@
+fragment VirtualKeyFields on VirtualKey {
+    id
+    alias
+    userId
+    agentId
+    rateLimitPolicyId
+    status
+    expiresAt
+    createdAt
+  }
+
+  mutation CreateVirtualKey($input: CreateVirtualKeyInput!) {
+    createVirtualKey(input: $input) {
+      key {
+        ...VirtualKeyFields
+      }
+      secret
+    }
+  }

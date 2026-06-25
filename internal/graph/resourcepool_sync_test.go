@@ -61,13 +61,27 @@ func TestResourcePool_SyncTestUpdate(t *testing.T) {
 		t.Fatal("syncedAt not set")
 	}
 
-	// test connection
-	tested, err := mr.TestResourcePoolConnection(ctx, pool.ID)
+	// test connection: the credential-less pre-save probe TCP-dials the endpoint.
+	// vcsim's URL is reachable, so the probe should report ok=true.
+	tested, err := mr.TestResourcePoolConnection(ctx, model.TestResourcePoolConnectionInput{
+		Name: "oc1", Endpoint: vsrv.URL.String(), ContentLibraryName: "lib1",
+	})
 	if err != nil {
 		t.Fatalf("test connection: %v", err)
 	}
-	if tested.ConnectionStatus != model.PoolConnectionStatusConnected {
-		t.Fatalf("test status = %v", tested.ConnectionStatus)
+	if !tested.Ok {
+		t.Fatalf("test probe should be ok for a reachable endpoint: %s", tested.Message)
+	}
+
+	// an unreachable / malformed endpoint reports ok=false (not an error).
+	bad, err := mr.TestResourcePoolConnection(ctx, model.TestResourcePoolConnectionInput{
+		Name: "oc1", Endpoint: "", ContentLibraryName: "lib1",
+	})
+	if err != nil {
+		t.Fatalf("test connection (bad): unexpected error %v", err)
+	}
+	if bad.Ok {
+		t.Fatal("empty endpoint should report ok=false")
 	}
 
 	// update

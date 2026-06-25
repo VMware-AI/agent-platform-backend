@@ -179,13 +179,14 @@ type CreateDepartmentInput struct {
 }
 
 type CreateResourcePoolInput struct {
-	Name            string  `json:"name"`
-	Endpoint        string  `json:"endpoint"`
-	DatacenterCount *int    `json:"datacenterCount,omitempty"`
-	ClusterCount    *int    `json:"clusterCount,omitempty"`
-	Username        *string `json:"username,omitempty"`
-	Password        *string `json:"password,omitempty"`
-	SecretRef       *string `json:"secretRef,omitempty"`
+	Name               string  `json:"name"`
+	Endpoint           string  `json:"endpoint"`
+	ContentLibraryName *string `json:"contentLibraryName,omitempty"`
+	DatacenterCount    *int    `json:"datacenterCount,omitempty"`
+	ClusterCount       *int    `json:"clusterCount,omitempty"`
+	Username           *string `json:"username,omitempty"`
+	Password           *string `json:"password,omitempty"`
+	SecretRef          *string `json:"secretRef,omitempty"`
 }
 
 type CreateResourcePoolPayload struct {
@@ -489,24 +490,36 @@ type ResetPasswordPayload struct {
 }
 
 type ResourcePool struct {
-	ID               string                `json:"id"`
-	Name             string                `json:"name"`
-	Endpoint         string                `json:"endpoint"`
-	ConnectionStatus PoolConnectionStatus  `json:"connectionStatus"`
-	DatacenterCount  int                   `json:"datacenterCount"`
-	ClusterCount     int                   `json:"clusterCount"`
-	EsxiHostCount    int                   `json:"esxiHostCount"`
-	VMInstanceCount  int                   `json:"vmInstanceCount"`
-	SyncStatus       ResourcePoolSyncState `json:"syncStatus"`
-	LastSyncedAt     *time.Time            `json:"lastSyncedAt,omitempty"`
-	CreatedAt        time.Time             `json:"createdAt"`
-	UpdatedAt        time.Time             `json:"updatedAt"`
+	ID                 string                `json:"id"`
+	Name               string                `json:"name"`
+	Endpoint           string                `json:"endpoint"`
+	ContentLibraryName string                `json:"contentLibraryName"`
+	ConnectionStatus   PoolConnectionStatus  `json:"connectionStatus"`
+	DatacenterCount    int                   `json:"datacenterCount"`
+	ClusterCount       int                   `json:"clusterCount"`
+	EsxiHostCount      int                   `json:"esxiHostCount"`
+	VMInstanceCount    int                   `json:"vmInstanceCount"`
+	SyncStatus         ResourcePoolSyncState `json:"syncStatus"`
+	LastSyncedAt       *time.Time            `json:"lastSyncedAt,omitempty"`
+	CreatedAt          time.Time             `json:"createdAt"`
+	UpdatedAt          time.Time             `json:"updatedAt"`
 }
 
 type ResourcePoolConnection struct {
 	Nodes      []ResourcePool `json:"nodes"`
 	TotalCount int            `json:"totalCount"`
 	PageInfo   *PageInfo      `json:"pageInfo"`
+}
+
+type ResourcePoolConnectionDetail struct {
+	VSphereVersion string `json:"vSphereVersion"`
+	ItemCount      int    `json:"itemCount"`
+}
+
+type ResourcePoolConnectionTest struct {
+	Ok      bool                          `json:"ok"`
+	Message string                        `json:"message"`
+	Detail  *ResourcePoolConnectionDetail `json:"detail,omitempty"`
 }
 
 type ResourcePoolFilter struct {
@@ -566,6 +579,12 @@ type SyncResourcePoolPayload struct {
 	SyncedAt time.Time     `json:"syncedAt"`
 }
 
+type TestResourcePoolConnectionInput struct {
+	Name               string `json:"name"`
+	Endpoint           string `json:"endpoint"`
+	ContentLibraryName string `json:"contentLibraryName"`
+}
+
 type ToggleUserEnabledPayload struct {
 	User *AccountUser `json:"user"`
 }
@@ -587,13 +606,14 @@ type UpdateAgentConfigInput struct {
 }
 
 type UpdateResourcePoolInput struct {
-	Name            *string `json:"name,omitempty"`
-	Endpoint        *string `json:"endpoint,omitempty"`
-	DatacenterCount *int    `json:"datacenterCount,omitempty"`
-	ClusterCount    *int    `json:"clusterCount,omitempty"`
-	Username        *string `json:"username,omitempty"`
-	Password        *string `json:"password,omitempty"`
-	SecretRef       *string `json:"secretRef,omitempty"`
+	Name               *string `json:"name,omitempty"`
+	Endpoint           *string `json:"endpoint,omitempty"`
+	ContentLibraryName *string `json:"contentLibraryName,omitempty"`
+	DatacenterCount    *int    `json:"datacenterCount,omitempty"`
+	ClusterCount       *int    `json:"clusterCount,omitempty"`
+	Username           *string `json:"username,omitempty"`
+	Password           *string `json:"password,omitempty"`
+	SecretRef          *string `json:"secretRef,omitempty"`
 }
 
 type UpdateResourcePoolPayload struct {
