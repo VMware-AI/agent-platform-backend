@@ -1,0 +1,19 @@
+query RequestLogs($filter: RequestLogFilter, $page: PageInput) {
+    requestLogs(filter: $filter, page: $page) {
+      ...RequestLogFields
+    }
+  }
+  
+  fragment RequestLogFields on RequestLog {
+    id
+    requestId
+    userId
+    agentId
+    model
+    inputTokens
+    outputTokens
+    latencyMs
+    statusCode
+    detail
+    createdAt
+  }

@@ -1,0 +1,27 @@
+mutation SetAgentConfigKnowledge($configId: ID!, $knowledgeArtifactIds: [ID!]!) {
+    setAgentConfigKnowledge(configId: $configId, knowledgeArtifactIds: $knowledgeArtifactIds) {
+      ...AgentConfigFields
+    }
+  }
+  
+  fragment AgentConfigFields on AgentConfig {
+    id
+    name
+    agentType
+    isDefault
+    artifactId
+    knowledge {
+      ...KnowledgeArtifactFields
+    }
+    createdAt
+  }
+  
+  fragment KnowledgeArtifactFields on Artifact {
+    id
+    name
+    kind
+    version
+    uri
+    sha256
+    createdAt
+  }
