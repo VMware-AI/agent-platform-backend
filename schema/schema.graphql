@@ -41,6 +41,9 @@ input LoginInput {
   # The console login form collects an email; the backend accepts username or email.
   email: String!
   password: String!
+  # When false, the session cookie is a session cookie (cleared on browser close);
+  # when true or omitted, it persists for the session TTL ("remember me").
+  remember: Boolean
 }
 
 type AuditLog {

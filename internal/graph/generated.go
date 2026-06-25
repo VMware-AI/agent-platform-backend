@@ -6103,6 +6103,9 @@ input LoginInput {
   # The console login form collects an email; the backend accepts username or email.
   email: String!
   password: String!
+  # When false, the session cookie is a session cookie (cleared on browser close);
+  # when true or omitted, it persists for the session TTL ("remember me").
+  remember: Boolean
 }
 
 type AuditLog {
@@ -26807,7 +26810,7 @@ func (ec *executionContext) unmarshalInputLoginInput(ctx context.Context, obj an
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"email", "password"}
+	fieldsInOrder := [...]string{"email", "password", "remember"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -26828,6 +26831,13 @@ func (ec *executionContext) unmarshalInputLoginInput(ctx context.Context, obj an
 				return it, err
 			}
 			it.Password = data
+		case "remember":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remember"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Remember = data
 		}
 	}
 	return it, nil

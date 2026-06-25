@@ -408,6 +408,7 @@ type IssuedVirtualKey struct {
 type LoginInput struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+	Remember *bool  `json:"remember,omitempty"`
 }
 
 type Membership struct {

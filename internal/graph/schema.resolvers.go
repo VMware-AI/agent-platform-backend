@@ -75,6 +75,14 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 		return nil, err
 	}
 	if w := httpx.Writer(ctx); w != nil {
+		// "Remember me": persistent cookie (MaxAge=TTL) by default / when true; a
+		// session cookie (MaxAge=0 ⇒ no Max-Age attribute, cleared on browser
+		// close) when the caller explicitly opts out. The server-side session
+		// still expires at SessionTTL either way.
+		maxAge := int(r.SessionTTL.Seconds())
+		if input.Remember != nil && !*input.Remember {
+			maxAge = 0
+		}
 		http.SetCookie(w, &http.Cookie{
 			Name:     auth.SessionCookie,
 			Value:    sid,
@@ -82,7 +90,7 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 			HttpOnly: true,
 			Secure:   r.SecureCookies,
 			SameSite: http.SameSiteLaxMode,
-			MaxAge:   int(r.SessionTTL.Seconds()),
+			MaxAge:   maxAge,
 		})
 	}
 	if _, err := r.Ent.User.UpdateOne(u).SetLastLoginAt(time.Now()).Save(ctx); err != nil {
