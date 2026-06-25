@@ -44,6 +44,18 @@ type VMTemplate {
   uuid: String!
 }
 
+# A vCenter resource pool offered as a placement target for the cloned VM. A true
+# OVA template has NO source resource pool, so a real deploy must pick one of
+# these (its `path`) for DeployAgentInput.targetResourcePool.
+type VsphereResourcePool {
+  # Human label — the pool's base name (e.g. "Resources").
+  name: String!
+  # Inventory path that vCenter's CloneFromTemplate resolves to place the clone
+  # (e.g. "/DC0/host/DC0_C0/Resources"). Full path so it stays unambiguous across
+  # multiple datacenters. This is the value to send as targetResourcePool.
+  path: String!
+}
+
 input RecycleAgentInput {
   agentId: ID!
   # Destructive op double-confirm — must be true.
@@ -75,6 +87,12 @@ input RevertAgentSnapshotInput {
 extend type Query {
   # List OVA templates in a resource pool's vCenter (powers the deploy form).
   vmTemplates(resourcePoolId: ID!): [VMTemplate!]!
+  # List the placement resource pools in a platform resource pool's vCenter
+  # (powers the deploy form's placement picker). A real OVA template has no source
+  # pool, so the deploy must pick one of these for targetResourcePool. Admin-only:
+  # it dials the pool's vCenter with privileged credentials, like vmTemplates.
+  vsphereResourcePools(resourcePoolId: ID!): [VsphereResourcePool!]!
+    @hasRole(any: [admin])
   # List the agent VM's snapshots. Owner/admin (checked in resolver).
   agentSnapshots(agentId: ID!): [AgentSnapshot!]!
 }

@@ -572,6 +572,7 @@ type ComplexityRoot struct {
 		Users                   func(childComplexity int, filter *model.UserFilter, pagination *model.Pagination, sort *model.UserSort) int
 		VMTemplates             func(childComplexity int, resourcePoolID string) int
 		VirtualKeys             func(childComplexity int, userID *string) int
+		VsphereResourcePools    func(childComplexity int, resourcePoolID string) int
 	}
 
 	RateLimitPolicy struct {
@@ -735,6 +736,11 @@ type ComplexityRoot struct {
 		TeamID            func(childComplexity int) int
 		UserID            func(childComplexity int) int
 	}
+
+	VsphereResourcePool struct {
+		Name func(childComplexity int) int
+		Path func(childComplexity int) int
+	}
 }
 
 // endregion ***************************** api!.gotpl *****************************
@@ -850,6 +856,7 @@ type QueryResolver interface {
 	Departments(ctx context.Context) ([]model.Department, error)
 	DepartmentMembers(ctx context.Context, departmentID string) ([]model.Membership, error)
 	VMTemplates(ctx context.Context, resourcePoolID string) ([]model.VMTemplate, error)
+	VsphereResourcePools(ctx context.Context, resourcePoolID string) ([]model.VsphereResourcePool, error)
 	AgentSnapshots(ctx context.Context, agentID string) ([]model.AgentSnapshot, error)
 	GatewayConnections(ctx context.Context) ([]model.GatewayConnection, error)
 	Upstreams(ctx context.Context) ([]model.Upstream, error)
@@ -3620,6 +3627,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.VirtualKeys(childComplexity, args["userId"].(*string)), true
+	case "Query.vsphereResourcePools":
+		if e.ComplexityRoot.Query.VsphereResourcePools == nil {
+			break
+		}
+
+		args, err := ec.field_Query_vsphereResourcePools_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.VsphereResourcePools(childComplexity, args["resourcePoolId"].(string)), true
 
 	case "RateLimitPolicy.createdAt":
 		if e.ComplexityRoot.RateLimitPolicy.CreatedAt == nil {
@@ -4252,6 +4270,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.VirtualKey.UserID(childComplexity), true
+
+	case "VsphereResourcePool.name":
+		if e.ComplexityRoot.VsphereResourcePool.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VsphereResourcePool.Name(childComplexity), true
+	case "VsphereResourcePool.path":
+		if e.ComplexityRoot.VsphereResourcePool.Path == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VsphereResourcePool.Path(childComplexity), true
 
 	}
 	return 0, false
@@ -4967,6 +4998,18 @@ type VMTemplate {
   uuid: String!
 }
 
+# A vCenter resource pool offered as a placement target for the cloned VM. A true
+# OVA template has NO source resource pool, so a real deploy must pick one of
+# these (its ` + "`" + `path` + "`" + `) for DeployAgentInput.targetResourcePool.
+type VsphereResourcePool {
+  # Human label — the pool's base name (e.g. "Resources").
+  name: String!
+  # Inventory path that vCenter's CloneFromTemplate resolves to place the clone
+  # (e.g. "/DC0/host/DC0_C0/Resources"). Full path so it stays unambiguous across
+  # multiple datacenters. This is the value to send as targetResourcePool.
+  path: String!
+}
+
 input RecycleAgentInput {
   agentId: ID!
   # Destructive op double-confirm — must be true.
@@ -4998,6 +5041,12 @@ input RevertAgentSnapshotInput {
 extend type Query {
   # List OVA templates in a resource pool's vCenter (powers the deploy form).
   vmTemplates(resourcePoolId: ID!): [VMTemplate!]!
+  # List the placement resource pools in a platform resource pool's vCenter
+  # (powers the deploy form's placement picker). A real OVA template has no source
+  # pool, so the deploy must pick one of these for targetResourcePool. Admin-only:
+  # it dials the pool's vCenter with privileged credentials, like vmTemplates.
+  vsphereResourcePools(resourcePoolId: ID!): [VsphereResourcePool!]!
+    @hasRole(any: [admin])
   # List the agent VM's snapshots. Owner/admin (checked in resolver).
   agentSnapshots(agentId: ID!): [AgentSnapshot!]!
 }
@@ -7128,6 +7177,16 @@ func (ec *executionContext) childFields_VirtualKey(ctx context.Context, field gr
 	return nil, fmt.Errorf("no field named %q was found under type VirtualKey", field.Name)
 }
 
+func (ec *executionContext) childFields_VsphereResourcePool(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "name":
+		return ec.fieldContext_VsphereResourcePool_name(ctx, field)
+	case "path":
+		return ec.fieldContext_VsphereResourcePool_path(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type VsphereResourcePool", field.Name)
+}
+
 func (ec *executionContext) childFields___Directive(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "name":
@@ -8871,6 +8930,20 @@ func (ec *executionContext) field_Query_virtualKeys_args(ctx context.Context, ra
 }
 
 func (ec *executionContext) field_Query_vmTemplates_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "resourcePoolId",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["resourcePoolId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_vsphereResourcePools_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "resourcePoolId",
@@ -20179,6 +20252,68 @@ func (ec *executionContext) fieldContext_Query_vmTemplates(ctx context.Context, 
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_vsphereResourcePools(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_vsphereResourcePools(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().VsphereResourcePools(ctx, fc.Args["resourcePoolId"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal []model.VsphereResourcePool
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal []model.VsphereResourcePool
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v []model.VsphereResourcePool) graphql.Marshaler {
+			return ec.marshalNVsphereResourcePool2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVsphereResourcePoolᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_vsphereResourcePools(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_VsphereResourcePool(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_vsphereResourcePools_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_agentSnapshots(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -23824,6 +23959,52 @@ func (ec *executionContext) _VirtualKey_createdAt(ctx context.Context, field gra
 }
 func (ec *executionContext) fieldContext_VirtualKey_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _VsphereResourcePool_name(ctx context.Context, field graphql.CollectedField, obj *model.VsphereResourcePool) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VsphereResourcePool_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_VsphereResourcePool_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VsphereResourcePool", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _VsphereResourcePool_path(ctx context.Context, field graphql.CollectedField, obj *model.VsphereResourcePool) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VsphereResourcePool_path(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Path, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_VsphereResourcePool_path(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VsphereResourcePool", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -31680,6 +31861,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "vsphereResourcePools":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_vsphereResourcePools(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "agentSnapshots":
 			field := field
 
@@ -33352,6 +33555,50 @@ func (ec *executionContext) _VirtualKey(ctx context.Context, sel ast.SelectionSe
 			}
 		case "createdAt":
 			out.Values[i] = ec._VirtualKey_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var vsphereResourcePoolImplementors = []string{"VsphereResourcePool"}
+
+func (ec *executionContext) _VsphereResourcePool(ctx context.Context, sel ast.SelectionSet, obj *model.VsphereResourcePool) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, vsphereResourcePoolImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("VsphereResourcePool")
+		case "name":
+			out.Values[i] = ec._VsphereResourcePool_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "path":
+			out.Values[i] = ec._VsphereResourcePool_path(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -35851,6 +36098,26 @@ func (ec *executionContext) unmarshalNVirtualKeyStatus2githubᚗcomᚋVMwareᚑA
 
 func (ec *executionContext) marshalNVirtualKeyStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKeyStatus(ctx context.Context, sel ast.SelectionSet, v model.VirtualKeyStatus) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) marshalNVsphereResourcePool2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVsphereResourcePool(ctx context.Context, sel ast.SelectionSet, v model.VsphereResourcePool) graphql.Marshaler {
+	return ec._VsphereResourcePool(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNVsphereResourcePool2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVsphereResourcePoolᚄ(ctx context.Context, sel ast.SelectionSet, v []model.VsphereResourcePool) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNVsphereResourcePool2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVsphereResourcePool(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {
