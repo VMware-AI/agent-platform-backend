@@ -1,20 +1,85 @@
-# Local dev stack: postgres + redis. The backend itself runs via `make run`.
+# Local LiteLLM gateway (data plane) for end-to-end testing with the Go control
+# plane. The backend pushes the model list via /model/new and mints virtual keys
+# via /key/generate — so this config stays minimal (master key + DB) and the real
+# gateway-integration code is what gets exercised.
+#
+# Ports are chosen to NOT clash with a native homebrew postgres (5432) or the dev
+# stack's redis (6379): litellm=4000, its own postgres=5433.
+#
+# Usage:
+#   cd deploy/litellm
+#   cp .env.example .env        # then fill MINIMAX_API_KEY + a master key
+#   docker compose up -d
+#   # backend: LITELLM_BASE_URL=http://localhost:4000 LITELLM_MASTER_KEY=<same> make run
 services:
-  postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_USER: agentplatform
-      POSTGRES_PASSWORD: devpassword
-      POSTGRES_DB: agentplatform
+  litellm:
+    # Mirrored from litellm/litellm:v1.89.4 to quay.io/vmware-ai/litellm:v1.89.4
+    # (avoids the poisoned 1.82.7/1.82.8 releases; pin to this digest in prod).
+    image: quay.io/vmware-ai/litellm:v1.89.4
+    container_name: litellm
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
-      - "5432:5432"
+      - "4000:4000"
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      LITELLM_SALT_KEY: ${LITELLM_SALT_KEY}
+      DATABASE_URL: postgresql://agentplatform_user:agentplatform_passwd@postgres:5432/litellm_db
+      LITELLM_LOG: "INFO"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./config.yaml:/app/config.yaml:ro
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    restart: always
+
+  postgres:
+    image: quay.io/vmware-ai/postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_DB: agentplatform  # litellm's db name is litellm_db
+      POSTGRES_USER: agentplatform_user
+      POSTGRES_PASSWORD: agentplatform_passwd
+    ports:
+      - "127.0.0.1:5433:5432" # 5433 host → avoid clashing with native/homebrew pg on 5432
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentplatform_user"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: always
 
   redis:
-    image: redis:7
+    image: quay.io/vmware-ai/redis:7
+    container_name: redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: always
+
+  litellm-prometheus:
+    image: quay.io/vmware-ai/prometheus:v3.5.4
+    container_name: litellm-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - litellm_prom_data:/prometheus
+    restart: always
+    depends_on:
+      - litellm   
 
 volumes:
-  pgdata:
+  pg_data:
+  redis_data:
+  litellm_prom_data:

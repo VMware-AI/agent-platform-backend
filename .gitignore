@@ -18,4 +18,4 @@ vendor/
 .DS_Store
 
 # local litellm secrets
-deploy/litellm/.env
+deploy/.env
