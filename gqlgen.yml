@@ -27,3 +27,13 @@ models:
   Time:
     model:
       - github.com/99designs/gqlgen/graphql.Time
+  # Carry the agent's FK columns on the resolved model so the lazily-resolved
+  # apiKey/owner/credentials fields never re-fetch the agent row (N+1 kill).
+  # These are non-schema Go-only fields (no JSON tag → never serialized), so the
+  # external GraphQL contract is unchanged. Populated by toModelAgent.
+  Agent:
+    extraFields:
+      OwnerUserID:
+        type: github.com/google/uuid.UUID
+      VirtualKeyID:
+        type: "*github.com/google/uuid.UUID"

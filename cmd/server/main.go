@@ -164,6 +164,10 @@ func main() {
 	srv.AddTransport(transport.Options{})
 	srv.AddTransport(transport.GET{})
 	srv.AddTransport(transport.POST{})
+	// Per-response batch loaders (dataloader pattern): coalesce the Agent
+	// owner/apiKey/credentials field lookups into one IN(...) query each,
+	// eliminating the agents-list N+1.
+	resolver.InstallLoaders(srv)
 	srv.Use(extension.Introspection{})
 	srv.Use(extension.FixedComplexityLimit(200)) // guard against deep/expensive queries
 	// LLD-01 §6: block all mutations except changePassword/logout while the

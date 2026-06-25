@@ -8,6 +8,8 @@ import (
 	"io"
 	"strconv"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type AccountRoleRef struct {
@@ -54,6 +56,8 @@ type Agent struct {
 	Credentials       *AgentCredentials `json:"credentials,omitempty"`
 	CreatedAt         time.Time         `json:"createdAt"`
 	UpdatedAt         time.Time         `json:"updatedAt"`
+	OwnerUserID       uuid.UUID         `json:"-"`
+	VirtualKeyID      *uuid.UUID        `json:"-"`
 }
 
 type AgentAPIKey struct {

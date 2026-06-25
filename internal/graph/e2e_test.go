@@ -44,6 +44,7 @@ func setupE2E(t *testing.T) *e2eEnv {
 	})
 	srv := handler.New(es)
 	srv.AddTransport(transport.POST{})
+	r.InstallLoaders(srv) // batch Agent owner/apiKey lookups (matches prod wiring)
 	h := auth.SessionMiddleware(sess)(srv)
 	return &e2eEnv{gql: client.New(h), ent: c, sess: sess, cleanup: func() { _ = c.Close() }}
 }
