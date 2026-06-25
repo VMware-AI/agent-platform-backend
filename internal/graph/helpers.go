@@ -315,14 +315,14 @@ func toModelResourcePool(p *ent.ResourcePool) *model.ResourcePool {
 		Endpoint:           p.Endpoint,
 		ContentLibraryName: p.ContentLibraryName,
 		ConnectionStatus:   poolConnStatus(p.Status),
-		DatacenterCount:  p.DatacenterCount,
-		ClusterCount:     p.ClusterCount,
-		EsxiHostCount:    p.HostCount,
-		VMInstanceCount:  p.VMCount,
-		SyncStatus:       poolSyncState(p),
-		LastSyncedAt:     p.LastSyncedAt,
-		CreatedAt:        p.CreatedAt,
-		UpdatedAt:        p.UpdatedAt,
+		DatacenterCount:    p.DatacenterCount,
+		ClusterCount:       p.ClusterCount,
+		EsxiHostCount:      p.HostCount,
+		VMInstanceCount:    p.VMCount,
+		SyncStatus:         poolSyncState(p),
+		LastSyncedAt:       p.LastSyncedAt,
+		CreatedAt:          p.CreatedAt,
+		UpdatedAt:          p.UpdatedAt,
 	}
 }
 
