@@ -43,12 +43,29 @@ if (existsSync(OUT)) {
   for (const f of readdirSync(OUT).filter((f) => f.endsWith('.graphql'))) rmSync(`${OUT}/${f}`)
 }
 
+// Operations the console ships but the backend hasn't implemented yet. Add an
+// entry here only as a temporary measure; remove it the moment its backend op
+// lands so drift is caught again.
+//
+// Block 6 (agent marketplace) is now fully implemented + contract-tested:
+//   - Block 6a (OVA-template catalog) landed earlier.
+//   - Block 6b (DeployAgent) is implemented as create-from-OVA; the marketplace's
+//     separate VirtualKey concept (AvailableVirtualKeys / CreateVirtualKey) was
+//     eliminated — deploy issues the key itself and returns its secret once. Those
+//     two ops no longer exist in the console, so this set is empty.
+const DEFERRED = new Set([])
+
 let count = 0
+let skipped = 0
 for (const m of text.matchAll(/gql`([\s\S]*?)`/g)) {
   const body = inline(m[1]).trim()
   const op = body.match(/\b(query|mutation)\s+(\w+)/)
   if (!op) continue // fragment-only block
+  if (DEFERRED.has(op[2])) {
+    skipped++
+    continue
+  }
   writeFileSync(`${OUT}/${op[2]}.graphql`, body + '\n')
   count++
 }
-console.log(`wrote ${count} operation fixtures to ${OUT}`)
+console.log(`wrote ${count} operation fixtures to ${OUT}${skipped ? ` (skipped ${skipped} deferred: Block 6)` : ''}`)

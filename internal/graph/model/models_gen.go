@@ -28,17 +28,32 @@ type AccountUser struct {
 	UpdatedAt        time.Time        `json:"updatedAt"`
 }
 
+type AddOvaTemplateVersionInput struct {
+	FamilyID      string  `json:"familyId"`
+	Version       string  `json:"version"`
+	OvaIdentifier string  `json:"ovaIdentifier"`
+	Notes         *string `json:"notes,omitempty"`
+}
+
+type AddOvaTemplateVersionPayload struct {
+	Version *OvaTemplateVersion `json:"version"`
+}
+
 type Agent struct {
-	ID        string       `json:"id"`
-	Name      string       `json:"name"`
-	Type      string       `json:"type"`
-	TypeLabel string       `json:"typeLabel"`
-	Status    AgentStatus  `json:"status"`
-	APIKey    *AgentAPIKey `json:"apiKey,omitempty"`
-	Owner     *User        `json:"owner,omitempty"`
-	Endpoint  *string      `json:"endpoint,omitempty"`
-	CreatedAt time.Time    `json:"createdAt"`
-	UpdatedAt time.Time    `json:"updatedAt"`
+	ID                string            `json:"id"`
+	Name              string            `json:"name"`
+	Type              string            `json:"type"`
+	TypeLabel         string            `json:"typeLabel"`
+	Status            AgentStatus       `json:"status"`
+	APIKey            *AgentAPIKey      `json:"apiKey,omitempty"`
+	Owner             *User             `json:"owner,omitempty"`
+	Endpoint          *string           `json:"endpoint,omitempty"`
+	TemplateFamilyID  *string           `json:"templateFamilyId,omitempty"`
+	TemplateVersionID *string           `json:"templateVersionId,omitempty"`
+	ResourcePoolID    *string           `json:"resourcePoolId,omitempty"`
+	Credentials       *AgentCredentials `json:"credentials,omitempty"`
+	CreatedAt         time.Time         `json:"createdAt"`
+	UpdatedAt         time.Time         `json:"updatedAt"`
 }
 
 type AgentAPIKey struct {
@@ -60,6 +75,10 @@ type AgentConnection struct {
 	Nodes      []Agent   `json:"nodes"`
 	TotalCount int       `json:"totalCount"`
 	PageInfo   *PageInfo `json:"pageInfo"`
+}
+
+type AgentCredentials struct {
+	Username string `json:"username"`
 }
 
 type AgentFilter struct {
@@ -100,6 +119,16 @@ type AgentUsage struct {
 	AgentID      string  `json:"agentId"`
 	InputTokens  int     `json:"inputTokens"`
 	OutputTokens int     `json:"outputTokens"`
+	Cost         float64 `json:"cost"`
+}
+
+type AgentUsageRow struct {
+	AgentID      string  `json:"agentId"`
+	AgentName    string  `json:"agentName"`
+	InputTokens  int     `json:"inputTokens"`
+	OutputTokens int     `json:"outputTokens"`
+	TotalTokens  int     `json:"totalTokens"`
+	Requests     int     `json:"requests"`
 	Cost         float64 `json:"cost"`
 }
 
@@ -178,14 +207,46 @@ type CreateDepartmentInput struct {
 	MaxBudget *float64 `json:"maxBudget,omitempty"`
 }
 
+type CreateModelRouteInput struct {
+	Name             string              `json:"name"`
+	BackendGatewayID *string             `json:"backendGatewayId,omitempty"`
+	GatewayName      *string             `json:"gatewayName,omitempty"`
+	SupportedModels  []string            `json:"supportedModels,omitempty"`
+	UIStrategy       *ModelRouteStrategy `json:"uiStrategy,omitempty"`
+	Enabled          *bool               `json:"enabled,omitempty"`
+}
+
+type CreateOvaTemplateFamilyInput struct {
+	Name           string                         `json:"name"`
+	Type           string                         `json:"type"`
+	Description    string                         `json:"description"`
+	Tools          []string                       `json:"tools"`
+	Scenarios      []string                       `json:"scenarios"`
+	Skills         []string                       `json:"skills"`
+	IconShape      string                         `json:"iconShape"`
+	IconColor      OvaTemplateColor               `json:"iconColor"`
+	InitialVersion *CreateOvaTemplateVersionInput `json:"initialVersion"`
+}
+
+type CreateOvaTemplateFamilyPayload struct {
+	Family *OvaTemplateFamily `json:"family"`
+}
+
+type CreateOvaTemplateVersionInput struct {
+	Version       string  `json:"version"`
+	OvaIdentifier string  `json:"ovaIdentifier"`
+	Notes         *string `json:"notes,omitempty"`
+}
+
 type CreateResourcePoolInput struct {
-	Name            string  `json:"name"`
-	Endpoint        string  `json:"endpoint"`
-	DatacenterCount *int    `json:"datacenterCount,omitempty"`
-	ClusterCount    *int    `json:"clusterCount,omitempty"`
-	Username        *string `json:"username,omitempty"`
-	Password        *string `json:"password,omitempty"`
-	SecretRef       *string `json:"secretRef,omitempty"`
+	Name               string  `json:"name"`
+	Endpoint           string  `json:"endpoint"`
+	ContentLibraryName *string `json:"contentLibraryName,omitempty"`
+	DatacenterCount    *int    `json:"datacenterCount,omitempty"`
+	ClusterCount       *int    `json:"clusterCount,omitempty"`
+	Username           *string `json:"username,omitempty"`
+	Password           *string `json:"password,omitempty"`
+	SecretRef          *string `json:"secretRef,omitempty"`
 }
 
 type CreateResourcePoolPayload struct {
@@ -213,6 +274,50 @@ type CustomRole struct {
 	IsSystem    bool      `json:"isSystem"`
 	Permissions []string  `json:"permissions"`
 	CreatedAt   time.Time `json:"createdAt"`
+}
+
+type DailyUsageRow struct {
+	Date         string  `json:"date"`
+	InputTokens  int     `json:"inputTokens"`
+	OutputTokens int     `json:"outputTokens"`
+	TotalTokens  int     `json:"totalTokens"`
+	Requests     int     `json:"requests"`
+	Cost         float64 `json:"cost"`
+}
+
+type DashboardNotice struct {
+	ID         string                `json:"id"`
+	Text       string                `json:"text"`
+	Status     DashboardNoticeStatus `json:"status"`
+	OccurredAt time.Time             `json:"occurredAt"`
+}
+
+type DashboardOverview struct {
+	Stats        *DashboardStats        `json:"stats"`
+	RecentAgents []DashboardRecentAgent `json:"recentAgents"`
+	Notices      []DashboardNotice      `json:"notices"`
+}
+
+type DashboardRecentAgent struct {
+	ID        string               `json:"id"`
+	Name      string               `json:"name"`
+	AgentName string               `json:"agentName"`
+	Status    DashboardAgentStatus `json:"status"`
+	CreatedAt time.Time            `json:"createdAt"`
+}
+
+type DashboardStats struct {
+	TotalAgents        int     `json:"totalAgents"`
+	RunningAgents      int     `json:"runningAgents"`
+	StoppedAgents      int     `json:"stoppedAgents"`
+	ExceptionAgents    int     `json:"exceptionAgents"`
+	TotalVirtualKeys   int     `json:"totalVirtualKeys"`
+	TotalGateways      int     `json:"totalGateways"`
+	TotalResourcePools int     `json:"totalResourcePools"`
+	TotalUsers         int     `json:"totalUsers"`
+	MonthlyCalls       int     `json:"monthlyCalls"`
+	MonthlyTokens      int     `json:"monthlyTokens"`
+	MonthlyCost        float64 `json:"monthlyCost"`
 }
 
 type DateUsage struct {
@@ -244,9 +349,9 @@ type Department struct {
 }
 
 type DeployAgentInput struct {
-	AgentID            string   `json:"agentId"`
-	Template           string   `json:"template"`
-	VMName             string   `json:"vmName"`
+	Name               string   `json:"name"`
+	TemplateFamilyID   string   `json:"templateFamilyId"`
+	TemplateVersionID  string   `json:"templateVersionId"`
 	ResourcePoolID     string   `json:"resourcePoolId"`
 	TargetResourcePool *string  `json:"targetResourcePool,omitempty"`
 	Hostname           *string  `json:"hostname,omitempty"`
@@ -254,8 +359,10 @@ type DeployAgentInput struct {
 }
 
 type DeployedAgent struct {
-	Agent            *Agent `json:"agent"`
-	VirtualKeySecret string `json:"virtualKeySecret"`
+	Agent            *Agent              `json:"agent"`
+	VirtualKeySecret string              `json:"virtualKeySecret"`
+	TemplateVersion  *OvaTemplateVersion `json:"templateVersion"`
+	ResourcePool     *ResourcePool       `json:"resourcePool"`
 }
 
 type GatewayConnection struct {
@@ -277,15 +384,16 @@ type Image struct {
 }
 
 type IssueVirtualKeyInput struct {
-	UserID            string   `json:"userId"`
-	AgentID           *string  `json:"agentId,omitempty"`
-	RateLimitPolicyID *string  `json:"rateLimitPolicyId,omitempty"`
-	TeamID            *string  `json:"teamId,omitempty"`
-	Models            []string `json:"models,omitempty"`
-	MaxBudget         *float64 `json:"maxBudget,omitempty"`
-	RpmLimit          *int     `json:"rpmLimit,omitempty"`
-	TpmLimit          *int     `json:"tpmLimit,omitempty"`
-	Alias             *string  `json:"alias,omitempty"`
+	UserID            string     `json:"userId"`
+	AgentID           *string    `json:"agentId,omitempty"`
+	RateLimitPolicyID *string    `json:"rateLimitPolicyId,omitempty"`
+	TeamID            *string    `json:"teamId,omitempty"`
+	Models            []string   `json:"models,omitempty"`
+	MaxBudget         *float64   `json:"maxBudget,omitempty"`
+	RpmLimit          *int       `json:"rpmLimit,omitempty"`
+	TpmLimit          *int       `json:"tpmLimit,omitempty"`
+	Alias             *string    `json:"alias,omitempty"`
+	ExpiresAt         *time.Time `json:"expiresAt,omitempty"`
 }
 
 type IssuedVirtualKey struct {
@@ -303,6 +411,23 @@ type Membership struct {
 	UserID       string         `json:"userId"`
 	DepartmentID string         `json:"departmentId"`
 	Role         MembershipRole `json:"role"`
+}
+
+type MeteringCostSummary struct {
+	TotalCost   float64 `json:"totalCost"`
+	MonthlyCost float64 `json:"monthlyCost"`
+}
+
+type MeteringOverview struct {
+	Range             MeteringTimeRange    `json:"range"`
+	TotalInputTokens  int                  `json:"totalInputTokens"`
+	TotalOutputTokens int                  `json:"totalOutputTokens"`
+	TotalTokens       int                  `json:"totalTokens"`
+	TotalRequests     int                  `json:"totalRequests"`
+	ByAgent           []AgentUsageRow      `json:"byAgent"`
+	ByModel           []ModelUsageRow      `json:"byModel"`
+	ByDay             []DailyUsageRow      `json:"byDay"`
+	Cost              *MeteringCostSummary `json:"cost"`
 }
 
 type MeteringSummary struct {
@@ -377,10 +502,14 @@ type ModelRoute struct {
 	Name             string              `json:"name"`
 	ModelAlias       string              `json:"modelAlias"`
 	BackendGatewayID *string             `json:"backendGatewayId,omitempty"`
+	GatewayName      string              `json:"gatewayName"`
 	Upstreams        []string            `json:"upstreams"`
+	SupportedModels  []string            `json:"supportedModels"`
 	Strategy         LoadBalanceStrategy `json:"strategy"`
+	UIStrategy       ModelRouteStrategy  `json:"uiStrategy"`
 	Enabled          bool                `json:"enabled"`
 	CreatedAt        time.Time           `json:"createdAt"`
+	UpdatedAt        time.Time           `json:"updatedAt"`
 }
 
 type ModelUsage struct {
@@ -390,7 +519,63 @@ type ModelUsage struct {
 	Cost         float64 `json:"cost"`
 }
 
+type ModelUsageRow struct {
+	Model        string  `json:"model"`
+	InputTokens  int     `json:"inputTokens"`
+	OutputTokens int     `json:"outputTokens"`
+	TotalTokens  int     `json:"totalTokens"`
+	Requests     int     `json:"requests"`
+	Cost         float64 `json:"cost"`
+}
+
 type Mutation struct {
+}
+
+type OvaTemplateFamily struct {
+	ID            string               `json:"id"`
+	Name          string               `json:"name"`
+	Type          string               `json:"type"`
+	Description   string               `json:"description"`
+	Tools         []string             `json:"tools"`
+	Skills        []string             `json:"skills"`
+	Scenarios     []string             `json:"scenarios"`
+	IconShape     string               `json:"iconShape"`
+	IconColor     OvaTemplateColor     `json:"iconColor"`
+	LatestVersion *string              `json:"latestVersion,omitempty"`
+	CreatedAt     time.Time            `json:"createdAt"`
+	UpdatedAt     time.Time            `json:"updatedAt"`
+	Versions      []OvaTemplateVersion `json:"versions"`
+}
+
+type OvaTemplateFamilyConnection struct {
+	Nodes      []OvaTemplateFamily `json:"nodes"`
+	TotalCount int                 `json:"totalCount"`
+	PageInfo   *PageInfo           `json:"pageInfo"`
+}
+
+type OvaTemplateFamilyFilter struct {
+	NameKeyword *string `json:"nameKeyword,omitempty"`
+	Type        *string `json:"type,omitempty"`
+}
+
+type OvaTemplateFamilySort struct {
+	Field     OvaTemplateFamilySortField `json:"field"`
+	Direction SortDirection              `json:"direction"`
+}
+
+type OvaTemplateVersion struct {
+	ID            string    `json:"id"`
+	FamilyID      string    `json:"familyId"`
+	Version       string    `json:"version"`
+	OvaIdentifier string    `json:"ovaIdentifier"`
+	Notes         *string   `json:"notes,omitempty"`
+	CreatedAt     time.Time `json:"createdAt"`
+}
+
+type OvaTemplateVersionConnection struct {
+	Nodes      []OvaTemplateVersion `json:"nodes"`
+	TotalCount int                  `json:"totalCount"`
+	PageInfo   *PageInfo            `json:"pageInfo"`
 }
 
 type PageInfo struct {
@@ -488,24 +673,36 @@ type ResetPasswordPayload struct {
 }
 
 type ResourcePool struct {
-	ID               string                `json:"id"`
-	Name             string                `json:"name"`
-	Endpoint         string                `json:"endpoint"`
-	ConnectionStatus PoolConnectionStatus  `json:"connectionStatus"`
-	DatacenterCount  int                   `json:"datacenterCount"`
-	ClusterCount     int                   `json:"clusterCount"`
-	EsxiHostCount    int                   `json:"esxiHostCount"`
-	VMInstanceCount  int                   `json:"vmInstanceCount"`
-	SyncStatus       ResourcePoolSyncState `json:"syncStatus"`
-	LastSyncedAt     *time.Time            `json:"lastSyncedAt,omitempty"`
-	CreatedAt        time.Time             `json:"createdAt"`
-	UpdatedAt        time.Time             `json:"updatedAt"`
+	ID                 string                `json:"id"`
+	Name               string                `json:"name"`
+	Endpoint           string                `json:"endpoint"`
+	ContentLibraryName string                `json:"contentLibraryName"`
+	ConnectionStatus   PoolConnectionStatus  `json:"connectionStatus"`
+	DatacenterCount    int                   `json:"datacenterCount"`
+	ClusterCount       int                   `json:"clusterCount"`
+	EsxiHostCount      int                   `json:"esxiHostCount"`
+	VMInstanceCount    int                   `json:"vmInstanceCount"`
+	SyncStatus         ResourcePoolSyncState `json:"syncStatus"`
+	LastSyncedAt       *time.Time            `json:"lastSyncedAt,omitempty"`
+	CreatedAt          time.Time             `json:"createdAt"`
+	UpdatedAt          time.Time             `json:"updatedAt"`
 }
 
 type ResourcePoolConnection struct {
 	Nodes      []ResourcePool `json:"nodes"`
 	TotalCount int            `json:"totalCount"`
 	PageInfo   *PageInfo      `json:"pageInfo"`
+}
+
+type ResourcePoolConnectionDetail struct {
+	VSphereVersion string `json:"vSphereVersion"`
+	ItemCount      int    `json:"itemCount"`
+}
+
+type ResourcePoolConnectionTest struct {
+	Ok      bool                          `json:"ok"`
+	Message string                        `json:"message"`
+	Detail  *ResourcePoolConnectionDetail `json:"detail,omitempty"`
 }
 
 type ResourcePoolFilter struct {
@@ -565,6 +762,12 @@ type SyncResourcePoolPayload struct {
 	SyncedAt time.Time     `json:"syncedAt"`
 }
 
+type TestResourcePoolConnectionInput struct {
+	Name               string `json:"name"`
+	Endpoint           string `json:"endpoint"`
+	ContentLibraryName string `json:"contentLibraryName"`
+}
+
 type ToggleUserEnabledPayload struct {
 	User *AccountUser `json:"user"`
 }
@@ -585,14 +788,24 @@ type UpdateAgentConfigInput struct {
 	ArtifactID *string `json:"artifactId,omitempty"`
 }
 
+type UpdateModelRouteInput struct {
+	Name             *string             `json:"name,omitempty"`
+	BackendGatewayID *string             `json:"backendGatewayId,omitempty"`
+	GatewayName      *string             `json:"gatewayName,omitempty"`
+	SupportedModels  []string            `json:"supportedModels,omitempty"`
+	UIStrategy       *ModelRouteStrategy `json:"uiStrategy,omitempty"`
+	Enabled          *bool               `json:"enabled,omitempty"`
+}
+
 type UpdateResourcePoolInput struct {
-	Name            *string `json:"name,omitempty"`
-	Endpoint        *string `json:"endpoint,omitempty"`
-	DatacenterCount *int    `json:"datacenterCount,omitempty"`
-	ClusterCount    *int    `json:"clusterCount,omitempty"`
-	Username        *string `json:"username,omitempty"`
-	Password        *string `json:"password,omitempty"`
-	SecretRef       *string `json:"secretRef,omitempty"`
+	Name               *string `json:"name,omitempty"`
+	Endpoint           *string `json:"endpoint,omitempty"`
+	ContentLibraryName *string `json:"contentLibraryName,omitempty"`
+	DatacenterCount    *int    `json:"datacenterCount,omitempty"`
+	ClusterCount       *int    `json:"clusterCount,omitempty"`
+	Username           *string `json:"username,omitempty"`
+	Password           *string `json:"password,omitempty"`
+	SecretRef          *string `json:"secretRef,omitempty"`
 }
 
 type UpdateResourcePoolPayload struct {
@@ -1022,6 +1235,120 @@ func (e ConnectionStatus) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type DashboardAgentStatus string
+
+const (
+	DashboardAgentStatusRunning   DashboardAgentStatus = "running"
+	DashboardAgentStatusStopped   DashboardAgentStatus = "stopped"
+	DashboardAgentStatusException DashboardAgentStatus = "exception"
+)
+
+var AllDashboardAgentStatus = []DashboardAgentStatus{
+	DashboardAgentStatusRunning,
+	DashboardAgentStatusStopped,
+	DashboardAgentStatusException,
+}
+
+func (e DashboardAgentStatus) IsValid() bool {
+	switch e {
+	case DashboardAgentStatusRunning, DashboardAgentStatusStopped, DashboardAgentStatusException:
+		return true
+	}
+	return false
+}
+
+func (e DashboardAgentStatus) String() string {
+	return string(e)
+}
+
+func (e *DashboardAgentStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = DashboardAgentStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid DashboardAgentStatus", str)
+	}
+	return nil
+}
+
+func (e DashboardAgentStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *DashboardAgentStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e DashboardAgentStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type DashboardNoticeStatus string
+
+const (
+	DashboardNoticeStatusSuccess DashboardNoticeStatus = "success"
+	DashboardNoticeStatusWarning DashboardNoticeStatus = "warning"
+	DashboardNoticeStatusDanger  DashboardNoticeStatus = "danger"
+)
+
+var AllDashboardNoticeStatus = []DashboardNoticeStatus{
+	DashboardNoticeStatusSuccess,
+	DashboardNoticeStatusWarning,
+	DashboardNoticeStatusDanger,
+}
+
+func (e DashboardNoticeStatus) IsValid() bool {
+	switch e {
+	case DashboardNoticeStatusSuccess, DashboardNoticeStatusWarning, DashboardNoticeStatusDanger:
+		return true
+	}
+	return false
+}
+
+func (e DashboardNoticeStatus) String() string {
+	return string(e)
+}
+
+func (e *DashboardNoticeStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = DashboardNoticeStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid DashboardNoticeStatus", str)
+	}
+	return nil
+}
+
+func (e DashboardNoticeStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *DashboardNoticeStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e DashboardNoticeStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type GatewayStatus string
 
 const (
@@ -1305,6 +1632,63 @@ func (e MembershipRole) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type MeteringTimeRange string
+
+const (
+	MeteringTimeRangeLast7Days  MeteringTimeRange = "LAST_7_DAYS"
+	MeteringTimeRangeLast30Days MeteringTimeRange = "LAST_30_DAYS"
+	MeteringTimeRangeThisMonth  MeteringTimeRange = "THIS_MONTH"
+)
+
+var AllMeteringTimeRange = []MeteringTimeRange{
+	MeteringTimeRangeLast7Days,
+	MeteringTimeRangeLast30Days,
+	MeteringTimeRangeThisMonth,
+}
+
+func (e MeteringTimeRange) IsValid() bool {
+	switch e {
+	case MeteringTimeRangeLast7Days, MeteringTimeRangeLast30Days, MeteringTimeRangeThisMonth:
+		return true
+	}
+	return false
+}
+
+func (e MeteringTimeRange) String() string {
+	return string(e)
+}
+
+func (e *MeteringTimeRange) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = MeteringTimeRange(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid MeteringTimeRange", str)
+	}
+	return nil
+}
+
+func (e MeteringTimeRange) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *MeteringTimeRange) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e MeteringTimeRange) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type ModelGatewayProvider string
 
 const (
@@ -1532,6 +1916,185 @@ func (e *ModelGatewaySyncState) UnmarshalJSON(b []byte) error {
 }
 
 func (e ModelGatewaySyncState) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type ModelRouteStrategy string
+
+const (
+	ModelRouteStrategyRoundRobin         ModelRouteStrategy = "ROUND_ROBIN"
+	ModelRouteStrategyWeightedRoundRobin ModelRouteStrategy = "WEIGHTED_ROUND_ROBIN"
+	ModelRouteStrategyRandom             ModelRouteStrategy = "RANDOM"
+)
+
+var AllModelRouteStrategy = []ModelRouteStrategy{
+	ModelRouteStrategyRoundRobin,
+	ModelRouteStrategyWeightedRoundRobin,
+	ModelRouteStrategyRandom,
+}
+
+func (e ModelRouteStrategy) IsValid() bool {
+	switch e {
+	case ModelRouteStrategyRoundRobin, ModelRouteStrategyWeightedRoundRobin, ModelRouteStrategyRandom:
+		return true
+	}
+	return false
+}
+
+func (e ModelRouteStrategy) String() string {
+	return string(e)
+}
+
+func (e *ModelRouteStrategy) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ModelRouteStrategy(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ModelRouteStrategy", str)
+	}
+	return nil
+}
+
+func (e ModelRouteStrategy) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *ModelRouteStrategy) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e ModelRouteStrategy) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type OvaTemplateColor string
+
+const (
+	OvaTemplateColorBlue   OvaTemplateColor = "BLUE"
+	OvaTemplateColorPurple OvaTemplateColor = "PURPLE"
+	OvaTemplateColorOrange OvaTemplateColor = "ORANGE"
+	OvaTemplateColorGreen  OvaTemplateColor = "GREEN"
+	OvaTemplateColorRed    OvaTemplateColor = "RED"
+	OvaTemplateColorCyan   OvaTemplateColor = "CYAN"
+)
+
+var AllOvaTemplateColor = []OvaTemplateColor{
+	OvaTemplateColorBlue,
+	OvaTemplateColorPurple,
+	OvaTemplateColorOrange,
+	OvaTemplateColorGreen,
+	OvaTemplateColorRed,
+	OvaTemplateColorCyan,
+}
+
+func (e OvaTemplateColor) IsValid() bool {
+	switch e {
+	case OvaTemplateColorBlue, OvaTemplateColorPurple, OvaTemplateColorOrange, OvaTemplateColorGreen, OvaTemplateColorRed, OvaTemplateColorCyan:
+		return true
+	}
+	return false
+}
+
+func (e OvaTemplateColor) String() string {
+	return string(e)
+}
+
+func (e *OvaTemplateColor) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = OvaTemplateColor(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid OvaTemplateColor", str)
+	}
+	return nil
+}
+
+func (e OvaTemplateColor) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *OvaTemplateColor) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e OvaTemplateColor) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type OvaTemplateFamilySortField string
+
+const (
+	OvaTemplateFamilySortFieldOvaName   OvaTemplateFamilySortField = "OVA_NAME"
+	OvaTemplateFamilySortFieldType      OvaTemplateFamilySortField = "TYPE"
+	OvaTemplateFamilySortFieldCreatedAt OvaTemplateFamilySortField = "CREATED_AT"
+	OvaTemplateFamilySortFieldUpdatedAt OvaTemplateFamilySortField = "UPDATED_AT"
+)
+
+var AllOvaTemplateFamilySortField = []OvaTemplateFamilySortField{
+	OvaTemplateFamilySortFieldOvaName,
+	OvaTemplateFamilySortFieldType,
+	OvaTemplateFamilySortFieldCreatedAt,
+	OvaTemplateFamilySortFieldUpdatedAt,
+}
+
+func (e OvaTemplateFamilySortField) IsValid() bool {
+	switch e {
+	case OvaTemplateFamilySortFieldOvaName, OvaTemplateFamilySortFieldType, OvaTemplateFamilySortFieldCreatedAt, OvaTemplateFamilySortFieldUpdatedAt:
+		return true
+	}
+	return false
+}
+
+func (e OvaTemplateFamilySortField) String() string {
+	return string(e)
+}
+
+func (e *OvaTemplateFamilySortField) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = OvaTemplateFamilySortField(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid OvaTemplateFamilySortField", str)
+	}
+	return nil
+}
+
+func (e OvaTemplateFamilySortField) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *OvaTemplateFamilySortField) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e OvaTemplateFamilySortField) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

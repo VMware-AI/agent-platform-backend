@@ -8,6 +8,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/VMware-AI/agent-platform-backend/ent"
@@ -164,6 +165,134 @@ func (r *queryResolver) MeteringSummary(ctx context.Context, userID *string) (*m
 	for _, d := range byDate {
 		out.ByDate = append(out.ByDate, model.DateUsage{
 			Date: d.Day, InputTokens: d.In, OutputTokens: d.Out, Cost: d.Cost,
+		})
+	}
+	return out, nil
+}
+
+// MeteringOverview aggregates token usage for the console 计量中心 over a time range
+// (默认近7天): per-agent / per-model / per-day breakdowns (each with a request count
+// = number of usage rows), grand totals, and the cost summary cards. All slices
+// are pushed down (GROUP BY in the DB); agent names are resolved in one batched
+// query. Mirrors MeteringSummary's tenant/env scoping.
+func (r *queryResolver) MeteringOverview(ctx context.Context, rangeArg *model.MeteringTimeRange, userID *string) (*model.MeteringOverview, error) {
+	rng := model.MeteringTimeRangeLast7Days
+	if rangeArg != nil {
+		rng = *rangeArg
+	}
+	from := meteringRangeStart(rng, time.Now())
+
+	q, err := r.scopedTokenUsageQuery(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	q = q.Where(tokenusage.CreatedAtGTE(from))
+
+	// Per-model breakdown (low cardinality), pushed down with a request count.
+	var byModel []struct {
+		Model string  `json:"model"`
+		In    int     `json:"in"`
+		Out   int     `json:"out"`
+		Cost  float64 `json:"cost"`
+		Reqs  int     `json:"reqs"`
+	}
+	if err := q.Clone().GroupBy(tokenusage.FieldModel).Aggregate(
+		ent.As(ent.Sum(tokenusage.FieldInputTokens), "in"),
+		ent.As(ent.Sum(tokenusage.FieldOutputTokens), "out"),
+		ent.As(ent.Sum(tokenusage.FieldCost), "cost"),
+		ent.As(ent.Count(), "reqs"),
+	).Scan(ctx, &byModel); err != nil {
+		return nil, err
+	}
+
+	// Per-agent breakdown (only rows attributed to an agent).
+	var byAgent []struct {
+		AgentID string  `json:"agent_id"`
+		In      int     `json:"in"`
+		Out     int     `json:"out"`
+		Cost    float64 `json:"cost"`
+		Reqs    int     `json:"reqs"`
+	}
+	if err := q.Clone().Where(tokenusage.AgentIDNotNil()).GroupBy(tokenusage.FieldAgentID).Aggregate(
+		ent.As(ent.Sum(tokenusage.FieldInputTokens), "in"),
+		ent.As(ent.Sum(tokenusage.FieldOutputTokens), "out"),
+		ent.As(ent.Sum(tokenusage.FieldCost), "cost"),
+		ent.As(ent.Count(), "reqs"),
+	).Scan(ctx, &byAgent); err != nil {
+		return nil, err
+	}
+
+	// Per-day trend, bucketed via a portable date expression (sqlite + postgres),
+	// pushed down so raw rows are never materialized. Run the DB in UTC so day
+	// buckets line up with the stored UTC timestamps (see MeteringSummary).
+	var byDay []struct {
+		Day  string  `json:"day"`
+		In   int     `json:"in"`
+		Out  int     `json:"out"`
+		Cost float64 `json:"cost"`
+		Reqs int     `json:"reqs"`
+	}
+	if err := q.Clone().Modify(func(s *sql.Selector) {
+		day := fmt.Sprintf("cast(date(%s) as text)", s.C(tokenusage.FieldCreatedAt))
+		s.Select(
+			sql.As(day, "day"),
+			sql.As(sql.Sum(s.C(tokenusage.FieldInputTokens)), "in"),
+			sql.As(sql.Sum(s.C(tokenusage.FieldOutputTokens)), "out"),
+			sql.As(sql.Sum(s.C(tokenusage.FieldCost)), "cost"),
+			sql.As("count(*)", "reqs"),
+		).GroupBy(day).OrderBy(sql.Asc("day"))
+	}).Scan(ctx, &byDay); err != nil {
+		return nil, err
+	}
+
+	// Cost for the current calendar month (the "本月" card), independent of the
+	// selected range. Reuses the same scope so a tenant-admin only sees their own.
+	monthQ, err := r.scopedTokenUsageQuery(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	monthStart := startOfMonth(time.Now())
+	// monthlyUsageTotals scans into a struct slice, so an empty current month
+	// (SUM(cost) over zero rows → NULL) yields 0 instead of erroring the way a
+	// single-column .Float64() does on the NULL scan.
+	_, _, monthlyCost, err := r.monthlyUsageTotals(ctx, monthQ.Where(tokenusage.CreatedAtGTE(monthStart)))
+	if err != nil {
+		return nil, err
+	}
+
+	// Resolve agent display names in one batched query (id → name).
+	agentNames, err := r.agentNamesFor(ctx, byAgent)
+	if err != nil {
+		return nil, err
+	}
+
+	out := &model.MeteringOverview{
+		Range: rng,
+		Cost:  &model.MeteringCostSummary{},
+	}
+	for _, m := range byModel {
+		out.TotalInputTokens += m.In
+		out.TotalOutputTokens += m.Out
+		out.TotalRequests += m.Reqs
+		out.Cost.TotalCost += m.Cost
+		out.ByModel = append(out.ByModel, model.ModelUsageRow{
+			Model: m.Model, InputTokens: m.In, OutputTokens: m.Out,
+			TotalTokens: m.In + m.Out, Requests: m.Reqs, Cost: m.Cost,
+		})
+	}
+	out.TotalTokens = out.TotalInputTokens + out.TotalOutputTokens
+	out.Cost.MonthlyCost = monthlyCost
+	for _, a := range byAgent {
+		out.ByAgent = append(out.ByAgent, model.AgentUsageRow{
+			AgentID: a.AgentID, AgentName: agentNames[a.AgentID],
+			InputTokens: a.In, OutputTokens: a.Out, TotalTokens: a.In + a.Out,
+			Requests: a.Reqs, Cost: a.Cost,
+		})
+	}
+	for _, d := range byDay {
+		out.ByDay = append(out.ByDay, model.DailyUsageRow{
+			Date: d.Day, InputTokens: d.In, OutputTokens: d.Out,
+			TotalTokens: d.In + d.Out, Requests: d.Reqs, Cost: d.Cost,
 		})
 	}
 	return out, nil

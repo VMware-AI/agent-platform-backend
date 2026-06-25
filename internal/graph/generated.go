@@ -32,6 +32,8 @@ type ResolverRoot interface {
 	Agent() AgentResolver
 	AgentConfig() AgentConfigResolver
 	Mutation() MutationResolver
+	OvaTemplateFamily() OvaTemplateFamilyResolver
+	OvaTemplateVersion() OvaTemplateVersionResolver
 	Query() QueryResolver
 	User() UserResolver
 }
@@ -60,17 +62,25 @@ type ComplexityRoot struct {
 		Username         func(childComplexity int) int
 	}
 
+	AddOvaTemplateVersionPayload struct {
+		Version func(childComplexity int) int
+	}
+
 	Agent struct {
-		APIKey    func(childComplexity int) int
-		CreatedAt func(childComplexity int) int
-		Endpoint  func(childComplexity int) int
-		ID        func(childComplexity int) int
-		Name      func(childComplexity int) int
-		Owner     func(childComplexity int) int
-		Status    func(childComplexity int) int
-		Type      func(childComplexity int) int
-		TypeLabel func(childComplexity int) int
-		UpdatedAt func(childComplexity int) int
+		APIKey            func(childComplexity int) int
+		CreatedAt         func(childComplexity int) int
+		Credentials       func(childComplexity int) int
+		Endpoint          func(childComplexity int) int
+		ID                func(childComplexity int) int
+		Name              func(childComplexity int) int
+		Owner             func(childComplexity int) int
+		ResourcePoolID    func(childComplexity int) int
+		Status            func(childComplexity int) int
+		TemplateFamilyID  func(childComplexity int) int
+		TemplateVersionID func(childComplexity int) int
+		Type              func(childComplexity int) int
+		TypeLabel         func(childComplexity int) int
+		UpdatedAt         func(childComplexity int) int
 	}
 
 	AgentApiKey struct {
@@ -92,6 +102,10 @@ type ComplexityRoot struct {
 		Nodes      func(childComplexity int) int
 		PageInfo   func(childComplexity int) int
 		TotalCount func(childComplexity int) int
+	}
+
+	AgentCredentials struct {
+		Username func(childComplexity int) int
 	}
 
 	AgentSnapshot struct {
@@ -120,6 +134,16 @@ type ComplexityRoot struct {
 		Cost         func(childComplexity int) int
 		InputTokens  func(childComplexity int) int
 		OutputTokens func(childComplexity int) int
+	}
+
+	AgentUsageRow struct {
+		AgentID      func(childComplexity int) int
+		AgentName    func(childComplexity int) int
+		Cost         func(childComplexity int) int
+		InputTokens  func(childComplexity int) int
+		OutputTokens func(childComplexity int) int
+		Requests     func(childComplexity int) int
+		TotalTokens  func(childComplexity int) int
 	}
 
 	Artifact struct {
@@ -162,6 +186,10 @@ type ComplexityRoot struct {
 		User               func(childComplexity int) int
 	}
 
+	CreateOvaTemplateFamilyPayload struct {
+		Family func(childComplexity int) int
+	}
+
 	CreateResourcePoolPayload struct {
 		Pool func(childComplexity int) int
 	}
@@ -177,6 +205,50 @@ type ComplexityRoot struct {
 		IsSystem    func(childComplexity int) int
 		Name        func(childComplexity int) int
 		Permissions func(childComplexity int) int
+	}
+
+	DailyUsageRow struct {
+		Cost         func(childComplexity int) int
+		Date         func(childComplexity int) int
+		InputTokens  func(childComplexity int) int
+		OutputTokens func(childComplexity int) int
+		Requests     func(childComplexity int) int
+		TotalTokens  func(childComplexity int) int
+	}
+
+	DashboardNotice struct {
+		ID         func(childComplexity int) int
+		OccurredAt func(childComplexity int) int
+		Status     func(childComplexity int) int
+		Text       func(childComplexity int) int
+	}
+
+	DashboardOverview struct {
+		Notices      func(childComplexity int) int
+		RecentAgents func(childComplexity int) int
+		Stats        func(childComplexity int) int
+	}
+
+	DashboardRecentAgent struct {
+		AgentName func(childComplexity int) int
+		CreatedAt func(childComplexity int) int
+		ID        func(childComplexity int) int
+		Name      func(childComplexity int) int
+		Status    func(childComplexity int) int
+	}
+
+	DashboardStats struct {
+		ExceptionAgents    func(childComplexity int) int
+		MonthlyCalls       func(childComplexity int) int
+		MonthlyCost        func(childComplexity int) int
+		MonthlyTokens      func(childComplexity int) int
+		RunningAgents      func(childComplexity int) int
+		StoppedAgents      func(childComplexity int) int
+		TotalAgents        func(childComplexity int) int
+		TotalGateways      func(childComplexity int) int
+		TotalResourcePools func(childComplexity int) int
+		TotalUsers         func(childComplexity int) int
+		TotalVirtualKeys   func(childComplexity int) int
 	}
 
 	DateUsage struct {
@@ -209,6 +281,8 @@ type ComplexityRoot struct {
 
 	DeployedAgent struct {
 		Agent            func(childComplexity int) int
+		ResourcePool     func(childComplexity int) int
+		TemplateVersion  func(childComplexity int) int
 		VirtualKeySecret func(childComplexity int) int
 	}
 
@@ -240,6 +314,23 @@ type ComplexityRoot struct {
 		ID           func(childComplexity int) int
 		Role         func(childComplexity int) int
 		UserID       func(childComplexity int) int
+	}
+
+	MeteringCostSummary struct {
+		MonthlyCost func(childComplexity int) int
+		TotalCost   func(childComplexity int) int
+	}
+
+	MeteringOverview struct {
+		ByAgent           func(childComplexity int) int
+		ByDay             func(childComplexity int) int
+		ByModel           func(childComplexity int) int
+		Cost              func(childComplexity int) int
+		Range             func(childComplexity int) int
+		TotalInputTokens  func(childComplexity int) int
+		TotalOutputTokens func(childComplexity int) int
+		TotalRequests     func(childComplexity int) int
+		TotalTokens       func(childComplexity int) int
 	}
 
 	MeteringSummary struct {
@@ -294,10 +385,14 @@ type ComplexityRoot struct {
 		BackendGatewayID func(childComplexity int) int
 		CreatedAt        func(childComplexity int) int
 		Enabled          func(childComplexity int) int
+		GatewayName      func(childComplexity int) int
 		ID               func(childComplexity int) int
 		ModelAlias       func(childComplexity int) int
 		Name             func(childComplexity int) int
 		Strategy         func(childComplexity int) int
+		SupportedModels  func(childComplexity int) int
+		UIStrategy       func(childComplexity int) int
+		UpdatedAt        func(childComplexity int) int
 		Upstreams        func(childComplexity int) int
 	}
 
@@ -308,8 +403,18 @@ type ComplexityRoot struct {
 		OutputTokens func(childComplexity int) int
 	}
 
+	ModelUsageRow struct {
+		Cost         func(childComplexity int) int
+		InputTokens  func(childComplexity int) int
+		Model        func(childComplexity int) int
+		OutputTokens func(childComplexity int) int
+		Requests     func(childComplexity int) int
+		TotalTokens  func(childComplexity int) int
+	}
+
 	Mutation struct {
 		AddMembership              func(childComplexity int, userID string, departmentID string, role *model.MembershipRole) int
+		AddOvaTemplateVersion      func(childComplexity int, input model.AddOvaTemplateVersionInput) int
 		AssignUserRole             func(childComplexity int, userID string, roleID string) int
 		AssignUsersToRole          func(childComplexity int, input model.AssignUsersToRoleInput) int
 		ChangePassword             func(childComplexity int, oldPassword string, newPassword string) int
@@ -318,6 +423,8 @@ type ComplexityRoot struct {
 		CreateCustomRole           func(childComplexity int, input model.CreateCustomRoleInput) int
 		CreateDepartment           func(childComplexity int, input model.CreateDepartmentInput) int
 		CreateModelGateway         func(childComplexity int, input model.ModelGatewayInput) int
+		CreateModelRoute           func(childComplexity int, input model.CreateModelRouteInput) int
+		CreateOvaTemplateFamily    func(childComplexity int, input model.CreateOvaTemplateFamilyInput) int
 		CreateResourcePool         func(childComplexity int, input model.CreateResourcePoolInput) int
 		CreateUser                 func(childComplexity int, input model.CreateUserInput) int
 		DeleteAgentConfig          func(childComplexity int, id string) int
@@ -361,10 +468,11 @@ type ComplexityRoot struct {
 		SyncResourcePool           func(childComplexity int, id string) int
 		TestGatewayConnection      func(childComplexity int, id string) int
 		TestModelGatewayConnection func(childComplexity int, id string) int
-		TestResourcePoolConnection func(childComplexity int, id string) int
+		TestResourcePoolConnection func(childComplexity int, input model.TestResourcePoolConnectionInput) int
 		ToggleUserEnabled          func(childComplexity int, id string) int
 		UpdateAgentConfig          func(childComplexity int, id string, input model.UpdateAgentConfigInput) int
 		UpdateModelGateway         func(childComplexity int, id string, input model.ModelGatewayInput) int
+		UpdateModelRoute           func(childComplexity int, id string, input model.UpdateModelRouteInput) int
 		UpdateResourcePool         func(childComplexity int, id string, input model.UpdateResourcePoolInput) int
 		UpdateUser                 func(childComplexity int, id string, input model.UpdateUserInput) int
 		UpsertAgentTemplate        func(childComplexity int, input model.UpsertAgentTemplateInput) int
@@ -375,6 +483,43 @@ type ComplexityRoot struct {
 		UpsertRateLimitPolicy      func(childComplexity int, input model.UpsertRateLimitPolicyInput) int
 		UpsertSkill                func(childComplexity int, input model.UpsertSkillInput) int
 		UpsertUpstream             func(childComplexity int, input model.UpsertUpstreamInput) int
+	}
+
+	OvaTemplateFamily struct {
+		CreatedAt     func(childComplexity int) int
+		Description   func(childComplexity int) int
+		ID            func(childComplexity int) int
+		IconColor     func(childComplexity int) int
+		IconShape     func(childComplexity int) int
+		LatestVersion func(childComplexity int) int
+		Name          func(childComplexity int) int
+		Scenarios     func(childComplexity int) int
+		Skills        func(childComplexity int) int
+		Tools         func(childComplexity int) int
+		Type          func(childComplexity int) int
+		UpdatedAt     func(childComplexity int) int
+		Versions      func(childComplexity int) int
+	}
+
+	OvaTemplateFamilyConnection struct {
+		Nodes      func(childComplexity int) int
+		PageInfo   func(childComplexity int) int
+		TotalCount func(childComplexity int) int
+	}
+
+	OvaTemplateVersion struct {
+		CreatedAt     func(childComplexity int) int
+		FamilyID      func(childComplexity int) int
+		ID            func(childComplexity int) int
+		Notes         func(childComplexity int) int
+		OvaIdentifier func(childComplexity int) int
+		Version       func(childComplexity int) int
+	}
+
+	OvaTemplateVersionConnection struct {
+		Nodes      func(childComplexity int) int
+		PageInfo   func(childComplexity int) int
+		TotalCount func(childComplexity int) int
 	}
 
 	PageInfo struct {
@@ -398,15 +543,19 @@ type ComplexityRoot struct {
 		Artifacts               func(childComplexity int, kind *model.ArtifactKind) int
 		AuditLogs               func(childComplexity int, filter *model.AuditFilter, page *model.PageInput) int
 		CustomRoles             func(childComplexity int) int
+		DashboardOverview       func(childComplexity int, recentLimit *int, noticeLimit *int) int
 		DepartmentMembers       func(childComplexity int, departmentID string) int
 		Departments             func(childComplexity int) int
 		GatewayConnections      func(childComplexity int) int
 		Images                  func(childComplexity int) int
 		Me                      func(childComplexity int) int
+		MeteringOverview        func(childComplexity int, rangeArg *model.MeteringTimeRange, userID *string) int
 		MeteringSummary         func(childComplexity int, userID *string) int
 		ModelGatewaySyncSummary func(childComplexity int) int
 		ModelGateways           func(childComplexity int, filter *model.ModelGatewayFilterInput, page model.PageInput, sort *model.ModelGatewaySort) int
 		ModelRoutes             func(childComplexity int) int
+		OvaTemplateFamilies     func(childComplexity int, filter *model.OvaTemplateFamilyFilter, pagination *model.Pagination, sort *model.OvaTemplateFamilySort) int
+		OvaTemplateVersions     func(childComplexity int, familyID *string, pagination *model.Pagination) int
 		Permissions             func(childComplexity int) int
 		RateLimitPolicies       func(childComplexity int) int
 		RequestLogs             func(childComplexity int, filter *model.RequestLogFilter, page *model.PageInput) int
@@ -454,24 +603,36 @@ type ComplexityRoot struct {
 	}
 
 	ResourcePool struct {
-		ClusterCount     func(childComplexity int) int
-		ConnectionStatus func(childComplexity int) int
-		CreatedAt        func(childComplexity int) int
-		DatacenterCount  func(childComplexity int) int
-		Endpoint         func(childComplexity int) int
-		EsxiHostCount    func(childComplexity int) int
-		ID               func(childComplexity int) int
-		LastSyncedAt     func(childComplexity int) int
-		Name             func(childComplexity int) int
-		SyncStatus       func(childComplexity int) int
-		UpdatedAt        func(childComplexity int) int
-		VMInstanceCount  func(childComplexity int) int
+		ClusterCount       func(childComplexity int) int
+		ConnectionStatus   func(childComplexity int) int
+		ContentLibraryName func(childComplexity int) int
+		CreatedAt          func(childComplexity int) int
+		DatacenterCount    func(childComplexity int) int
+		Endpoint           func(childComplexity int) int
+		EsxiHostCount      func(childComplexity int) int
+		ID                 func(childComplexity int) int
+		LastSyncedAt       func(childComplexity int) int
+		Name               func(childComplexity int) int
+		SyncStatus         func(childComplexity int) int
+		UpdatedAt          func(childComplexity int) int
+		VMInstanceCount    func(childComplexity int) int
 	}
 
 	ResourcePoolConnection struct {
 		Nodes      func(childComplexity int) int
 		PageInfo   func(childComplexity int) int
 		TotalCount func(childComplexity int) int
+	}
+
+	ResourcePoolConnectionDetail struct {
+		ItemCount      func(childComplexity int) int
+		VSphereVersion func(childComplexity int) int
+	}
+
+	ResourcePoolConnectionTest struct {
+		Detail  func(childComplexity int) int
+		Message func(childComplexity int) int
+		Ok      func(childComplexity int) int
 	}
 
 	Role struct {
@@ -585,6 +746,8 @@ type AgentResolver interface {
 
 	APIKey(ctx context.Context, obj *model.Agent) (*model.AgentAPIKey, error)
 	Owner(ctx context.Context, obj *model.Agent) (*model.User, error)
+
+	Credentials(ctx context.Context, obj *model.Agent) (*model.AgentCredentials, error)
 }
 type AgentConfigResolver interface {
 	Knowledge(ctx context.Context, obj *model.AgentConfig) ([]model.Artifact, error)
@@ -629,6 +792,8 @@ type MutationResolver interface {
 	UpsertUpstream(ctx context.Context, input model.UpsertUpstreamInput) (*model.Upstream, error)
 	DeleteUpstream(ctx context.Context, id string) (bool, error)
 	UpsertModelRoute(ctx context.Context, input model.UpsertModelRouteInput) (*model.ModelRoute, error)
+	CreateModelRoute(ctx context.Context, input model.CreateModelRouteInput) (*model.ModelRoute, error)
+	UpdateModelRoute(ctx context.Context, id string, input model.UpdateModelRouteInput) (*model.ModelRoute, error)
 	SetModelRouteEnabled(ctx context.Context, id string, enabled bool) (*model.ModelRoute, error)
 	DeleteModelRoute(ctx context.Context, id string) (bool, error)
 	SetRouterTier(ctx context.Context, tier model.RouterTierLevel, modelAlias string) (*model.RouterTier, error)
@@ -641,6 +806,8 @@ type MutationResolver interface {
 	UpsertRateLimitPolicy(ctx context.Context, input model.UpsertRateLimitPolicyInput) (*model.RateLimitPolicy, error)
 	SetRateLimitPolicyEnabled(ctx context.Context, id string, enabled bool) (*model.RateLimitPolicy, error)
 	DeleteRateLimitPolicy(ctx context.Context, id string) (bool, error)
+	CreateOvaTemplateFamily(ctx context.Context, input model.CreateOvaTemplateFamilyInput) (*model.CreateOvaTemplateFamilyPayload, error)
+	AddOvaTemplateVersion(ctx context.Context, input model.AddOvaTemplateVersionInput) (*model.AddOvaTemplateVersionPayload, error)
 	CreateCustomRole(ctx context.Context, input model.CreateCustomRoleInput) (*model.CustomRole, error)
 	DeleteCustomRole(ctx context.Context, id string) (bool, error)
 	UpsertPermission(ctx context.Context, key string, description *string) (*model.Permission, error)
@@ -650,12 +817,20 @@ type MutationResolver interface {
 	CreateResourcePool(ctx context.Context, input model.CreateResourcePoolInput) (*model.CreateResourcePoolPayload, error)
 	UpdateResourcePool(ctx context.Context, id string, input model.UpdateResourcePoolInput) (*model.UpdateResourcePoolPayload, error)
 	DeleteResourcePool(ctx context.Context, id string) (*model.DeleteResourcePoolPayload, error)
-	TestResourcePoolConnection(ctx context.Context, id string) (*model.ResourcePool, error)
+	TestResourcePoolConnection(ctx context.Context, input model.TestResourcePoolConnectionInput) (*model.ResourcePoolConnectionTest, error)
 	SyncResourcePool(ctx context.Context, id string) (*model.SyncResourcePoolPayload, error)
 	IssueVirtualKey(ctx context.Context, input model.IssueVirtualKeyInput) (*model.IssuedVirtualKey, error)
 	RevokeVirtualKey(ctx context.Context, id string) (bool, error)
 	RegenerateVirtualKey(ctx context.Context, id string) (*model.IssuedVirtualKey, error)
 	SetVirtualKeyEnabled(ctx context.Context, id string, enabled bool) (*model.VirtualKey, error)
+}
+type OvaTemplateFamilyResolver interface {
+	LatestVersion(ctx context.Context, obj *model.OvaTemplateFamily) (*string, error)
+
+	Versions(ctx context.Context, obj *model.OvaTemplateFamily) ([]model.OvaTemplateVersion, error)
+}
+type OvaTemplateVersionResolver interface {
+	FamilyID(ctx context.Context, obj *model.OvaTemplateVersion) (string, error)
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
@@ -671,6 +846,7 @@ type QueryResolver interface {
 	ArtifactVersions(ctx context.Context, name string) ([]model.Artifact, error)
 	Skills(ctx context.Context) ([]model.Skill, error)
 	Images(ctx context.Context) ([]model.Image, error)
+	DashboardOverview(ctx context.Context, recentLimit *int, noticeLimit *int) (*model.DashboardOverview, error)
 	Departments(ctx context.Context) ([]model.Department, error)
 	DepartmentMembers(ctx context.Context, departmentID string) ([]model.Membership, error)
 	VMTemplates(ctx context.Context, resourcePoolID string) ([]model.VMTemplate, error)
@@ -681,10 +857,13 @@ type QueryResolver interface {
 	RouterTiers(ctx context.Context) ([]model.RouterTier, error)
 	TokenUsage(ctx context.Context, userID *string, page *model.PageInput) ([]model.TokenUsage, error)
 	MeteringSummary(ctx context.Context, userID *string) (*model.MeteringSummary, error)
+	MeteringOverview(ctx context.Context, rangeArg *model.MeteringTimeRange, userID *string) (*model.MeteringOverview, error)
 	ModelGateways(ctx context.Context, filter *model.ModelGatewayFilterInput, page model.PageInput, sort *model.ModelGatewaySort) (*model.ModelGatewayConnection, error)
 	ModelGatewaySyncSummary(ctx context.Context) (*model.ModelGatewaySyncSummary, error)
 	RequestLogs(ctx context.Context, filter *model.RequestLogFilter, page *model.PageInput) ([]model.RequestLog, error)
 	RateLimitPolicies(ctx context.Context) ([]model.RateLimitPolicy, error)
+	OvaTemplateFamilies(ctx context.Context, filter *model.OvaTemplateFamilyFilter, pagination *model.Pagination, sort *model.OvaTemplateFamilySort) (*model.OvaTemplateFamilyConnection, error)
+	OvaTemplateVersions(ctx context.Context, familyID *string, pagination *model.Pagination) (*model.OvaTemplateVersionConnection, error)
 	CustomRoles(ctx context.Context) ([]model.CustomRole, error)
 	Permissions(ctx context.Context) ([]model.Permission, error)
 	UserRoles(ctx context.Context, userID string) ([]model.CustomRole, error)
@@ -788,6 +967,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.AccountUser.Username(childComplexity), true
 
+	case "AddOvaTemplateVersionPayload.version":
+		if e.ComplexityRoot.AddOvaTemplateVersionPayload.Version == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AddOvaTemplateVersionPayload.Version(childComplexity), true
+
 	case "Agent.apiKey":
 		if e.ComplexityRoot.Agent.APIKey == nil {
 			break
@@ -800,6 +986,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Agent.CreatedAt(childComplexity), true
+	case "Agent.credentials":
+		if e.ComplexityRoot.Agent.Credentials == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Agent.Credentials(childComplexity), true
 	case "Agent.endpoint":
 		if e.ComplexityRoot.Agent.Endpoint == nil {
 			break
@@ -824,12 +1016,30 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Agent.Owner(childComplexity), true
+	case "Agent.resourcePoolId":
+		if e.ComplexityRoot.Agent.ResourcePoolID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Agent.ResourcePoolID(childComplexity), true
 	case "Agent.status":
 		if e.ComplexityRoot.Agent.Status == nil {
 			break
 		}
 
 		return e.ComplexityRoot.Agent.Status(childComplexity), true
+	case "Agent.templateFamilyId":
+		if e.ComplexityRoot.Agent.TemplateFamilyID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Agent.TemplateFamilyID(childComplexity), true
+	case "Agent.templateVersionId":
+		if e.ComplexityRoot.Agent.TemplateVersionID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Agent.TemplateVersionID(childComplexity), true
 	case "Agent.type":
 		if e.ComplexityRoot.Agent.Type == nil {
 			break
@@ -923,6 +1133,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.AgentConnection.TotalCount(childComplexity), true
+
+	case "AgentCredentials.username":
+		if e.ComplexityRoot.AgentCredentials.Username == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentCredentials.Username(childComplexity), true
 
 	case "AgentSnapshot.createdAt":
 		if e.ComplexityRoot.AgentSnapshot.CreatedAt == nil {
@@ -1040,6 +1257,49 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.AgentUsage.OutputTokens(childComplexity), true
+
+	case "AgentUsageRow.agentId":
+		if e.ComplexityRoot.AgentUsageRow.AgentID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentUsageRow.AgentID(childComplexity), true
+	case "AgentUsageRow.agentName":
+		if e.ComplexityRoot.AgentUsageRow.AgentName == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentUsageRow.AgentName(childComplexity), true
+	case "AgentUsageRow.cost":
+		if e.ComplexityRoot.AgentUsageRow.Cost == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentUsageRow.Cost(childComplexity), true
+	case "AgentUsageRow.inputTokens":
+		if e.ComplexityRoot.AgentUsageRow.InputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentUsageRow.InputTokens(childComplexity), true
+	case "AgentUsageRow.outputTokens":
+		if e.ComplexityRoot.AgentUsageRow.OutputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentUsageRow.OutputTokens(childComplexity), true
+	case "AgentUsageRow.requests":
+		if e.ComplexityRoot.AgentUsageRow.Requests == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentUsageRow.Requests(childComplexity), true
+	case "AgentUsageRow.totalTokens":
+		if e.ComplexityRoot.AgentUsageRow.TotalTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AgentUsageRow.TotalTokens(childComplexity), true
 
 	case "Artifact.content":
 		if e.ComplexityRoot.Artifact.Content == nil {
@@ -1196,6 +1456,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.AuthPayload.User(childComplexity), true
 
+	case "CreateOvaTemplateFamilyPayload.family":
+		if e.ComplexityRoot.CreateOvaTemplateFamilyPayload.Family == nil {
+			break
+		}
+
+		return e.ComplexityRoot.CreateOvaTemplateFamilyPayload.Family(childComplexity), true
+
 	case "CreateResourcePoolPayload.pool":
 		if e.ComplexityRoot.CreateResourcePoolPayload.Pool == nil {
 			break
@@ -1246,6 +1513,185 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.CustomRole.Permissions(childComplexity), true
+
+	case "DailyUsageRow.cost":
+		if e.ComplexityRoot.DailyUsageRow.Cost == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DailyUsageRow.Cost(childComplexity), true
+	case "DailyUsageRow.date":
+		if e.ComplexityRoot.DailyUsageRow.Date == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DailyUsageRow.Date(childComplexity), true
+	case "DailyUsageRow.inputTokens":
+		if e.ComplexityRoot.DailyUsageRow.InputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DailyUsageRow.InputTokens(childComplexity), true
+	case "DailyUsageRow.outputTokens":
+		if e.ComplexityRoot.DailyUsageRow.OutputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DailyUsageRow.OutputTokens(childComplexity), true
+	case "DailyUsageRow.requests":
+		if e.ComplexityRoot.DailyUsageRow.Requests == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DailyUsageRow.Requests(childComplexity), true
+	case "DailyUsageRow.totalTokens":
+		if e.ComplexityRoot.DailyUsageRow.TotalTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DailyUsageRow.TotalTokens(childComplexity), true
+
+	case "DashboardNotice.id":
+		if e.ComplexityRoot.DashboardNotice.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardNotice.ID(childComplexity), true
+	case "DashboardNotice.occurredAt":
+		if e.ComplexityRoot.DashboardNotice.OccurredAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardNotice.OccurredAt(childComplexity), true
+	case "DashboardNotice.status":
+		if e.ComplexityRoot.DashboardNotice.Status == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardNotice.Status(childComplexity), true
+	case "DashboardNotice.text":
+		if e.ComplexityRoot.DashboardNotice.Text == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardNotice.Text(childComplexity), true
+
+	case "DashboardOverview.notices":
+		if e.ComplexityRoot.DashboardOverview.Notices == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardOverview.Notices(childComplexity), true
+	case "DashboardOverview.recentAgents":
+		if e.ComplexityRoot.DashboardOverview.RecentAgents == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardOverview.RecentAgents(childComplexity), true
+	case "DashboardOverview.stats":
+		if e.ComplexityRoot.DashboardOverview.Stats == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardOverview.Stats(childComplexity), true
+
+	case "DashboardRecentAgent.agentName":
+		if e.ComplexityRoot.DashboardRecentAgent.AgentName == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardRecentAgent.AgentName(childComplexity), true
+	case "DashboardRecentAgent.createdAt":
+		if e.ComplexityRoot.DashboardRecentAgent.CreatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardRecentAgent.CreatedAt(childComplexity), true
+	case "DashboardRecentAgent.id":
+		if e.ComplexityRoot.DashboardRecentAgent.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardRecentAgent.ID(childComplexity), true
+	case "DashboardRecentAgent.name":
+		if e.ComplexityRoot.DashboardRecentAgent.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardRecentAgent.Name(childComplexity), true
+	case "DashboardRecentAgent.status":
+		if e.ComplexityRoot.DashboardRecentAgent.Status == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardRecentAgent.Status(childComplexity), true
+
+	case "DashboardStats.exceptionAgents":
+		if e.ComplexityRoot.DashboardStats.ExceptionAgents == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardStats.ExceptionAgents(childComplexity), true
+	case "DashboardStats.monthlyCalls":
+		if e.ComplexityRoot.DashboardStats.MonthlyCalls == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardStats.MonthlyCalls(childComplexity), true
+	case "DashboardStats.monthlyCost":
+		if e.ComplexityRoot.DashboardStats.MonthlyCost == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardStats.MonthlyCost(childComplexity), true
+	case "DashboardStats.monthlyTokens":
+		if e.ComplexityRoot.DashboardStats.MonthlyTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardStats.MonthlyTokens(childComplexity), true
+	case "DashboardStats.runningAgents":
+		if e.ComplexityRoot.DashboardStats.RunningAgents == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardStats.RunningAgents(childComplexity), true
+	case "DashboardStats.stoppedAgents":
+		if e.ComplexityRoot.DashboardStats.StoppedAgents == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardStats.StoppedAgents(childComplexity), true
+	case "DashboardStats.totalAgents":
+		if e.ComplexityRoot.DashboardStats.TotalAgents == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardStats.TotalAgents(childComplexity), true
+	case "DashboardStats.totalGateways":
+		if e.ComplexityRoot.DashboardStats.TotalGateways == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardStats.TotalGateways(childComplexity), true
+	case "DashboardStats.totalResourcePools":
+		if e.ComplexityRoot.DashboardStats.TotalResourcePools == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardStats.TotalResourcePools(childComplexity), true
+	case "DashboardStats.totalUsers":
+		if e.ComplexityRoot.DashboardStats.TotalUsers == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardStats.TotalUsers(childComplexity), true
+	case "DashboardStats.totalVirtualKeys":
+		if e.ComplexityRoot.DashboardStats.TotalVirtualKeys == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DashboardStats.TotalVirtualKeys(childComplexity), true
 
 	case "DateUsage.cost":
 		if e.ComplexityRoot.DateUsage.Cost == nil {
@@ -1336,6 +1782,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.DeployedAgent.Agent(childComplexity), true
+	case "DeployedAgent.resourcePool":
+		if e.ComplexityRoot.DeployedAgent.ResourcePool == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DeployedAgent.ResourcePool(childComplexity), true
+	case "DeployedAgent.templateVersion":
+		if e.ComplexityRoot.DeployedAgent.TemplateVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DeployedAgent.TemplateVersion(childComplexity), true
 	case "DeployedAgent.virtualKeySecret":
 		if e.ComplexityRoot.DeployedAgent.VirtualKeySecret == nil {
 			break
@@ -1454,6 +1912,74 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Membership.UserID(childComplexity), true
+
+	case "MeteringCostSummary.monthlyCost":
+		if e.ComplexityRoot.MeteringCostSummary.MonthlyCost == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringCostSummary.MonthlyCost(childComplexity), true
+	case "MeteringCostSummary.totalCost":
+		if e.ComplexityRoot.MeteringCostSummary.TotalCost == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringCostSummary.TotalCost(childComplexity), true
+
+	case "MeteringOverview.byAgent":
+		if e.ComplexityRoot.MeteringOverview.ByAgent == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringOverview.ByAgent(childComplexity), true
+	case "MeteringOverview.byDay":
+		if e.ComplexityRoot.MeteringOverview.ByDay == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringOverview.ByDay(childComplexity), true
+	case "MeteringOverview.byModel":
+		if e.ComplexityRoot.MeteringOverview.ByModel == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringOverview.ByModel(childComplexity), true
+	case "MeteringOverview.cost":
+		if e.ComplexityRoot.MeteringOverview.Cost == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringOverview.Cost(childComplexity), true
+	case "MeteringOverview.range":
+		if e.ComplexityRoot.MeteringOverview.Range == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringOverview.Range(childComplexity), true
+	case "MeteringOverview.totalInputTokens":
+		if e.ComplexityRoot.MeteringOverview.TotalInputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringOverview.TotalInputTokens(childComplexity), true
+	case "MeteringOverview.totalOutputTokens":
+		if e.ComplexityRoot.MeteringOverview.TotalOutputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringOverview.TotalOutputTokens(childComplexity), true
+	case "MeteringOverview.totalRequests":
+		if e.ComplexityRoot.MeteringOverview.TotalRequests == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringOverview.TotalRequests(childComplexity), true
+	case "MeteringOverview.totalTokens":
+		if e.ComplexityRoot.MeteringOverview.TotalTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.MeteringOverview.TotalTokens(childComplexity), true
 
 	case "MeteringSummary.byAgent":
 		if e.ComplexityRoot.MeteringSummary.ByAgent == nil {
@@ -1676,6 +2202,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelRoute.Enabled(childComplexity), true
+	case "ModelRoute.gatewayName":
+		if e.ComplexityRoot.ModelRoute.GatewayName == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelRoute.GatewayName(childComplexity), true
 	case "ModelRoute.id":
 		if e.ComplexityRoot.ModelRoute.ID == nil {
 			break
@@ -1700,6 +2232,24 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelRoute.Strategy(childComplexity), true
+	case "ModelRoute.supportedModels":
+		if e.ComplexityRoot.ModelRoute.SupportedModels == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelRoute.SupportedModels(childComplexity), true
+	case "ModelRoute.uiStrategy":
+		if e.ComplexityRoot.ModelRoute.UIStrategy == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelRoute.UIStrategy(childComplexity), true
+	case "ModelRoute.updatedAt":
+		if e.ComplexityRoot.ModelRoute.UpdatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelRoute.UpdatedAt(childComplexity), true
 	case "ModelRoute.upstreams":
 		if e.ComplexityRoot.ModelRoute.Upstreams == nil {
 			break
@@ -1732,6 +2282,43 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.ModelUsage.OutputTokens(childComplexity), true
 
+	case "ModelUsageRow.cost":
+		if e.ComplexityRoot.ModelUsageRow.Cost == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelUsageRow.Cost(childComplexity), true
+	case "ModelUsageRow.inputTokens":
+		if e.ComplexityRoot.ModelUsageRow.InputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelUsageRow.InputTokens(childComplexity), true
+	case "ModelUsageRow.model":
+		if e.ComplexityRoot.ModelUsageRow.Model == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelUsageRow.Model(childComplexity), true
+	case "ModelUsageRow.outputTokens":
+		if e.ComplexityRoot.ModelUsageRow.OutputTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelUsageRow.OutputTokens(childComplexity), true
+	case "ModelUsageRow.requests":
+		if e.ComplexityRoot.ModelUsageRow.Requests == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelUsageRow.Requests(childComplexity), true
+	case "ModelUsageRow.totalTokens":
+		if e.ComplexityRoot.ModelUsageRow.TotalTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelUsageRow.TotalTokens(childComplexity), true
+
 	case "Mutation.addMembership":
 		if e.ComplexityRoot.Mutation.AddMembership == nil {
 			break
@@ -1743,6 +2330,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.AddMembership(childComplexity, args["userId"].(string), args["departmentId"].(string), args["role"].(*model.MembershipRole)), true
+	case "Mutation.addOvaTemplateVersion":
+		if e.ComplexityRoot.Mutation.AddOvaTemplateVersion == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_addOvaTemplateVersion_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.AddOvaTemplateVersion(childComplexity, args["input"].(model.AddOvaTemplateVersionInput)), true
 	case "Mutation.assignUserRole":
 		if e.ComplexityRoot.Mutation.AssignUserRole == nil {
 			break
@@ -1831,6 +2429,28 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.CreateModelGateway(childComplexity, args["input"].(model.ModelGatewayInput)), true
+	case "Mutation.createModelRoute":
+		if e.ComplexityRoot.Mutation.CreateModelRoute == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createModelRoute_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.CreateModelRoute(childComplexity, args["input"].(model.CreateModelRouteInput)), true
+	case "Mutation.createOvaTemplateFamily":
+		if e.ComplexityRoot.Mutation.CreateOvaTemplateFamily == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createOvaTemplateFamily_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.CreateOvaTemplateFamily(childComplexity, args["input"].(model.CreateOvaTemplateFamilyInput)), true
 	case "Mutation.createResourcePool":
 		if e.ComplexityRoot.Mutation.CreateResourcePool == nil {
 			break
@@ -2309,7 +2929,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Mutation.TestResourcePoolConnection(childComplexity, args["id"].(string)), true
+		return e.ComplexityRoot.Mutation.TestResourcePoolConnection(childComplexity, args["input"].(model.TestResourcePoolConnectionInput)), true
 	case "Mutation.toggleUserEnabled":
 		if e.ComplexityRoot.Mutation.ToggleUserEnabled == nil {
 			break
@@ -2343,6 +2963,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.UpdateModelGateway(childComplexity, args["id"].(string), args["input"].(model.ModelGatewayInput)), true
+	case "Mutation.updateModelRoute":
+		if e.ComplexityRoot.Mutation.UpdateModelRoute == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateModelRoute_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.UpdateModelRoute(childComplexity, args["id"].(string), args["input"].(model.UpdateModelRouteInput)), true
 	case "Mutation.updateResourcePool":
 		if e.ComplexityRoot.Mutation.UpdateResourcePool == nil {
 			break
@@ -2453,6 +3084,160 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.UpsertUpstream(childComplexity, args["input"].(model.UpsertUpstreamInput)), true
+
+	case "OvaTemplateFamily.createdAt":
+		if e.ComplexityRoot.OvaTemplateFamily.CreatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateFamily.CreatedAt(childComplexity), true
+	case "OvaTemplateFamily.description":
+		if e.ComplexityRoot.OvaTemplateFamily.Description == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateFamily.Description(childComplexity), true
+	case "OvaTemplateFamily.id":
+		if e.ComplexityRoot.OvaTemplateFamily.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateFamily.ID(childComplexity), true
+	case "OvaTemplateFamily.iconColor":
+		if e.ComplexityRoot.OvaTemplateFamily.IconColor == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateFamily.IconColor(childComplexity), true
+	case "OvaTemplateFamily.iconShape":
+		if e.ComplexityRoot.OvaTemplateFamily.IconShape == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateFamily.IconShape(childComplexity), true
+	case "OvaTemplateFamily.latestVersion":
+		if e.ComplexityRoot.OvaTemplateFamily.LatestVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateFamily.LatestVersion(childComplexity), true
+	case "OvaTemplateFamily.name":
+		if e.ComplexityRoot.OvaTemplateFamily.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateFamily.Name(childComplexity), true
+	case "OvaTemplateFamily.scenarios":
+		if e.ComplexityRoot.OvaTemplateFamily.Scenarios == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateFamily.Scenarios(childComplexity), true
+	case "OvaTemplateFamily.skills":
+		if e.ComplexityRoot.OvaTemplateFamily.Skills == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateFamily.Skills(childComplexity), true
+	case "OvaTemplateFamily.tools":
+		if e.ComplexityRoot.OvaTemplateFamily.Tools == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateFamily.Tools(childComplexity), true
+	case "OvaTemplateFamily.type":
+		if e.ComplexityRoot.OvaTemplateFamily.Type == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateFamily.Type(childComplexity), true
+	case "OvaTemplateFamily.updatedAt":
+		if e.ComplexityRoot.OvaTemplateFamily.UpdatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateFamily.UpdatedAt(childComplexity), true
+	case "OvaTemplateFamily.versions":
+		if e.ComplexityRoot.OvaTemplateFamily.Versions == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateFamily.Versions(childComplexity), true
+
+	case "OvaTemplateFamilyConnection.nodes":
+		if e.ComplexityRoot.OvaTemplateFamilyConnection.Nodes == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateFamilyConnection.Nodes(childComplexity), true
+	case "OvaTemplateFamilyConnection.pageInfo":
+		if e.ComplexityRoot.OvaTemplateFamilyConnection.PageInfo == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateFamilyConnection.PageInfo(childComplexity), true
+	case "OvaTemplateFamilyConnection.totalCount":
+		if e.ComplexityRoot.OvaTemplateFamilyConnection.TotalCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateFamilyConnection.TotalCount(childComplexity), true
+
+	case "OvaTemplateVersion.createdAt":
+		if e.ComplexityRoot.OvaTemplateVersion.CreatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateVersion.CreatedAt(childComplexity), true
+	case "OvaTemplateVersion.familyId":
+		if e.ComplexityRoot.OvaTemplateVersion.FamilyID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateVersion.FamilyID(childComplexity), true
+	case "OvaTemplateVersion.id":
+		if e.ComplexityRoot.OvaTemplateVersion.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateVersion.ID(childComplexity), true
+	case "OvaTemplateVersion.notes":
+		if e.ComplexityRoot.OvaTemplateVersion.Notes == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateVersion.Notes(childComplexity), true
+	case "OvaTemplateVersion.ovaIdentifier":
+		if e.ComplexityRoot.OvaTemplateVersion.OvaIdentifier == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateVersion.OvaIdentifier(childComplexity), true
+	case "OvaTemplateVersion.version":
+		if e.ComplexityRoot.OvaTemplateVersion.Version == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateVersion.Version(childComplexity), true
+
+	case "OvaTemplateVersionConnection.nodes":
+		if e.ComplexityRoot.OvaTemplateVersionConnection.Nodes == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateVersionConnection.Nodes(childComplexity), true
+	case "OvaTemplateVersionConnection.pageInfo":
+		if e.ComplexityRoot.OvaTemplateVersionConnection.PageInfo == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateVersionConnection.PageInfo(childComplexity), true
+	case "OvaTemplateVersionConnection.totalCount":
+		if e.ComplexityRoot.OvaTemplateVersionConnection.TotalCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateVersionConnection.TotalCount(childComplexity), true
 
 	case "PageInfo.page":
 		if e.ComplexityRoot.PageInfo.Page == nil {
@@ -2570,6 +3355,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.CustomRoles(childComplexity), true
+	case "Query.dashboardOverview":
+		if e.ComplexityRoot.Query.DashboardOverview == nil {
+			break
+		}
+
+		args, err := ec.field_Query_dashboardOverview_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.DashboardOverview(childComplexity, args["recentLimit"].(*int), args["noticeLimit"].(*int)), true
 	case "Query.departmentMembers":
 		if e.ComplexityRoot.Query.DepartmentMembers == nil {
 			break
@@ -2606,6 +3402,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Me(childComplexity), true
+	case "Query.meteringOverview":
+		if e.ComplexityRoot.Query.MeteringOverview == nil {
+			break
+		}
+
+		args, err := ec.field_Query_meteringOverview_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.MeteringOverview(childComplexity, args["range"].(*model.MeteringTimeRange), args["userId"].(*string)), true
 	case "Query.meteringSummary":
 		if e.ComplexityRoot.Query.MeteringSummary == nil {
 			break
@@ -2640,6 +3447,28 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.ModelRoutes(childComplexity), true
+	case "Query.ovaTemplateFamilies":
+		if e.ComplexityRoot.Query.OvaTemplateFamilies == nil {
+			break
+		}
+
+		args, err := ec.field_Query_ovaTemplateFamilies_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.OvaTemplateFamilies(childComplexity, args["filter"].(*model.OvaTemplateFamilyFilter), args["pagination"].(*model.Pagination), args["sort"].(*model.OvaTemplateFamilySort)), true
+	case "Query.ovaTemplateVersions":
+		if e.ComplexityRoot.Query.OvaTemplateVersions == nil {
+			break
+		}
+
+		args, err := ec.field_Query_ovaTemplateVersions_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.OvaTemplateVersions(childComplexity, args["familyId"].(*string), args["pagination"].(*model.Pagination)), true
 	case "Query.permissions":
 		if e.ComplexityRoot.Query.Permissions == nil {
 			break
@@ -2921,6 +3750,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ResourcePool.ConnectionStatus(childComplexity), true
+	case "ResourcePool.contentLibraryName":
+		if e.ComplexityRoot.ResourcePool.ContentLibraryName == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ResourcePool.ContentLibraryName(childComplexity), true
 	case "ResourcePool.createdAt":
 		if e.ComplexityRoot.ResourcePool.CreatedAt == nil {
 			break
@@ -3000,6 +3835,38 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ResourcePoolConnection.TotalCount(childComplexity), true
+
+	case "ResourcePoolConnectionDetail.itemCount":
+		if e.ComplexityRoot.ResourcePoolConnectionDetail.ItemCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ResourcePoolConnectionDetail.ItemCount(childComplexity), true
+	case "ResourcePoolConnectionDetail.vSphereVersion":
+		if e.ComplexityRoot.ResourcePoolConnectionDetail.VSphereVersion == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ResourcePoolConnectionDetail.VSphereVersion(childComplexity), true
+
+	case "ResourcePoolConnectionTest.detail":
+		if e.ComplexityRoot.ResourcePoolConnectionTest.Detail == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ResourcePoolConnectionTest.Detail(childComplexity), true
+	case "ResourcePoolConnectionTest.message":
+		if e.ComplexityRoot.ResourcePoolConnectionTest.Message == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ResourcePoolConnectionTest.Message(childComplexity), true
+	case "ResourcePoolConnectionTest.ok":
+		if e.ComplexityRoot.ResourcePoolConnectionTest.Ok == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ResourcePoolConnectionTest.Ok(childComplexity), true
 
 	case "Role.builtIn":
 		if e.ComplexityRoot.Role.BuiltIn == nil {
@@ -3394,6 +4261,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	opCtx := graphql.GetOperationContext(ctx)
 	ec := newExecutionContext(opCtx, e, make(chan graphql.DeferredResult))
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
+		ec.unmarshalInputAddOvaTemplateVersionInput,
 		ec.unmarshalInputAgentFilter,
 		ec.unmarshalInputAgentSort,
 		ec.unmarshalInputAssignUsersToRoleInput,
@@ -3402,6 +4270,9 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCreateAgentInput,
 		ec.unmarshalInputCreateCustomRoleInput,
 		ec.unmarshalInputCreateDepartmentInput,
+		ec.unmarshalInputCreateModelRouteInput,
+		ec.unmarshalInputCreateOvaTemplateFamilyInput,
+		ec.unmarshalInputCreateOvaTemplateVersionInput,
 		ec.unmarshalInputCreateResourcePoolInput,
 		ec.unmarshalInputCreateUserInput,
 		ec.unmarshalInputDeployAgentInput,
@@ -3410,6 +4281,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputModelGatewayFilterInput,
 		ec.unmarshalInputModelGatewayInput,
 		ec.unmarshalInputModelGatewaySort,
+		ec.unmarshalInputOvaTemplateFamilyFilter,
+		ec.unmarshalInputOvaTemplateFamilySort,
 		ec.unmarshalInputPageInput,
 		ec.unmarshalInputPagination,
 		ec.unmarshalInputRecordRequestLogInput,
@@ -3421,7 +4294,9 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputResourcePoolSort,
 		ec.unmarshalInputRevertAgentSnapshotInput,
 		ec.unmarshalInputSnapshotAgentInput,
+		ec.unmarshalInputTestResourcePoolConnectionInput,
 		ec.unmarshalInputUpdateAgentConfigInput,
+		ec.unmarshalInputUpdateModelRouteInput,
 		ec.unmarshalInputUpdateResourcePoolInput,
 		ec.unmarshalInputUpdateUserInput,
 		ec.unmarshalInputUpsertAgentTemplateInput,
@@ -3718,6 +4593,15 @@ type Agent {
   owner: User @goField(forceResolver: true)
   # endpoint = the VM ref (moRef/name); null until deployed.
   endpoint: String
+  # Catalog provenance, set when the agent was deployed from an OVA version (智能体
+  # 市场 deploy). Null for agents created directly via createAgent.
+  templateFamilyId: ID
+  templateVersionId: ID
+  # The vCenter resource pool the agent's VM lives in (set at deploy). Null until deployed.
+  resourcePoolId: ID
+  # Run-as credentials for the agent's VM. Currently sources ` + "`" + `username` + "`" + ` from the
+  # owning user (the agent has no separate OS account today); resolver-computed.
+  credentials: AgentCredentials @goField(forceResolver: true)
   createdAt: Time!
   updatedAt: Time!
 }
@@ -3726,6 +4610,12 @@ type Agent {
 type AgentApiKey {
   id: ID!
   name: String!
+}
+
+# Run-as credentials surfaced for a deployed agent. Only ` + "`" + `username` + "`" + ` is exposed;
+# the password is never returned by the API (it is a Sensitive VM secret).
+type AgentCredentials {
+  username: String!
 }
 
 # Connection wrapper for the paged/filtered/sorted agent list (前后端整合契约).
@@ -3917,6 +4807,74 @@ extend type Mutation {
   deleteImage(id: ID!): Boolean! @hasRole(any: [admin])
 }
 `, BuiltIn: false},
+	{Name: "../../schema/dashboard.graphql", Input: `# Dashboard / overview (控制台首页). Stat cards + recent agents + system notices,
+# all derived from REAL entities (Agent / VirtualKey / GatewayConnection /
+# ResourcePool / User / TokenUsage / AuditLog). No mock data.
+
+# Status of a recent agent row (mirrors Agent.status, minus provisioning which the
+# console surfaces as stopped for the overview list).
+enum DashboardAgentStatus {
+  running
+  stopped
+  exception
+}
+
+# Severity of a system notice, mapped from the source audit-log result.
+enum DashboardNoticeStatus {
+  success
+  warning
+  danger
+}
+
+# Headline counts for the overview stat cards.
+type DashboardStats {
+  totalAgents: Int!
+  runningAgents: Int!
+  stoppedAgents: Int!
+  exceptionAgents: Int!
+  totalVirtualKeys: Int!
+  totalGateways: Int!
+  totalResourcePools: Int!
+  totalUsers: Int!
+  # Calls = TokenUsage rows in the current calendar month (本月调用数).
+  monthlyCalls: Int!
+  # Token + cost for the current calendar month (本月 Token / 预估费用).
+  monthlyTokens: Int!
+  monthlyCost: Float!
+}
+
+# A recently created agent for the 最近创建的实例 table.
+type DashboardRecentAgent {
+  id: ID!
+  name: String!
+  agentName: String! # the agent kind/type
+  status: DashboardAgentStatus!
+  createdAt: Time!
+}
+
+# A system notice for the 系统通知 list, sourced from the most recent audit logs.
+type DashboardNotice {
+  id: ID!
+  text: String!
+  status: DashboardNoticeStatus!
+  occurredAt: Time!
+}
+
+type DashboardOverview {
+  stats: DashboardStats!
+  recentAgents: [DashboardRecentAgent!]!
+  notices: [DashboardNotice!]!
+}
+
+extend type Query {
+  # The console overview page. recentLimit/noticeLimit cap the two lists (默认 5).
+  # Figures are platform-global (counts/notices are not tenant-scoped yet), so this
+  # is restricted to platform roles — exposing it to tenant_admin would leak other
+  # tenants' counts/usage/audit. Per-tenant dashboard scoping is future work (C1).
+  dashboardOverview(recentLimit: Int = 5, noticeLimit: Int = 5): DashboardOverview!
+    @hasRole(any: [admin, observability])
+}
+`, BuiltIn: false},
 	{Name: "../../schema/department.graphql", Input: `# Departments (部门 = litellm team) + memberships. See doc43 / LLD-01.
 
 enum MembershipRole {
@@ -3963,25 +4921,43 @@ extend type Mutation {
   removeMembership(userId: ID!, departmentId: ID!): Boolean!
 }
 `, BuiltIn: false},
-	{Name: "../../schema/deploy.graphql", Input: `# Agent deployment: provision the VM (gateway key + cloud-init + guestinfo).
-# See LLD-05 §3 + internal/deploy.
+	{Name: "../../schema/deploy.graphql", Input: `# Agent deployment: create a NEW agent from an OVA template version and provision
+# its VM (gateway key + cloud-init + guestinfo). See LLD-05 §3 + internal/deploy.
+#
+# Block 6 reshape (前端为主): the 智能体市场 deploys a fresh agent from a catalog
+# OVA version — it does NOT provision a pre-existing agent. Deploy ISSUES the
+# gateway key itself and returns its secret ONCE (virtualKeySecret); there is no
+# separate marketplace "pick / create a virtual key" step.
 
 type DeployedAgent {
   agent: Agent!
   # The issued virtual-key secret — returned ONCE.
   virtualKeySecret: String!
+  # The catalog version the agent was cloned from + the pool it landed in, so the
+  # console can confirm the deployment without a second round-trip.
+  templateVersion: OvaTemplateVersion!
+  resourcePool: ResourcePool!
 }
 
 input DeployAgentInput {
-  agentId: ID!
-  # Source OVA template VM to clone the agent from (ListTemplates).
-  template: String!
-  # Name to give the newly cloned agent VM.
-  vmName: String!
+  # Display name for the new agent (and its cloned VM).
+  name: String!
+  # The OVA template family (its ` + "`" + `type` + "`" + ` becomes the agent's kind) and the specific
+  # version to clone from (its ` + "`" + `ovaIdentifier` + "`" + ` is the source template).
+  templateFamilyId: ID!
+  templateVersionId: ID!
+  # Target vCenter resource pool to place the clone in.
   resourcePoolId: ID!
-  # Optional vSphere resource pool to place the clone in (empty = template's pool).
+  # Optional vSphere resource-pool name to place the VM clone in. A true OVA
+  # template has NO source resource pool, so vCenter's CloneFromTemplate requires
+  # an explicit placement pool for real deploys ("source has no resource pool;
+  # specify resourcePool"). Empty = inherit the source template's pool (only works
+  # when the source is a regular VM, e.g. vcsim). Optional to keep the contract
+  # backward-compatible.
   targetResourcePool: String
+  # Optional cloud-init hostname for the VM (defaults to none).
   hostname: String
+  # Optional per-key spend cap handed to the gateway when issuing the agent's key.
   maxBudget: Float
 }
 
@@ -4027,10 +5003,13 @@ extend type Query {
 }
 
 extend type Mutation {
-  # Owner or admin (checked in resolver). Issues a key, clones the VM from the
-  # template, injects cloud-init, powers on, and marks the agent running. On
-  # failure the VM and key are rolled back (no orphans).
-  deployAgent(input: DeployAgentInput!): DeployedAgent!
+  # Create a NEW agent from a catalog OVA version and provision its VM. Creates the
+  # agent row (kind from the family), issues a gateway key, clones the VM from the
+  # version's ovaIdentifier, injects cloud-init, powers on, marks it running. On
+  # failure the VM, key and (if needed) the new agent row are rolled back (no
+  # orphans). Admin-only: the 智能体市场 (and its OVA catalog queries) are gated to
+  # admins, so deploy is consistently admin-only too (owner = the admin caller).
+  deployAgent(input: DeployAgentInput!): DeployedAgent! @hasRole(any: [admin])
 
   # Owner or admin. Destroys the agent's VM, revokes its key, marks it stopped.
   # confirm must be true (double-confirm on a destructive operation).
@@ -4087,6 +5066,15 @@ enum RouterTierLevel {
   REASONING
 }
 
+# Console-facing load-balancing strategy for a model route (模型路由 page). Distinct
+# from the litellm LoadBalanceStrategy: a friendly, gateway-agnostic choice the
+# operator picks in the UI and the backend round-trips verbatim.
+enum ModelRouteStrategy {
+  ROUND_ROBIN
+  WEIGHTED_ROUND_ROBIN
+  RANDOM
+}
+
 type GatewayConnection {
   id: ID!
   name: String!
@@ -4111,10 +5099,17 @@ type ModelRoute {
   name: String!
   modelAlias: String!
   backendGatewayId: ID
+  # Display name of the serving gateway (console 模型路由 list).
+  gatewayName: String!
   upstreams: [String!]!
+  # Console alias for ` + "`" + `upstreams` + "`" + ` — the models this route can serve (模型路由 page).
+  supportedModels: [String!]!
   strategy: LoadBalanceStrategy!
+  # Console-facing load-balancing strategy (模型路由 page).
+  uiStrategy: ModelRouteStrategy!
   enabled: Boolean!
   createdAt: Time!
+  updatedAt: Time!
 }
 
 type RouterTier {
@@ -4152,6 +5147,27 @@ input UpsertModelRouteInput {
   enabled: Boolean
 }
 
+# Console 模型路由 create form (创建路由). modelAlias defaults to name when omitted;
+# supportedModels are stored as the route's upstream group.
+input CreateModelRouteInput {
+  name: String!
+  backendGatewayId: ID
+  gatewayName: String
+  supportedModels: [String!]
+  uiStrategy: ModelRouteStrategy
+  enabled: Boolean
+}
+
+# Console 模型路由 edit form (编辑路由). All fields optional — only set ones change.
+input UpdateModelRouteInput {
+  name: String
+  backendGatewayId: ID
+  gatewayName: String
+  supportedModels: [String!]
+  uiStrategy: ModelRouteStrategy
+  enabled: Boolean
+}
+
 extend type Query {
   gatewayConnections: [GatewayConnection!]! @hasRole(any: [admin])
   upstreams: [Upstream!]! @hasPermission(perm: "route:manage")
@@ -4167,6 +5183,10 @@ extend type Mutation {
   upsertUpstream(input: UpsertUpstreamInput!): Upstream! @hasPermission(perm: "route:manage")
   deleteUpstream(id: ID!): Boolean! @hasPermission(perm: "route:manage")
   upsertModelRoute(input: UpsertModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
+  # Console 模型路由 page CRUD (创建/编辑路由). create mints a new route by id;
+  # update edits an existing one by id (distinct from the name-keyed upsert above).
+  createModelRoute(input: CreateModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
+  updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
   setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute! @hasPermission(perm: "route:manage")
   deleteModelRoute(id: ID!): Boolean! @hasPermission(perm: "route:manage")
 
@@ -4226,10 +5246,73 @@ input RecordTokenUsageInput {
   cost: Float
 }
 
+# Time window for the metering center (计量中心 time-range selector). LAST_30_DAYS /
+# THIS_MONTH map to a concrete [from,to); LAST_7_DAYS is the default.
+enum MeteringTimeRange {
+  LAST_7_DAYS
+  LAST_30_DAYS
+  THIS_MONTH
+}
+
+# Per-agent usage row for the metering 智能体用量 table. Adds requests (row count =
+# usage events) and a display name on top of the token/cost sums.
+type AgentUsageRow {
+  agentId: ID!
+  agentName: String!
+  inputTokens: Int!
+  outputTokens: Int!
+  totalTokens: Int!
+  requests: Int!
+  cost: Float!
+}
+
+# Per-model usage row for the metering 模型用量 table.
+type ModelUsageRow {
+  model: String!
+  inputTokens: Int!
+  outputTokens: Int!
+  totalTokens: Int!
+  requests: Int!
+  cost: Float!
+}
+
+# Per-day usage row for the metering 每日用量/趋势 table+chart (date = YYYY-MM-DD).
+type DailyUsageRow {
+  date: String!
+  inputTokens: Int!
+  outputTokens: Int!
+  totalTokens: Int!
+  requests: Int!
+  cost: Float!
+}
+
+# Cost summary cards (计费概览): total cost over the selected range, plus the
+# current calendar month's cost (the "本月" card).
+type MeteringCostSummary {
+  totalCost: Float!
+  monthlyCost: Float!
+}
+
+# Everything the metering center renders for one time range (计量中心).
+type MeteringOverview {
+  range: MeteringTimeRange!
+  totalInputTokens: Int!
+  totalOutputTokens: Int!
+  totalTokens: Int!
+  totalRequests: Int!
+  byAgent: [AgentUsageRow!]!
+  byModel: [ModelUsageRow!]!
+  byDay: [DailyUsageRow!]!
+  cost: MeteringCostSummary!
+}
+
 extend type Query {
   # metering:view permission (admin + observability).
   tokenUsage(userId: ID, page: PageInput): [TokenUsage!]! @hasPermission(perm: "metering:view")
   meteringSummary(userId: ID): MeteringSummary! @hasPermission(perm: "metering:view")
+  # Aggregated metering for the console 计量中心 over a time range (默认近7天).
+  meteringOverview(range: MeteringTimeRange = LAST_7_DAYS, userId: ID): MeteringOverview!
+    @hasPermission(perm: "metering:view")
 }
 
 extend type Mutation {
@@ -4415,6 +5498,127 @@ extend type Mutation {
   deleteRateLimitPolicy(id: ID!): Boolean! @hasPermission(perm: "route:manage")
 }
 `, BuiltIn: false},
+	{Name: "../../schema/ova.graphql", Input: `# Agent Marketplace — OVA template catalog (Block 6a). The console 智能体市场
+# browses families (metadata + icon) each owning N versioned OVA images. This
+# block covers the CATALOG only; deploy + marketplace virtual-key ops are a later
+# phase (intentionally deferred). The catalog is platform-global (admin-gated).
+
+# Fixed marketplace card palette (console-defined).
+enum OvaTemplateColor {
+  BLUE
+  PURPLE
+  ORANGE
+  GREEN
+  RED
+  CYAN
+}
+
+type OvaTemplateVersion {
+  id: ID!
+  # Owning family id (resolved from the family edge).
+  familyId: ID! @goField(forceResolver: true)
+  version: String!
+  ovaIdentifier: String!
+  notes: String
+  createdAt: Time!
+}
+
+type OvaTemplateFamily {
+  id: ID!
+  name: String!
+  type: String!
+  description: String!
+  tools: [String!]!
+  skills: [String!]!
+  scenarios: [String!]!
+  iconShape: String!
+  iconColor: OvaTemplateColor!
+  # Version string of the most recently created version, or null when none.
+  latestVersion: String @goField(forceResolver: true)
+  createdAt: Time!
+  updatedAt: Time!
+  # All versions, newest-first.
+  versions: [OvaTemplateVersion!]! @goField(forceResolver: true)
+}
+
+type OvaTemplateFamilyConnection {
+  nodes: [OvaTemplateFamily!]!
+  totalCount: Int!
+  pageInfo: PageInfo!
+}
+
+type OvaTemplateVersionConnection {
+  nodes: [OvaTemplateVersion!]!
+  totalCount: Int!
+  pageInfo: PageInfo!
+}
+
+input OvaTemplateFamilyFilter {
+  nameKeyword: String
+  type: String
+}
+
+enum OvaTemplateFamilySortField {
+  OVA_NAME
+  TYPE
+  CREATED_AT
+  UPDATED_AT
+}
+
+input OvaTemplateFamilySort {
+  field: OvaTemplateFamilySortField!
+  direction: SortDirection!
+}
+
+input CreateOvaTemplateVersionInput {
+  version: String!
+  ovaIdentifier: String!
+  notes: String
+}
+
+input CreateOvaTemplateFamilyInput {
+  name: String!
+  type: String!
+  description: String!
+  tools: [String!]!
+  scenarios: [String!]!
+  skills: [String!]!
+  iconShape: String!
+  iconColor: OvaTemplateColor!
+  initialVersion: CreateOvaTemplateVersionInput!
+}
+
+input AddOvaTemplateVersionInput {
+  familyId: ID!
+  version: String!
+  ovaIdentifier: String!
+  notes: String
+}
+
+type CreateOvaTemplateFamilyPayload {
+  family: OvaTemplateFamily!
+}
+
+type AddOvaTemplateVersionPayload {
+  version: OvaTemplateVersion!
+}
+
+extend type Query {
+  ovaTemplateFamilies(
+    filter: OvaTemplateFamilyFilter
+    pagination: Pagination
+    sort: OvaTemplateFamilySort
+  ): OvaTemplateFamilyConnection! @hasRole(any: [admin])
+  ovaTemplateVersions(familyId: ID, pagination: Pagination): OvaTemplateVersionConnection! @hasRole(any: [admin])
+}
+
+extend type Mutation {
+  # Create a family + its initial version in one transaction.
+  createOvaTemplateFamily(input: CreateOvaTemplateFamilyInput!): CreateOvaTemplateFamilyPayload! @hasRole(any: [admin])
+  # Append a version to an existing family (errors if the family is missing).
+  addOvaTemplateVersion(input: AddOvaTemplateVersionInput!): AddOvaTemplateVersionPayload! @hasRole(any: [admin])
+}
+`, BuiltIn: false},
 	{Name: "../../schema/rbac.graphql", Input: `# Fine-grained custom roles & permissions (角色与权限页). See LLD-01 §1.2/§4.2.
 # Distinct from the platform ` + "`" + `Role` + "`" + ` enum (User.role); these power custom roles +
 # the permission matrix UI.
@@ -4492,6 +5696,8 @@ type ResourcePool {
   id: ID!
   name: String!
   endpoint: String!
+  # Content library the pool deploys OVA templates from (console 接入表单).
+  contentLibraryName: String!
   connectionStatus: PoolConnectionStatus!
   datacenterCount: Int!
   clusterCount: Int!
@@ -4523,6 +5729,7 @@ input ResourcePoolSort {
 input CreateResourcePoolInput {
   name: String!
   endpoint: String!
+  contentLibraryName: String
   datacenterCount: Int
   clusterCount: Int
   # vCenter (JVC) 凭据(可选;真机连接必填,前端表单可后补)。后端写入 secret store
@@ -4536,6 +5743,7 @@ input CreateResourcePoolInput {
 input UpdateResourcePoolInput {
   name: String
   endpoint: String
+  contentLibraryName: String
   datacenterCount: Int
   clusterCount: Int
   # 重填凭据(轮换):同 create,写 secret store 后只存引用。
@@ -4562,6 +5770,26 @@ type SyncResourcePoolPayload {
   syncedAt: Time!
 }
 
+# Pre-save reachability probe for the 接入表单 (carries NO credentials): the form
+# checks an endpoint is reachable before the operator commits the pool. A full
+# vCenter inventory probe needs credentials and runs later via syncResourcePool.
+input TestResourcePoolConnectionInput {
+  name: String!
+  endpoint: String!
+  contentLibraryName: String!
+}
+
+type ResourcePoolConnectionTest {
+  ok: Boolean!
+  message: String!
+  detail: ResourcePoolConnectionDetail
+}
+
+type ResourcePoolConnectionDetail {
+  vSphereVersion: String!
+  itemCount: Int!
+}
+
 extend type Query {
   resourcePools(
     filter: ResourcePoolFilter
@@ -4575,8 +5803,9 @@ extend type Mutation {
   createResourcePool(input: CreateResourcePoolInput!): CreateResourcePoolPayload! @hasRole(any: [admin])
   updateResourcePool(id: ID!, input: UpdateResourcePoolInput!): UpdateResourcePoolPayload! @hasRole(any: [admin])
   deleteResourcePool(id: ID!): DeleteResourcePoolPayload! @hasRole(any: [admin])
-  # Resolve credentials → connect → set status (0619 第13页 连接状态).
-  testResourcePoolConnection(id: ID!): ResourcePool! @hasRole(any: [admin])
+  # Lightweight pre-save reachability probe from the 接入表单 (no credentials):
+  # validate the endpoint is well-formed and dial-reachable (0619 第13页 连接状态).
+  testResourcePoolConnection(input: TestResourcePoolConnectionInput!): ResourcePoolConnectionTest! @hasRole(any: [admin])
   # Connect → count datacenters/clusters/hosts/VMs → persist (同步数据).
   syncResourcePool(id: ID!): SyncResourcePoolPayload! @hasRole(any: [admin])
 }
@@ -4716,6 +5945,8 @@ input IssueVirtualKeyInput {
   rpmLimit: Int
   tpmLimit: Int
   alias: String
+  # Optional expiry; when set, the key stops working at the gateway after this time.
+  expiresAt: Time
 }
 
 extend type Query {
@@ -4775,6 +6006,14 @@ func (ec *executionContext) childFields_AccountUser(ctx context.Context, field g
 	return nil, fmt.Errorf("no field named %q was found under type AccountUser", field.Name)
 }
 
+func (ec *executionContext) childFields_AddOvaTemplateVersionPayload(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "version":
+		return ec.fieldContext_AddOvaTemplateVersionPayload_version(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type AddOvaTemplateVersionPayload", field.Name)
+}
+
 func (ec *executionContext) childFields_Agent(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -4793,6 +6032,14 @@ func (ec *executionContext) childFields_Agent(ctx context.Context, field graphql
 		return ec.fieldContext_Agent_owner(ctx, field)
 	case "endpoint":
 		return ec.fieldContext_Agent_endpoint(ctx, field)
+	case "templateFamilyId":
+		return ec.fieldContext_Agent_templateFamilyId(ctx, field)
+	case "templateVersionId":
+		return ec.fieldContext_Agent_templateVersionId(ctx, field)
+	case "resourcePoolId":
+		return ec.fieldContext_Agent_resourcePoolId(ctx, field)
+	case "credentials":
+		return ec.fieldContext_Agent_credentials(ctx, field)
 	case "createdAt":
 		return ec.fieldContext_Agent_createdAt(ctx, field)
 	case "updatedAt":
@@ -4841,6 +6088,14 @@ func (ec *executionContext) childFields_AgentConnection(ctx context.Context, fie
 		return ec.fieldContext_AgentConnection_pageInfo(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type AgentConnection", field.Name)
+}
+
+func (ec *executionContext) childFields_AgentCredentials(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "username":
+		return ec.fieldContext_AgentCredentials_username(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type AgentCredentials", field.Name)
 }
 
 func (ec *executionContext) childFields_AgentSnapshot(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -4897,6 +6152,26 @@ func (ec *executionContext) childFields_AgentUsage(ctx context.Context, field gr
 		return ec.fieldContext_AgentUsage_cost(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type AgentUsage", field.Name)
+}
+
+func (ec *executionContext) childFields_AgentUsageRow(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "agentId":
+		return ec.fieldContext_AgentUsageRow_agentId(ctx, field)
+	case "agentName":
+		return ec.fieldContext_AgentUsageRow_agentName(ctx, field)
+	case "inputTokens":
+		return ec.fieldContext_AgentUsageRow_inputTokens(ctx, field)
+	case "outputTokens":
+		return ec.fieldContext_AgentUsageRow_outputTokens(ctx, field)
+	case "totalTokens":
+		return ec.fieldContext_AgentUsageRow_totalTokens(ctx, field)
+	case "requests":
+		return ec.fieldContext_AgentUsageRow_requests(ctx, field)
+	case "cost":
+		return ec.fieldContext_AgentUsageRow_cost(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type AgentUsageRow", field.Name)
 }
 
 func (ec *executionContext) childFields_Artifact(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -4979,6 +6254,14 @@ func (ec *executionContext) childFields_AuthPayload(ctx context.Context, field g
 	return nil, fmt.Errorf("no field named %q was found under type AuthPayload", field.Name)
 }
 
+func (ec *executionContext) childFields_CreateOvaTemplateFamilyPayload(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "family":
+		return ec.fieldContext_CreateOvaTemplateFamilyPayload_family(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type CreateOvaTemplateFamilyPayload", field.Name)
+}
+
 func (ec *executionContext) childFields_CreateResourcePoolPayload(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "pool":
@@ -5011,6 +6294,94 @@ func (ec *executionContext) childFields_CustomRole(ctx context.Context, field gr
 		return ec.fieldContext_CustomRole_createdAt(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type CustomRole", field.Name)
+}
+
+func (ec *executionContext) childFields_DailyUsageRow(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "date":
+		return ec.fieldContext_DailyUsageRow_date(ctx, field)
+	case "inputTokens":
+		return ec.fieldContext_DailyUsageRow_inputTokens(ctx, field)
+	case "outputTokens":
+		return ec.fieldContext_DailyUsageRow_outputTokens(ctx, field)
+	case "totalTokens":
+		return ec.fieldContext_DailyUsageRow_totalTokens(ctx, field)
+	case "requests":
+		return ec.fieldContext_DailyUsageRow_requests(ctx, field)
+	case "cost":
+		return ec.fieldContext_DailyUsageRow_cost(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type DailyUsageRow", field.Name)
+}
+
+func (ec *executionContext) childFields_DashboardNotice(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_DashboardNotice_id(ctx, field)
+	case "text":
+		return ec.fieldContext_DashboardNotice_text(ctx, field)
+	case "status":
+		return ec.fieldContext_DashboardNotice_status(ctx, field)
+	case "occurredAt":
+		return ec.fieldContext_DashboardNotice_occurredAt(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type DashboardNotice", field.Name)
+}
+
+func (ec *executionContext) childFields_DashboardOverview(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "stats":
+		return ec.fieldContext_DashboardOverview_stats(ctx, field)
+	case "recentAgents":
+		return ec.fieldContext_DashboardOverview_recentAgents(ctx, field)
+	case "notices":
+		return ec.fieldContext_DashboardOverview_notices(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type DashboardOverview", field.Name)
+}
+
+func (ec *executionContext) childFields_DashboardRecentAgent(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_DashboardRecentAgent_id(ctx, field)
+	case "name":
+		return ec.fieldContext_DashboardRecentAgent_name(ctx, field)
+	case "agentName":
+		return ec.fieldContext_DashboardRecentAgent_agentName(ctx, field)
+	case "status":
+		return ec.fieldContext_DashboardRecentAgent_status(ctx, field)
+	case "createdAt":
+		return ec.fieldContext_DashboardRecentAgent_createdAt(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type DashboardRecentAgent", field.Name)
+}
+
+func (ec *executionContext) childFields_DashboardStats(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "totalAgents":
+		return ec.fieldContext_DashboardStats_totalAgents(ctx, field)
+	case "runningAgents":
+		return ec.fieldContext_DashboardStats_runningAgents(ctx, field)
+	case "stoppedAgents":
+		return ec.fieldContext_DashboardStats_stoppedAgents(ctx, field)
+	case "exceptionAgents":
+		return ec.fieldContext_DashboardStats_exceptionAgents(ctx, field)
+	case "totalVirtualKeys":
+		return ec.fieldContext_DashboardStats_totalVirtualKeys(ctx, field)
+	case "totalGateways":
+		return ec.fieldContext_DashboardStats_totalGateways(ctx, field)
+	case "totalResourcePools":
+		return ec.fieldContext_DashboardStats_totalResourcePools(ctx, field)
+	case "totalUsers":
+		return ec.fieldContext_DashboardStats_totalUsers(ctx, field)
+	case "monthlyCalls":
+		return ec.fieldContext_DashboardStats_monthlyCalls(ctx, field)
+	case "monthlyTokens":
+		return ec.fieldContext_DashboardStats_monthlyTokens(ctx, field)
+	case "monthlyCost":
+		return ec.fieldContext_DashboardStats_monthlyCost(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type DashboardStats", field.Name)
 }
 
 func (ec *executionContext) childFields_DateUsage(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -5075,6 +6446,10 @@ func (ec *executionContext) childFields_DeployedAgent(ctx context.Context, field
 		return ec.fieldContext_DeployedAgent_agent(ctx, field)
 	case "virtualKeySecret":
 		return ec.fieldContext_DeployedAgent_virtualKeySecret(ctx, field)
+	case "templateVersion":
+		return ec.fieldContext_DeployedAgent_templateVersion(ctx, field)
+	case "resourcePool":
+		return ec.fieldContext_DeployedAgent_resourcePool(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type DeployedAgent", field.Name)
 }
@@ -5137,6 +6512,40 @@ func (ec *executionContext) childFields_Membership(ctx context.Context, field gr
 		return ec.fieldContext_Membership_role(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Membership", field.Name)
+}
+
+func (ec *executionContext) childFields_MeteringCostSummary(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "totalCost":
+		return ec.fieldContext_MeteringCostSummary_totalCost(ctx, field)
+	case "monthlyCost":
+		return ec.fieldContext_MeteringCostSummary_monthlyCost(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type MeteringCostSummary", field.Name)
+}
+
+func (ec *executionContext) childFields_MeteringOverview(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "range":
+		return ec.fieldContext_MeteringOverview_range(ctx, field)
+	case "totalInputTokens":
+		return ec.fieldContext_MeteringOverview_totalInputTokens(ctx, field)
+	case "totalOutputTokens":
+		return ec.fieldContext_MeteringOverview_totalOutputTokens(ctx, field)
+	case "totalTokens":
+		return ec.fieldContext_MeteringOverview_totalTokens(ctx, field)
+	case "totalRequests":
+		return ec.fieldContext_MeteringOverview_totalRequests(ctx, field)
+	case "byAgent":
+		return ec.fieldContext_MeteringOverview_byAgent(ctx, field)
+	case "byModel":
+		return ec.fieldContext_MeteringOverview_byModel(ctx, field)
+	case "byDay":
+		return ec.fieldContext_MeteringOverview_byDay(ctx, field)
+	case "cost":
+		return ec.fieldContext_MeteringOverview_cost(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type MeteringOverview", field.Name)
 }
 
 func (ec *executionContext) childFields_MeteringSummary(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -5245,14 +6654,22 @@ func (ec *executionContext) childFields_ModelRoute(ctx context.Context, field gr
 		return ec.fieldContext_ModelRoute_modelAlias(ctx, field)
 	case "backendGatewayId":
 		return ec.fieldContext_ModelRoute_backendGatewayId(ctx, field)
+	case "gatewayName":
+		return ec.fieldContext_ModelRoute_gatewayName(ctx, field)
 	case "upstreams":
 		return ec.fieldContext_ModelRoute_upstreams(ctx, field)
+	case "supportedModels":
+		return ec.fieldContext_ModelRoute_supportedModels(ctx, field)
 	case "strategy":
 		return ec.fieldContext_ModelRoute_strategy(ctx, field)
+	case "uiStrategy":
+		return ec.fieldContext_ModelRoute_uiStrategy(ctx, field)
 	case "enabled":
 		return ec.fieldContext_ModelRoute_enabled(ctx, field)
 	case "createdAt":
 		return ec.fieldContext_ModelRoute_createdAt(ctx, field)
+	case "updatedAt":
+		return ec.fieldContext_ModelRoute_updatedAt(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type ModelRoute", field.Name)
 }
@@ -5269,6 +6686,98 @@ func (ec *executionContext) childFields_ModelUsage(ctx context.Context, field gr
 		return ec.fieldContext_ModelUsage_cost(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type ModelUsage", field.Name)
+}
+
+func (ec *executionContext) childFields_ModelUsageRow(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "model":
+		return ec.fieldContext_ModelUsageRow_model(ctx, field)
+	case "inputTokens":
+		return ec.fieldContext_ModelUsageRow_inputTokens(ctx, field)
+	case "outputTokens":
+		return ec.fieldContext_ModelUsageRow_outputTokens(ctx, field)
+	case "totalTokens":
+		return ec.fieldContext_ModelUsageRow_totalTokens(ctx, field)
+	case "requests":
+		return ec.fieldContext_ModelUsageRow_requests(ctx, field)
+	case "cost":
+		return ec.fieldContext_ModelUsageRow_cost(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type ModelUsageRow", field.Name)
+}
+
+func (ec *executionContext) childFields_OvaTemplateFamily(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_OvaTemplateFamily_id(ctx, field)
+	case "name":
+		return ec.fieldContext_OvaTemplateFamily_name(ctx, field)
+	case "type":
+		return ec.fieldContext_OvaTemplateFamily_type(ctx, field)
+	case "description":
+		return ec.fieldContext_OvaTemplateFamily_description(ctx, field)
+	case "tools":
+		return ec.fieldContext_OvaTemplateFamily_tools(ctx, field)
+	case "skills":
+		return ec.fieldContext_OvaTemplateFamily_skills(ctx, field)
+	case "scenarios":
+		return ec.fieldContext_OvaTemplateFamily_scenarios(ctx, field)
+	case "iconShape":
+		return ec.fieldContext_OvaTemplateFamily_iconShape(ctx, field)
+	case "iconColor":
+		return ec.fieldContext_OvaTemplateFamily_iconColor(ctx, field)
+	case "latestVersion":
+		return ec.fieldContext_OvaTemplateFamily_latestVersion(ctx, field)
+	case "createdAt":
+		return ec.fieldContext_OvaTemplateFamily_createdAt(ctx, field)
+	case "updatedAt":
+		return ec.fieldContext_OvaTemplateFamily_updatedAt(ctx, field)
+	case "versions":
+		return ec.fieldContext_OvaTemplateFamily_versions(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type OvaTemplateFamily", field.Name)
+}
+
+func (ec *executionContext) childFields_OvaTemplateFamilyConnection(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "nodes":
+		return ec.fieldContext_OvaTemplateFamilyConnection_nodes(ctx, field)
+	case "totalCount":
+		return ec.fieldContext_OvaTemplateFamilyConnection_totalCount(ctx, field)
+	case "pageInfo":
+		return ec.fieldContext_OvaTemplateFamilyConnection_pageInfo(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type OvaTemplateFamilyConnection", field.Name)
+}
+
+func (ec *executionContext) childFields_OvaTemplateVersion(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_OvaTemplateVersion_id(ctx, field)
+	case "familyId":
+		return ec.fieldContext_OvaTemplateVersion_familyId(ctx, field)
+	case "version":
+		return ec.fieldContext_OvaTemplateVersion_version(ctx, field)
+	case "ovaIdentifier":
+		return ec.fieldContext_OvaTemplateVersion_ovaIdentifier(ctx, field)
+	case "notes":
+		return ec.fieldContext_OvaTemplateVersion_notes(ctx, field)
+	case "createdAt":
+		return ec.fieldContext_OvaTemplateVersion_createdAt(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type OvaTemplateVersion", field.Name)
+}
+
+func (ec *executionContext) childFields_OvaTemplateVersionConnection(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "nodes":
+		return ec.fieldContext_OvaTemplateVersionConnection_nodes(ctx, field)
+	case "totalCount":
+		return ec.fieldContext_OvaTemplateVersionConnection_totalCount(ctx, field)
+	case "pageInfo":
+		return ec.fieldContext_OvaTemplateVersionConnection_pageInfo(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type OvaTemplateVersionConnection", field.Name)
 }
 
 func (ec *executionContext) childFields_PageInfo(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -5359,6 +6868,8 @@ func (ec *executionContext) childFields_ResourcePool(ctx context.Context, field 
 		return ec.fieldContext_ResourcePool_name(ctx, field)
 	case "endpoint":
 		return ec.fieldContext_ResourcePool_endpoint(ctx, field)
+	case "contentLibraryName":
+		return ec.fieldContext_ResourcePool_contentLibraryName(ctx, field)
 	case "connectionStatus":
 		return ec.fieldContext_ResourcePool_connectionStatus(ctx, field)
 	case "datacenterCount":
@@ -5391,6 +6902,28 @@ func (ec *executionContext) childFields_ResourcePoolConnection(ctx context.Conte
 		return ec.fieldContext_ResourcePoolConnection_pageInfo(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type ResourcePoolConnection", field.Name)
+}
+
+func (ec *executionContext) childFields_ResourcePoolConnectionDetail(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "vSphereVersion":
+		return ec.fieldContext_ResourcePoolConnectionDetail_vSphereVersion(ctx, field)
+	case "itemCount":
+		return ec.fieldContext_ResourcePoolConnectionDetail_itemCount(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type ResourcePoolConnectionDetail", field.Name)
+}
+
+func (ec *executionContext) childFields_ResourcePoolConnectionTest(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "ok":
+		return ec.fieldContext_ResourcePoolConnectionTest_ok(ctx, field)
+	case "message":
+		return ec.fieldContext_ResourcePoolConnectionTest_message(ctx, field)
+	case "detail":
+		return ec.fieldContext_ResourcePoolConnectionTest_detail(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type ResourcePoolConnectionTest", field.Name)
 }
 
 func (ec *executionContext) childFields_Role(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -5769,6 +7302,20 @@ func (ec *executionContext) field_Mutation_addMembership_args(ctx context.Contex
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_addOvaTemplateVersion_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.AddOvaTemplateVersionInput, error) {
+			return ec.unmarshalNAddOvaTemplateVersionInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAddOvaTemplateVersionInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_assignUserRole_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -5889,6 +7436,34 @@ func (ec *executionContext) field_Mutation_createModelGateway_args(ctx context.C
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
 		func(ctx context.Context, v any) (model.ModelGatewayInput, error) {
 			return ec.unmarshalNModelGatewayInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createModelRoute_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.CreateModelRouteInput, error) {
+			return ec.unmarshalNCreateModelRouteInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCreateModelRouteInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createOvaTemplateFamily_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.CreateOvaTemplateFamilyInput, error) {
+			return ec.unmarshalNCreateOvaTemplateFamilyInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCreateOvaTemplateFamilyInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -6568,14 +8143,14 @@ func (ec *executionContext) field_Mutation_testModelGatewayConnection_args(ctx c
 func (ec *executionContext) field_Mutation_testResourcePoolConnection_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
-		func(ctx context.Context, v any) (string, error) {
-			return ec.unmarshalNID2string(ctx, v)
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.TestResourcePoolConnectionInput, error) {
+			return ec.unmarshalNTestResourcePoolConnectionInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTestResourcePoolConnectionInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["id"] = arg0
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -6629,6 +8204,28 @@ func (ec *executionContext) field_Mutation_updateModelGateway_args(ctx context.C
 	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input",
 		func(ctx context.Context, v any) (model.ModelGatewayInput, error) {
 			return ec.unmarshalNModelGatewayInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateModelRoute_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.UpdateModelRouteInput, error) {
+			return ec.unmarshalNUpdateModelRouteInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUpdateModelRouteInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -6923,6 +8520,28 @@ func (ec *executionContext) field_Query_auditLogs_args(ctx context.Context, rawA
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_dashboardOverview_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "recentLimit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["recentLimit"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "noticeLimit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["noticeLimit"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_departmentMembers_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -6934,6 +8553,28 @@ func (ec *executionContext) field_Query_departmentMembers_args(ctx context.Conte
 		return nil, err
 	}
 	args["departmentId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_meteringOverview_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "range",
+		func(ctx context.Context, v any) (*model.MeteringTimeRange, error) {
+			return ec.unmarshalOMeteringTimeRange2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringTimeRange(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["range"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "userId",
+		func(ctx context.Context, v any) (*string, error) {
+			return ec.unmarshalOID2ᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["userId"] = arg1
 	return args, nil
 }
 
@@ -6978,6 +8619,58 @@ func (ec *executionContext) field_Query_modelGateways_args(ctx context.Context, 
 		return nil, err
 	}
 	args["sort"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_ovaTemplateFamilies_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
+		func(ctx context.Context, v any) (*model.OvaTemplateFamilyFilter, error) {
+			return ec.unmarshalOOvaTemplateFamilyFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateFamilyFilter(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["filter"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "pagination",
+		func(ctx context.Context, v any) (*model.Pagination, error) {
+			return ec.unmarshalOPagination2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPagination(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["pagination"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
+		func(ctx context.Context, v any) (*model.OvaTemplateFamilySort, error) {
+			return ec.unmarshalOOvaTemplateFamilySort2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateFamilySort(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["sort"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_ovaTemplateVersions_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "familyId",
+		func(ctx context.Context, v any) (*string, error) {
+			return ec.unmarshalOID2ᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["familyId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "pagination",
+		func(ctx context.Context, v any) (*model.Pagination, error) {
+			return ec.unmarshalOPagination2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPagination(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["pagination"] = arg1
 	return args, nil
 }
 
@@ -7536,6 +9229,38 @@ func (ec *executionContext) fieldContext_AccountUser_updatedAt(_ context.Context
 	return graphql.NewScalarFieldContext("AccountUser", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
+func (ec *executionContext) _AddOvaTemplateVersionPayload_version(ctx context.Context, field graphql.CollectedField, obj *model.AddOvaTemplateVersionPayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AddOvaTemplateVersionPayload_version(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Version, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.OvaTemplateVersion) graphql.Marshaler {
+			return ec.marshalNOvaTemplateVersion2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AddOvaTemplateVersionPayload_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AddOvaTemplateVersionPayload",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_OvaTemplateVersion(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Agent_id(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -7736,6 +9461,107 @@ func (ec *executionContext) _Agent_endpoint(ctx context.Context, field graphql.C
 }
 func (ec *executionContext) fieldContext_Agent_endpoint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Agent", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Agent_templateFamilyId(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Agent_templateFamilyId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TemplateFamilyID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOID2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Agent_templateFamilyId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Agent", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _Agent_templateVersionId(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Agent_templateVersionId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TemplateVersionID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOID2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Agent_templateVersionId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Agent", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _Agent_resourcePoolId(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Agent_resourcePoolId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ResourcePoolID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOID2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Agent_resourcePoolId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Agent", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _Agent_credentials(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Agent_credentials(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Agent().Credentials(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.AgentCredentials) graphql.Marshaler {
+			return ec.marshalOAgentCredentials2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentCredentials(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Agent_credentials(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Agent",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_AgentCredentials(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _Agent_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Agent) (ret graphql.Marshaler) {
@@ -8085,6 +9911,29 @@ func (ec *executionContext) fieldContext_AgentConnection_pageInfo(_ context.Cont
 		},
 	}
 	return fc, nil
+}
+
+func (ec *executionContext) _AgentCredentials_username(ctx context.Context, field graphql.CollectedField, obj *model.AgentCredentials) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentCredentials_username(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Username, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentCredentials_username(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentCredentials", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _AgentSnapshot_name(ctx context.Context, field graphql.CollectedField, obj *model.AgentSnapshot) (ret graphql.Marshaler) {
@@ -8522,6 +10371,167 @@ func (ec *executionContext) _AgentUsage_cost(ctx context.Context, field graphql.
 }
 func (ec *executionContext) fieldContext_AgentUsage_cost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("AgentUsage", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _AgentUsageRow_agentId(ctx context.Context, field graphql.CollectedField, obj *model.AgentUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentUsageRow_agentId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.AgentID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentUsageRow_agentId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentUsageRow", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _AgentUsageRow_agentName(ctx context.Context, field graphql.CollectedField, obj *model.AgentUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentUsageRow_agentName(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.AgentName, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentUsageRow_agentName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentUsageRow", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _AgentUsageRow_inputTokens(ctx context.Context, field graphql.CollectedField, obj *model.AgentUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentUsageRow_inputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.InputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentUsageRow_inputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _AgentUsageRow_outputTokens(ctx context.Context, field graphql.CollectedField, obj *model.AgentUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentUsageRow_outputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OutputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentUsageRow_outputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _AgentUsageRow_totalTokens(ctx context.Context, field graphql.CollectedField, obj *model.AgentUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentUsageRow_totalTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentUsageRow_totalTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _AgentUsageRow_requests(ctx context.Context, field graphql.CollectedField, obj *model.AgentUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentUsageRow_requests(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Requests, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentUsageRow_requests(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _AgentUsageRow_cost(ctx context.Context, field graphql.CollectedField, obj *model.AgentUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AgentUsageRow_cost(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Cost, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_AgentUsageRow_cost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AgentUsageRow", field, false, false, errors.New("field of type Float does not have child fields"))
 }
 
 func (ec *executionContext) _Artifact_id(ctx context.Context, field graphql.CollectedField, obj *model.Artifact) (ret graphql.Marshaler) {
@@ -9126,6 +11136,38 @@ func (ec *executionContext) fieldContext_AuthPayload_mustChangePassword(_ contex
 	return graphql.NewScalarFieldContext("AuthPayload", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
+func (ec *executionContext) _CreateOvaTemplateFamilyPayload_family(ctx context.Context, field graphql.CollectedField, obj *model.CreateOvaTemplateFamilyPayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_CreateOvaTemplateFamilyPayload_family(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Family, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.OvaTemplateFamily) graphql.Marshaler {
+			return ec.marshalNOvaTemplateFamily2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateFamily(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_CreateOvaTemplateFamilyPayload_family(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CreateOvaTemplateFamilyPayload",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_OvaTemplateFamily(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _CreateResourcePoolPayload_pool(ctx context.Context, field graphql.CollectedField, obj *model.CreateResourcePoolPayload) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -9326,6 +11368,700 @@ func (ec *executionContext) _CustomRole_createdAt(ctx context.Context, field gra
 }
 func (ec *executionContext) fieldContext_CustomRole_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("CustomRole", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _DailyUsageRow_date(ctx context.Context, field graphql.CollectedField, obj *model.DailyUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DailyUsageRow_date(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Date, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DailyUsageRow_date(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DailyUsageRow", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _DailyUsageRow_inputTokens(ctx context.Context, field graphql.CollectedField, obj *model.DailyUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DailyUsageRow_inputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.InputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DailyUsageRow_inputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DailyUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DailyUsageRow_outputTokens(ctx context.Context, field graphql.CollectedField, obj *model.DailyUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DailyUsageRow_outputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OutputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DailyUsageRow_outputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DailyUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DailyUsageRow_totalTokens(ctx context.Context, field graphql.CollectedField, obj *model.DailyUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DailyUsageRow_totalTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DailyUsageRow_totalTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DailyUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DailyUsageRow_requests(ctx context.Context, field graphql.CollectedField, obj *model.DailyUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DailyUsageRow_requests(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Requests, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DailyUsageRow_requests(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DailyUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DailyUsageRow_cost(ctx context.Context, field graphql.CollectedField, obj *model.DailyUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DailyUsageRow_cost(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Cost, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DailyUsageRow_cost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DailyUsageRow", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardNotice_id(ctx context.Context, field graphql.CollectedField, obj *model.DashboardNotice) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardNotice_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardNotice_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardNotice", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardNotice_text(ctx context.Context, field graphql.CollectedField, obj *model.DashboardNotice) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardNotice_text(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Text, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardNotice_text(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardNotice", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardNotice_status(ctx context.Context, field graphql.CollectedField, obj *model.DashboardNotice) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardNotice_status(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Status, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.DashboardNoticeStatus) graphql.Marshaler {
+			return ec.marshalNDashboardNoticeStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDashboardNoticeStatus(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardNotice_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardNotice", field, false, false, errors.New("field of type DashboardNoticeStatus does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardNotice_occurredAt(ctx context.Context, field graphql.CollectedField, obj *model.DashboardNotice) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardNotice_occurredAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OccurredAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardNotice_occurredAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardNotice", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardOverview_stats(ctx context.Context, field graphql.CollectedField, obj *model.DashboardOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardOverview_stats(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Stats, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.DashboardStats) graphql.Marshaler {
+			return ec.marshalNDashboardStats2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDashboardStats(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardOverview_stats(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DashboardOverview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_DashboardStats(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DashboardOverview_recentAgents(ctx context.Context, field graphql.CollectedField, obj *model.DashboardOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardOverview_recentAgents(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RecentAgents, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.DashboardRecentAgent) graphql.Marshaler {
+			return ec.marshalNDashboardRecentAgent2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDashboardRecentAgentᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardOverview_recentAgents(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DashboardOverview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_DashboardRecentAgent(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DashboardOverview_notices(ctx context.Context, field graphql.CollectedField, obj *model.DashboardOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardOverview_notices(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Notices, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.DashboardNotice) graphql.Marshaler {
+			return ec.marshalNDashboardNotice2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDashboardNoticeᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardOverview_notices(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DashboardOverview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_DashboardNotice(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DashboardRecentAgent_id(ctx context.Context, field graphql.CollectedField, obj *model.DashboardRecentAgent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardRecentAgent_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardRecentAgent_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardRecentAgent", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardRecentAgent_name(ctx context.Context, field graphql.CollectedField, obj *model.DashboardRecentAgent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardRecentAgent_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardRecentAgent_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardRecentAgent", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardRecentAgent_agentName(ctx context.Context, field graphql.CollectedField, obj *model.DashboardRecentAgent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardRecentAgent_agentName(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.AgentName, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardRecentAgent_agentName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardRecentAgent", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardRecentAgent_status(ctx context.Context, field graphql.CollectedField, obj *model.DashboardRecentAgent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardRecentAgent_status(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Status, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.DashboardAgentStatus) graphql.Marshaler {
+			return ec.marshalNDashboardAgentStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDashboardAgentStatus(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardRecentAgent_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardRecentAgent", field, false, false, errors.New("field of type DashboardAgentStatus does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardRecentAgent_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.DashboardRecentAgent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardRecentAgent_createdAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardRecentAgent_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardRecentAgent", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardStats_totalAgents(ctx context.Context, field graphql.CollectedField, obj *model.DashboardStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardStats_totalAgents(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalAgents, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardStats_totalAgents(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardStats", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardStats_runningAgents(ctx context.Context, field graphql.CollectedField, obj *model.DashboardStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardStats_runningAgents(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RunningAgents, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardStats_runningAgents(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardStats", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardStats_stoppedAgents(ctx context.Context, field graphql.CollectedField, obj *model.DashboardStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardStats_stoppedAgents(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.StoppedAgents, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardStats_stoppedAgents(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardStats", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardStats_exceptionAgents(ctx context.Context, field graphql.CollectedField, obj *model.DashboardStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardStats_exceptionAgents(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ExceptionAgents, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardStats_exceptionAgents(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardStats", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardStats_totalVirtualKeys(ctx context.Context, field graphql.CollectedField, obj *model.DashboardStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardStats_totalVirtualKeys(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalVirtualKeys, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardStats_totalVirtualKeys(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardStats", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardStats_totalGateways(ctx context.Context, field graphql.CollectedField, obj *model.DashboardStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardStats_totalGateways(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalGateways, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardStats_totalGateways(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardStats", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardStats_totalResourcePools(ctx context.Context, field graphql.CollectedField, obj *model.DashboardStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardStats_totalResourcePools(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalResourcePools, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardStats_totalResourcePools(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardStats", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardStats_totalUsers(ctx context.Context, field graphql.CollectedField, obj *model.DashboardStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardStats_totalUsers(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalUsers, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardStats_totalUsers(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardStats", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardStats_monthlyCalls(ctx context.Context, field graphql.CollectedField, obj *model.DashboardStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardStats_monthlyCalls(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.MonthlyCalls, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardStats_monthlyCalls(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardStats", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardStats_monthlyTokens(ctx context.Context, field graphql.CollectedField, obj *model.DashboardStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardStats_monthlyTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.MonthlyTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardStats_monthlyTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardStats", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DashboardStats_monthlyCost(ctx context.Context, field graphql.CollectedField, obj *model.DashboardStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DashboardStats_monthlyCost(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.MonthlyCost, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DashboardStats_monthlyCost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DashboardStats", field, false, false, errors.New("field of type Float does not have child fields"))
 }
 
 func (ec *executionContext) _DateUsage_date(ctx context.Context, field graphql.CollectedField, obj *model.DateUsage) (ret graphql.Marshaler) {
@@ -9680,6 +12416,70 @@ func (ec *executionContext) _DeployedAgent_virtualKeySecret(ctx context.Context,
 }
 func (ec *executionContext) fieldContext_DeployedAgent_virtualKeySecret(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("DeployedAgent", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _DeployedAgent_templateVersion(ctx context.Context, field graphql.CollectedField, obj *model.DeployedAgent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DeployedAgent_templateVersion(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TemplateVersion, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.OvaTemplateVersion) graphql.Marshaler {
+			return ec.marshalNOvaTemplateVersion2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateVersion(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DeployedAgent_templateVersion(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeployedAgent",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_OvaTemplateVersion(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DeployedAgent_resourcePool(ctx context.Context, field graphql.CollectedField, obj *model.DeployedAgent) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DeployedAgent_resourcePool(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ResourcePool, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ResourcePool) graphql.Marshaler {
+			return ec.marshalNResourcePool2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DeployedAgent_resourcePool(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DeployedAgent",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ResourcePool(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _GatewayConnection_id(ctx context.Context, field graphql.CollectedField, obj *model.GatewayConnection) (ret graphql.Marshaler) {
@@ -10103,6 +12903,295 @@ func (ec *executionContext) _Membership_role(ctx context.Context, field graphql.
 }
 func (ec *executionContext) fieldContext_Membership_role(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Membership", field, false, false, errors.New("field of type MembershipRole does not have child fields"))
+}
+
+func (ec *executionContext) _MeteringCostSummary_totalCost(ctx context.Context, field graphql.CollectedField, obj *model.MeteringCostSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringCostSummary_totalCost(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalCost, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringCostSummary_totalCost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("MeteringCostSummary", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _MeteringCostSummary_monthlyCost(ctx context.Context, field graphql.CollectedField, obj *model.MeteringCostSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringCostSummary_monthlyCost(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.MonthlyCost, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringCostSummary_monthlyCost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("MeteringCostSummary", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _MeteringOverview_range(ctx context.Context, field graphql.CollectedField, obj *model.MeteringOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringOverview_range(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Range, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.MeteringTimeRange) graphql.Marshaler {
+			return ec.marshalNMeteringTimeRange2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringTimeRange(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringOverview_range(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("MeteringOverview", field, false, false, errors.New("field of type MeteringTimeRange does not have child fields"))
+}
+
+func (ec *executionContext) _MeteringOverview_totalInputTokens(ctx context.Context, field graphql.CollectedField, obj *model.MeteringOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringOverview_totalInputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalInputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringOverview_totalInputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("MeteringOverview", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _MeteringOverview_totalOutputTokens(ctx context.Context, field graphql.CollectedField, obj *model.MeteringOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringOverview_totalOutputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalOutputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringOverview_totalOutputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("MeteringOverview", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _MeteringOverview_totalTokens(ctx context.Context, field graphql.CollectedField, obj *model.MeteringOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringOverview_totalTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringOverview_totalTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("MeteringOverview", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _MeteringOverview_totalRequests(ctx context.Context, field graphql.CollectedField, obj *model.MeteringOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringOverview_totalRequests(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalRequests, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringOverview_totalRequests(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("MeteringOverview", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _MeteringOverview_byAgent(ctx context.Context, field graphql.CollectedField, obj *model.MeteringOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringOverview_byAgent(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ByAgent, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.AgentUsageRow) graphql.Marshaler {
+			return ec.marshalNAgentUsageRow2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentUsageRowᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringOverview_byAgent(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MeteringOverview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_AgentUsageRow(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MeteringOverview_byModel(ctx context.Context, field graphql.CollectedField, obj *model.MeteringOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringOverview_byModel(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ByModel, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.ModelUsageRow) graphql.Marshaler {
+			return ec.marshalNModelUsageRow2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelUsageRowᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringOverview_byModel(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MeteringOverview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ModelUsageRow(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MeteringOverview_byDay(ctx context.Context, field graphql.CollectedField, obj *model.MeteringOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringOverview_byDay(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ByDay, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.DailyUsageRow) graphql.Marshaler {
+			return ec.marshalNDailyUsageRow2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDailyUsageRowᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringOverview_byDay(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MeteringOverview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_DailyUsageRow(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MeteringOverview_cost(ctx context.Context, field graphql.CollectedField, obj *model.MeteringOverview) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_MeteringOverview_cost(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Cost, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.MeteringCostSummary) graphql.Marshaler {
+			return ec.marshalNMeteringCostSummary2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringCostSummary(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_MeteringOverview_cost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MeteringOverview",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_MeteringCostSummary(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _MeteringSummary_totalInputTokens(ctx context.Context, field graphql.CollectedField, obj *model.MeteringSummary) (ret graphql.Marshaler) {
@@ -11001,6 +14090,29 @@ func (ec *executionContext) fieldContext_ModelRoute_backendGatewayId(_ context.C
 	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type ID does not have child fields"))
 }
 
+func (ec *executionContext) _ModelRoute_gatewayName(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelRoute_gatewayName(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.GatewayName, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelRoute_gatewayName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _ModelRoute_upstreams(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -11021,6 +14133,29 @@ func (ec *executionContext) _ModelRoute_upstreams(ctx context.Context, field gra
 	)
 }
 func (ec *executionContext) fieldContext_ModelRoute_upstreams(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ModelRoute_supportedModels(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelRoute_supportedModels(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.SupportedModels, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []string) graphql.Marshaler {
+			return ec.marshalNString2ᚕstringᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelRoute_supportedModels(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
@@ -11045,6 +14180,29 @@ func (ec *executionContext) _ModelRoute_strategy(ctx context.Context, field grap
 }
 func (ec *executionContext) fieldContext_ModelRoute_strategy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type LoadBalanceStrategy does not have child fields"))
+}
+
+func (ec *executionContext) _ModelRoute_uiStrategy(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelRoute_uiStrategy(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.UIStrategy, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.ModelRouteStrategy) graphql.Marshaler {
+			return ec.marshalNModelRouteStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelRoute_uiStrategy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type ModelRouteStrategy does not have child fields"))
 }
 
 func (ec *executionContext) _ModelRoute_enabled(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
@@ -11090,6 +14248,29 @@ func (ec *executionContext) _ModelRoute_createdAt(ctx context.Context, field gra
 	)
 }
 func (ec *executionContext) fieldContext_ModelRoute_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _ModelRoute_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelRoute_updatedAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.UpdatedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelRoute_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
@@ -11183,6 +14364,144 @@ func (ec *executionContext) _ModelUsage_cost(ctx context.Context, field graphql.
 }
 func (ec *executionContext) fieldContext_ModelUsage_cost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ModelUsage", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _ModelUsageRow_model(ctx context.Context, field graphql.CollectedField, obj *model.ModelUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelUsageRow_model(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Model, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelUsageRow_model(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelUsageRow", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ModelUsageRow_inputTokens(ctx context.Context, field graphql.CollectedField, obj *model.ModelUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelUsageRow_inputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.InputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelUsageRow_inputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ModelUsageRow_outputTokens(ctx context.Context, field graphql.CollectedField, obj *model.ModelUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelUsageRow_outputTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OutputTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelUsageRow_outputTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ModelUsageRow_totalTokens(ctx context.Context, field graphql.CollectedField, obj *model.ModelUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelUsageRow_totalTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelUsageRow_totalTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ModelUsageRow_requests(ctx context.Context, field graphql.CollectedField, obj *model.ModelUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelUsageRow_requests(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Requests, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelUsageRow_requests(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelUsageRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ModelUsageRow_cost(ctx context.Context, field graphql.CollectedField, obj *model.ModelUsageRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelUsageRow_cost(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Cost, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelUsageRow_cost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelUsageRow", field, false, false, errors.New("field of type Float does not have child fields"))
 }
 
 func (ec *executionContext) _Mutation_login(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -12724,7 +16043,25 @@ func (ec *executionContext) _Mutation_deployAgent(ctx context.Context, field gra
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Mutation().DeployAgent(ctx, fc.Args["input"].(model.DeployAgentInput))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.DeployedAgent
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.DeployedAgent
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
 		func(ctx context.Context, selections ast.SelectionSet, v *model.DeployedAgent) graphql.Marshaler {
 			return ec.marshalNDeployedAgent2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDeployedAgent(ctx, selections, v)
 		},
@@ -13342,6 +16679,130 @@ func (ec *executionContext) fieldContext_Mutation_upsertModelRoute(ctx context.C
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_upsertModelRoute_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_createModelRoute(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_createModelRoute(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().CreateModelRoute(ctx, fc.Args["input"].(model.CreateModelRouteInput))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				perm, err := ec.unmarshalNString2string(ctx, "route:manage")
+				if err != nil {
+					var zeroVal *model.ModelRoute
+					return zeroVal, err
+				}
+				if ec.Directives.HasPermission == nil {
+					var zeroVal *model.ModelRoute
+					return zeroVal, errors.New("directive hasPermission is not implemented")
+				}
+				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ModelRoute) graphql.Marshaler {
+			return ec.marshalNModelRoute2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRoute(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_createModelRoute(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ModelRoute(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createModelRoute_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateModelRoute(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_updateModelRoute(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().UpdateModelRoute(ctx, fc.Args["id"].(string), fc.Args["input"].(model.UpdateModelRouteInput))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				perm, err := ec.unmarshalNString2string(ctx, "route:manage")
+				if err != nil {
+					var zeroVal *model.ModelRoute
+					return zeroVal, err
+				}
+				if ec.Directives.HasPermission == nil {
+					var zeroVal *model.ModelRoute
+					return zeroVal, errors.New("directive hasPermission is not implemented")
+				}
+				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ModelRoute) graphql.Marshaler {
+			return ec.marshalNModelRoute2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRoute(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_updateModelRoute(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ModelRoute(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateModelRoute_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -14092,6 +17553,130 @@ func (ec *executionContext) fieldContext_Mutation_deleteRateLimitPolicy(ctx cont
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_createOvaTemplateFamily(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_createOvaTemplateFamily(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().CreateOvaTemplateFamily(ctx, fc.Args["input"].(model.CreateOvaTemplateFamilyInput))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.CreateOvaTemplateFamilyPayload
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.CreateOvaTemplateFamilyPayload
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.CreateOvaTemplateFamilyPayload) graphql.Marshaler {
+			return ec.marshalNCreateOvaTemplateFamilyPayload2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCreateOvaTemplateFamilyPayload(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_createOvaTemplateFamily(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_CreateOvaTemplateFamilyPayload(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createOvaTemplateFamily_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_addOvaTemplateVersion(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_addOvaTemplateVersion(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().AddOvaTemplateVersion(ctx, fc.Args["input"].(model.AddOvaTemplateVersionInput))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.AddOvaTemplateVersionPayload
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.AddOvaTemplateVersionPayload
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.AddOvaTemplateVersionPayload) graphql.Marshaler {
+			return ec.marshalNAddOvaTemplateVersionPayload2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAddOvaTemplateVersionPayload(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_addOvaTemplateVersion(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_AddOvaTemplateVersionPayload(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_addOvaTemplateVersion_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_createCustomRole(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -14660,7 +18245,7 @@ func (ec *executionContext) _Mutation_testResourcePoolConnection(ctx context.Con
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().TestResourcePoolConnection(ctx, fc.Args["id"].(string))
+			return ec.Resolvers.Mutation().TestResourcePoolConnection(ctx, fc.Args["input"].(model.TestResourcePoolConnectionInput))
 		},
 		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
 			directive0 := next
@@ -14668,11 +18253,11 @@ func (ec *executionContext) _Mutation_testResourcePoolConnection(ctx context.Con
 			directive1 := func(ctx context.Context) (any, error) {
 				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
-					var zeroVal *model.ResourcePool
+					var zeroVal *model.ResourcePoolConnectionTest
 					return zeroVal, err
 				}
 				if ec.Directives.HasRole == nil {
-					var zeroVal *model.ResourcePool
+					var zeroVal *model.ResourcePoolConnectionTest
 					return zeroVal, errors.New("directive hasRole is not implemented")
 				}
 				return ec.Directives.HasRole(ctx, nil, directive0, any)
@@ -14681,8 +18266,8 @@ func (ec *executionContext) _Mutation_testResourcePoolConnection(ctx context.Con
 			next = directive1
 			return next
 		},
-		func(ctx context.Context, selections ast.SelectionSet, v *model.ResourcePool) graphql.Marshaler {
-			return ec.marshalNResourcePool2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePool(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ResourcePoolConnectionTest) graphql.Marshaler {
+			return ec.marshalNResourcePoolConnectionTest2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolConnectionTest(ctx, selections, v)
 		},
 		true,
 		true,
@@ -14695,7 +18280,7 @@ func (ec *executionContext) fieldContext_Mutation_testResourcePoolConnection(ctx
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_ResourcePool(ctx, field)
+			return ec.childFields_ResourcePoolConnectionTest(ctx, field)
 		},
 	}
 	defer func() {
@@ -15018,6 +18603,626 @@ func (ec *executionContext) fieldContext_Mutation_setVirtualKeyEnabled(ctx conte
 	if fc.Args, err = ec.field_Mutation_setVirtualKeyEnabled_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _OvaTemplateFamily_id(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateFamily) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateFamily_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateFamily_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateFamily", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateFamily_name(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateFamily) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateFamily_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateFamily_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateFamily", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateFamily_type(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateFamily) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateFamily_type(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Type, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateFamily_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateFamily", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateFamily_description(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateFamily) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateFamily_description(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Description, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateFamily_description(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateFamily", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateFamily_tools(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateFamily) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateFamily_tools(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Tools, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []string) graphql.Marshaler {
+			return ec.marshalNString2ᚕstringᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateFamily_tools(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateFamily", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateFamily_skills(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateFamily) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateFamily_skills(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Skills, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []string) graphql.Marshaler {
+			return ec.marshalNString2ᚕstringᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateFamily_skills(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateFamily", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateFamily_scenarios(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateFamily) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateFamily_scenarios(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Scenarios, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []string) graphql.Marshaler {
+			return ec.marshalNString2ᚕstringᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateFamily_scenarios(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateFamily", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateFamily_iconShape(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateFamily) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateFamily_iconShape(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.IconShape, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateFamily_iconShape(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateFamily", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateFamily_iconColor(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateFamily) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateFamily_iconColor(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.IconColor, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.OvaTemplateColor) graphql.Marshaler {
+			return ec.marshalNOvaTemplateColor2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateColor(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateFamily_iconColor(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateFamily", field, false, false, errors.New("field of type OvaTemplateColor does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateFamily_latestVersion(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateFamily) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateFamily_latestVersion(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.OvaTemplateFamily().LatestVersion(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateFamily_latestVersion(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateFamily", field, true, true, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateFamily_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateFamily) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateFamily_createdAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateFamily_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateFamily", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateFamily_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateFamily) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateFamily_updatedAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.UpdatedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateFamily_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateFamily", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateFamily_versions(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateFamily) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateFamily_versions(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.OvaTemplateFamily().Versions(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.OvaTemplateVersion) graphql.Marshaler {
+			return ec.marshalNOvaTemplateVersion2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateVersionᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateFamily_versions(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "OvaTemplateFamily",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_OvaTemplateVersion(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _OvaTemplateFamilyConnection_nodes(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateFamilyConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateFamilyConnection_nodes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Nodes, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.OvaTemplateFamily) graphql.Marshaler {
+			return ec.marshalNOvaTemplateFamily2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateFamilyᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateFamilyConnection_nodes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "OvaTemplateFamilyConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_OvaTemplateFamily(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _OvaTemplateFamilyConnection_totalCount(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateFamilyConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateFamilyConnection_totalCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateFamilyConnection_totalCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateFamilyConnection", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateFamilyConnection_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateFamilyConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateFamilyConnection_pageInfo(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.PageInfo, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.PageInfo) graphql.Marshaler {
+			return ec.marshalNPageInfo2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPageInfo(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateFamilyConnection_pageInfo(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "OvaTemplateFamilyConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PageInfo(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _OvaTemplateVersion_id(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateVersion_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateVersion_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateVersion", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateVersion_familyId(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateVersion_familyId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.OvaTemplateVersion().FamilyID(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateVersion_familyId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateVersion", field, true, true, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateVersion_version(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateVersion_version(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Version, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateVersion_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateVersion", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateVersion_ovaIdentifier(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateVersion_ovaIdentifier(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OvaIdentifier, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateVersion_ovaIdentifier(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateVersion", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateVersion_notes(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateVersion_notes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Notes, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateVersion_notes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateVersion", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateVersion_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateVersion_createdAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateVersion_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateVersion", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateVersionConnection_nodes(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateVersionConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateVersionConnection_nodes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Nodes, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.OvaTemplateVersion) graphql.Marshaler {
+			return ec.marshalNOvaTemplateVersion2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateVersionᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateVersionConnection_nodes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "OvaTemplateVersionConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_OvaTemplateVersion(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _OvaTemplateVersionConnection_totalCount(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateVersionConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateVersionConnection_totalCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateVersionConnection_totalCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OvaTemplateVersionConnection", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateVersionConnection_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateVersionConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateVersionConnection_pageInfo(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.PageInfo, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.PageInfo) graphql.Marshaler {
+			return ec.marshalNPageInfo2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPageInfo(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateVersionConnection_pageInfo(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "OvaTemplateVersionConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PageInfo(ctx, field)
+		},
 	}
 	return fc, nil
 }
@@ -15774,6 +19979,68 @@ func (ec *executionContext) fieldContext_Query_images(_ context.Context, field g
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_dashboardOverview(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_dashboardOverview(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().DashboardOverview(ctx, fc.Args["recentLimit"].(*int), fc.Args["noticeLimit"].(*int))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "observability"})
+				if err != nil {
+					var zeroVal *model.DashboardOverview
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.DashboardOverview
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.DashboardOverview) graphql.Marshaler {
+			return ec.marshalNDashboardOverview2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDashboardOverview(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_dashboardOverview(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_DashboardOverview(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_dashboardOverview_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_departments(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -16280,6 +20547,68 @@ func (ec *executionContext) fieldContext_Query_meteringSummary(ctx context.Conte
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_meteringOverview(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_meteringOverview(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().MeteringOverview(ctx, fc.Args["range"].(*model.MeteringTimeRange), fc.Args["userId"].(*string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				perm, err := ec.unmarshalNString2string(ctx, "metering:view")
+				if err != nil {
+					var zeroVal *model.MeteringOverview
+					return zeroVal, err
+				}
+				if ec.Directives.HasPermission == nil {
+					var zeroVal *model.MeteringOverview
+					return zeroVal, errors.New("directive hasPermission is not implemented")
+				}
+				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.MeteringOverview) graphql.Marshaler {
+			return ec.marshalNMeteringOverview2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringOverview(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_meteringOverview(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_MeteringOverview(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_meteringOverview_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_modelGateways(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -16500,6 +20829,130 @@ func (ec *executionContext) fieldContext_Query_rateLimitPolicies(_ context.Conte
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_RateLimitPolicy(ctx, field)
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_ovaTemplateFamilies(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_ovaTemplateFamilies(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().OvaTemplateFamilies(ctx, fc.Args["filter"].(*model.OvaTemplateFamilyFilter), fc.Args["pagination"].(*model.Pagination), fc.Args["sort"].(*model.OvaTemplateFamilySort))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.OvaTemplateFamilyConnection
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.OvaTemplateFamilyConnection
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.OvaTemplateFamilyConnection) graphql.Marshaler {
+			return ec.marshalNOvaTemplateFamilyConnection2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateFamilyConnection(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_ovaTemplateFamilies(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_OvaTemplateFamilyConnection(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_ovaTemplateFamilies_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_ovaTemplateVersions(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_ovaTemplateVersions(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().OvaTemplateVersions(ctx, fc.Args["familyId"].(*string), fc.Args["pagination"].(*model.Pagination))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.OvaTemplateVersionConnection
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.OvaTemplateVersionConnection
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.OvaTemplateVersionConnection) graphql.Marshaler {
+			return ec.marshalNOvaTemplateVersionConnection2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateVersionConnection(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_ovaTemplateVersions(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_OvaTemplateVersionConnection(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_ovaTemplateVersions_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -17443,6 +21896,29 @@ func (ec *executionContext) fieldContext_ResourcePool_endpoint(_ context.Context
 	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _ResourcePool_contentLibraryName(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ResourcePool_contentLibraryName(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ContentLibraryName, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ResourcePool_contentLibraryName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _ResourcePool_connectionStatus(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -17732,6 +22208,130 @@ func (ec *executionContext) fieldContext_ResourcePoolConnection_pageInfo(_ conte
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_PageInfo(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ResourcePoolConnectionDetail_vSphereVersion(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePoolConnectionDetail) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ResourcePoolConnectionDetail_vSphereVersion(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.VSphereVersion, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ResourcePoolConnectionDetail_vSphereVersion(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ResourcePoolConnectionDetail", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ResourcePoolConnectionDetail_itemCount(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePoolConnectionDetail) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ResourcePoolConnectionDetail_itemCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ItemCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ResourcePoolConnectionDetail_itemCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ResourcePoolConnectionDetail", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ResourcePoolConnectionTest_ok(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePoolConnectionTest) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ResourcePoolConnectionTest_ok(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Ok, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ResourcePoolConnectionTest_ok(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ResourcePoolConnectionTest", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _ResourcePoolConnectionTest_message(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePoolConnectionTest) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ResourcePoolConnectionTest_message(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Message, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ResourcePoolConnectionTest_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ResourcePoolConnectionTest", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ResourcePoolConnectionTest_detail(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePoolConnectionTest) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ResourcePoolConnectionTest_detail(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Detail, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ResourcePoolConnectionDetail) graphql.Marshaler {
+			return ec.marshalOResourcePoolConnectionDetail2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolConnectionDetail(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_ResourcePoolConnectionTest_detail(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ResourcePoolConnectionTest",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ResourcePoolConnectionDetail(ctx, field)
 		},
 	}
 	return fc, nil
@@ -20285,6 +24885,57 @@ func (ec *executionContext) fieldContext___Type_isOneOf(_ context.Context, field
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputAddOvaTemplateVersionInput(ctx context.Context, obj any) (model.AddOvaTemplateVersionInput, error) {
+	var it model.AddOvaTemplateVersionInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"familyId", "version", "ovaIdentifier", "notes"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "familyId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("familyId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.FamilyID = data
+		case "version":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("version"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Version = data
+		case "ovaIdentifier":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ovaIdentifier"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.OvaIdentifier = data
+		case "notes":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("notes"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Notes = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputAgentFilter(ctx context.Context, obj any) (model.AgentFilter, error) {
 	var it model.AgentFilter
 	if obj == nil {
@@ -20637,6 +25288,201 @@ func (ec *executionContext) unmarshalInputCreateDepartmentInput(ctx context.Cont
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputCreateModelRouteInput(ctx context.Context, obj any) (model.CreateModelRouteInput, error) {
+	var it model.CreateModelRouteInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name", "backendGatewayId", "gatewayName", "supportedModels", "uiStrategy", "enabled"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "backendGatewayId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("backendGatewayId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.BackendGatewayID = data
+		case "gatewayName":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gatewayName"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.GatewayName = data
+		case "supportedModels":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("supportedModels"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SupportedModels = data
+		case "uiStrategy":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("uiStrategy"))
+			data, err := ec.unmarshalOModelRouteStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UIStrategy = data
+		case "enabled":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("enabled"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Enabled = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputCreateOvaTemplateFamilyInput(ctx context.Context, obj any) (model.CreateOvaTemplateFamilyInput, error) {
+	var it model.CreateOvaTemplateFamilyInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name", "type", "description", "tools", "scenarios", "skills", "iconShape", "iconColor", "initialVersion"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "type":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("type"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Type = data
+		case "description":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Description = data
+		case "tools":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("tools"))
+			data, err := ec.unmarshalNString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Tools = data
+		case "scenarios":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scenarios"))
+			data, err := ec.unmarshalNString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Scenarios = data
+		case "skills":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("skills"))
+			data, err := ec.unmarshalNString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Skills = data
+		case "iconShape":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("iconShape"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.IconShape = data
+		case "iconColor":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("iconColor"))
+			data, err := ec.unmarshalNOvaTemplateColor2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateColor(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.IconColor = data
+		case "initialVersion":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("initialVersion"))
+			data, err := ec.unmarshalNCreateOvaTemplateVersionInput2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCreateOvaTemplateVersionInput(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.InitialVersion = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputCreateOvaTemplateVersionInput(ctx context.Context, obj any) (model.CreateOvaTemplateVersionInput, error) {
+	var it model.CreateOvaTemplateVersionInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"version", "ovaIdentifier", "notes"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "version":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("version"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Version = data
+		case "ovaIdentifier":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ovaIdentifier"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.OvaIdentifier = data
+		case "notes":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("notes"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Notes = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputCreateResourcePoolInput(ctx context.Context, obj any) (model.CreateResourcePoolInput, error) {
 	var it model.CreateResourcePoolInput
 	if obj == nil {
@@ -20648,7 +25494,7 @@ func (ec *executionContext) unmarshalInputCreateResourcePoolInput(ctx context.Co
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "endpoint", "datacenterCount", "clusterCount", "username", "password", "secretRef"}
+	fieldsInOrder := [...]string{"name", "endpoint", "contentLibraryName", "datacenterCount", "clusterCount", "username", "password", "secretRef"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -20669,6 +25515,13 @@ func (ec *executionContext) unmarshalInputCreateResourcePoolInput(ctx context.Co
 				return it, err
 			}
 			it.Endpoint = data
+		case "contentLibraryName":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("contentLibraryName"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ContentLibraryName = data
 		case "datacenterCount":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("datacenterCount"))
 			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
@@ -20796,34 +25649,34 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"agentId", "template", "vmName", "resourcePoolId", "targetResourcePool", "hostname", "maxBudget"}
+	fieldsInOrder := [...]string{"name", "templateFamilyId", "templateVersionId", "resourcePoolId", "targetResourcePool", "hostname", "maxBudget"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "agentId":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("agentId"))
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "templateFamilyId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("templateFamilyId"))
 			data, err := ec.unmarshalNID2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.AgentID = data
-		case "template":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("template"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			it.TemplateFamilyID = data
+		case "templateVersionId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("templateVersionId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.Template = data
-		case "vmName":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("vmName"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.VMName = data
+			it.TemplateVersionID = data
 		case "resourcePoolId":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourcePoolId"))
 			data, err := ec.unmarshalNID2string(ctx, v)
@@ -20868,7 +25721,7 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"userId", "agentId", "rateLimitPolicyId", "teamId", "models", "maxBudget", "rpmLimit", "tpmLimit", "alias"}
+	fieldsInOrder := [...]string{"userId", "agentId", "rateLimitPolicyId", "teamId", "models", "maxBudget", "rpmLimit", "tpmLimit", "alias", "expiresAt"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -20938,6 +25791,13 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 				return it, err
 			}
 			it.Alias = data
+		case "expiresAt":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("expiresAt"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ExpiresAt = data
 		}
 	}
 	return it, nil
@@ -21103,6 +25963,80 @@ func (ec *executionContext) unmarshalInputModelGatewaySort(ctx context.Context, 
 		case "field":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
 			data, err := ec.unmarshalNModelGatewaySortField2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySortField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Field = data
+		case "direction":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			data, err := ec.unmarshalNSortDirection2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSortDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Direction = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputOvaTemplateFamilyFilter(ctx context.Context, obj any) (model.OvaTemplateFamilyFilter, error) {
+	var it model.OvaTemplateFamilyFilter
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"nameKeyword", "type"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "nameKeyword":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nameKeyword"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.NameKeyword = data
+		case "type":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("type"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Type = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputOvaTemplateFamilySort(ctx context.Context, obj any) (model.OvaTemplateFamilySort, error) {
+	var it model.OvaTemplateFamilySort
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"field", "direction"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "field":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			data, err := ec.unmarshalNOvaTemplateFamilySortField2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateFamilySortField(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -21673,6 +26607,50 @@ func (ec *executionContext) unmarshalInputSnapshotAgentInput(ctx context.Context
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputTestResourcePoolConnectionInput(ctx context.Context, obj any) (model.TestResourcePoolConnectionInput, error) {
+	var it model.TestResourcePoolConnectionInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name", "endpoint", "contentLibraryName"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "endpoint":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("endpoint"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Endpoint = data
+		case "contentLibraryName":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("contentLibraryName"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ContentLibraryName = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputUpdateAgentConfigInput(ctx context.Context, obj any) (model.UpdateAgentConfigInput, error) {
 	var it model.UpdateAgentConfigInput
 	if obj == nil {
@@ -21710,6 +26688,71 @@ func (ec *executionContext) unmarshalInputUpdateAgentConfigInput(ctx context.Con
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputUpdateModelRouteInput(ctx context.Context, obj any) (model.UpdateModelRouteInput, error) {
+	var it model.UpdateModelRouteInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name", "backendGatewayId", "gatewayName", "supportedModels", "uiStrategy", "enabled"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "backendGatewayId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("backendGatewayId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.BackendGatewayID = data
+		case "gatewayName":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gatewayName"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.GatewayName = data
+		case "supportedModels":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("supportedModels"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SupportedModels = data
+		case "uiStrategy":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("uiStrategy"))
+			data, err := ec.unmarshalOModelRouteStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UIStrategy = data
+		case "enabled":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("enabled"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Enabled = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputUpdateResourcePoolInput(ctx context.Context, obj any) (model.UpdateResourcePoolInput, error) {
 	var it model.UpdateResourcePoolInput
 	if obj == nil {
@@ -21721,7 +26764,7 @@ func (ec *executionContext) unmarshalInputUpdateResourcePoolInput(ctx context.Co
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "endpoint", "datacenterCount", "clusterCount", "username", "password", "secretRef"}
+	fieldsInOrder := [...]string{"name", "endpoint", "contentLibraryName", "datacenterCount", "clusterCount", "username", "password", "secretRef"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -21742,6 +26785,13 @@ func (ec *executionContext) unmarshalInputUpdateResourcePoolInput(ctx context.Co
 				return it, err
 			}
 			it.Endpoint = data
+		case "contentLibraryName":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("contentLibraryName"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ContentLibraryName = data
 		case "datacenterCount":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("datacenterCount"))
 			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
@@ -22512,6 +27562,45 @@ func (ec *executionContext) _AccountUser(ctx context.Context, sel ast.SelectionS
 	return out
 }
 
+var addOvaTemplateVersionPayloadImplementors = []string{"AddOvaTemplateVersionPayload"}
+
+func (ec *executionContext) _AddOvaTemplateVersionPayload(ctx context.Context, sel ast.SelectionSet, obj *model.AddOvaTemplateVersionPayload) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, addOvaTemplateVersionPayloadImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AddOvaTemplateVersionPayload")
+		case "version":
+			out.Values[i] = ec._AddOvaTemplateVersionPayload_version(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var agentImplementors = []string{"Agent"}
 
 func (ec *executionContext) _Agent(ctx context.Context, sel ast.SelectionSet, obj *model.Agent) graphql.Marshaler {
@@ -22656,6 +27745,57 @@ func (ec *executionContext) _Agent(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.RequiredNull {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "templateFamilyId":
+			out.Values[i] = ec._Agent_templateFamilyId(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "templateVersionId":
+			out.Values[i] = ec._Agent_templateVersionId(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "resourcePoolId":
+			out.Values[i] = ec._Agent_resourcePoolId(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "credentials":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Agent_credentials(ctx, field, obj)
+				if res == graphql.RequiredNull {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "createdAt":
 			out.Values[i] = ec._Agent_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -22882,6 +28022,45 @@ func (ec *executionContext) _AgentConnection(ctx context.Context, sel ast.Select
 	return out
 }
 
+var agentCredentialsImplementors = []string{"AgentCredentials"}
+
+func (ec *executionContext) _AgentCredentials(ctx context.Context, sel ast.SelectionSet, obj *model.AgentCredentials) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, agentCredentialsImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AgentCredentials")
+		case "username":
+			out.Values[i] = ec._AgentCredentials_username(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var agentSnapshotImplementors = []string{"AgentSnapshot"}
 
 func (ec *executionContext) _AgentSnapshot(ctx context.Context, sel ast.SelectionSet, obj *model.AgentSnapshot) graphql.Marshaler {
@@ -23053,6 +28232,75 @@ func (ec *executionContext) _AgentUsage(ctx context.Context, sel ast.SelectionSe
 			}
 		case "cost":
 			out.Values[i] = ec._AgentUsage_cost(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var agentUsageRowImplementors = []string{"AgentUsageRow"}
+
+func (ec *executionContext) _AgentUsageRow(ctx context.Context, sel ast.SelectionSet, obj *model.AgentUsageRow) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, agentUsageRowImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AgentUsageRow")
+		case "agentId":
+			out.Values[i] = ec._AgentUsageRow_agentId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "agentName":
+			out.Values[i] = ec._AgentUsageRow_agentName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "inputTokens":
+			out.Values[i] = ec._AgentUsageRow_inputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "outputTokens":
+			out.Values[i] = ec._AgentUsageRow_outputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalTokens":
+			out.Values[i] = ec._AgentUsageRow_totalTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "requests":
+			out.Values[i] = ec._AgentUsageRow_requests(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cost":
+			out.Values[i] = ec._AgentUsageRow_cost(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -23374,6 +28622,45 @@ func (ec *executionContext) _AuthPayload(ctx context.Context, sel ast.SelectionS
 	return out
 }
 
+var createOvaTemplateFamilyPayloadImplementors = []string{"CreateOvaTemplateFamilyPayload"}
+
+func (ec *executionContext) _CreateOvaTemplateFamilyPayload(ctx context.Context, sel ast.SelectionSet, obj *model.CreateOvaTemplateFamilyPayload) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, createOvaTemplateFamilyPayloadImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("CreateOvaTemplateFamilyPayload")
+		case "family":
+			out.Values[i] = ec._CreateOvaTemplateFamilyPayload_family(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var createResourcePoolPayloadImplementors = []string{"CreateResourcePoolPayload"}
 
 func (ec *executionContext) _CreateResourcePoolPayload(ctx context.Context, sel ast.SelectionSet, obj *model.CreateResourcePoolPayload) graphql.Marshaler {
@@ -23490,6 +28777,321 @@ func (ec *executionContext) _CustomRole(ctx context.Context, sel ast.SelectionSe
 			}
 		case "createdAt":
 			out.Values[i] = ec._CustomRole_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var dailyUsageRowImplementors = []string{"DailyUsageRow"}
+
+func (ec *executionContext) _DailyUsageRow(ctx context.Context, sel ast.SelectionSet, obj *model.DailyUsageRow) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, dailyUsageRowImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DailyUsageRow")
+		case "date":
+			out.Values[i] = ec._DailyUsageRow_date(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "inputTokens":
+			out.Values[i] = ec._DailyUsageRow_inputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "outputTokens":
+			out.Values[i] = ec._DailyUsageRow_outputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalTokens":
+			out.Values[i] = ec._DailyUsageRow_totalTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "requests":
+			out.Values[i] = ec._DailyUsageRow_requests(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cost":
+			out.Values[i] = ec._DailyUsageRow_cost(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var dashboardNoticeImplementors = []string{"DashboardNotice"}
+
+func (ec *executionContext) _DashboardNotice(ctx context.Context, sel ast.SelectionSet, obj *model.DashboardNotice) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, dashboardNoticeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DashboardNotice")
+		case "id":
+			out.Values[i] = ec._DashboardNotice_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "text":
+			out.Values[i] = ec._DashboardNotice_text(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "status":
+			out.Values[i] = ec._DashboardNotice_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "occurredAt":
+			out.Values[i] = ec._DashboardNotice_occurredAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var dashboardOverviewImplementors = []string{"DashboardOverview"}
+
+func (ec *executionContext) _DashboardOverview(ctx context.Context, sel ast.SelectionSet, obj *model.DashboardOverview) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, dashboardOverviewImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DashboardOverview")
+		case "stats":
+			out.Values[i] = ec._DashboardOverview_stats(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "recentAgents":
+			out.Values[i] = ec._DashboardOverview_recentAgents(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "notices":
+			out.Values[i] = ec._DashboardOverview_notices(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var dashboardRecentAgentImplementors = []string{"DashboardRecentAgent"}
+
+func (ec *executionContext) _DashboardRecentAgent(ctx context.Context, sel ast.SelectionSet, obj *model.DashboardRecentAgent) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, dashboardRecentAgentImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DashboardRecentAgent")
+		case "id":
+			out.Values[i] = ec._DashboardRecentAgent_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._DashboardRecentAgent_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "agentName":
+			out.Values[i] = ec._DashboardRecentAgent_agentName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "status":
+			out.Values[i] = ec._DashboardRecentAgent_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createdAt":
+			out.Values[i] = ec._DashboardRecentAgent_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var dashboardStatsImplementors = []string{"DashboardStats"}
+
+func (ec *executionContext) _DashboardStats(ctx context.Context, sel ast.SelectionSet, obj *model.DashboardStats) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, dashboardStatsImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DashboardStats")
+		case "totalAgents":
+			out.Values[i] = ec._DashboardStats_totalAgents(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "runningAgents":
+			out.Values[i] = ec._DashboardStats_runningAgents(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "stoppedAgents":
+			out.Values[i] = ec._DashboardStats_stoppedAgents(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "exceptionAgents":
+			out.Values[i] = ec._DashboardStats_exceptionAgents(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalVirtualKeys":
+			out.Values[i] = ec._DashboardStats_totalVirtualKeys(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalGateways":
+			out.Values[i] = ec._DashboardStats_totalGateways(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalResourcePools":
+			out.Values[i] = ec._DashboardStats_totalResourcePools(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalUsers":
+			out.Values[i] = ec._DashboardStats_totalUsers(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "monthlyCalls":
+			out.Values[i] = ec._DashboardStats_monthlyCalls(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "monthlyTokens":
+			out.Values[i] = ec._DashboardStats_monthlyTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "monthlyCost":
+			out.Values[i] = ec._DashboardStats_monthlyCost(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -23772,6 +29374,16 @@ func (ec *executionContext) _DeployedAgent(ctx context.Context, sel ast.Selectio
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "templateVersion":
+			out.Values[i] = ec._DeployedAgent_templateVersion(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "resourcePool":
+			out.Values[i] = ec._DeployedAgent_resourcePool(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -23995,6 +29607,129 @@ func (ec *executionContext) _Membership(ctx context.Context, sel ast.SelectionSe
 			}
 		case "role":
 			out.Values[i] = ec._Membership_role(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var meteringCostSummaryImplementors = []string{"MeteringCostSummary"}
+
+func (ec *executionContext) _MeteringCostSummary(ctx context.Context, sel ast.SelectionSet, obj *model.MeteringCostSummary) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, meteringCostSummaryImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("MeteringCostSummary")
+		case "totalCost":
+			out.Values[i] = ec._MeteringCostSummary_totalCost(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "monthlyCost":
+			out.Values[i] = ec._MeteringCostSummary_monthlyCost(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var meteringOverviewImplementors = []string{"MeteringOverview"}
+
+func (ec *executionContext) _MeteringOverview(ctx context.Context, sel ast.SelectionSet, obj *model.MeteringOverview) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, meteringOverviewImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("MeteringOverview")
+		case "range":
+			out.Values[i] = ec._MeteringOverview_range(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalInputTokens":
+			out.Values[i] = ec._MeteringOverview_totalInputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalOutputTokens":
+			out.Values[i] = ec._MeteringOverview_totalOutputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalTokens":
+			out.Values[i] = ec._MeteringOverview_totalTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalRequests":
+			out.Values[i] = ec._MeteringOverview_totalRequests(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "byAgent":
+			out.Values[i] = ec._MeteringOverview_byAgent(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "byModel":
+			out.Values[i] = ec._MeteringOverview_byModel(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "byDay":
+			out.Values[i] = ec._MeteringOverview_byDay(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cost":
+			out.Values[i] = ec._MeteringOverview_cost(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -24387,13 +30122,28 @@ func (ec *executionContext) _ModelRoute(ctx context.Context, sel ast.SelectionSe
 			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
+		case "gatewayName":
+			out.Values[i] = ec._ModelRoute_gatewayName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "upstreams":
 			out.Values[i] = ec._ModelRoute_upstreams(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "supportedModels":
+			out.Values[i] = ec._ModelRoute_supportedModels(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "strategy":
 			out.Values[i] = ec._ModelRoute_strategy(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "uiStrategy":
+			out.Values[i] = ec._ModelRoute_uiStrategy(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -24404,6 +30154,11 @@ func (ec *executionContext) _ModelRoute(ctx context.Context, sel ast.SelectionSe
 			}
 		case "createdAt":
 			out.Values[i] = ec._ModelRoute_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updatedAt":
+			out.Values[i] = ec._ModelRoute_updatedAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -24458,6 +30213,70 @@ func (ec *executionContext) _ModelUsage(ctx context.Context, sel ast.SelectionSe
 			}
 		case "cost":
 			out.Values[i] = ec._ModelUsage_cost(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var modelUsageRowImplementors = []string{"ModelUsageRow"}
+
+func (ec *executionContext) _ModelUsageRow(ctx context.Context, sel ast.SelectionSet, obj *model.ModelUsageRow) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, modelUsageRowImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ModelUsageRow")
+		case "model":
+			out.Values[i] = ec._ModelUsageRow_model(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "inputTokens":
+			out.Values[i] = ec._ModelUsageRow_inputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "outputTokens":
+			out.Values[i] = ec._ModelUsageRow_outputTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalTokens":
+			out.Values[i] = ec._ModelUsageRow_totalTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "requests":
+			out.Values[i] = ec._ModelUsageRow_requests(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cost":
+			out.Values[i] = ec._ModelUsageRow_cost(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -24776,6 +30595,20 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "createModelRoute":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createModelRoute(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updateModelRoute":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateModelRoute(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "setModelRouteEnabled":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_setModelRouteEnabled(ctx, field)
@@ -24856,6 +30689,20 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "deleteRateLimitPolicy":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_deleteRateLimitPolicy(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createOvaTemplateFamily":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createOvaTemplateFamily(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "addOvaTemplateVersion":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_addOvaTemplateVersion(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -24962,6 +30809,360 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_setVirtualKeyEnabled(ctx, field)
 			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var ovaTemplateFamilyImplementors = []string{"OvaTemplateFamily"}
+
+func (ec *executionContext) _OvaTemplateFamily(ctx context.Context, sel ast.SelectionSet, obj *model.OvaTemplateFamily) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, ovaTemplateFamilyImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("OvaTemplateFamily")
+		case "id":
+			out.Values[i] = ec._OvaTemplateFamily_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "name":
+			out.Values[i] = ec._OvaTemplateFamily_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "type":
+			out.Values[i] = ec._OvaTemplateFamily_type(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "description":
+			out.Values[i] = ec._OvaTemplateFamily_description(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "tools":
+			out.Values[i] = ec._OvaTemplateFamily_tools(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "skills":
+			out.Values[i] = ec._OvaTemplateFamily_skills(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "scenarios":
+			out.Values[i] = ec._OvaTemplateFamily_scenarios(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "iconShape":
+			out.Values[i] = ec._OvaTemplateFamily_iconShape(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "iconColor":
+			out.Values[i] = ec._OvaTemplateFamily_iconColor(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "latestVersion":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._OvaTemplateFamily_latestVersion(ctx, field, obj)
+				if res == graphql.RequiredNull {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "createdAt":
+			out.Values[i] = ec._OvaTemplateFamily_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "updatedAt":
+			out.Values[i] = ec._OvaTemplateFamily_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "versions":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._OvaTemplateFamily_versions(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var ovaTemplateFamilyConnectionImplementors = []string{"OvaTemplateFamilyConnection"}
+
+func (ec *executionContext) _OvaTemplateFamilyConnection(ctx context.Context, sel ast.SelectionSet, obj *model.OvaTemplateFamilyConnection) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, ovaTemplateFamilyConnectionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("OvaTemplateFamilyConnection")
+		case "nodes":
+			out.Values[i] = ec._OvaTemplateFamilyConnection_nodes(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalCount":
+			out.Values[i] = ec._OvaTemplateFamilyConnection_totalCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pageInfo":
+			out.Values[i] = ec._OvaTemplateFamilyConnection_pageInfo(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var ovaTemplateVersionImplementors = []string{"OvaTemplateVersion"}
+
+func (ec *executionContext) _OvaTemplateVersion(ctx context.Context, sel ast.SelectionSet, obj *model.OvaTemplateVersion) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, ovaTemplateVersionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("OvaTemplateVersion")
+		case "id":
+			out.Values[i] = ec._OvaTemplateVersion_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "familyId":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._OvaTemplateVersion_familyId(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "version":
+			out.Values[i] = ec._OvaTemplateVersion_version(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "ovaIdentifier":
+			out.Values[i] = ec._OvaTemplateVersion_ovaIdentifier(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "notes":
+			out.Values[i] = ec._OvaTemplateVersion_notes(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "createdAt":
+			out.Values[i] = ec._OvaTemplateVersion_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var ovaTemplateVersionConnectionImplementors = []string{"OvaTemplateVersionConnection"}
+
+func (ec *executionContext) _OvaTemplateVersionConnection(ctx context.Context, sel ast.SelectionSet, obj *model.OvaTemplateVersionConnection) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, ovaTemplateVersionConnectionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("OvaTemplateVersionConnection")
+		case "nodes":
+			out.Values[i] = ec._OvaTemplateVersionConnection_nodes(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalCount":
+			out.Values[i] = ec._OvaTemplateVersionConnection_totalCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pageInfo":
+			out.Values[i] = ec._OvaTemplateVersionConnection_pageInfo(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -25391,6 +31592,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "dashboardOverview":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_dashboardOverview(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "departments":
 			field := field
 
@@ -25611,6 +31834,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "meteringOverview":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_meteringOverview(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "modelGateways":
 			field := field
 
@@ -25687,6 +31932,50 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_rateLimitPolicies(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "ovaTemplateFamilies":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_ovaTemplateFamilies(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "ovaTemplateVersions":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_ovaTemplateVersions(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -26091,6 +32380,11 @@ func (ec *executionContext) _ResourcePool(ctx context.Context, sel ast.Selection
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "contentLibraryName":
+			out.Values[i] = ec._ResourcePool_contentLibraryName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "connectionStatus":
 			out.Values[i] = ec._ResourcePool_connectionStatus(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -26183,6 +32477,99 @@ func (ec *executionContext) _ResourcePoolConnection(ctx context.Context, sel ast
 		case "pageInfo":
 			out.Values[i] = ec._ResourcePoolConnection_pageInfo(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var resourcePoolConnectionDetailImplementors = []string{"ResourcePoolConnectionDetail"}
+
+func (ec *executionContext) _ResourcePoolConnectionDetail(ctx context.Context, sel ast.SelectionSet, obj *model.ResourcePoolConnectionDetail) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, resourcePoolConnectionDetailImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ResourcePoolConnectionDetail")
+		case "vSphereVersion":
+			out.Values[i] = ec._ResourcePoolConnectionDetail_vSphereVersion(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "itemCount":
+			out.Values[i] = ec._ResourcePoolConnectionDetail_itemCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var resourcePoolConnectionTestImplementors = []string{"ResourcePoolConnectionTest"}
+
+func (ec *executionContext) _ResourcePoolConnectionTest(ctx context.Context, sel ast.SelectionSet, obj *model.ResourcePoolConnectionTest) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, resourcePoolConnectionTestImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ResourcePoolConnectionTest")
+		case "ok":
+			out.Values[i] = ec._ResourcePoolConnectionTest_ok(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "message":
+			out.Values[i] = ec._ResourcePoolConnectionTest_message(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "detail":
+			out.Values[i] = ec._ResourcePoolConnectionTest_detail(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
 		default:
@@ -27429,6 +33816,25 @@ func (ec *executionContext) marshalNAccountUser2ᚖgithubᚗcomᚋVMwareᚑAIᚋ
 	return ec._AccountUser(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNAddOvaTemplateVersionInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAddOvaTemplateVersionInput(ctx context.Context, v any) (model.AddOvaTemplateVersionInput, error) {
+	res, err := ec.unmarshalInputAddOvaTemplateVersionInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNAddOvaTemplateVersionPayload2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAddOvaTemplateVersionPayload(ctx context.Context, sel ast.SelectionSet, v model.AddOvaTemplateVersionPayload) graphql.Marshaler {
+	return ec._AddOvaTemplateVersionPayload(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNAddOvaTemplateVersionPayload2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAddOvaTemplateVersionPayload(ctx context.Context, sel ast.SelectionSet, v *model.AddOvaTemplateVersionPayload) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._AddOvaTemplateVersionPayload(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNAgent2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgent(ctx context.Context, sel ast.SelectionSet, v model.Agent) graphql.Marshaler {
 	return ec._Agent(ctx, sel, &v)
 }
@@ -27613,6 +34019,26 @@ func (ec *executionContext) marshalNAgentUsage2ᚕgithubᚗcomᚋVMwareᚑAIᚋa
 	return ret
 }
 
+func (ec *executionContext) marshalNAgentUsageRow2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentUsageRow(ctx context.Context, sel ast.SelectionSet, v model.AgentUsageRow) graphql.Marshaler {
+	return ec._AgentUsageRow(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNAgentUsageRow2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentUsageRowᚄ(ctx context.Context, sel ast.SelectionSet, v []model.AgentUsageRow) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNAgentUsageRow2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentUsageRow(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) marshalNArtifact2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐArtifact(ctx context.Context, sel ast.SelectionSet, v model.Artifact) graphql.Marshaler {
 	return ec._Artifact(ctx, sel, &v)
 }
@@ -27766,6 +34192,35 @@ func (ec *executionContext) unmarshalNCreateDepartmentInput2githubᚗcomᚋVMwar
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalNCreateModelRouteInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCreateModelRouteInput(ctx context.Context, v any) (model.CreateModelRouteInput, error) {
+	res, err := ec.unmarshalInputCreateModelRouteInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNCreateOvaTemplateFamilyInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCreateOvaTemplateFamilyInput(ctx context.Context, v any) (model.CreateOvaTemplateFamilyInput, error) {
+	res, err := ec.unmarshalInputCreateOvaTemplateFamilyInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNCreateOvaTemplateFamilyPayload2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCreateOvaTemplateFamilyPayload(ctx context.Context, sel ast.SelectionSet, v model.CreateOvaTemplateFamilyPayload) graphql.Marshaler {
+	return ec._CreateOvaTemplateFamilyPayload(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNCreateOvaTemplateFamilyPayload2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCreateOvaTemplateFamilyPayload(ctx context.Context, sel ast.SelectionSet, v *model.CreateOvaTemplateFamilyPayload) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._CreateOvaTemplateFamilyPayload(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNCreateOvaTemplateVersionInput2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCreateOvaTemplateVersionInput(ctx context.Context, v any) (*model.CreateOvaTemplateVersionInput, error) {
+	res, err := ec.unmarshalInputCreateOvaTemplateVersionInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNCreateResourcePoolInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCreateResourcePoolInput(ctx context.Context, v any) (model.CreateResourcePoolInput, error) {
 	res, err := ec.unmarshalInputCreateResourcePoolInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -27832,6 +34287,110 @@ func (ec *executionContext) marshalNCustomRole2ᚖgithubᚗcomᚋVMwareᚑAIᚋa
 		return graphql.Null
 	}
 	return ec._CustomRole(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNDailyUsageRow2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDailyUsageRow(ctx context.Context, sel ast.SelectionSet, v model.DailyUsageRow) graphql.Marshaler {
+	return ec._DailyUsageRow(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNDailyUsageRow2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDailyUsageRowᚄ(ctx context.Context, sel ast.SelectionSet, v []model.DailyUsageRow) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNDailyUsageRow2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDailyUsageRow(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNDashboardAgentStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDashboardAgentStatus(ctx context.Context, v any) (model.DashboardAgentStatus, error) {
+	var res model.DashboardAgentStatus
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNDashboardAgentStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDashboardAgentStatus(ctx context.Context, sel ast.SelectionSet, v model.DashboardAgentStatus) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) marshalNDashboardNotice2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDashboardNotice(ctx context.Context, sel ast.SelectionSet, v model.DashboardNotice) graphql.Marshaler {
+	return ec._DashboardNotice(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNDashboardNotice2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDashboardNoticeᚄ(ctx context.Context, sel ast.SelectionSet, v []model.DashboardNotice) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNDashboardNotice2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDashboardNotice(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNDashboardNoticeStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDashboardNoticeStatus(ctx context.Context, v any) (model.DashboardNoticeStatus, error) {
+	var res model.DashboardNoticeStatus
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNDashboardNoticeStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDashboardNoticeStatus(ctx context.Context, sel ast.SelectionSet, v model.DashboardNoticeStatus) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) marshalNDashboardOverview2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDashboardOverview(ctx context.Context, sel ast.SelectionSet, v model.DashboardOverview) graphql.Marshaler {
+	return ec._DashboardOverview(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNDashboardOverview2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDashboardOverview(ctx context.Context, sel ast.SelectionSet, v *model.DashboardOverview) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._DashboardOverview(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNDashboardRecentAgent2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDashboardRecentAgent(ctx context.Context, sel ast.SelectionSet, v model.DashboardRecentAgent) graphql.Marshaler {
+	return ec._DashboardRecentAgent(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNDashboardRecentAgent2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDashboardRecentAgentᚄ(ctx context.Context, sel ast.SelectionSet, v []model.DashboardRecentAgent) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNDashboardRecentAgent2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDashboardRecentAgent(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNDashboardStats2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDashboardStats(ctx context.Context, sel ast.SelectionSet, v *model.DashboardStats) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._DashboardStats(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNDateUsage2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDateUsage(ctx context.Context, sel ast.SelectionSet, v model.DateUsage) graphql.Marshaler {
@@ -28187,6 +34746,30 @@ func (ec *executionContext) marshalNMembershipRole2githubᚗcomᚋVMwareᚑAIᚋ
 	return v
 }
 
+func (ec *executionContext) marshalNMeteringCostSummary2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringCostSummary(ctx context.Context, sel ast.SelectionSet, v *model.MeteringCostSummary) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._MeteringCostSummary(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNMeteringOverview2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringOverview(ctx context.Context, sel ast.SelectionSet, v model.MeteringOverview) graphql.Marshaler {
+	return ec._MeteringOverview(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNMeteringOverview2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringOverview(ctx context.Context, sel ast.SelectionSet, v *model.MeteringOverview) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._MeteringOverview(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNMeteringSummary2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringSummary(ctx context.Context, sel ast.SelectionSet, v model.MeteringSummary) graphql.Marshaler {
 	return ec._MeteringSummary(ctx, sel, &v)
 }
@@ -28199,6 +34782,16 @@ func (ec *executionContext) marshalNMeteringSummary2ᚖgithubᚗcomᚋVMwareᚑA
 		return graphql.Null
 	}
 	return ec._MeteringSummary(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNMeteringTimeRange2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringTimeRange(ctx context.Context, v any) (model.MeteringTimeRange, error) {
+	var res model.MeteringTimeRange
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNMeteringTimeRange2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringTimeRange(ctx context.Context, sel ast.SelectionSet, v model.MeteringTimeRange) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) marshalNModelGateway2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGateway(ctx context.Context, sel ast.SelectionSet, v model.ModelGateway) graphql.Marshaler {
@@ -28348,6 +34941,16 @@ func (ec *executionContext) marshalNModelRoute2ᚖgithubᚗcomᚋVMwareᚑAIᚋa
 	return ec._ModelRoute(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNModelRouteStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx context.Context, v any) (model.ModelRouteStrategy, error) {
+	var res model.ModelRouteStrategy
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNModelRouteStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx context.Context, sel ast.SelectionSet, v model.ModelRouteStrategy) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) marshalNModelUsage2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelUsage(ctx context.Context, sel ast.SelectionSet, v model.ModelUsage) graphql.Marshaler {
 	return ec._ModelUsage(ctx, sel, &v)
 }
@@ -28366,6 +34969,134 @@ func (ec *executionContext) marshalNModelUsage2ᚕgithubᚗcomᚋVMwareᚑAIᚋa
 	}
 
 	return ret
+}
+
+func (ec *executionContext) marshalNModelUsageRow2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelUsageRow(ctx context.Context, sel ast.SelectionSet, v model.ModelUsageRow) graphql.Marshaler {
+	return ec._ModelUsageRow(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNModelUsageRow2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelUsageRowᚄ(ctx context.Context, sel ast.SelectionSet, v []model.ModelUsageRow) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNModelUsageRow2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelUsageRow(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNOvaTemplateColor2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateColor(ctx context.Context, v any) (model.OvaTemplateColor, error) {
+	var res model.OvaTemplateColor
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNOvaTemplateColor2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateColor(ctx context.Context, sel ast.SelectionSet, v model.OvaTemplateColor) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) marshalNOvaTemplateFamily2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateFamily(ctx context.Context, sel ast.SelectionSet, v model.OvaTemplateFamily) graphql.Marshaler {
+	return ec._OvaTemplateFamily(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNOvaTemplateFamily2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateFamilyᚄ(ctx context.Context, sel ast.SelectionSet, v []model.OvaTemplateFamily) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNOvaTemplateFamily2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateFamily(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNOvaTemplateFamily2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateFamily(ctx context.Context, sel ast.SelectionSet, v *model.OvaTemplateFamily) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._OvaTemplateFamily(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNOvaTemplateFamilyConnection2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateFamilyConnection(ctx context.Context, sel ast.SelectionSet, v model.OvaTemplateFamilyConnection) graphql.Marshaler {
+	return ec._OvaTemplateFamilyConnection(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNOvaTemplateFamilyConnection2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateFamilyConnection(ctx context.Context, sel ast.SelectionSet, v *model.OvaTemplateFamilyConnection) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._OvaTemplateFamilyConnection(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNOvaTemplateFamilySortField2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateFamilySortField(ctx context.Context, v any) (model.OvaTemplateFamilySortField, error) {
+	var res model.OvaTemplateFamilySortField
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNOvaTemplateFamilySortField2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateFamilySortField(ctx context.Context, sel ast.SelectionSet, v model.OvaTemplateFamilySortField) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) marshalNOvaTemplateVersion2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateVersion(ctx context.Context, sel ast.SelectionSet, v model.OvaTemplateVersion) graphql.Marshaler {
+	return ec._OvaTemplateVersion(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNOvaTemplateVersion2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateVersionᚄ(ctx context.Context, sel ast.SelectionSet, v []model.OvaTemplateVersion) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNOvaTemplateVersion2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateVersion(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNOvaTemplateVersion2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateVersion(ctx context.Context, sel ast.SelectionSet, v *model.OvaTemplateVersion) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._OvaTemplateVersion(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNOvaTemplateVersionConnection2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateVersionConnection(ctx context.Context, sel ast.SelectionSet, v model.OvaTemplateVersionConnection) graphql.Marshaler {
+	return ec._OvaTemplateVersionConnection(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNOvaTemplateVersionConnection2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateVersionConnection(ctx context.Context, sel ast.SelectionSet, v *model.OvaTemplateVersionConnection) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._OvaTemplateVersionConnection(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNPageInfo2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPageInfo(ctx context.Context, sel ast.SelectionSet, v *model.PageInfo) graphql.Marshaler {
@@ -28569,6 +35300,20 @@ func (ec *executionContext) marshalNResourcePoolConnection2ᚖgithubᚗcomᚋVMw
 		return graphql.Null
 	}
 	return ec._ResourcePoolConnection(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNResourcePoolConnectionTest2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolConnectionTest(ctx context.Context, sel ast.SelectionSet, v model.ResourcePoolConnectionTest) graphql.Marshaler {
+	return ec._ResourcePoolConnectionTest(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNResourcePoolConnectionTest2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolConnectionTest(ctx context.Context, sel ast.SelectionSet, v *model.ResourcePoolConnectionTest) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ResourcePoolConnectionTest(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNResourcePoolSortField2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolSortField(ctx context.Context, v any) (model.ResourcePoolSortField, error) {
@@ -28836,6 +35581,11 @@ func (ec *executionContext) marshalNSyncResourcePoolPayload2ᚖgithubᚗcomᚋVM
 	return ec._SyncResourcePoolPayload(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNTestResourcePoolConnectionInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTestResourcePoolConnectionInput(ctx context.Context, v any) (model.TestResourcePoolConnectionInput, error) {
+	res, err := ec.unmarshalInputTestResourcePoolConnectionInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNTime2timeᚐTime(ctx context.Context, v any) (time.Time, error) {
 	res, err := graphql.UnmarshalTime(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -28898,6 +35648,11 @@ func (ec *executionContext) marshalNTokenUsage2ᚖgithubᚗcomᚋVMwareᚑAIᚋa
 
 func (ec *executionContext) unmarshalNUpdateAgentConfigInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUpdateAgentConfigInput(ctx context.Context, v any) (model.UpdateAgentConfigInput, error) {
 	res, err := ec.unmarshalInputUpdateAgentConfigInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNUpdateModelRouteInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUpdateModelRouteInput(ctx context.Context, v any) (model.UpdateModelRouteInput, error) {
+	res, err := ec.unmarshalInputUpdateModelRouteInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
@@ -29246,6 +36001,13 @@ func (ec *executionContext) marshalOAgentApiKey2ᚖgithubᚗcomᚋVMwareᚑAIᚋ
 	return ec._AgentApiKey(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalOAgentCredentials2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentCredentials(ctx context.Context, sel ast.SelectionSet, v *model.AgentCredentials) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._AgentCredentials(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalOAgentFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentFilter(ctx context.Context, v any) (*model.AgentFilter, error) {
 	if v == nil {
 		return nil, nil
@@ -29451,6 +36213,22 @@ func (ec *executionContext) marshalOMembershipRole2ᚖgithubᚗcomᚋVMwareᚑAI
 	return v
 }
 
+func (ec *executionContext) unmarshalOMeteringTimeRange2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringTimeRange(ctx context.Context, v any) (*model.MeteringTimeRange, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.MeteringTimeRange)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOMeteringTimeRange2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐMeteringTimeRange(ctx context.Context, sel ast.SelectionSet, v *model.MeteringTimeRange) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
 func (ec *executionContext) unmarshalOModelGatewayFilterInput2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayFilterInput(ctx context.Context, v any) (*model.ModelGatewayFilterInput, error) {
 	if v == nil {
 		return nil, nil
@@ -29481,6 +36259,38 @@ func (ec *executionContext) marshalOModelGatewayStatus2ᚖgithubᚗcomᚋVMware�
 		return graphql.Null
 	}
 	return v
+}
+
+func (ec *executionContext) unmarshalOModelRouteStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx context.Context, v any) (*model.ModelRouteStrategy, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.ModelRouteStrategy)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOModelRouteStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx context.Context, sel ast.SelectionSet, v *model.ModelRouteStrategy) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
+func (ec *executionContext) unmarshalOOvaTemplateFamilyFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateFamilyFilter(ctx context.Context, v any) (*model.OvaTemplateFamilyFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputOvaTemplateFamilyFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOOvaTemplateFamilySort2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateFamilySort(ctx context.Context, v any) (*model.OvaTemplateFamilySort, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputOvaTemplateFamilySort(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalOPageInput2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPageInput(ctx context.Context, v any) (*model.PageInput, error) {
@@ -29528,6 +36338,13 @@ func (ec *executionContext) marshalOResourcePool2ᚖgithubᚗcomᚋVMwareᚑAI�
 		return graphql.Null
 	}
 	return ec._ResourcePool(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOResourcePoolConnectionDetail2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolConnectionDetail(ctx context.Context, sel ast.SelectionSet, v *model.ResourcePoolConnectionDetail) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._ResourcePoolConnectionDetail(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOResourcePoolFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolFilter(ctx context.Context, v any) (*model.ResourcePoolFilter, error) {

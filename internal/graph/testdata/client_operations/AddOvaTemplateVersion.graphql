@@ -1,0 +1,16 @@
+fragment OvaTemplateVersionFields on OvaTemplateVersion {
+    id
+    familyId
+    version
+    ovaIdentifier
+    notes
+    createdAt
+  }
+
+  mutation AddOvaTemplateVersion($input: AddOvaTemplateVersionInput!) {
+    addOvaTemplateVersion(input: $input) {
+      version {
+        ...OvaTemplateVersionFields
+      }
+    }
+  }

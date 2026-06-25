@@ -1,0 +1,3 @@
+mutation DeleteModelRoute($id: ID!) {
+    deleteModelRoute(id: $id)
+  }

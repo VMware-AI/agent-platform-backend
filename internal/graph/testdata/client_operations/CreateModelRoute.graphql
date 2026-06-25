@@ -1,0 +1,17 @@
+mutation CreateModelRoute($input: CreateModelRouteInput!) {
+    createModelRoute(input: $input) {
+      ...ModelRouteFields
+    }
+  }
+  
+  fragment ModelRouteFields on ModelRoute {
+    id
+    name
+    backendGatewayId
+    gatewayName
+    supportedModels
+    uiStrategy
+    enabled
+    createdAt
+    updatedAt
+  }

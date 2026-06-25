@@ -65,6 +65,25 @@ func (r *agentResolver) Owner(ctx context.Context, obj *model.Agent) (*model.Use
 	return toModelUser(u), nil
 }
 
+// Credentials is the resolver for the credentials field. The agent has no
+// separate OS account today, so `username` is sourced from the owning user — the
+// account the agent runs as. The password is never exposed (Sensitive VM secret),
+// so only `username` is returned. Nil if the agent or its owner is gone.
+func (r *agentResolver) Credentials(ctx context.Context, obj *model.Agent) (*model.AgentCredentials, error) {
+	ag, err := r.agentForField(ctx, obj.ID)
+	if err != nil || ag == nil {
+		return nil, err
+	}
+	u, err := r.Ent.User.Get(ctx, ag.OwnerUserID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &model.AgentCredentials{Username: u.Username}, nil
+}
+
 // Knowledge is the resolver for the knowledge field. Lazily loads the config's
 // mounted OKF knowledge packs (LLD-11 K2). The parent AgentConfig was already
 // tenant-authorized before this field resolves, so no extra scope guard here.

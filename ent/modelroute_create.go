@@ -75,6 +75,20 @@ func (_c *ModelRouteCreate) SetNillableGatewayConnectionID(v *uuid.UUID) *ModelR
 	return _c
 }
 
+// SetGatewayName sets the "gateway_name" field.
+func (_c *ModelRouteCreate) SetGatewayName(v string) *ModelRouteCreate {
+	_c.mutation.SetGatewayName(v)
+	return _c
+}
+
+// SetNillableGatewayName sets the "gateway_name" field if the given value is not nil.
+func (_c *ModelRouteCreate) SetNillableGatewayName(v *string) *ModelRouteCreate {
+	if v != nil {
+		_c.SetGatewayName(*v)
+	}
+	return _c
+}
+
 // SetUpstreams sets the "upstreams" field.
 func (_c *ModelRouteCreate) SetUpstreams(v []string) *ModelRouteCreate {
 	_c.mutation.SetUpstreams(v)
@@ -91,6 +105,20 @@ func (_c *ModelRouteCreate) SetStrategy(v modelroute.Strategy) *ModelRouteCreate
 func (_c *ModelRouteCreate) SetNillableStrategy(v *modelroute.Strategy) *ModelRouteCreate {
 	if v != nil {
 		_c.SetStrategy(*v)
+	}
+	return _c
+}
+
+// SetUIStrategy sets the "ui_strategy" field.
+func (_c *ModelRouteCreate) SetUIStrategy(v modelroute.UIStrategy) *ModelRouteCreate {
+	_c.mutation.SetUIStrategy(v)
+	return _c
+}
+
+// SetNillableUIStrategy sets the "ui_strategy" field if the given value is not nil.
+func (_c *ModelRouteCreate) SetNillableUIStrategy(v *modelroute.UIStrategy) *ModelRouteCreate {
+	if v != nil {
+		_c.SetUIStrategy(*v)
 	}
 	return _c
 }
@@ -166,9 +194,17 @@ func (_c *ModelRouteCreate) defaults() {
 		v := modelroute.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
+	if _, ok := _c.mutation.GatewayName(); !ok {
+		v := modelroute.DefaultGatewayName
+		_c.mutation.SetGatewayName(v)
+	}
 	if _, ok := _c.mutation.Strategy(); !ok {
 		v := modelroute.DefaultStrategy
 		_c.mutation.SetStrategy(v)
+	}
+	if _, ok := _c.mutation.UIStrategy(); !ok {
+		v := modelroute.DefaultUIStrategy
+		_c.mutation.SetUIStrategy(v)
 	}
 	if _, ok := _c.mutation.Enabled(); !ok {
 		v := modelroute.DefaultEnabled
@@ -210,6 +246,14 @@ func (_c *ModelRouteCreate) check() error {
 	if v, ok := _c.mutation.Strategy(); ok {
 		if err := modelroute.StrategyValidator(v); err != nil {
 			return &ValidationError{Name: "strategy", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.strategy": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.UIStrategy(); !ok {
+		return &ValidationError{Name: "ui_strategy", err: errors.New(`ent: missing required field "ModelRoute.ui_strategy"`)}
+	}
+	if v, ok := _c.mutation.UIStrategy(); ok {
+		if err := modelroute.UIStrategyValidator(v); err != nil {
+			return &ValidationError{Name: "ui_strategy", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.ui_strategy": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.Enabled(); !ok {
@@ -270,6 +314,10 @@ func (_c *ModelRouteCreate) createSpec() (*ModelRoute, *sqlgraph.CreateSpec) {
 		_spec.SetField(modelroute.FieldGatewayConnectionID, field.TypeUUID, value)
 		_node.GatewayConnectionID = &value
 	}
+	if value, ok := _c.mutation.GatewayName(); ok {
+		_spec.SetField(modelroute.FieldGatewayName, field.TypeString, value)
+		_node.GatewayName = value
+	}
 	if value, ok := _c.mutation.Upstreams(); ok {
 		_spec.SetField(modelroute.FieldUpstreams, field.TypeJSON, value)
 		_node.Upstreams = value
@@ -277,6 +325,10 @@ func (_c *ModelRouteCreate) createSpec() (*ModelRoute, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Strategy(); ok {
 		_spec.SetField(modelroute.FieldStrategy, field.TypeEnum, value)
 		_node.Strategy = value
+	}
+	if value, ok := _c.mutation.UIStrategy(); ok {
+		_spec.SetField(modelroute.FieldUIStrategy, field.TypeEnum, value)
+		_node.UIStrategy = value
 	}
 	if value, ok := _c.mutation.Enabled(); ok {
 		_spec.SetField(modelroute.FieldEnabled, field.TypeBool, value)

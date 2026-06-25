@@ -1,0 +1,17 @@
+query ModelRoutes {
+    modelRoutes {
+      ...ModelRouteFields
+    }
+  }
+  
+  fragment ModelRouteFields on ModelRoute {
+    id
+    name
+    backendGatewayId
+    gatewayName
+    supportedModels
+    uiStrategy
+    enabled
+    createdAt
+    updatedAt
+  }

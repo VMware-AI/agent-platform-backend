@@ -1,22 +1,40 @@
-# Agent deployment: provision the VM (gateway key + cloud-init + guestinfo).
-# See LLD-05 §3 + internal/deploy.
+# Agent deployment: create a NEW agent from an OVA template version and provision
+# its VM (gateway key + cloud-init + guestinfo). See LLD-05 §3 + internal/deploy.
+#
+# Block 6 reshape (前端为主): the 智能体市场 deploys a fresh agent from a catalog
+# OVA version — it does NOT provision a pre-existing agent. Deploy ISSUES the
+# gateway key itself and returns its secret ONCE (virtualKeySecret); there is no
+# separate marketplace "pick / create a virtual key" step.
 
 type DeployedAgent {
   agent: Agent!
   # The issued virtual-key secret — returned ONCE.
   virtualKeySecret: String!
+  # The catalog version the agent was cloned from + the pool it landed in, so the
+  # console can confirm the deployment without a second round-trip.
+  templateVersion: OvaTemplateVersion!
+  resourcePool: ResourcePool!
 }
 
 input DeployAgentInput {
-  agentId: ID!
-  # Source OVA template VM to clone the agent from (ListTemplates).
-  template: String!
-  # Name to give the newly cloned agent VM.
-  vmName: String!
+  # Display name for the new agent (and its cloned VM).
+  name: String!
+  # The OVA template family (its `type` becomes the agent's kind) and the specific
+  # version to clone from (its `ovaIdentifier` is the source template).
+  templateFamilyId: ID!
+  templateVersionId: ID!
+  # Target vCenter resource pool to place the clone in.
   resourcePoolId: ID!
-  # Optional vSphere resource pool to place the clone in (empty = template's pool).
+  # Optional vSphere resource-pool name to place the VM clone in. A true OVA
+  # template has NO source resource pool, so vCenter's CloneFromTemplate requires
+  # an explicit placement pool for real deploys ("source has no resource pool;
+  # specify resourcePool"). Empty = inherit the source template's pool (only works
+  # when the source is a regular VM, e.g. vcsim). Optional to keep the contract
+  # backward-compatible.
   targetResourcePool: String
+  # Optional cloud-init hostname for the VM (defaults to none).
   hostname: String
+  # Optional per-key spend cap handed to the gateway when issuing the agent's key.
   maxBudget: Float
 }
 
@@ -62,10 +80,13 @@ extend type Query {
 }
 
 extend type Mutation {
-  # Owner or admin (checked in resolver). Issues a key, clones the VM from the
-  # template, injects cloud-init, powers on, and marks the agent running. On
-  # failure the VM and key are rolled back (no orphans).
-  deployAgent(input: DeployAgentInput!): DeployedAgent!
+  # Create a NEW agent from a catalog OVA version and provision its VM. Creates the
+  # agent row (kind from the family), issues a gateway key, clones the VM from the
+  # version's ovaIdentifier, injects cloud-init, powers on, marks it running. On
+  # failure the VM, key and (if needed) the new agent row are rolled back (no
+  # orphans). Admin-only: the 智能体市场 (and its OVA catalog queries) are gated to
+  # admins, so deploy is consistently admin-only too (owner = the admin caller).
+  deployAgent(input: DeployAgentInput!): DeployedAgent! @hasRole(any: [admin])
 
   # Owner or admin. Destroys the agent's VM, revokes its key, marks it stopped.
   # confirm must be true (double-confirm on a destructive operation).

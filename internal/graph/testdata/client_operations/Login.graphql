@@ -1,11 +1,13 @@
 mutation Login($input: LoginInput!) {
     login(input: $input) {
       token
+      mustChangePassword
       user {
         id
         username
         displayName
         email
+        role
       }
     }
   }

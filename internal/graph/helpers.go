@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
+	"net/url"
+	"regexp"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,6 +23,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
+	"github.com/VMware-AI/agent-platform-backend/ent/tokenusage"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
@@ -306,18 +310,19 @@ func toModelUser(u *ent.User) *model.User {
 // (secret_ref is intentionally not exposed).
 func toModelResourcePool(p *ent.ResourcePool) *model.ResourcePool {
 	return &model.ResourcePool{
-		ID:               p.ID.String(),
-		Name:             p.Name,
-		Endpoint:         p.Endpoint,
-		ConnectionStatus: poolConnStatus(p.Status),
-		DatacenterCount:  p.DatacenterCount,
-		ClusterCount:     p.ClusterCount,
-		EsxiHostCount:    p.HostCount,
-		VMInstanceCount:  p.VMCount,
-		SyncStatus:       poolSyncState(p),
-		LastSyncedAt:     p.LastSyncedAt,
-		CreatedAt:        p.CreatedAt,
-		UpdatedAt:        p.UpdatedAt,
+		ID:                 p.ID.String(),
+		Name:               p.Name,
+		Endpoint:           p.Endpoint,
+		ContentLibraryName: p.ContentLibraryName,
+		ConnectionStatus:   poolConnStatus(p.Status),
+		DatacenterCount:    p.DatacenterCount,
+		ClusterCount:       p.ClusterCount,
+		EsxiHostCount:      p.HostCount,
+		VMInstanceCount:    p.VMCount,
+		SyncStatus:         poolSyncState(p),
+		LastSyncedAt:       p.LastSyncedAt,
+		CreatedAt:          p.CreatedAt,
+		UpdatedAt:          p.UpdatedAt,
 	}
 }
 
@@ -485,6 +490,18 @@ func toModelAgent(a *ent.Agent) *model.Agent {
 		v := a.VMRef
 		m.Endpoint = &v
 	}
+	if a.TemplateFamilyID != nil {
+		s := a.TemplateFamilyID.String()
+		m.TemplateFamilyID = &s
+	}
+	if a.TemplateVersionID != nil {
+		s := a.TemplateVersionID.String()
+		m.TemplateVersionID = &s
+	}
+	if a.ResourcePoolID != nil {
+		s := a.ResourcePoolID.String()
+		m.ResourcePoolID = &s
+	}
 	return m
 }
 
@@ -505,6 +522,149 @@ func applyTemplateOptionals(m *ent.AgentTemplateMutation, input model.UpsertAgen
 	if input.KnowledgePrompt != nil {
 		m.SetKnowledgePrompt(*input.KnowledgePrompt)
 	}
+}
+
+// clampLimit normalizes an optional list-limit into [1, max], defaulting to def.
+func clampLimit(p *int, def, max int) int {
+	n := def
+	if p != nil {
+		n = *p
+	}
+	if n < 1 {
+		n = def
+	}
+	if n > max {
+		n = max
+	}
+	return n
+}
+
+// dashboardAgentStatus projects the ent agent status onto the console's 3-state
+// overview badge. provisioning is not yet running, so it surfaces as stopped.
+func dashboardAgentStatus(s agent.Status) model.DashboardAgentStatus {
+	switch s {
+	case agent.StatusRunning:
+		return model.DashboardAgentStatusRunning
+	case agent.StatusException:
+		return model.DashboardAgentStatusException
+	default: // stopped + provisioning
+		return model.DashboardAgentStatusStopped
+	}
+}
+
+// noticeText renders a human-readable system-notice line from an audit log's
+// action + resource type, marked succeeded/failed. e.g. ("resource_pool.test",
+// "resource_pool", success) → "resource_pool.test on resource_pool succeeded".
+func noticeText(action, resourceType string, status model.DashboardNoticeStatus) string {
+	verb := "succeeded"
+	if status == model.DashboardNoticeStatusDanger {
+		verb = "failed"
+	}
+	if resourceType != "" {
+		return fmt.Sprintf("%s on %s %s", action, resourceType, verb)
+	}
+	return fmt.Sprintf("%s %s", action, verb)
+}
+
+// monthlyUsageTotals sums input/output tokens and cost over the given TokenUsage
+// query, returning zeros when there are no rows (the aggregate scan yields no row
+// on an empty table for some drivers).
+func (r *Resolver) monthlyUsageTotals(ctx context.Context, q *ent.TokenUsageQuery) (in, out int, cost float64, err error) {
+	var agg []struct {
+		In   int     `json:"in"`
+		Out  int     `json:"out"`
+		Cost float64 `json:"cost"`
+	}
+	if err = q.Clone().Aggregate(
+		ent.As(ent.Sum(tokenusage.FieldInputTokens), "in"),
+		ent.As(ent.Sum(tokenusage.FieldOutputTokens), "out"),
+		ent.As(ent.Sum(tokenusage.FieldCost), "cost"),
+	).Scan(ctx, &agg); err != nil {
+		return 0, 0, 0, err
+	}
+	if len(agg) == 1 {
+		return agg[0].In, agg[0].Out, agg[0].Cost, nil
+	}
+	return 0, 0, 0, nil
+}
+
+// scopedTokenUsageQuery builds a TokenUsage query confined to the caller's tenant
+// (tenant-admin → own tenant; admin → all) and environment (when env_scope is on),
+// optionally narrowed to one user. Shared by the metering aggregations so they all
+// agree on visibility (LLD-10).
+func (r *Resolver) scopedTokenUsageQuery(ctx context.Context, userID *string) (*ent.TokenUsageQuery, error) {
+	q := r.Ent.TokenUsage.Query()
+	if userID != nil {
+		uid, err := uuid.Parse(*userID)
+		if err != nil {
+			return nil, gqlerror.Errorf("invalid userId")
+		}
+		q = q.Where(tokenusage.UserID(uid))
+	}
+	if d := tenantScopeFor(ctx); d.apply {
+		if d.denyAll {
+			q = q.Where(tokenusage.IDEQ(uuid.Nil))
+		} else {
+			q = q.Where(tokenusage.TenantID(d.tenant))
+		}
+	}
+	if env, ok := r.envScopeFor(ctx); ok {
+		q = q.Where(tokenusage.Or(tokenusage.EnvironmentID(env), tokenusage.EnvironmentIDIsNil()))
+	}
+	return q, nil
+}
+
+// meteringRangeStart maps a MeteringTimeRange to the inclusive lower bound of the
+// window, relative to now. LAST_7_DAYS (default) and LAST_30_DAYS are rolling
+// day windows; THIS_MONTH starts at the first of the current calendar month.
+func meteringRangeStart(rng model.MeteringTimeRange, now time.Time) time.Time {
+	switch rng {
+	case model.MeteringTimeRangeLast30Days:
+		return now.AddDate(0, 0, -30)
+	case model.MeteringTimeRangeThisMonth:
+		return startOfMonth(now)
+	default: // LAST_7_DAYS
+		return now.AddDate(0, 0, -7)
+	}
+}
+
+// startOfMonth returns midnight on the first day of now's calendar month (UTC),
+// matching the DB-side UTC day buckets.
+func startOfMonth(now time.Time) time.Time {
+	y, m, _ := now.UTC().Date()
+	return time.Date(y, m, 1, 0, 0, 0, 0, time.UTC)
+}
+
+// agentNamesFor resolves agent display names for a per-agent usage breakdown in one
+// batched query (id → name). Rows whose agent no longer exists fall back to the id
+// string so the metering table never shows a blank name. The argument is the
+// anonymous per-agent aggregation slice; only its AgentID is read.
+func (r *Resolver) agentNamesFor(ctx context.Context, rows []struct {
+	AgentID string  `json:"agent_id"`
+	In      int     `json:"in"`
+	Out     int     `json:"out"`
+	Cost    float64 `json:"cost"`
+	Reqs    int     `json:"reqs"`
+}) (map[string]string, error) {
+	names := make(map[string]string, len(rows))
+	ids := make([]uuid.UUID, 0, len(rows))
+	for _, row := range rows {
+		if id, err := uuid.Parse(row.AgentID); err == nil {
+			ids = append(ids, id)
+		}
+		names[row.AgentID] = row.AgentID // fallback to id
+	}
+	if len(ids) == 0 {
+		return names, nil
+	}
+	ags, err := r.Ent.Agent.Query().Where(agent.IDIn(ids...)).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, a := range ags {
+		names[a.ID.String()] = a.Name
+	}
+	return names, nil
 }
 
 func toModelTokenUsage(t *ent.TokenUsage) *model.TokenUsage {
@@ -578,6 +738,45 @@ func derefString(p *string) string {
 		return *p
 	}
 	return ""
+}
+
+// vmNameInvalidChars matches characters that are not safe in a vSphere VM name;
+// they are collapsed to a single dash. vCenter disallows the special chars
+// %/\?*:|"<> among others, so we keep only word chars, dot and dash.
+var vmNameInvalidChars = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
+
+// uniqueVMName derives a collision-free vCenter VM name from the agent's display
+// name + the first 8 chars of its (unique) id. The display name alone can repeat
+// across agents, which would collide on the VM clone; the id suffix disambiguates.
+// The result is sanitized to a valid vSphere VM name.
+func uniqueVMName(displayName string, id uuid.UUID) string {
+	base := strings.Trim(vmNameInvalidChars.ReplaceAllString(displayName, "-"), "-")
+	if base == "" {
+		base = "agent"
+	}
+	return base + "-" + id.String()[:8]
+}
+
+// parseOptionalUUID parses an optional id input into a *uuid.UUID. nil input →
+// nil result (no error); a malformed id → a user-facing error naming the field.
+func parseOptionalUUID(s *string, field string) (*uuid.UUID, error) {
+	if s == nil || *s == "" {
+		return nil, nil
+	}
+	id, err := uuid.Parse(*s)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid %s", field)
+	}
+	return &id, nil
+}
+
+// orEmptyStrings returns the slice unchanged, or an empty (non-nil) slice when nil,
+// so a stored string list is never NULL.
+func orEmptyStrings(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
 }
 
 func toModelGatewayConnection(g *ent.GatewayConnection) *model.GatewayConnection {
@@ -742,13 +941,18 @@ func toModelModelRoute(r *ent.ModelRoute) *model.ModelRoute {
 		ups = []string{}
 	}
 	m := &model.ModelRoute{
-		ID:         r.ID.String(),
-		Name:       r.Name,
-		ModelAlias: r.ModelAlias,
-		Upstreams:  ups,
-		Strategy:   model.LoadBalanceStrategy(string(r.Strategy)),
-		Enabled:    r.Enabled,
-		CreatedAt:  r.CreatedAt,
+		ID:          r.ID.String(),
+		Name:        r.Name,
+		ModelAlias:  r.ModelAlias,
+		GatewayName: r.GatewayName,
+		Upstreams:   ups,
+		// Console alias for upstreams — same backing slice (the route's model group).
+		SupportedModels: ups,
+		Strategy:        model.LoadBalanceStrategy(string(r.Strategy)),
+		UIStrategy:      model.ModelRouteStrategy(string(r.UIStrategy)),
+		Enabled:         r.Enabled,
+		CreatedAt:       r.CreatedAt,
+		UpdatedAt:       r.UpdatedAt,
 	}
 	if r.GatewayConnectionID != nil {
 		g := r.GatewayConnectionID.String()
@@ -869,6 +1073,59 @@ func (r *Resolver) modelCustomRole(ctx context.Context, role *ent.Role) (*model.
 	}, nil
 }
 
+// poolProbeTimeout bounds the pre-save reachability dial (testResourcePoolConnection).
+const poolProbeTimeout = 5 * time.Second
+
+// defaultVCenterPort is the HTTPS port a vCenter endpoint listens on; used when the
+// operator's endpoint omits an explicit port.
+const defaultVCenterPort = "443"
+
+// parseEndpointHostPort validates a resource-pool endpoint (a host, host:port, or
+// https URL) and returns a "host:port" suitable for net.Dial. It rejects empty or
+// malformed input — the boundary validation for the credential-less probe — and
+// defaults the port to vCenter HTTPS (443) when none is given.
+func parseEndpointHostPort(endpoint string) (string, error) {
+	e := strings.TrimSpace(endpoint)
+	if e == "" {
+		return "", fmt.Errorf("endpoint is required")
+	}
+	// Accept a full URL (https://host[:port][/path]) or a bare host[:port].
+	host := e
+	if strings.Contains(e, "://") {
+		u, err := url.Parse(e)
+		if err != nil || u.Host == "" {
+			return "", fmt.Errorf("endpoint %q is not a valid URL", endpoint)
+		}
+		host = u.Host
+	}
+	// Split host:port; default the port when absent.
+	h, p, err := net.SplitHostPort(host)
+	if err != nil {
+		// No port present (or another error) — treat the whole thing as the host.
+		h, p = host, defaultVCenterPort
+	}
+	if strings.TrimSpace(h) == "" {
+		return "", fmt.Errorf("endpoint %q has no host", endpoint)
+	}
+	return net.JoinHostPort(h, p), nil
+}
+
+// dialReachable performs a bounded TCP dial to confirm an endpoint is reachable.
+// LIMITATION: this is a transport-level reachability check only — it does NOT
+// complete a TLS handshake or authenticate, so it cannot verify the endpoint is
+// actually a vCenter or that the supplied credentials work. That full check
+// happens later, with credentials, in syncResourcePool.
+func dialReachable(ctx context.Context, hostPort string) error {
+	d := net.Dialer{Timeout: poolProbeTimeout}
+	dctx, cancel := context.WithTimeout(ctx, poolProbeTimeout)
+	defer cancel()
+	conn, err := d.DialContext(dctx, "tcp", hostPort)
+	if err != nil {
+		return err
+	}
+	return conn.Close()
+}
+
 // connectPool resolves a resource pool's credentials and dials its vCenter.
 func (r *Resolver) connectPool(ctx context.Context, pool *ent.ResourcePool) (VCenterClient, error) {
 	if r.Secrets == nil || r.VCenterConnect == nil {
@@ -975,6 +1232,33 @@ func (r *Resolver) rollbackDeploy(ctx context.Context, conn VCenterClient, ag *e
 	if _, err := r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusException).Save(cctx); err != nil {
 		log.Printf("deploy rollback: mark agent %s exception failed: %v", ag.ID, err)
 	}
+}
+
+// deleteAgentRow drops a freshly-created agent row when its deploy aborts before
+// any VM/key exists (create-from-OVA flow). The row was created by DeployAgent
+// itself, so removing it leaves no orphan. Detached ctx so cleanup runs even if
+// the request ctx was canceled. Failures are logged (never swallowed).
+func (r *Resolver) deleteAgentRow(ctx context.Context, ag *ent.Agent) {
+	if err := r.Ent.Agent.DeleteOne(ag).Exec(context.WithoutCancel(ctx)); err != nil {
+		log.Printf("deploy rollback: delete agent row %s failed: %v", ag.ID, err)
+	}
+}
+
+// rollbackDeployCreate compensates a failed create-from-OVA deploy AFTER the VM
+// and gateway key already exist: destroy the VM, revoke the key, and delete the
+// agent row (it was created by this same deploy and never went live, so unlike
+// rollbackDeploy we drop it rather than mark it exception).
+func (r *Resolver) rollbackDeployCreate(ctx context.Context, conn VCenterClient, ag *ent.Agent, vmName, key string) {
+	cctx := context.WithoutCancel(ctx)
+	if err := conn.Destroy(cctx, vmName); err != nil {
+		log.Printf("deploy rollback: orphan VM %q, destroy failed: %v", vmName, err)
+	}
+	if r.Gateway != nil {
+		if err := r.Gateway.DeleteKey(cctx, key); err != nil {
+			log.Printf("deploy rollback: orphan gateway key, revoke failed: %v", err)
+		}
+	}
+	r.deleteAgentRow(cctx, ag)
 }
 
 // connectAgentVM resolves an agent the caller owns, dials its resource pool's

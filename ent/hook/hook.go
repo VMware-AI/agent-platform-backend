@@ -165,6 +165,30 @@ func (f ModelRouteFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ModelRouteMutation", m)
 }
 
+// The OvaTemplateFamilyFunc type is an adapter to allow the use of ordinary
+// function as OvaTemplateFamily mutator.
+type OvaTemplateFamilyFunc func(context.Context, *ent.OvaTemplateFamilyMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f OvaTemplateFamilyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.OvaTemplateFamilyMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.OvaTemplateFamilyMutation", m)
+}
+
+// The OvaTemplateVersionFunc type is an adapter to allow the use of ordinary
+// function as OvaTemplateVersion mutator.
+type OvaTemplateVersionFunc func(context.Context, *ent.OvaTemplateVersionMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f OvaTemplateVersionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.OvaTemplateVersionMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.OvaTemplateVersionMutation", m)
+}
+
 // The PermissionFunc type is an adapter to allow the use of ordinary
 // function as Permission mutator.
 type PermissionFunc func(context.Context, *ent.PermissionMutation) (ent.Value, error)

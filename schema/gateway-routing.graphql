@@ -27,6 +27,15 @@ enum RouterTierLevel {
   REASONING
 }
 
+# Console-facing load-balancing strategy for a model route (模型路由 page). Distinct
+# from the litellm LoadBalanceStrategy: a friendly, gateway-agnostic choice the
+# operator picks in the UI and the backend round-trips verbatim.
+enum ModelRouteStrategy {
+  ROUND_ROBIN
+  WEIGHTED_ROUND_ROBIN
+  RANDOM
+}
+
 type GatewayConnection {
   id: ID!
   name: String!
@@ -51,10 +60,17 @@ type ModelRoute {
   name: String!
   modelAlias: String!
   backendGatewayId: ID
+  # Display name of the serving gateway (console 模型路由 list).
+  gatewayName: String!
   upstreams: [String!]!
+  # Console alias for `upstreams` — the models this route can serve (模型路由 page).
+  supportedModels: [String!]!
   strategy: LoadBalanceStrategy!
+  # Console-facing load-balancing strategy (模型路由 page).
+  uiStrategy: ModelRouteStrategy!
   enabled: Boolean!
   createdAt: Time!
+  updatedAt: Time!
 }
 
 type RouterTier {
@@ -92,6 +108,27 @@ input UpsertModelRouteInput {
   enabled: Boolean
 }
 
+# Console 模型路由 create form (创建路由). modelAlias defaults to name when omitted;
+# supportedModels are stored as the route's upstream group.
+input CreateModelRouteInput {
+  name: String!
+  backendGatewayId: ID
+  gatewayName: String
+  supportedModels: [String!]
+  uiStrategy: ModelRouteStrategy
+  enabled: Boolean
+}
+
+# Console 模型路由 edit form (编辑路由). All fields optional — only set ones change.
+input UpdateModelRouteInput {
+  name: String
+  backendGatewayId: ID
+  gatewayName: String
+  supportedModels: [String!]
+  uiStrategy: ModelRouteStrategy
+  enabled: Boolean
+}
+
 extend type Query {
   gatewayConnections: [GatewayConnection!]! @hasRole(any: [admin])
   upstreams: [Upstream!]! @hasPermission(perm: "route:manage")
@@ -107,6 +144,10 @@ extend type Mutation {
   upsertUpstream(input: UpsertUpstreamInput!): Upstream! @hasPermission(perm: "route:manage")
   deleteUpstream(id: ID!): Boolean! @hasPermission(perm: "route:manage")
   upsertModelRoute(input: UpsertModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
+  # Console 模型路由 page CRUD (创建/编辑路由). create mints a new route by id;
+  # update edits an existing one by id (distinct from the name-keyed upsert above).
+  createModelRoute(input: CreateModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
+  updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
   setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute! @hasPermission(perm: "route:manage")
   deleteModelRoute(id: ID!): Boolean! @hasPermission(perm: "route:manage")
 

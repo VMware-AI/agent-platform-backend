@@ -1,0 +1,14 @@
+mutation SetRateLimitPolicyEnabled($id: ID!, $enabled: Boolean!) {
+    setRateLimitPolicyEnabled(id: $id, enabled: $enabled) {
+      ...RateLimitPolicyFields
+    }
+  }
+  
+  fragment RateLimitPolicyFields on RateLimitPolicy {
+    id
+    name
+    rpm
+    tpm
+    enabled
+    createdAt
+  }

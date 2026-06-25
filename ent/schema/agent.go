@@ -28,6 +28,9 @@ func (Agent) Fields() []ent.Field {
 		field.UUID("config_id", uuid.UUID{}).Optional().Nillable(),
 		field.UUID("virtual_key_id", uuid.UUID{}).Optional().Nillable(),
 		field.UUID("resource_pool_id", uuid.UUID{}).Optional().Nillable(),
+		// Catalog provenance when deployed from an OVA version (智能体市场 deploy).
+		field.UUID("template_family_id", uuid.UUID{}).Optional().Nillable(),
+		field.UUID("template_version_id", uuid.UUID{}).Optional().Nillable(),
 		field.UUID("tenant_id", uuid.UUID{}).Optional().Nillable(),
 		field.UUID("environment_id", uuid.UUID{}).Optional().Nillable(), // LLD-10 env_scope (default off)
 	}

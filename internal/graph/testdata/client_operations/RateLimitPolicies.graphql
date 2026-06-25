@@ -1,0 +1,14 @@
+query RateLimitPolicies {
+    rateLimitPolicies {
+      ...RateLimitPolicyFields
+    }
+  }
+  
+  fragment RateLimitPolicyFields on RateLimitPolicy {
+    id
+    name
+    rpm
+    tpm
+    enabled
+    createdAt
+  }

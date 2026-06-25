@@ -1,0 +1,67 @@
+# Dashboard / overview (控制台首页). Stat cards + recent agents + system notices,
+# all derived from REAL entities (Agent / VirtualKey / GatewayConnection /
+# ResourcePool / User / TokenUsage / AuditLog). No mock data.
+
+# Status of a recent agent row (mirrors Agent.status, minus provisioning which the
+# console surfaces as stopped for the overview list).
+enum DashboardAgentStatus {
+  running
+  stopped
+  exception
+}
+
+# Severity of a system notice, mapped from the source audit-log result.
+enum DashboardNoticeStatus {
+  success
+  warning
+  danger
+}
+
+# Headline counts for the overview stat cards.
+type DashboardStats {
+  totalAgents: Int!
+  runningAgents: Int!
+  stoppedAgents: Int!
+  exceptionAgents: Int!
+  totalVirtualKeys: Int!
+  totalGateways: Int!
+  totalResourcePools: Int!
+  totalUsers: Int!
+  # Calls = TokenUsage rows in the current calendar month (本月调用数).
+  monthlyCalls: Int!
+  # Token + cost for the current calendar month (本月 Token / 预估费用).
+  monthlyTokens: Int!
+  monthlyCost: Float!
+}
+
+# A recently created agent for the 最近创建的实例 table.
+type DashboardRecentAgent {
+  id: ID!
+  name: String!
+  agentName: String! # the agent kind/type
+  status: DashboardAgentStatus!
+  createdAt: Time!
+}
+
+# A system notice for the 系统通知 list, sourced from the most recent audit logs.
+type DashboardNotice {
+  id: ID!
+  text: String!
+  status: DashboardNoticeStatus!
+  occurredAt: Time!
+}
+
+type DashboardOverview {
+  stats: DashboardStats!
+  recentAgents: [DashboardRecentAgent!]!
+  notices: [DashboardNotice!]!
+}
+
+extend type Query {
+  # The console overview page. recentLimit/noticeLimit cap the two lists (默认 5).
+  # Figures are platform-global (counts/notices are not tenant-scoped yet), so this
+  # is restricted to platform roles — exposing it to tenant_admin would leak other
+  # tenants' counts/usage/audit. Per-tenant dashboard scoping is future work (C1).
+  dashboardOverview(recentLimit: Int = 5, noticeLimit: Int = 5): DashboardOverview!
+    @hasRole(any: [admin, observability])
+}

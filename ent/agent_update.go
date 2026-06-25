@@ -172,6 +172,46 @@ func (_u *AgentUpdate) ClearResourcePoolID() *AgentUpdate {
 	return _u
 }
 
+// SetTemplateFamilyID sets the "template_family_id" field.
+func (_u *AgentUpdate) SetTemplateFamilyID(v uuid.UUID) *AgentUpdate {
+	_u.mutation.SetTemplateFamilyID(v)
+	return _u
+}
+
+// SetNillableTemplateFamilyID sets the "template_family_id" field if the given value is not nil.
+func (_u *AgentUpdate) SetNillableTemplateFamilyID(v *uuid.UUID) *AgentUpdate {
+	if v != nil {
+		_u.SetTemplateFamilyID(*v)
+	}
+	return _u
+}
+
+// ClearTemplateFamilyID clears the value of the "template_family_id" field.
+func (_u *AgentUpdate) ClearTemplateFamilyID() *AgentUpdate {
+	_u.mutation.ClearTemplateFamilyID()
+	return _u
+}
+
+// SetTemplateVersionID sets the "template_version_id" field.
+func (_u *AgentUpdate) SetTemplateVersionID(v uuid.UUID) *AgentUpdate {
+	_u.mutation.SetTemplateVersionID(v)
+	return _u
+}
+
+// SetNillableTemplateVersionID sets the "template_version_id" field if the given value is not nil.
+func (_u *AgentUpdate) SetNillableTemplateVersionID(v *uuid.UUID) *AgentUpdate {
+	if v != nil {
+		_u.SetTemplateVersionID(*v)
+	}
+	return _u
+}
+
+// ClearTemplateVersionID clears the value of the "template_version_id" field.
+func (_u *AgentUpdate) ClearTemplateVersionID() *AgentUpdate {
+	_u.mutation.ClearTemplateVersionID()
+	return _u
+}
+
 // SetTenantID sets the "tenant_id" field.
 func (_u *AgentUpdate) SetTenantID(v uuid.UUID) *AgentUpdate {
 	_u.mutation.SetTenantID(v)
@@ -329,6 +369,18 @@ func (_u *AgentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.ResourcePoolIDCleared() {
 		_spec.ClearField(agent.FieldResourcePoolID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.TemplateFamilyID(); ok {
+		_spec.SetField(agent.FieldTemplateFamilyID, field.TypeUUID, value)
+	}
+	if _u.mutation.TemplateFamilyIDCleared() {
+		_spec.ClearField(agent.FieldTemplateFamilyID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.TemplateVersionID(); ok {
+		_spec.SetField(agent.FieldTemplateVersionID, field.TypeUUID, value)
+	}
+	if _u.mutation.TemplateVersionIDCleared() {
+		_spec.ClearField(agent.FieldTemplateVersionID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.TenantID(); ok {
 		_spec.SetField(agent.FieldTenantID, field.TypeUUID, value)
@@ -503,6 +555,46 @@ func (_u *AgentUpdateOne) SetNillableResourcePoolID(v *uuid.UUID) *AgentUpdateOn
 // ClearResourcePoolID clears the value of the "resource_pool_id" field.
 func (_u *AgentUpdateOne) ClearResourcePoolID() *AgentUpdateOne {
 	_u.mutation.ClearResourcePoolID()
+	return _u
+}
+
+// SetTemplateFamilyID sets the "template_family_id" field.
+func (_u *AgentUpdateOne) SetTemplateFamilyID(v uuid.UUID) *AgentUpdateOne {
+	_u.mutation.SetTemplateFamilyID(v)
+	return _u
+}
+
+// SetNillableTemplateFamilyID sets the "template_family_id" field if the given value is not nil.
+func (_u *AgentUpdateOne) SetNillableTemplateFamilyID(v *uuid.UUID) *AgentUpdateOne {
+	if v != nil {
+		_u.SetTemplateFamilyID(*v)
+	}
+	return _u
+}
+
+// ClearTemplateFamilyID clears the value of the "template_family_id" field.
+func (_u *AgentUpdateOne) ClearTemplateFamilyID() *AgentUpdateOne {
+	_u.mutation.ClearTemplateFamilyID()
+	return _u
+}
+
+// SetTemplateVersionID sets the "template_version_id" field.
+func (_u *AgentUpdateOne) SetTemplateVersionID(v uuid.UUID) *AgentUpdateOne {
+	_u.mutation.SetTemplateVersionID(v)
+	return _u
+}
+
+// SetNillableTemplateVersionID sets the "template_version_id" field if the given value is not nil.
+func (_u *AgentUpdateOne) SetNillableTemplateVersionID(v *uuid.UUID) *AgentUpdateOne {
+	if v != nil {
+		_u.SetTemplateVersionID(*v)
+	}
+	return _u
+}
+
+// ClearTemplateVersionID clears the value of the "template_version_id" field.
+func (_u *AgentUpdateOne) ClearTemplateVersionID() *AgentUpdateOne {
+	_u.mutation.ClearTemplateVersionID()
 	return _u
 }
 
@@ -693,6 +785,18 @@ func (_u *AgentUpdateOne) sqlSave(ctx context.Context) (_node *Agent, err error)
 	}
 	if _u.mutation.ResourcePoolIDCleared() {
 		_spec.ClearField(agent.FieldResourcePoolID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.TemplateFamilyID(); ok {
+		_spec.SetField(agent.FieldTemplateFamilyID, field.TypeUUID, value)
+	}
+	if _u.mutation.TemplateFamilyIDCleared() {
+		_spec.ClearField(agent.FieldTemplateFamilyID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.TemplateVersionID(); ok {
+		_spec.SetField(agent.FieldTemplateVersionID, field.TypeUUID, value)
+	}
+	if _u.mutation.TemplateVersionIDCleared() {
+		_spec.ClearField(agent.FieldTemplateVersionID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.TenantID(); ok {
 		_spec.SetField(agent.FieldTenantID, field.TypeUUID, value)

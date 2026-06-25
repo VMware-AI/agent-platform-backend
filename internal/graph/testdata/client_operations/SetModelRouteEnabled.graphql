@@ -1,0 +1,17 @@
+mutation SetModelRouteEnabled($id: ID!, $enabled: Boolean!) {
+    setModelRouteEnabled(id: $id, enabled: $enabled) {
+      ...ModelRouteFields
+    }
+  }
+  
+  fragment ModelRouteFields on ModelRoute {
+    id
+    name
+    backendGatewayId
+    gatewayName
+    supportedModels
+    uiStrategy
+    enabled
+    createdAt
+    updatedAt
+  }

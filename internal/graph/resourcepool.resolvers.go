@@ -30,6 +30,9 @@ func (r *mutationResolver) CreateResourcePool(ctx context.Context, input model.C
 	create := r.Ent.ResourcePool.Create().
 		SetName(input.Name).
 		SetEndpoint(input.Endpoint)
+	if input.ContentLibraryName != nil {
+		create.SetContentLibraryName(*input.ContentLibraryName)
+	}
 	if set {
 		create.SetSecretRef(ref)
 	}
@@ -60,6 +63,9 @@ func (r *mutationResolver) UpdateResourcePool(ctx context.Context, id string, in
 	}
 	if input.Endpoint != nil {
 		u.SetEndpoint(*input.Endpoint)
+	}
+	if input.ContentLibraryName != nil {
+		u.SetContentLibraryName(*input.ContentLibraryName)
 	}
 	if input.DatacenterCount != nil {
 		u.SetDatacenterCount(*input.DatacenterCount)
@@ -101,28 +107,34 @@ func (r *mutationResolver) DeleteResourcePool(ctx context.Context, id string) (*
 	return &model.DeleteResourcePoolPayload{ID: id, DeletedName: p.Name}, nil
 }
 
-// TestResourcePoolConnection dials the pool and records connected/error status.
-func (r *mutationResolver) TestResourcePoolConnection(ctx context.Context, id string) (*model.ResourcePool, error) {
-	pid, err := uuid.Parse(id)
+// TestResourcePoolConnection is the 接入表单 pre-save reachability probe. The input
+// carries NO credentials, so this is a REAL but lightweight network check, not a
+// full authenticated vCenter login: it validates the endpoint is a well-formed
+// host/URL and that the vCenter HTTPS port is dial-reachable (TCP). It does NOT
+// authenticate — so vSphereVersion is best-effort ("" when not derivable without
+// a session) and itemCount is 0 (a content-library inventory requires credentials,
+// done later by syncResourcePool). A pool row is NOT created or mutated here.
+func (r *mutationResolver) TestResourcePoolConnection(ctx context.Context, input model.TestResourcePoolConnectionInput) (*model.ResourcePoolConnectionTest, error) {
+	host, err := parseEndpointHostPort(input.Endpoint)
 	if err != nil {
-		return nil, gqlerror.Errorf("invalid id")
+		r.audit(ctx, "resource_pool.test", "resource_pool", input.Name, false, actorID(auth.FromContext(ctx)))
+		return &model.ResourcePoolConnectionTest{Ok: false, Message: err.Error()}, nil
 	}
-	pool, err := r.Ent.ResourcePool.Get(ctx, pid)
-	if err != nil {
-		return nil, err
+	if derr := dialReachable(ctx, host); derr != nil {
+		r.audit(ctx, "resource_pool.test", "resource_pool", input.Name, false, actorID(auth.FromContext(ctx)))
+		return &model.ResourcePoolConnectionTest{
+			Ok:      false,
+			Message: fmt.Sprintf("endpoint %q is not reachable: %v", host, derr),
+		}, nil
 	}
-	status := resourcepool.StatusConnected
-	if conn, err := r.connectPool(ctx, pool); err != nil {
-		status = resourcepool.StatusError
-	} else {
-		_ = conn.Logout(ctx)
-	}
-	pool, err = r.Ent.ResourcePool.UpdateOne(pool).SetStatus(status).Save(ctx)
-	if err != nil {
-		return nil, err
-	}
-	r.audit(ctx, "resource_pool.test", "resource_pool", id, status == resourcepool.StatusConnected, actorID(auth.FromContext(ctx)))
-	return toModelResourcePool(pool), nil
+	r.audit(ctx, "resource_pool.test", "resource_pool", input.Name, true, actorID(auth.FromContext(ctx)))
+	return &model.ResourcePoolConnectionTest{
+		Ok:      true,
+		Message: fmt.Sprintf("%s is reachable", host),
+		// Best-effort: a full version/item-count probe needs credentials (done at
+		// syncResourcePool); the pre-save check only confirms reachability.
+		Detail: &model.ResourcePoolConnectionDetail{VSphereVersion: "", ItemCount: 0},
+	}, nil
 }
 
 // SyncResourcePool dials the pool, counts inventory, and persists it (同步数据).

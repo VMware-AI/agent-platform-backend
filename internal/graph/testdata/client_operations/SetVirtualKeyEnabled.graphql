@@ -1,0 +1,16 @@
+mutation SetVirtualKeyEnabled($id: ID!, $enabled: Boolean!) {
+    setVirtualKeyEnabled(id: $id, enabled: $enabled) {
+      ...VirtualKeyFields
+    }
+  }
+  
+  fragment VirtualKeyFields on VirtualKey {
+    id
+    alias
+    userId
+    agentId
+    rateLimitPolicyId
+    status
+    expiresAt
+    createdAt
+  }

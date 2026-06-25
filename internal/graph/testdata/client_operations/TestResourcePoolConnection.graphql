@@ -1,0 +1,10 @@
+mutation TestResourcePoolConnection($input: TestResourcePoolConnectionInput!) {
+    testResourcePoolConnection(input: $input) {
+      ok
+      message
+      detail {
+        vSphereVersion
+        itemCount
+      }
+    }
+  }

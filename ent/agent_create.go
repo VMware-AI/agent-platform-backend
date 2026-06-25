@@ -137,6 +137,34 @@ func (_c *AgentCreate) SetNillableResourcePoolID(v *uuid.UUID) *AgentCreate {
 	return _c
 }
 
+// SetTemplateFamilyID sets the "template_family_id" field.
+func (_c *AgentCreate) SetTemplateFamilyID(v uuid.UUID) *AgentCreate {
+	_c.mutation.SetTemplateFamilyID(v)
+	return _c
+}
+
+// SetNillableTemplateFamilyID sets the "template_family_id" field if the given value is not nil.
+func (_c *AgentCreate) SetNillableTemplateFamilyID(v *uuid.UUID) *AgentCreate {
+	if v != nil {
+		_c.SetTemplateFamilyID(*v)
+	}
+	return _c
+}
+
+// SetTemplateVersionID sets the "template_version_id" field.
+func (_c *AgentCreate) SetTemplateVersionID(v uuid.UUID) *AgentCreate {
+	_c.mutation.SetTemplateVersionID(v)
+	return _c
+}
+
+// SetNillableTemplateVersionID sets the "template_version_id" field if the given value is not nil.
+func (_c *AgentCreate) SetNillableTemplateVersionID(v *uuid.UUID) *AgentCreate {
+	if v != nil {
+		_c.SetTemplateVersionID(*v)
+	}
+	return _c
+}
+
 // SetTenantID sets the "tenant_id" field.
 func (_c *AgentCreate) SetTenantID(v uuid.UUID) *AgentCreate {
 	_c.mutation.SetTenantID(v)
@@ -341,6 +369,14 @@ func (_c *AgentCreate) createSpec() (*Agent, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ResourcePoolID(); ok {
 		_spec.SetField(agent.FieldResourcePoolID, field.TypeUUID, value)
 		_node.ResourcePoolID = &value
+	}
+	if value, ok := _c.mutation.TemplateFamilyID(); ok {
+		_spec.SetField(agent.FieldTemplateFamilyID, field.TypeUUID, value)
+		_node.TemplateFamilyID = &value
+	}
+	if value, ok := _c.mutation.TemplateVersionID(); ok {
+		_spec.SetField(agent.FieldTemplateVersionID, field.TypeUUID, value)
+		_node.TemplateVersionID = &value
 	}
 	if value, ok := _c.mutation.TenantID(); ok {
 		_spec.SetField(agent.FieldTenantID, field.TypeUUID, value)

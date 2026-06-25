@@ -37,6 +37,8 @@ input IssueVirtualKeyInput {
   rpmLimit: Int
   tpmLimit: Int
   alias: String
+  # Optional expiry; when set, the key stops working at the gateway after this time.
+  expiresAt: Time
 }
 
 extend type Query {

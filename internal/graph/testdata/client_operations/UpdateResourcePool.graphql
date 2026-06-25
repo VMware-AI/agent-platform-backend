@@ -2,9 +2,8 @@ fragment ResourcePoolFields on ResourcePool {
     id
     name
     endpoint
+    contentLibraryName
     connectionStatus
-    datacenterCount
-    clusterCount
     esxiHostCount
     vmInstanceCount
     syncStatus

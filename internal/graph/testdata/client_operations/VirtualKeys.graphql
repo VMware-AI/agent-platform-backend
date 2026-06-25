@@ -1,0 +1,16 @@
+query VirtualKeys($userId: ID) {
+    virtualKeys(userId: $userId) {
+      ...VirtualKeyFields
+    }
+  }
+  
+  fragment VirtualKeyFields on VirtualKey {
+    id
+    alias
+    userId
+    agentId
+    rateLimitPolicyId
+    status
+    expiresAt
+    createdAt
+  }

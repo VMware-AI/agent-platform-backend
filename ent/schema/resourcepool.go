@@ -22,6 +22,8 @@ func (ResourcePool) Fields() []ent.Field {
 		field.Enum("kind").Values("vcenter").Default("vcenter"),
 		field.String("endpoint").NotEmpty(),
 		field.Enum("status").Values("connected", "disconnected", "error").Default("disconnected"),
+		// Content library the pool deploys OVA templates from (console 接入表单).
+		field.String("content_library_name").Optional().Default(""),
 		// Reference into the secret store; never the credential itself.
 		field.String("secret_ref").Optional(),
 		// Inventory counts from the last sync (0619 第13页).

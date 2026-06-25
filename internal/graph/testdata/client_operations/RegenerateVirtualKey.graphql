@@ -1,0 +1,19 @@
+mutation RegenerateVirtualKey($id: ID!) {
+    regenerateVirtualKey(id: $id) {
+      secret
+      virtualKey {
+        ...VirtualKeyFields
+      }
+    }
+  }
+  
+  fragment VirtualKeyFields on VirtualKey {
+    id
+    alias
+    userId
+    agentId
+    rateLimitPolicyId
+    status
+    expiresAt
+    createdAt
+  }

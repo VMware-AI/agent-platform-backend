@@ -37,6 +37,8 @@ type ResourcePool {
   id: ID!
   name: String!
   endpoint: String!
+  # Content library the pool deploys OVA templates from (console 接入表单).
+  contentLibraryName: String!
   connectionStatus: PoolConnectionStatus!
   datacenterCount: Int!
   clusterCount: Int!
@@ -68,6 +70,7 @@ input ResourcePoolSort {
 input CreateResourcePoolInput {
   name: String!
   endpoint: String!
+  contentLibraryName: String
   datacenterCount: Int
   clusterCount: Int
   # vCenter (JVC) 凭据(可选;真机连接必填,前端表单可后补)。后端写入 secret store
@@ -81,6 +84,7 @@ input CreateResourcePoolInput {
 input UpdateResourcePoolInput {
   name: String
   endpoint: String
+  contentLibraryName: String
   datacenterCount: Int
   clusterCount: Int
   # 重填凭据(轮换):同 create,写 secret store 后只存引用。
@@ -107,6 +111,26 @@ type SyncResourcePoolPayload {
   syncedAt: Time!
 }
 
+# Pre-save reachability probe for the 接入表单 (carries NO credentials): the form
+# checks an endpoint is reachable before the operator commits the pool. A full
+# vCenter inventory probe needs credentials and runs later via syncResourcePool.
+input TestResourcePoolConnectionInput {
+  name: String!
+  endpoint: String!
+  contentLibraryName: String!
+}
+
+type ResourcePoolConnectionTest {
+  ok: Boolean!
+  message: String!
+  detail: ResourcePoolConnectionDetail
+}
+
+type ResourcePoolConnectionDetail {
+  vSphereVersion: String!
+  itemCount: Int!
+}
+
 extend type Query {
   resourcePools(
     filter: ResourcePoolFilter
@@ -120,8 +144,9 @@ extend type Mutation {
   createResourcePool(input: CreateResourcePoolInput!): CreateResourcePoolPayload! @hasRole(any: [admin])
   updateResourcePool(id: ID!, input: UpdateResourcePoolInput!): UpdateResourcePoolPayload! @hasRole(any: [admin])
   deleteResourcePool(id: ID!): DeleteResourcePoolPayload! @hasRole(any: [admin])
-  # Resolve credentials → connect → set status (0619 第13页 连接状态).
-  testResourcePoolConnection(id: ID!): ResourcePool! @hasRole(any: [admin])
+  # Lightweight pre-save reachability probe from the 接入表单 (no credentials):
+  # validate the endpoint is well-formed and dial-reachable (0619 第13页 连接状态).
+  testResourcePoolConnection(input: TestResourcePoolConnectionInput!): ResourcePoolConnectionTest! @hasRole(any: [admin])
   # Connect → count datacenters/clusters/hosts/VMs → persist (同步数据).
   syncResourcePool(id: ID!): SyncResourcePoolPayload! @hasRole(any: [admin])
 }
