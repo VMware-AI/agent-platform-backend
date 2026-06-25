@@ -211,6 +211,73 @@ func (r *mutationResolver) UpsertModelRoute(ctx context.Context, input model.Ups
 	return toModelModelRoute(mr), nil
 }
 
+// CreateModelRoute mints a new model route from the console 模型路由 create form.
+// Distinct from the name-keyed upsertModelRoute: this always inserts and returns
+// the route by its new id. model_alias defaults to the route name (the console
+// form has no separate alias); supportedModels are stored as the upstream group.
+func (r *mutationResolver) CreateModelRoute(ctx context.Context, input model.CreateModelRouteInput) (*model.ModelRoute, error) {
+	gwID, err := parseOptionalUUID(input.BackendGatewayID, "backendGatewayId")
+	if err != nil {
+		return nil, err
+	}
+	c := r.Ent.ModelRoute.Create().
+		SetName(input.Name).
+		SetModelAlias(input.Name).
+		SetNillableGatewayConnectionID(gwID).
+		SetGatewayName(derefString(input.GatewayName)).
+		SetUpstreams(orEmptyStrings(input.SupportedModels))
+	if input.UIStrategy != nil {
+		c.SetUIStrategy(modelroute.UIStrategy(*input.UIStrategy))
+	}
+	if input.Enabled != nil {
+		c.SetEnabled(*input.Enabled)
+	}
+	mr, err := c.Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	r.audit(ctx, "model_route.create", "model_route", mr.ID.String(), true, actorID(auth.FromContext(ctx)))
+	return toModelModelRoute(mr), nil
+}
+
+// UpdateModelRoute edits an existing model route by id (console 模型路由 edit form).
+// Only provided fields change; supportedModels (when given) replace the upstream
+// group. backendGatewayId is intentionally not cleared here — the form always
+// resends a gateway.
+func (r *mutationResolver) UpdateModelRoute(ctx context.Context, id string, input model.UpdateModelRouteInput) (*model.ModelRoute, error) {
+	rid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid id")
+	}
+	u := r.Ent.ModelRoute.UpdateOneID(rid)
+	if input.Name != nil {
+		u.SetName(*input.Name)
+	}
+	if gwID, perr := parseOptionalUUID(input.BackendGatewayID, "backendGatewayId"); perr != nil {
+		return nil, perr
+	} else if gwID != nil {
+		u.SetGatewayConnectionID(*gwID)
+	}
+	if input.GatewayName != nil {
+		u.SetGatewayName(*input.GatewayName)
+	}
+	if input.SupportedModels != nil {
+		u.SetUpstreams(input.SupportedModels)
+	}
+	if input.UIStrategy != nil {
+		u.SetUIStrategy(modelroute.UIStrategy(*input.UIStrategy))
+	}
+	if input.Enabled != nil {
+		u.SetEnabled(*input.Enabled)
+	}
+	mr, err := u.Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	r.audit(ctx, "model_route.update", "model_route", id, true, actorID(auth.FromContext(ctx)))
+	return toModelModelRoute(mr), nil
+}
+
 // SetModelRouteEnabled is the resolver for the setModelRouteEnabled field.
 func (r *mutationResolver) SetModelRouteEnabled(ctx context.Context, id string, enabled bool) (*model.ModelRoute, error) {
 	rid, err := uuid.Parse(id)

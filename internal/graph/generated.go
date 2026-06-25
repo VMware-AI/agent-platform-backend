@@ -294,10 +294,14 @@ type ComplexityRoot struct {
 		BackendGatewayID func(childComplexity int) int
 		CreatedAt        func(childComplexity int) int
 		Enabled          func(childComplexity int) int
+		GatewayName      func(childComplexity int) int
 		ID               func(childComplexity int) int
 		ModelAlias       func(childComplexity int) int
 		Name             func(childComplexity int) int
 		Strategy         func(childComplexity int) int
+		SupportedModels  func(childComplexity int) int
+		UIStrategy       func(childComplexity int) int
+		UpdatedAt        func(childComplexity int) int
 		Upstreams        func(childComplexity int) int
 	}
 
@@ -318,6 +322,7 @@ type ComplexityRoot struct {
 		CreateCustomRole           func(childComplexity int, input model.CreateCustomRoleInput) int
 		CreateDepartment           func(childComplexity int, input model.CreateDepartmentInput) int
 		CreateModelGateway         func(childComplexity int, input model.ModelGatewayInput) int
+		CreateModelRoute           func(childComplexity int, input model.CreateModelRouteInput) int
 		CreateResourcePool         func(childComplexity int, input model.CreateResourcePoolInput) int
 		CreateUser                 func(childComplexity int, input model.CreateUserInput) int
 		DeleteAgentConfig          func(childComplexity int, id string) int
@@ -365,6 +370,7 @@ type ComplexityRoot struct {
 		ToggleUserEnabled          func(childComplexity int, id string) int
 		UpdateAgentConfig          func(childComplexity int, id string, input model.UpdateAgentConfigInput) int
 		UpdateModelGateway         func(childComplexity int, id string, input model.ModelGatewayInput) int
+		UpdateModelRoute           func(childComplexity int, id string, input model.UpdateModelRouteInput) int
 		UpdateResourcePool         func(childComplexity int, id string, input model.UpdateResourcePoolInput) int
 		UpdateUser                 func(childComplexity int, id string, input model.UpdateUserInput) int
 		UpsertAgentTemplate        func(childComplexity int, input model.UpsertAgentTemplateInput) int
@@ -641,6 +647,8 @@ type MutationResolver interface {
 	UpsertUpstream(ctx context.Context, input model.UpsertUpstreamInput) (*model.Upstream, error)
 	DeleteUpstream(ctx context.Context, id string) (bool, error)
 	UpsertModelRoute(ctx context.Context, input model.UpsertModelRouteInput) (*model.ModelRoute, error)
+	CreateModelRoute(ctx context.Context, input model.CreateModelRouteInput) (*model.ModelRoute, error)
+	UpdateModelRoute(ctx context.Context, id string, input model.UpdateModelRouteInput) (*model.ModelRoute, error)
 	SetModelRouteEnabled(ctx context.Context, id string, enabled bool) (*model.ModelRoute, error)
 	DeleteModelRoute(ctx context.Context, id string) (bool, error)
 	SetRouterTier(ctx context.Context, tier model.RouterTierLevel, modelAlias string) (*model.RouterTier, error)
@@ -1688,6 +1696,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelRoute.Enabled(childComplexity), true
+	case "ModelRoute.gatewayName":
+		if e.ComplexityRoot.ModelRoute.GatewayName == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelRoute.GatewayName(childComplexity), true
 	case "ModelRoute.id":
 		if e.ComplexityRoot.ModelRoute.ID == nil {
 			break
@@ -1712,6 +1726,24 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelRoute.Strategy(childComplexity), true
+	case "ModelRoute.supportedModels":
+		if e.ComplexityRoot.ModelRoute.SupportedModels == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelRoute.SupportedModels(childComplexity), true
+	case "ModelRoute.uiStrategy":
+		if e.ComplexityRoot.ModelRoute.UIStrategy == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelRoute.UIStrategy(childComplexity), true
+	case "ModelRoute.updatedAt":
+		if e.ComplexityRoot.ModelRoute.UpdatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelRoute.UpdatedAt(childComplexity), true
 	case "ModelRoute.upstreams":
 		if e.ComplexityRoot.ModelRoute.Upstreams == nil {
 			break
@@ -1843,6 +1875,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.CreateModelGateway(childComplexity, args["input"].(model.ModelGatewayInput)), true
+	case "Mutation.createModelRoute":
+		if e.ComplexityRoot.Mutation.CreateModelRoute == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createModelRoute_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.CreateModelRoute(childComplexity, args["input"].(model.CreateModelRouteInput)), true
 	case "Mutation.createResourcePool":
 		if e.ComplexityRoot.Mutation.CreateResourcePool == nil {
 			break
@@ -2355,6 +2398,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.UpdateModelGateway(childComplexity, args["id"].(string), args["input"].(model.ModelGatewayInput)), true
+	case "Mutation.updateModelRoute":
+		if e.ComplexityRoot.Mutation.UpdateModelRoute == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateModelRoute_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.UpdateModelRoute(childComplexity, args["id"].(string), args["input"].(model.UpdateModelRouteInput)), true
 	case "Mutation.updateResourcePool":
 		if e.ComplexityRoot.Mutation.UpdateResourcePool == nil {
 			break
@@ -3452,6 +3506,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCreateAgentInput,
 		ec.unmarshalInputCreateCustomRoleInput,
 		ec.unmarshalInputCreateDepartmentInput,
+		ec.unmarshalInputCreateModelRouteInput,
 		ec.unmarshalInputCreateResourcePoolInput,
 		ec.unmarshalInputCreateUserInput,
 		ec.unmarshalInputDeployAgentInput,
@@ -3473,6 +3528,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputSnapshotAgentInput,
 		ec.unmarshalInputTestResourcePoolConnectionInput,
 		ec.unmarshalInputUpdateAgentConfigInput,
+		ec.unmarshalInputUpdateModelRouteInput,
 		ec.unmarshalInputUpdateResourcePoolInput,
 		ec.unmarshalInputUpdateUserInput,
 		ec.unmarshalInputUpsertAgentTemplateInput,
@@ -4138,6 +4194,15 @@ enum RouterTierLevel {
   REASONING
 }
 
+# Console-facing load-balancing strategy for a model route (模型路由 page). Distinct
+# from the litellm LoadBalanceStrategy: a friendly, gateway-agnostic choice the
+# operator picks in the UI and the backend round-trips verbatim.
+enum ModelRouteStrategy {
+  ROUND_ROBIN
+  WEIGHTED_ROUND_ROBIN
+  RANDOM
+}
+
 type GatewayConnection {
   id: ID!
   name: String!
@@ -4162,10 +4227,17 @@ type ModelRoute {
   name: String!
   modelAlias: String!
   backendGatewayId: ID
+  # Display name of the serving gateway (console 模型路由 list).
+  gatewayName: String!
   upstreams: [String!]!
+  # Console alias for ` + "`" + `upstreams` + "`" + ` — the models this route can serve (模型路由 page).
+  supportedModels: [String!]!
   strategy: LoadBalanceStrategy!
+  # Console-facing load-balancing strategy (模型路由 page).
+  uiStrategy: ModelRouteStrategy!
   enabled: Boolean!
   createdAt: Time!
+  updatedAt: Time!
 }
 
 type RouterTier {
@@ -4203,6 +4275,27 @@ input UpsertModelRouteInput {
   enabled: Boolean
 }
 
+# Console 模型路由 create form (创建路由). modelAlias defaults to name when omitted;
+# supportedModels are stored as the route's upstream group.
+input CreateModelRouteInput {
+  name: String!
+  backendGatewayId: ID
+  gatewayName: String
+  supportedModels: [String!]
+  uiStrategy: ModelRouteStrategy
+  enabled: Boolean
+}
+
+# Console 模型路由 edit form (编辑路由). All fields optional — only set ones change.
+input UpdateModelRouteInput {
+  name: String
+  backendGatewayId: ID
+  gatewayName: String
+  supportedModels: [String!]
+  uiStrategy: ModelRouteStrategy
+  enabled: Boolean
+}
+
 extend type Query {
   gatewayConnections: [GatewayConnection!]! @hasRole(any: [admin])
   upstreams: [Upstream!]! @hasPermission(perm: "route:manage")
@@ -4218,6 +4311,10 @@ extend type Mutation {
   upsertUpstream(input: UpsertUpstreamInput!): Upstream! @hasPermission(perm: "route:manage")
   deleteUpstream(id: ID!): Boolean! @hasPermission(perm: "route:manage")
   upsertModelRoute(input: UpsertModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
+  # Console 模型路由 page CRUD (创建/编辑路由). create mints a new route by id;
+  # update edits an existing one by id (distinct from the name-keyed upsert above).
+  createModelRoute(input: CreateModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
+  updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute! @hasPermission(perm: "route:manage")
   setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute! @hasPermission(perm: "route:manage")
   deleteModelRoute(id: ID!): Boolean! @hasPermission(perm: "route:manage")
 
@@ -5323,14 +5420,22 @@ func (ec *executionContext) childFields_ModelRoute(ctx context.Context, field gr
 		return ec.fieldContext_ModelRoute_modelAlias(ctx, field)
 	case "backendGatewayId":
 		return ec.fieldContext_ModelRoute_backendGatewayId(ctx, field)
+	case "gatewayName":
+		return ec.fieldContext_ModelRoute_gatewayName(ctx, field)
 	case "upstreams":
 		return ec.fieldContext_ModelRoute_upstreams(ctx, field)
+	case "supportedModels":
+		return ec.fieldContext_ModelRoute_supportedModels(ctx, field)
 	case "strategy":
 		return ec.fieldContext_ModelRoute_strategy(ctx, field)
+	case "uiStrategy":
+		return ec.fieldContext_ModelRoute_uiStrategy(ctx, field)
 	case "enabled":
 		return ec.fieldContext_ModelRoute_enabled(ctx, field)
 	case "createdAt":
 		return ec.fieldContext_ModelRoute_createdAt(ctx, field)
+	case "updatedAt":
+		return ec.fieldContext_ModelRoute_updatedAt(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type ModelRoute", field.Name)
 }
@@ -5991,6 +6096,20 @@ func (ec *executionContext) field_Mutation_createModelGateway_args(ctx context.C
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
 		func(ctx context.Context, v any) (model.ModelGatewayInput, error) {
 			return ec.unmarshalNModelGatewayInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createModelRoute_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.CreateModelRouteInput, error) {
+			return ec.unmarshalNCreateModelRouteInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCreateModelRouteInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -6731,6 +6850,28 @@ func (ec *executionContext) field_Mutation_updateModelGateway_args(ctx context.C
 	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input",
 		func(ctx context.Context, v any) (model.ModelGatewayInput, error) {
 			return ec.unmarshalNModelGatewayInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateModelRoute_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.UpdateModelRouteInput, error) {
+			return ec.unmarshalNUpdateModelRouteInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUpdateModelRouteInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -11103,6 +11244,29 @@ func (ec *executionContext) fieldContext_ModelRoute_backendGatewayId(_ context.C
 	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type ID does not have child fields"))
 }
 
+func (ec *executionContext) _ModelRoute_gatewayName(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelRoute_gatewayName(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.GatewayName, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelRoute_gatewayName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _ModelRoute_upstreams(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -11123,6 +11287,29 @@ func (ec *executionContext) _ModelRoute_upstreams(ctx context.Context, field gra
 	)
 }
 func (ec *executionContext) fieldContext_ModelRoute_upstreams(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ModelRoute_supportedModels(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelRoute_supportedModels(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.SupportedModels, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []string) graphql.Marshaler {
+			return ec.marshalNString2ᚕstringᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelRoute_supportedModels(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
@@ -11147,6 +11334,29 @@ func (ec *executionContext) _ModelRoute_strategy(ctx context.Context, field grap
 }
 func (ec *executionContext) fieldContext_ModelRoute_strategy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type LoadBalanceStrategy does not have child fields"))
+}
+
+func (ec *executionContext) _ModelRoute_uiStrategy(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelRoute_uiStrategy(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.UIStrategy, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.ModelRouteStrategy) graphql.Marshaler {
+			return ec.marshalNModelRouteStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelRoute_uiStrategy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type ModelRouteStrategy does not have child fields"))
 }
 
 func (ec *executionContext) _ModelRoute_enabled(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
@@ -11192,6 +11402,29 @@ func (ec *executionContext) _ModelRoute_createdAt(ctx context.Context, field gra
 	)
 }
 func (ec *executionContext) fieldContext_ModelRoute_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _ModelRoute_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelRoute_updatedAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.UpdatedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelRoute_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
@@ -13444,6 +13677,130 @@ func (ec *executionContext) fieldContext_Mutation_upsertModelRoute(ctx context.C
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_upsertModelRoute_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_createModelRoute(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_createModelRoute(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().CreateModelRoute(ctx, fc.Args["input"].(model.CreateModelRouteInput))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				perm, err := ec.unmarshalNString2string(ctx, "route:manage")
+				if err != nil {
+					var zeroVal *model.ModelRoute
+					return zeroVal, err
+				}
+				if ec.Directives.HasPermission == nil {
+					var zeroVal *model.ModelRoute
+					return zeroVal, errors.New("directive hasPermission is not implemented")
+				}
+				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ModelRoute) graphql.Marshaler {
+			return ec.marshalNModelRoute2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRoute(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_createModelRoute(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ModelRoute(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createModelRoute_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateModelRoute(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_updateModelRoute(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().UpdateModelRoute(ctx, fc.Args["id"].(string), fc.Args["input"].(model.UpdateModelRouteInput))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				perm, err := ec.unmarshalNString2string(ctx, "route:manage")
+				if err != nil {
+					var zeroVal *model.ModelRoute
+					return zeroVal, err
+				}
+				if ec.Directives.HasPermission == nil {
+					var zeroVal *model.ModelRoute
+					return zeroVal, errors.New("directive hasPermission is not implemented")
+				}
+				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ModelRoute) graphql.Marshaler {
+			return ec.marshalNModelRoute2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRoute(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_updateModelRoute(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ModelRoute(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateModelRoute_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -20886,6 +21243,71 @@ func (ec *executionContext) unmarshalInputCreateDepartmentInput(ctx context.Cont
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputCreateModelRouteInput(ctx context.Context, obj any) (model.CreateModelRouteInput, error) {
+	var it model.CreateModelRouteInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name", "backendGatewayId", "gatewayName", "supportedModels", "uiStrategy", "enabled"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "backendGatewayId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("backendGatewayId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.BackendGatewayID = data
+		case "gatewayName":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gatewayName"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.GatewayName = data
+		case "supportedModels":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("supportedModels"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SupportedModels = data
+		case "uiStrategy":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("uiStrategy"))
+			data, err := ec.unmarshalOModelRouteStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UIStrategy = data
+		case "enabled":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("enabled"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Enabled = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputCreateResourcePoolInput(ctx context.Context, obj any) (model.CreateResourcePoolInput, error) {
 	var it model.CreateResourcePoolInput
 	if obj == nil {
@@ -22012,6 +22434,71 @@ func (ec *executionContext) unmarshalInputUpdateAgentConfigInput(ctx context.Con
 				return it, err
 			}
 			it.ArtifactID = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUpdateModelRouteInput(ctx context.Context, obj any) (model.UpdateModelRouteInput, error) {
+	var it model.UpdateModelRouteInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name", "backendGatewayId", "gatewayName", "supportedModels", "uiStrategy", "enabled"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "backendGatewayId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("backendGatewayId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.BackendGatewayID = data
+		case "gatewayName":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gatewayName"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.GatewayName = data
+		case "supportedModels":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("supportedModels"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SupportedModels = data
+		case "uiStrategy":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("uiStrategy"))
+			data, err := ec.unmarshalOModelRouteStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UIStrategy = data
+		case "enabled":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("enabled"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Enabled = data
 		}
 	}
 	return it, nil
@@ -24701,13 +25188,28 @@ func (ec *executionContext) _ModelRoute(ctx context.Context, sel ast.SelectionSe
 			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
+		case "gatewayName":
+			out.Values[i] = ec._ModelRoute_gatewayName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "upstreams":
 			out.Values[i] = ec._ModelRoute_upstreams(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "supportedModels":
+			out.Values[i] = ec._ModelRoute_supportedModels(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "strategy":
 			out.Values[i] = ec._ModelRoute_strategy(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "uiStrategy":
+			out.Values[i] = ec._ModelRoute_uiStrategy(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -24718,6 +25220,11 @@ func (ec *executionContext) _ModelRoute(ctx context.Context, sel ast.SelectionSe
 			}
 		case "createdAt":
 			out.Values[i] = ec._ModelRoute_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updatedAt":
+			out.Values[i] = ec._ModelRoute_updatedAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -25086,6 +25593,20 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "upsertModelRoute":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_upsertModelRoute(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createModelRoute":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createModelRoute(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updateModelRoute":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateModelRoute(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -28178,6 +28699,11 @@ func (ec *executionContext) unmarshalNCreateDepartmentInput2githubᚗcomᚋVMwar
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalNCreateModelRouteInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCreateModelRouteInput(ctx context.Context, v any) (model.CreateModelRouteInput, error) {
+	res, err := ec.unmarshalInputCreateModelRouteInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNCreateResourcePoolInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCreateResourcePoolInput(ctx context.Context, v any) (model.CreateResourcePoolInput, error) {
 	res, err := ec.unmarshalInputCreateResourcePoolInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -28760,6 +29286,16 @@ func (ec *executionContext) marshalNModelRoute2ᚖgithubᚗcomᚋVMwareᚑAIᚋa
 	return ec._ModelRoute(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNModelRouteStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx context.Context, v any) (model.ModelRouteStrategy, error) {
+	var res model.ModelRouteStrategy
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNModelRouteStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx context.Context, sel ast.SelectionSet, v model.ModelRouteStrategy) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) marshalNModelUsage2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelUsage(ctx context.Context, sel ast.SelectionSet, v model.ModelUsage) graphql.Marshaler {
 	return ec._ModelUsage(ctx, sel, &v)
 }
@@ -29329,6 +29865,11 @@ func (ec *executionContext) marshalNTokenUsage2ᚖgithubᚗcomᚋVMwareᚑAIᚋa
 
 func (ec *executionContext) unmarshalNUpdateAgentConfigInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUpdateAgentConfigInput(ctx context.Context, v any) (model.UpdateAgentConfigInput, error) {
 	res, err := ec.unmarshalInputUpdateAgentConfigInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNUpdateModelRouteInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUpdateModelRouteInput(ctx context.Context, v any) (model.UpdateModelRouteInput, error) {
+	res, err := ec.unmarshalInputUpdateModelRouteInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
@@ -29908,6 +30449,22 @@ func (ec *executionContext) unmarshalOModelGatewayStatus2ᚖgithubᚗcomᚋVMwar
 }
 
 func (ec *executionContext) marshalOModelGatewayStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx context.Context, sel ast.SelectionSet, v *model.ModelGatewayStatus) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
+func (ec *executionContext) unmarshalOModelRouteStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx context.Context, v any) (*model.ModelRouteStrategy, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.ModelRouteStrategy)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOModelRouteStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx context.Context, sel ast.SelectionSet, v *model.ModelRouteStrategy) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}

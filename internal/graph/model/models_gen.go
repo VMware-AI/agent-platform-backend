@@ -178,6 +178,15 @@ type CreateDepartmentInput struct {
 	MaxBudget *float64 `json:"maxBudget,omitempty"`
 }
 
+type CreateModelRouteInput struct {
+	Name             string              `json:"name"`
+	BackendGatewayID *string             `json:"backendGatewayId,omitempty"`
+	GatewayName      *string             `json:"gatewayName,omitempty"`
+	SupportedModels  []string            `json:"supportedModels,omitempty"`
+	UIStrategy       *ModelRouteStrategy `json:"uiStrategy,omitempty"`
+	Enabled          *bool               `json:"enabled,omitempty"`
+}
+
 type CreateResourcePoolInput struct {
 	Name               string  `json:"name"`
 	Endpoint           string  `json:"endpoint"`
@@ -379,10 +388,14 @@ type ModelRoute struct {
 	Name             string              `json:"name"`
 	ModelAlias       string              `json:"modelAlias"`
 	BackendGatewayID *string             `json:"backendGatewayId,omitempty"`
+	GatewayName      string              `json:"gatewayName"`
 	Upstreams        []string            `json:"upstreams"`
+	SupportedModels  []string            `json:"supportedModels"`
 	Strategy         LoadBalanceStrategy `json:"strategy"`
+	UIStrategy       ModelRouteStrategy  `json:"uiStrategy"`
 	Enabled          bool                `json:"enabled"`
 	CreatedAt        time.Time           `json:"createdAt"`
+	UpdatedAt        time.Time           `json:"updatedAt"`
 }
 
 type ModelUsage struct {
@@ -603,6 +616,15 @@ type TokenUsage struct {
 type UpdateAgentConfigInput struct {
 	Name       *string `json:"name,omitempty"`
 	ArtifactID *string `json:"artifactId,omitempty"`
+}
+
+type UpdateModelRouteInput struct {
+	Name             *string             `json:"name,omitempty"`
+	BackendGatewayID *string             `json:"backendGatewayId,omitempty"`
+	GatewayName      *string             `json:"gatewayName,omitempty"`
+	SupportedModels  []string            `json:"supportedModels,omitempty"`
+	UIStrategy       *ModelRouteStrategy `json:"uiStrategy,omitempty"`
+	Enabled          *bool               `json:"enabled,omitempty"`
 }
 
 type UpdateResourcePoolInput struct {
@@ -1553,6 +1575,63 @@ func (e *ModelGatewaySyncState) UnmarshalJSON(b []byte) error {
 }
 
 func (e ModelGatewaySyncState) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type ModelRouteStrategy string
+
+const (
+	ModelRouteStrategyRoundRobin         ModelRouteStrategy = "ROUND_ROBIN"
+	ModelRouteStrategyWeightedRoundRobin ModelRouteStrategy = "WEIGHTED_ROUND_ROBIN"
+	ModelRouteStrategyRandom             ModelRouteStrategy = "RANDOM"
+)
+
+var AllModelRouteStrategy = []ModelRouteStrategy{
+	ModelRouteStrategyRoundRobin,
+	ModelRouteStrategyWeightedRoundRobin,
+	ModelRouteStrategyRandom,
+}
+
+func (e ModelRouteStrategy) IsValid() bool {
+	switch e {
+	case ModelRouteStrategyRoundRobin, ModelRouteStrategyWeightedRoundRobin, ModelRouteStrategyRandom:
+		return true
+	}
+	return false
+}
+
+func (e ModelRouteStrategy) String() string {
+	return string(e)
+}
+
+func (e *ModelRouteStrategy) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ModelRouteStrategy(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ModelRouteStrategy", str)
+	}
+	return nil
+}
+
+func (e ModelRouteStrategy) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *ModelRouteStrategy) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e ModelRouteStrategy) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

@@ -583,6 +583,28 @@ func derefString(p *string) string {
 	return ""
 }
 
+// parseOptionalUUID parses an optional id input into a *uuid.UUID. nil input →
+// nil result (no error); a malformed id → a user-facing error naming the field.
+func parseOptionalUUID(s *string, field string) (*uuid.UUID, error) {
+	if s == nil || *s == "" {
+		return nil, nil
+	}
+	id, err := uuid.Parse(*s)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid %s", field)
+	}
+	return &id, nil
+}
+
+// orEmptyStrings returns the slice unchanged, or an empty (non-nil) slice when nil,
+// so a stored string list is never NULL.
+func orEmptyStrings(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
+}
+
 func toModelGatewayConnection(g *ent.GatewayConnection) *model.GatewayConnection {
 	return &model.GatewayConnection{
 		ID:                  g.ID.String(),
@@ -745,13 +767,18 @@ func toModelModelRoute(r *ent.ModelRoute) *model.ModelRoute {
 		ups = []string{}
 	}
 	m := &model.ModelRoute{
-		ID:         r.ID.String(),
-		Name:       r.Name,
-		ModelAlias: r.ModelAlias,
-		Upstreams:  ups,
-		Strategy:   model.LoadBalanceStrategy(string(r.Strategy)),
-		Enabled:    r.Enabled,
-		CreatedAt:  r.CreatedAt,
+		ID:          r.ID.String(),
+		Name:        r.Name,
+		ModelAlias:  r.ModelAlias,
+		GatewayName: r.GatewayName,
+		Upstreams:   ups,
+		// Console alias for upstreams — same backing slice (the route's model group).
+		SupportedModels: ups,
+		Strategy:        model.LoadBalanceStrategy(string(r.Strategy)),
+		UIStrategy:      model.ModelRouteStrategy(string(r.UIStrategy)),
+		Enabled:         r.Enabled,
+		CreatedAt:       r.CreatedAt,
+		UpdatedAt:       r.UpdatedAt,
 	}
 	if r.GatewayConnectionID != nil {
 		g := r.GatewayConnectionID.String()

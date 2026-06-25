@@ -1,0 +1,17 @@
+mutation UpdateModelRoute($id: ID!, $input: UpdateModelRouteInput!) {
+    updateModelRoute(id: $id, input: $input) {
+      ...ModelRouteFields
+    }
+  }
+  
+  fragment ModelRouteFields on ModelRoute {
+    id
+    name
+    backendGatewayId
+    gatewayName
+    supportedModels
+    uiStrategy
+    enabled
+    createdAt
+    updatedAt
+  }

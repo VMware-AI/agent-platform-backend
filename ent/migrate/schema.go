@@ -321,8 +321,10 @@ var (
 		{Name: "name", Type: field.TypeString, Unique: true},
 		{Name: "model_alias", Type: field.TypeString},
 		{Name: "gateway_connection_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "gateway_name", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "upstreams", Type: field.TypeJSON, Nullable: true},
 		{Name: "strategy", Type: field.TypeEnum, Enums: []string{"simple_shuffle", "latency", "usage_v2", "least_busy", "cost"}, Default: "simple_shuffle"},
+		{Name: "ui_strategy", Type: field.TypeEnum, Enums: []string{"ROUND_ROBIN", "WEIGHTED_ROUND_ROBIN", "RANDOM"}, Default: "ROUND_ROBIN"},
 		{Name: "enabled", Type: field.TypeBool, Default: true},
 	}
 	// ModelRoutesTable holds the schema information for the "model_routes" table.
