@@ -28,14 +28,27 @@ const consts = {}
 for (const m of text.matchAll(/const\s+(\w+)\s*=\s*(?:\/\*\s*GraphQL\s*\*\/|gql)\s*`([\s\S]*?)`/g)) {
   consts[m[1]] = m[2]
 }
-const inline = (body) =>
-  body.replace(/\$\{(\w+)\}/g, (_, n) => {
-    if (!(n in consts)) {
-      console.error(`genclientfixtures: unresolved interpolation \${${n}} — fragment defined in an unscanned file?`)
-      process.exit(1)
-    }
-    return consts[n]
-  })
+// Resolve `${Fragment}` interpolations into the operation body. Fragments may
+// themselves interpolate further fragments (e.g. AGENT_CONFIG_FIELDS embeds
+// KNOWLEDGE_ARTIFACT_FIELDS), so loop until the body is stable. The iteration
+// cap fails fast on a circular fragment reference instead of spinning forever.
+const inline = (body) => {
+  let out = body
+  for (let i = 0; i < 20 && out.includes('${'); i++) {
+    out = out.replace(/\$\{(\w+)\}/g, (_, n) => {
+      if (!(n in consts)) {
+        console.error(`genclientfixtures: unresolved interpolation \${${n}} — fragment defined in an unscanned file?`)
+        process.exit(1)
+      }
+      return consts[n]
+    })
+  }
+  if (out.includes('${')) {
+    console.error('genclientfixtures: interpolation did not converge — circular fragment reference?')
+    process.exit(1)
+  }
+  return out
+}
 
 // Prune only the generated fixtures (keep README.md and anything else here).
 mkdirSync(OUT, { recursive: true })

@@ -1,0 +1,16 @@
+query AuditLogs($filter: AuditFilter, $page: PageInput) {
+    auditLogs(filter: $filter, page: $page) {
+      items {
+        id
+        actorUserId
+        action
+        resourceType
+        resourceId
+        ip
+        result
+        detail
+        createdAt
+      }
+      total
+    }
+  }

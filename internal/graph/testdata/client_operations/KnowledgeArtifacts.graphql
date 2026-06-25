@@ -1,0 +1,15 @@
+query KnowledgeArtifacts {
+    artifacts(kind: knowledge) {
+      ...KnowledgeArtifactFields
+    }
+  }
+  
+  fragment KnowledgeArtifactFields on Artifact {
+    id
+    name
+    kind
+    version
+    uri
+    sha256
+    createdAt
+  }
