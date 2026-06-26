@@ -28,7 +28,9 @@ type Department struct {
 	Name string `json:"name,omitempty"`
 	// LitellmTeamID holds the value of the "litellm_team_id" field.
 	LitellmTeamID string `json:"litellm_team_id,omitempty"`
-	selectValues  sql.SelectValues
+	// GatewayConnectionID holds the value of the "gateway_connection_id" field.
+	GatewayConnectionID *uuid.UUID `json:"gateway_connection_id,omitempty"`
+	selectValues        sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -36,7 +38,7 @@ func (*Department) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case department.FieldTenantID:
+		case department.FieldTenantID, department.FieldGatewayConnectionID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case department.FieldName, department.FieldLitellmTeamID:
 			values[i] = new(sql.NullString)
@@ -96,6 +98,13 @@ func (_m *Department) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.LitellmTeamID = value.String
 			}
+		case department.FieldGatewayConnectionID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field gateway_connection_id", values[i])
+			} else if value.Valid {
+				_m.GatewayConnectionID = new(uuid.UUID)
+				*_m.GatewayConnectionID = *value.S.(*uuid.UUID)
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -148,6 +157,11 @@ func (_m *Department) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("litellm_team_id=")
 	builder.WriteString(_m.LitellmTeamID)
+	builder.WriteString(", ")
+	if v := _m.GatewayConnectionID; v != nil {
+		builder.WriteString("gateway_connection_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteByte(')')
 	return builder.String()
 }

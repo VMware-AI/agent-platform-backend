@@ -296,6 +296,8 @@ setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier!
 | `id` | `ID!` | — |
 | `name` | `String!` | — |
 | `endpoint` | `String!` | — |
+| `publicUrl` | `String` | The URL provisioned VMs/agents call (LLD-13 §3.3). Falls back to endpoint when unset. |
+| `isDefault` | `Boolean!` | The platform default gateway — used for ops with no department context. At most one. |
 | `status` | `GatewayStatus!` | — |
 | `loadBalanceStrategy` | `LoadBalanceStrategy!` | — |
 | `createdAt` | `Time!` | — |
@@ -455,6 +457,8 @@ Console 模型路由 create form (创建路由). modelAlias defaults to name whe
 | `masterKey` | `String` | litellm master key(接入表单填写)→ 后端写 secret store,只存引用,明文不落库; 优先于 masterKeyRef。 |
 | `masterKeyRef` | `String` | — |
 | `loadBalanceStrategy` | `LoadBalanceStrategy` | — |
+| `publicUrl` | `String` | The URL provisioned VMs call (LLD-13 §3.3); omitted → falls back to endpoint. |
+| `isDefault` | `Boolean` | Mark this the platform default gateway; setting true clears the flag on any other. |
 
 ### UpdateModelRouteInput
 

@@ -80,6 +80,11 @@ func LitellmTeamID(v string) predicate.Department {
 	return predicate.Department(sql.FieldEQ(FieldLitellmTeamID, v))
 }
 
+// GatewayConnectionID applies equality check predicate on the "gateway_connection_id" field. It's identical to GatewayConnectionIDEQ.
+func GatewayConnectionID(v uuid.UUID) predicate.Department {
+	return predicate.Department(sql.FieldEQ(FieldGatewayConnectionID, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Department {
 	return predicate.Department(sql.FieldEQ(FieldCreatedAt, v))
@@ -348,6 +353,56 @@ func LitellmTeamIDEqualFold(v string) predicate.Department {
 // LitellmTeamIDContainsFold applies the ContainsFold predicate on the "litellm_team_id" field.
 func LitellmTeamIDContainsFold(v string) predicate.Department {
 	return predicate.Department(sql.FieldContainsFold(FieldLitellmTeamID, v))
+}
+
+// GatewayConnectionIDEQ applies the EQ predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDEQ(v uuid.UUID) predicate.Department {
+	return predicate.Department(sql.FieldEQ(FieldGatewayConnectionID, v))
+}
+
+// GatewayConnectionIDNEQ applies the NEQ predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDNEQ(v uuid.UUID) predicate.Department {
+	return predicate.Department(sql.FieldNEQ(FieldGatewayConnectionID, v))
+}
+
+// GatewayConnectionIDIn applies the In predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDIn(vs ...uuid.UUID) predicate.Department {
+	return predicate.Department(sql.FieldIn(FieldGatewayConnectionID, vs...))
+}
+
+// GatewayConnectionIDNotIn applies the NotIn predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDNotIn(vs ...uuid.UUID) predicate.Department {
+	return predicate.Department(sql.FieldNotIn(FieldGatewayConnectionID, vs...))
+}
+
+// GatewayConnectionIDGT applies the GT predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDGT(v uuid.UUID) predicate.Department {
+	return predicate.Department(sql.FieldGT(FieldGatewayConnectionID, v))
+}
+
+// GatewayConnectionIDGTE applies the GTE predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDGTE(v uuid.UUID) predicate.Department {
+	return predicate.Department(sql.FieldGTE(FieldGatewayConnectionID, v))
+}
+
+// GatewayConnectionIDLT applies the LT predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDLT(v uuid.UUID) predicate.Department {
+	return predicate.Department(sql.FieldLT(FieldGatewayConnectionID, v))
+}
+
+// GatewayConnectionIDLTE applies the LTE predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDLTE(v uuid.UUID) predicate.Department {
+	return predicate.Department(sql.FieldLTE(FieldGatewayConnectionID, v))
+}
+
+// GatewayConnectionIDIsNil applies the IsNil predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDIsNil() predicate.Department {
+	return predicate.Department(sql.FieldIsNull(FieldGatewayConnectionID))
+}
+
+// GatewayConnectionIDNotNil applies the NotNil predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDNotNil() predicate.Department {
+	return predicate.Department(sql.FieldNotNull(FieldGatewayConnectionID))
 }
 
 // And groups predicates with the AND operator between them.

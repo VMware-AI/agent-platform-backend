@@ -21,5 +21,9 @@ func (Department) Fields() []ent.Field {
 		field.String("name").NotEmpty(),
 		// Handle to the litellm team (typically == id). Sync via gateway client.
 		field.String("litellm_team_id").Optional(),
+		// The gateway connection that hosts this department's litellm team
+		// (LLD-13 §3.3): virtual-key / team / deploy ops route here. Nil → the
+		// platform default gateway (GatewayConnection.is_default).
+		field.UUID("gateway_connection_id", uuid.UUID{}).Optional().Nillable(),
 	}
 }

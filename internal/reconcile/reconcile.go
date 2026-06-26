@@ -36,6 +36,11 @@ type Gateway interface {
 type Reconciler struct {
 	Ent     *ent.Client
 	Gateway Gateway
+	// GatewayFunc, when set, resolves the gateway to reconcile at the start of each
+	// Run cycle (the platform default GatewayConnection, LLD-13 §3.3) — there is no
+	// process-wide gateway anymore. A nil result skips that cycle. (Reconciling each
+	// of several gateways is OQ-5, a follow-up.)
+	GatewayFunc func(context.Context) Gateway
 	// Prune enables healing: delete gateway orphans + revoke stale DB rows. When
 	// false (default) the reconciler only reports.
 	Prune bool
@@ -235,11 +240,18 @@ func (r *Reconciler) Run(ctx context.Context, interval time.Duration) {
 	t := time.NewTicker(interval)
 	defer t.Stop()
 	for {
-		if _, err := r.ReconcileKeys(ctx); err != nil {
-			log.Printf("reconcile keys cycle error: %v", err)
+		// Resolve the gateway to reconcile this cycle (default GatewayConnection).
+		// Run is a single goroutine, so mutating r.Gateway here is race-free.
+		if r.GatewayFunc != nil {
+			r.Gateway = r.GatewayFunc(ctx)
 		}
-		if _, err := r.ReconcileTeams(ctx); err != nil {
-			log.Printf("reconcile teams cycle error: %v", err)
+		if r.Gateway != nil {
+			if _, err := r.ReconcileKeys(ctx); err != nil {
+				log.Printf("reconcile keys cycle error: %v", err)
+			}
+			if _, err := r.ReconcileTeams(ctx); err != nil {
+				log.Printf("reconcile teams cycle error: %v", err)
+			}
 		}
 		select {
 		case <-ctx.Done():

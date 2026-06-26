@@ -272,11 +272,12 @@ type ComplexityRoot struct {
 	}
 
 	Department struct {
-		CreatedAt     func(childComplexity int) int
-		ID            func(childComplexity int) int
-		LitellmTeamID func(childComplexity int) int
-		Name          func(childComplexity int) int
-		TenantID      func(childComplexity int) int
+		CreatedAt           func(childComplexity int) int
+		GatewayConnectionID func(childComplexity int) int
+		ID                  func(childComplexity int) int
+		LitellmTeamID       func(childComplexity int) int
+		Name                func(childComplexity int) int
+		TenantID            func(childComplexity int) int
 	}
 
 	DeployedAgent struct {
@@ -290,8 +291,10 @@ type ComplexityRoot struct {
 		CreatedAt           func(childComplexity int) int
 		Endpoint            func(childComplexity int) int
 		ID                  func(childComplexity int) int
+		IsDefault           func(childComplexity int) int
 		LoadBalanceStrategy func(childComplexity int) int
 		Name                func(childComplexity int) int
+		PublicURL           func(childComplexity int) int
 		Status              func(childComplexity int) int
 	}
 
@@ -1797,6 +1800,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Department.CreatedAt(childComplexity), true
+	case "Department.gatewayConnectionId":
+		if e.ComplexityRoot.Department.GatewayConnectionID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Department.GatewayConnectionID(childComplexity), true
 	case "Department.id":
 		if e.ComplexityRoot.Department.ID == nil {
 			break
@@ -1865,6 +1874,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.GatewayConnection.ID(childComplexity), true
+	case "GatewayConnection.isDefault":
+		if e.ComplexityRoot.GatewayConnection.IsDefault == nil {
+			break
+		}
+
+		return e.ComplexityRoot.GatewayConnection.IsDefault(childComplexity), true
 	case "GatewayConnection.loadBalanceStrategy":
 		if e.ComplexityRoot.GatewayConnection.LoadBalanceStrategy == nil {
 			break
@@ -1877,6 +1892,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.GatewayConnection.Name(childComplexity), true
+	case "GatewayConnection.publicUrl":
+		if e.ComplexityRoot.GatewayConnection.PublicURL == nil {
+			break
+		}
+
+		return e.ComplexityRoot.GatewayConnection.PublicURL(childComplexity), true
 	case "GatewayConnection.status":
 		if e.ComplexityRoot.GatewayConnection.Status == nil {
 			break
@@ -5117,6 +5138,9 @@ type Department {
   tenantId: ID
   name: String!
   litellmTeamId: String
+  # The gateway connection hosting this department's litellm team (LLD-13 §3.3).
+  # Null → the platform default gateway.
+  gatewayConnectionId: ID
   createdAt: Time!
 }
 
@@ -5132,6 +5156,9 @@ input CreateDepartmentInput {
   name: String!
   # Shared budget for the litellm team backing this department.
   maxBudget: Float
+  # Which gateway connection hosts this department's litellm team (LLD-13 §3.3).
+  # Omitted → the platform default gateway (GatewayConnection.isDefault).
+  gatewayConnectionId: ID
 }
 
 extend type Query {
@@ -5178,6 +5205,10 @@ input DeployAgentInput {
   templateVersionId: ID!
   # Target vCenter resource pool to place the clone in.
   resourcePoolId: ID!
+  # Department whose gateway issues the agent's virtual key + whose gateway
+  # public_url is baked into cloud-init (LLD-13 §3.3). Omitted → platform default
+  # gateway.
+  departmentId: ID
   # Optional vSphere resource-pool name to place the VM clone in. A true OVA
   # template has NO source resource pool, so vCenter's CloneFromTemplate requires
   # an explicit placement pool for real deploys ("source has no resource pool;
@@ -5327,6 +5358,10 @@ type GatewayConnection {
   id: ID!
   name: String!
   endpoint: String!
+  # The URL provisioned VMs/agents call (LLD-13 §3.3). Falls back to endpoint when unset.
+  publicUrl: String
+  # The platform default gateway — used for ops with no department context. At most one.
+  isDefault: Boolean!
   status: GatewayStatus!
   loadBalanceStrategy: LoadBalanceStrategy!
   createdAt: Time!
@@ -5374,6 +5409,10 @@ input RegisterGatewayConnectionInput {
   masterKey: String
   masterKeyRef: String
   loadBalanceStrategy: LoadBalanceStrategy
+  # The URL provisioned VMs call (LLD-13 §3.3); omitted → falls back to endpoint.
+  publicUrl: String
+  # Mark this the platform default gateway; setting true clears the flag on any other.
+  isDefault: Boolean
 }
 input UpsertUpstreamInput {
   name: String!
@@ -6755,6 +6794,8 @@ func (ec *executionContext) childFields_Department(ctx context.Context, field gr
 		return ec.fieldContext_Department_name(ctx, field)
 	case "litellmTeamId":
 		return ec.fieldContext_Department_litellmTeamId(ctx, field)
+	case "gatewayConnectionId":
+		return ec.fieldContext_Department_gatewayConnectionId(ctx, field)
 	case "createdAt":
 		return ec.fieldContext_Department_createdAt(ctx, field)
 	}
@@ -6783,6 +6824,10 @@ func (ec *executionContext) childFields_GatewayConnection(ctx context.Context, f
 		return ec.fieldContext_GatewayConnection_name(ctx, field)
 	case "endpoint":
 		return ec.fieldContext_GatewayConnection_endpoint(ctx, field)
+	case "publicUrl":
+		return ec.fieldContext_GatewayConnection_publicUrl(ctx, field)
+	case "isDefault":
+		return ec.fieldContext_GatewayConnection_isDefault(ctx, field)
 	case "status":
 		return ec.fieldContext_GatewayConnection_status(ctx, field)
 	case "loadBalanceStrategy":
@@ -12803,6 +12848,29 @@ func (ec *executionContext) fieldContext_Department_litellmTeamId(_ context.Cont
 	return graphql.NewScalarFieldContext("Department", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _Department_gatewayConnectionId(ctx context.Context, field graphql.CollectedField, obj *model.Department) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Department_gatewayConnectionId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.GatewayConnectionID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOID2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Department_gatewayConnectionId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Department", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
 func (ec *executionContext) _Department_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Department) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -13012,6 +13080,52 @@ func (ec *executionContext) _GatewayConnection_endpoint(ctx context.Context, fie
 }
 func (ec *executionContext) fieldContext_GatewayConnection_endpoint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("GatewayConnection", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _GatewayConnection_publicUrl(ctx context.Context, field graphql.CollectedField, obj *model.GatewayConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_GatewayConnection_publicUrl(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.PublicURL, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_GatewayConnection_publicUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("GatewayConnection", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _GatewayConnection_isDefault(ctx context.Context, field graphql.CollectedField, obj *model.GatewayConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_GatewayConnection_isDefault(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.IsDefault, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_GatewayConnection_isDefault(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("GatewayConnection", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
 func (ec *executionContext) _GatewayConnection_status(ctx context.Context, field graphql.CollectedField, obj *model.GatewayConnection) (ret graphql.Marshaler) {
@@ -26501,7 +26615,7 @@ func (ec *executionContext) unmarshalInputCreateDepartmentInput(ctx context.Cont
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"tenantId", "name", "maxBudget"}
+	fieldsInOrder := [...]string{"tenantId", "name", "maxBudget", "gatewayConnectionId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -26529,6 +26643,13 @@ func (ec *executionContext) unmarshalInputCreateDepartmentInput(ctx context.Cont
 				return it, err
 			}
 			it.MaxBudget = data
+		case "gatewayConnectionId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gatewayConnectionId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.GatewayConnectionID = data
 		}
 	}
 	return it, nil
@@ -26902,7 +27023,7 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "templateFamilyId", "templateVersionId", "resourcePoolId", "targetResourcePool", "hostname", "maxBudget"}
+	fieldsInOrder := [...]string{"name", "templateFamilyId", "templateVersionId", "resourcePoolId", "departmentId", "targetResourcePool", "hostname", "maxBudget"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -26937,6 +27058,13 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 				return it, err
 			}
 			it.ResourcePoolID = data
+		case "departmentId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("departmentId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.DepartmentID = data
 		case "targetResourcePool":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetResourcePool"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -27600,7 +27728,7 @@ func (ec *executionContext) unmarshalInputRegisterGatewayConnectionInput(ctx con
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "endpoint", "masterKey", "masterKeyRef", "loadBalanceStrategy"}
+	fieldsInOrder := [...]string{"name", "endpoint", "masterKey", "masterKeyRef", "loadBalanceStrategy", "publicUrl", "isDefault"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -27642,6 +27770,20 @@ func (ec *executionContext) unmarshalInputRegisterGatewayConnectionInput(ctx con
 				return it, err
 			}
 			it.LoadBalanceStrategy = data
+		case "publicUrl":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("publicUrl"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PublicURL = data
+		case "isDefault":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("isDefault"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.IsDefault = data
 		}
 	}
 	return it, nil
@@ -30666,6 +30808,11 @@ func (ec *executionContext) _Department(ctx context.Context, sel ast.SelectionSe
 			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
+		case "gatewayConnectionId":
+			out.Values[i] = ec._Department_gatewayConnectionId(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
 		case "createdAt":
 			out.Values[i] = ec._Department_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -30771,6 +30918,16 @@ func (ec *executionContext) _GatewayConnection(ctx context.Context, sel ast.Sele
 			}
 		case "endpoint":
 			out.Values[i] = ec._GatewayConnection_endpoint(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "publicUrl":
+			out.Values[i] = ec._GatewayConnection_publicUrl(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "isDefault":
+			out.Values[i] = ec._GatewayConnection_isDefault(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

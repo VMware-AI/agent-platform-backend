@@ -24,6 +24,8 @@ const (
 	FieldName = "name"
 	// FieldLitellmTeamID holds the string denoting the litellm_team_id field in the database.
 	FieldLitellmTeamID = "litellm_team_id"
+	// FieldGatewayConnectionID holds the string denoting the gateway_connection_id field in the database.
+	FieldGatewayConnectionID = "gateway_connection_id"
 	// Table holds the table name of the department in the database.
 	Table = "departments"
 )
@@ -36,6 +38,7 @@ var Columns = []string{
 	FieldTenantID,
 	FieldName,
 	FieldLitellmTeamID,
+	FieldGatewayConnectionID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -92,4 +95,9 @@ func ByName(opts ...sql.OrderTermOption) OrderOption {
 // ByLitellmTeamID orders the results by the litellm_team_id field.
 func ByLitellmTeamID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLitellmTeamID, opts...).ToFunc()
+}
+
+// ByGatewayConnectionID orders the results by the gateway_connection_id field.
+func ByGatewayConnectionID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldGatewayConnectionID, opts...).ToFunc()
 }

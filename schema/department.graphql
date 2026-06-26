@@ -10,6 +10,9 @@ type Department {
   tenantId: ID
   name: String!
   litellmTeamId: String
+  # The gateway connection hosting this department's litellm team (LLD-13 §3.3).
+  # Null → the platform default gateway.
+  gatewayConnectionId: ID
   createdAt: Time!
 }
 
@@ -25,6 +28,9 @@ input CreateDepartmentInput {
   name: String!
   # Shared budget for the litellm team backing this department.
   maxBudget: Float
+  # Which gateway connection hosts this department's litellm team (LLD-13 §3.3).
+  # Omitted → the platform default gateway (GatewayConnection.isDefault).
+  gatewayConnectionId: ID
 }
 
 extend type Query {

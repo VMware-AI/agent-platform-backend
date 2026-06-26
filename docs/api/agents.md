@@ -499,6 +499,7 @@ A vCenter resource pool offered as a placement target for the cloned VM. A true 
 | `templateFamilyId` | `ID!` | The OVA template family (its `type` becomes the agent's kind) and the specific version to clone from (its `ovaIdentifier` is the source template). |
 | `templateVersionId` | `ID!` | — |
 | `resourcePoolId` | `ID!` | Target vCenter resource pool to place the clone in. |
+| `departmentId` | `ID` | Department whose gateway issues the agent's virtual key + whose gateway public_url is baked into cloud-init (LLD-13 §3.3). Omitted → platform default gateway. |
 | `targetResourcePool` | `String` | Optional vSphere resource-pool name to place the VM clone in. A true OVA template has NO source resource pool, so vCenter's CloneFromTemplate requires an explicit placement pool for real deploys ("source has no resource pool; specify resourcePool"). Empty = inherit the source template's pool (only works when the source is a regular VM, e.g. vcsim). Optional to keep the contract backward-compatible. |
 | `hostname` | `String` | Optional cloud-init hostname for the VM (defaults to none). |
 | `maxBudget` | `Float` | Optional per-key spend cap handed to the gateway when issuing the agent's key. |

@@ -65,8 +65,11 @@ func (f *fakeVCenter) Logout(context.Context) error { return nil }
 func TestRollbackDeploy_DestroysVMRevokesKeyMarksException(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()
+	// r.Gateway is deliberately NOT set (nil, as in production after LLD-13): the
+	// rollback must revoke through the gateway passed in, which DeployAgent resolves
+	// per-department/default. If rollback still revoked via r.Gateway it would
+	// silently leak the key here (C1).
 	fg := &fakeGateway{}
-	r.Gateway = fg
 	ctx := context.Background()
 	mr := &mutationResolver{r}
 
@@ -83,7 +86,7 @@ func TestRollbackDeploy_DestroysVMRevokesKeyMarksException(t *testing.T) {
 	agRow := r.Ent.Agent.GetX(ctx, aid)
 
 	fvc := &fakeVCenter{}
-	r.rollbackDeploy(ctx, fvc, agRow, "vm-xyz", "sk-live-key")
+	r.rollbackDeploy(ctx, fvc, fg, agRow, "vm-xyz", "sk-live-key")
 
 	if len(fvc.destroyed) != 1 || fvc.destroyed[0] != "vm-xyz" {
 		t.Errorf("VM not destroyed: %v", fvc.destroyed)

@@ -17,8 +17,13 @@ import (
 func TestGatewayRouting_StoresRawKeys(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()
-	store := secrets.NewStaticResolver(nil)
+	// Seed the preset ref used by the existing-ref path so the (now active) model
+	// sync to the default gateway can resolve it.
+	store := secrets.NewStaticResolver(map[string]secrets.Credential{
+		"vault://preset-1": {APIKey: "sk-preset"},
+	})
 	r.Secrets = store
+	injectFakeGatewayModels(r) // registered gateway becomes default; fake its model sync
 	ctx := adminCtx()
 	bg := context.Background()
 	mr := &mutationResolver{r}

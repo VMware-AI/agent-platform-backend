@@ -45,10 +45,14 @@ type Resolver struct {
 	Gateway gateway.Client
 	// GatewayModels manages the model pool + difficulty router (nil disables sync).
 	GatewayModels gateway.ModelManager
-	// GatewayClientFor builds a litellm client bound to a specific gateway row (its
-	// own endpoint + master key) for per-gateway connection tests. Injectable for
-	// tests; nil → a real HTTP client (see Resolver.gatewayClient).
+	// GatewayClientFor builds a litellm model-manager bound to a specific gateway
+	// row (its own endpoint + master key) for model/connection-test ops. Injectable
+	// for tests; nil → a real HTTP client (see Resolver.buildGatewayModels).
 	GatewayClientFor func(ctx context.Context, endpoint, masterKey string) gateway.ModelManager
+	// GatewayKeyClientFor builds a litellm key/team client bound to a specific
+	// gateway row, for per-department routing (LLD-13 §3.3). Injectable for tests;
+	// nil → a real HTTP client (see Resolver.buildGatewayKeyClient).
+	GatewayKeyClientFor func(ctx context.Context, g *ent.GatewayConnection) gateway.Client
 	// Secrets resolves resource-pool credentials (Vaultwarden); nil disables deploy.
 	Secrets secrets.Resolver
 	// GatewayURL is the LLM gateway base URL injected into provisioned VMs.

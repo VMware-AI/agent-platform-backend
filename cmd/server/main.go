@@ -22,7 +22,6 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/catalog"
 	"github.com/VMware-AI/agent-platform-backend/internal/config"
-	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph"
 	"github.com/VMware-AI/agent-platform-backend/internal/httpx"
 	"github.com/VMware-AI/agent-platform-backend/internal/ratelimit"
@@ -78,15 +77,10 @@ func main() {
 		log.Printf("session store: in-memory (dev); login limiter: in-memory")
 	}
 
-	var gw gateway.Client
-	var gwModels gateway.ModelManager
-	if base := os.Getenv("LITELLM_BASE_URL"); base != "" {
-		hc := gateway.NewHTTPClient(base, os.Getenv("LITELLM_MASTER_KEY"))
-		gw, gwModels = hc, hc
-		log.Printf("model gateway: %s", base)
-	} else {
-		log.Printf("model gateway: not configured (set LITELLM_BASE_URL)")
-	}
+	// Model gateways are configured in the console (模型网关接入) and stored in the
+	// DB; resolvers resolve the right gateway per department / the platform default
+	// at request time (LLD-13 §3.3). No process-wide gateway env anymore.
+	log.Printf("model gateway: resolved per-department from DB (console 模型网关接入)")
 
 	var sec secrets.Resolver
 	if vw := os.Getenv("VAULTWARDEN_URL"); vw != "" {
@@ -126,10 +120,7 @@ func main() {
 		Sessions:        sessions,
 		SessionTTL:      ttl,
 		SecureCookies:   cfg.Env == "prod",
-		Gateway:         gw,
-		GatewayModels:   gwModels,
 		Secrets:         sec,
-		GatewayURL:      os.Getenv("GATEWAY_PUBLIC_URL"),
 		InstallVars:     installVars,
 		VCenterConnect:  vcConnect,
 		LoginLimiter:    loginLimiter,
@@ -144,13 +135,17 @@ func main() {
 	// gateway is configured. Report-only unless RECONCILE_PRUNE=true.
 	reconcileCtx, stopReconcile := context.WithCancel(context.Background())
 	defer stopReconcile()
-	if cfg.ReconcileInterval > 0 && gw != nil {
-		rec := &reconcile.Reconciler{Ent: client, Gateway: gw, Prune: cfg.ReconcilePrune}
+	if cfg.ReconcileInterval > 0 {
+		rec := &reconcile.Reconciler{
+			Ent: client,
+			// Reconcile the platform default gateway, resolved from DB each cycle
+			// (LLD-13 §3.3); cycles are skipped until a default gateway exists.
+			GatewayFunc: func(ctx context.Context) reconcile.Gateway { return resolver.ReconcileGateway(ctx) },
+			Prune:       cfg.ReconcilePrune,
+		}
 		interval := time.Duration(cfg.ReconcileInterval) * time.Second
-		log.Printf("gateway-key reconciler: every %s (prune=%v)", interval, cfg.ReconcilePrune)
+		log.Printf("gateway-key reconciler: every %s (prune=%v), default gateway", interval, cfg.ReconcilePrune)
 		go rec.Run(reconcileCtx, interval)
-	} else if cfg.ReconcileInterval > 0 {
-		log.Printf("gateway-key reconciler: skipped (no gateway configured)")
 	}
 
 	es := graph.NewExecutableSchema(graph.Config{

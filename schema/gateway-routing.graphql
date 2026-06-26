@@ -40,6 +40,10 @@ type GatewayConnection {
   id: ID!
   name: String!
   endpoint: String!
+  # The URL provisioned VMs/agents call (LLD-13 §3.3). Falls back to endpoint when unset.
+  publicUrl: String
+  # The platform default gateway — used for ops with no department context. At most one.
+  isDefault: Boolean!
   status: GatewayStatus!
   loadBalanceStrategy: LoadBalanceStrategy!
   createdAt: Time!
@@ -87,6 +91,10 @@ input RegisterGatewayConnectionInput {
   masterKey: String
   masterKeyRef: String
   loadBalanceStrategy: LoadBalanceStrategy
+  # The URL provisioned VMs call (LLD-13 §3.3); omitted → falls back to endpoint.
+  publicUrl: String
+  # Mark this the platform default gateway; setting true clears the flag on any other.
+  isDefault: Boolean
 }
 input UpsertUpstreamInput {
   name: String!

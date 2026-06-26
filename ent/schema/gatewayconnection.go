@@ -23,6 +23,14 @@ func (GatewayConnection) Fields() []ent.Field {
 		// admin_url: the litellm admin UI URL the operator enters (console ModelGateway.adminUrl).
 		// Optional — projection falls back to <endpoint>/ui when unset.
 		field.String("admin_url").Optional(),
+		// public_url: the gateway URL provisioned VMs/agents actually call (LLD-13
+		// §3.3, replaces the GATEWAY_PUBLIC_URL env). Optional — falls back to
+		// endpoint when unset (the backend's own API base may differ from a public ingress).
+		field.String("public_url").Optional(),
+		// is_default: the fallback gateway for ops with no department context
+		// (e.g. upstream/router-tier sync, a virtual key issued without a team).
+		// At most one row is true; the resolver enforces the singleton on set.
+		field.Bool("is_default").Default(false),
 		// last_synced_at: when the gateway last successfully connected (set on a
 		// successful connection test). Nil = never synced. Distinct from updated_at
 		// so an unrelated edit does not move the apparent sync time.

@@ -205,6 +205,7 @@ input CreateDepartmentInput {
 	tenantId: ID
 	name: String!
 	maxBudget: Float
+	gatewayConnectionId: ID
 }
 input CreateModelRouteInput {
 	name: String!
@@ -337,6 +338,7 @@ type Department {
 	tenantId: ID
 	name: String!
 	litellmTeamId: String
+	gatewayConnectionId: ID
 	createdAt: Time!
 }
 input DeployAgentInput {
@@ -344,6 +346,7 @@ input DeployAgentInput {
 	templateFamilyId: ID!
 	templateVersionId: ID!
 	resourcePoolId: ID!
+	departmentId: ID
 	targetResourcePool: String
 	hostname: String
 	maxBudget: Float
@@ -358,6 +361,8 @@ type GatewayConnection {
 	id: ID!
 	name: String!
 	endpoint: String!
+	publicUrl: String
+	isDefault: Boolean!
 	status: GatewayStatus!
 	loadBalanceStrategy: LoadBalanceStrategy!
 	createdAt: Time!
@@ -792,6 +797,8 @@ input RegisterGatewayConnectionInput {
 	masterKey: String
 	masterKeyRef: String
 	loadBalanceStrategy: LoadBalanceStrategy
+	publicUrl: String
+	isDefault: Boolean
 }
 type RequestLog {
 	id: ID!
