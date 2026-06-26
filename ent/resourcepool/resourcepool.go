@@ -31,6 +31,8 @@ const (
 	FieldContentLibraryName = "content_library_name"
 	// FieldSecretRef holds the string denoting the secret_ref field in the database.
 	FieldSecretRef = "secret_ref"
+	// FieldInsecure holds the string denoting the insecure field in the database.
+	FieldInsecure = "insecure"
 	// FieldDatacenterCount holds the string denoting the datacenter_count field in the database.
 	FieldDatacenterCount = "datacenter_count"
 	// FieldClusterCount holds the string denoting the cluster_count field in the database.
@@ -60,6 +62,7 @@ var Columns = []string{
 	FieldStatus,
 	FieldContentLibraryName,
 	FieldSecretRef,
+	FieldInsecure,
 	FieldDatacenterCount,
 	FieldClusterCount,
 	FieldHostCount,
@@ -92,6 +95,8 @@ var (
 	EndpointValidator func(string) error
 	// DefaultContentLibraryName holds the default value on creation for the "content_library_name" field.
 	DefaultContentLibraryName string
+	// DefaultInsecure holds the default value on creation for the "insecure" field.
+	DefaultInsecure bool
 	// DefaultDatacenterCount holds the default value on creation for the "datacenter_count" field.
 	DefaultDatacenterCount int
 	// DatacenterCountValidator is a validator for the "datacenter_count" field. It is called by the builders before save.
@@ -210,6 +215,11 @@ func ByContentLibraryName(opts ...sql.OrderTermOption) OrderOption {
 // BySecretRef orders the results by the secret_ref field.
 func BySecretRef(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSecretRef, opts...).ToFunc()
+}
+
+// ByInsecure orders the results by the insecure field.
+func ByInsecure(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInsecure, opts...).ToFunc()
 }
 
 // ByDatacenterCount orders the results by the datacenter_count field.

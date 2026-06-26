@@ -26,6 +26,10 @@ func (ResourcePool) Fields() []ent.Field {
 		field.String("content_library_name").Optional().Default(""),
 		// Reference into the secret store; never the credential itself.
 		field.String("secret_ref").Optional(),
+		// Skip vCenter TLS verification for THIS pool. Default false (verify on);
+		// the operator opts in per-pool at 接入 time for air-gapped vCenters with a
+		// self-signed/internal CA (LLD-13: replaces the global VCENTER_INSECURE env).
+		field.Bool("insecure").Default(false),
 		// Inventory counts from the last sync (0619 第13页).
 		field.Int("datacenter_count").NonNegative().Default(0),
 		field.Int("cluster_count").NonNegative().Default(0),

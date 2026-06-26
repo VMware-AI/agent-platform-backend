@@ -239,6 +239,7 @@ input CreateResourcePoolInput {
 	contentLibraryName: String
 	datacenterCount: Int
 	clusterCount: Int
+	insecure: Boolean
 	username: String
 	password: String
 	secretRef: String
@@ -850,6 +851,7 @@ type ResourcePool {
 	name: String!
 	endpoint: String!
 	contentLibraryName: String!
+	insecure: Boolean!
 	connectionStatus: PoolConnectionStatus!
 	datacenterCount: Int!
 	clusterCount: Int!
@@ -997,6 +999,7 @@ input UpdateResourcePoolInput {
 	contentLibraryName: String
 	datacenterCount: Int
 	clusterCount: Int
+	insecure: Boolean
 	username: String
 	password: String
 	secretRef: String

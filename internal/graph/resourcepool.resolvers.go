@@ -33,6 +33,9 @@ func (r *mutationResolver) CreateResourcePool(ctx context.Context, input model.C
 	if input.ContentLibraryName != nil {
 		create.SetContentLibraryName(*input.ContentLibraryName)
 	}
+	if input.Insecure != nil {
+		create.SetInsecure(*input.Insecure)
+	}
 	if set {
 		create.SetSecretRef(ref)
 	}
@@ -66,6 +69,9 @@ func (r *mutationResolver) UpdateResourcePool(ctx context.Context, id string, in
 	}
 	if input.ContentLibraryName != nil {
 		u.SetContentLibraryName(*input.ContentLibraryName)
+	}
+	if input.Insecure != nil {
+		u.SetInsecure(*input.Insecure)
 	}
 	if input.DatacenterCount != nil {
 		u.SetDatacenterCount(*input.DatacenterCount)
