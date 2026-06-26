@@ -2,24 +2,21 @@ package config
 
 import "testing"
 
-// Guards the safety-critical defaults: prod must never auto-migrate the schema
-// (H3), and vCenter TLS verification must be on unless explicitly disabled (H-2).
+// Guards the safety-critical default: prod must never auto-migrate the schema
+// (H3). vCenter TLS verification is no longer a global env — it's a per-pool
+// ResourcePool.insecure field (default false / verify on), see LLD-13.
 func TestLoad_SafeDefaults(t *testing.T) {
 	t.Setenv("DATABASE_URL", "")
 	t.Setenv("REDIS_URL", "")
 
 	t.Setenv("APP_ENV", "prod")
 	t.Setenv("DB_AUTO_MIGRATE", "")
-	t.Setenv("VCENTER_INSECURE", "")
 	c, err := Load()
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
 	if c.DBAutoMigrate {
 		t.Error("prod must default to NO auto-migrate (versioned migrations only)")
-	}
-	if c.VCenterInsecure {
-		t.Error("vCenter TLS verification must default ON (insecure=false)")
 	}
 
 	t.Setenv("APP_ENV", "dev")

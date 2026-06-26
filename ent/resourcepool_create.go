@@ -117,6 +117,20 @@ func (_c *ResourcePoolCreate) SetNillableSecretRef(v *string) *ResourcePoolCreat
 	return _c
 }
 
+// SetInsecure sets the "insecure" field.
+func (_c *ResourcePoolCreate) SetInsecure(v bool) *ResourcePoolCreate {
+	_c.mutation.SetInsecure(v)
+	return _c
+}
+
+// SetNillableInsecure sets the "insecure" field if the given value is not nil.
+func (_c *ResourcePoolCreate) SetNillableInsecure(v *bool) *ResourcePoolCreate {
+	if v != nil {
+		_c.SetInsecure(*v)
+	}
+	return _c
+}
+
 // SetDatacenterCount sets the "datacenter_count" field.
 func (_c *ResourcePoolCreate) SetDatacenterCount(v int) *ResourcePoolCreate {
 	_c.mutation.SetDatacenterCount(v)
@@ -284,6 +298,10 @@ func (_c *ResourcePoolCreate) defaults() {
 		v := resourcepool.DefaultContentLibraryName
 		_c.mutation.SetContentLibraryName(v)
 	}
+	if _, ok := _c.mutation.Insecure(); !ok {
+		v := resourcepool.DefaultInsecure
+		_c.mutation.SetInsecure(v)
+	}
 	if _, ok := _c.mutation.DatacenterCount(); !ok {
 		v := resourcepool.DefaultDatacenterCount
 		_c.mutation.SetDatacenterCount(v)
@@ -345,6 +363,9 @@ func (_c *ResourcePoolCreate) check() error {
 		if err := resourcepool.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "ResourcePool.status": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.Insecure(); !ok {
+		return &ValidationError{Name: "insecure", err: errors.New(`ent: missing required field "ResourcePool.insecure"`)}
 	}
 	if _, ok := _c.mutation.DatacenterCount(); !ok {
 		return &ValidationError{Name: "datacenter_count", err: errors.New(`ent: missing required field "ResourcePool.datacenter_count"`)}
@@ -444,6 +465,10 @@ func (_c *ResourcePoolCreate) createSpec() (*ResourcePool, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.SecretRef(); ok {
 		_spec.SetField(resourcepool.FieldSecretRef, field.TypeString, value)
 		_node.SecretRef = value
+	}
+	if value, ok := _c.mutation.Insecure(); ok {
+		_spec.SetField(resourcepool.FieldInsecure, field.TypeBool, value)
+		_node.Insecure = value
 	}
 	if value, ok := _c.mutation.DatacenterCount(); ok {
 		_spec.SetField(resourcepool.FieldDatacenterCount, field.TypeInt, value)

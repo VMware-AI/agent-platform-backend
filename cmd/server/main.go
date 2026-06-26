@@ -131,7 +131,6 @@ func main() {
 		GatewayURL:      os.Getenv("GATEWAY_PUBLIC_URL"),
 		InstallVars:     installVars,
 		VCenterConnect:  vcConnect,
-		VCenterInsecure: cfg.VCenterInsecure,
 		LoginLimiter:    loginLimiter,
 		AgentMgr:        agentMgr,
 		ControlPlaneURL: os.Getenv("CONTROL_PLANE_URL"),

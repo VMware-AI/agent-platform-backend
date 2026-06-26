@@ -133,6 +133,7 @@ syncResourcePool(id: ID!): SyncResourcePoolPayload!
 | `name` | `String!` | — |
 | `endpoint` | `String!` | — |
 | `contentLibraryName` | `String!` | Content library the pool deploys OVA templates from (console 接入表单). |
+| `insecure` | `Boolean!` | Skip vCenter TLS verification for this pool (self-signed/internal CA). LLD-13. |
 | `connectionStatus` | `PoolConnectionStatus!` | — |
 | `datacenterCount` | `Int!` | — |
 | `clusterCount` | `Int!` | — |
@@ -200,6 +201,7 @@ syncResourcePool(id: ID!): SyncResourcePoolPayload!
 | `contentLibraryName` | `String` | — |
 | `datacenterCount` | `Int` | — |
 | `clusterCount` | `Int` | — |
+| `insecure` | `Boolean` | 跳过 vCenter TLS 验证(自签名/内网 CA);省略 = false(默认验证)。LLD-13。 |
 | `username` | `String` | vCenter (JVC) 凭据(可选;真机连接必填,前端表单可后补)。后端写入 secret store (Vaultwarden)并只存返回的引用,明文不落库;优先于 secretRef。 |
 | `password` | `String` | — |
 | `secretRef` | `String` | 已有 secret store 引用(高级/预置);与 username/password 二选一。 |
@@ -246,6 +248,7 @@ Pre-save reachability probe for the 接入表单 (carries NO credentials): the f
 | `contentLibraryName` | `String` | — |
 | `datacenterCount` | `Int` | — |
 | `clusterCount` | `Int` | — |
+| `insecure` | `Boolean` | 跳过 vCenter TLS 验证(自签名/内网 CA);省略 = 不变。LLD-13。 |
 | `username` | `String` | 重填凭据(轮换):同 create,写 secret store 后只存引用。 |
 | `password` | `String` | — |
 | `secretRef` | `String` | — |

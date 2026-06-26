@@ -65,7 +65,6 @@ dev/prod 行为不同的用 ✅ / ⚠️ 标注。
 | `SESSION_TTL_SECONDS` | `28800`（8h） | 否 | 整数，>0；非整数或 ≤0 fatal |
 | `ALLOWED_ORIGINS` | `http://localhost:5173,https://console.example.com` | dev 否 / prod 是（跨域 CSRF 放行） | 逗号分隔；同源请求始终放行 |
 | `DB_AUTO_MIGRATE` | `true` \| `false` | 否（dev 默认 `true`，prod 默认 `false`） | dev 启动自动改表；prod 必须关，改用 Atlas 版本化迁移 |
-| `VCENTER_INSECURE` | `false` | 否 | `true` → 跳过 vCenter TLS 校验（仅用于自签/内网 CA 的离线 vCenter） |
 | `ADMIN_BOOTSTRAP_PASSWORD` | `AdminLocal123!` | prod 是（dev 否） | 空库时种子 admin 密码；dev 不设会用 `ChangeMe123!` 并强制首登改密 |
 | `LITELLM_BASE_URL` | `http://localhost:4000` | 否 | 空 → 不启用模型网关（`upsertUpstream`/`issueVirtualKey` 等 resolver 拿不到 client） |
 | `LITELLM_MASTER_KEY` | `sk-local-master-…` | 与上一行同时设 | litellm admin API 的 master key（与 litellm 服务端 `LITELLM_MASTER_KEY` 必须一致） |
