@@ -12,6 +12,10 @@ agent-platform-backend
 *.out
 vendor/
 
+# Python bytecode (tools/apidocs/gen.py)
+__pycache__/
+*.pyc
+
 # Editor
 .idea/
 .vscode/

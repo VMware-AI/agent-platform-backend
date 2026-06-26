@@ -1,4 +1,4 @@
-.PHONY: generate schema-dump build test lint run tidy migrate-diff migrate-apply migrate-status build-images release-images
+.PHONY: generate schema-dump apidocs docs docs-check build test lint run tidy migrate-diff migrate-apply migrate-status build-images release-images
 
 # Image build/push settings.
 IMAGE     ?= agent-platform-backend
@@ -16,6 +16,23 @@ generate:
 # Merge every schema/*.graphql module into one reference SDL at docs/schema.graphql.
 schema-dump:
 	go run ./tools/schemadump
+
+# Regenerate the GraphQL API reference (docs/api/*.md) from schema/*.graphql.
+apidocs:
+	python3 tools/apidocs/gen.py
+
+# Regenerate every committed doc derived from the schema: the merged SDL and the
+# API reference. Run this after any schema/*.graphql change and commit the result.
+docs: schema-dump apidocs
+
+# CI guard: regenerate the derived docs and fail if the committed copies drifted
+# from the current schema. Keeps docs/schema.graphql + docs/api/*.md honest.
+docs-check: docs
+	@if ! git diff --quiet -- docs/; then \
+		echo "docs/ is stale vs schema/*.graphql — run 'make docs' and commit:"; \
+		git --no-pager diff --stat -- docs/; \
+		exit 1; \
+	fi
 
 # Snapshot the console's GraphQL operations as contract fixtures (validated by
 # TestClientOperationsMatchSchema). Console defaults to ../agent-platform-console.
