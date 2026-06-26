@@ -416,8 +416,13 @@ func (r *queryResolver) Agents(ctx context.Context, filter *model.AgentFilter, p
 			}
 		}
 	default:
+		// Regular user: only their own agents (owner track). Fail CLOSED — a
+		// session id that isn't a valid UUID must scope to zero rows, never fall
+		// through to an unscoped (all-agents) query.
 		if uid, err := uuid.Parse(cu.ID); err == nil {
 			q = q.Where(agent.OwnerUserID(uid))
+		} else {
+			q = q.Where(agent.IDEQ(uuid.Nil))
 		}
 	}
 	if env, ok := r.envScopeFor(ctx); ok { // soft env filter, after tenant (LLD-10 §2.3)
