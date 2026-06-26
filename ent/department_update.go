@@ -90,6 +90,26 @@ func (_u *DepartmentUpdate) ClearLitellmTeamID() *DepartmentUpdate {
 	return _u
 }
 
+// SetGatewayConnectionID sets the "gateway_connection_id" field.
+func (_u *DepartmentUpdate) SetGatewayConnectionID(v uuid.UUID) *DepartmentUpdate {
+	_u.mutation.SetGatewayConnectionID(v)
+	return _u
+}
+
+// SetNillableGatewayConnectionID sets the "gateway_connection_id" field if the given value is not nil.
+func (_u *DepartmentUpdate) SetNillableGatewayConnectionID(v *uuid.UUID) *DepartmentUpdate {
+	if v != nil {
+		_u.SetGatewayConnectionID(*v)
+	}
+	return _u
+}
+
+// ClearGatewayConnectionID clears the value of the "gateway_connection_id" field.
+func (_u *DepartmentUpdate) ClearGatewayConnectionID() *DepartmentUpdate {
+	_u.mutation.ClearGatewayConnectionID()
+	return _u
+}
+
 // Mutation returns the DepartmentMutation object of the builder.
 func (_u *DepartmentUpdate) Mutation() *DepartmentMutation {
 	return _u.mutation
@@ -177,6 +197,12 @@ func (_u *DepartmentUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if _u.mutation.LitellmTeamIDCleared() {
 		_spec.ClearField(department.FieldLitellmTeamID, field.TypeString)
 	}
+	if value, ok := _u.mutation.GatewayConnectionID(); ok {
+		_spec.SetField(department.FieldGatewayConnectionID, field.TypeUUID, value)
+	}
+	if _u.mutation.GatewayConnectionIDCleared() {
+		_spec.ClearField(department.FieldGatewayConnectionID, field.TypeUUID)
+	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -256,6 +282,26 @@ func (_u *DepartmentUpdateOne) SetNillableLitellmTeamID(v *string) *DepartmentUp
 // ClearLitellmTeamID clears the value of the "litellm_team_id" field.
 func (_u *DepartmentUpdateOne) ClearLitellmTeamID() *DepartmentUpdateOne {
 	_u.mutation.ClearLitellmTeamID()
+	return _u
+}
+
+// SetGatewayConnectionID sets the "gateway_connection_id" field.
+func (_u *DepartmentUpdateOne) SetGatewayConnectionID(v uuid.UUID) *DepartmentUpdateOne {
+	_u.mutation.SetGatewayConnectionID(v)
+	return _u
+}
+
+// SetNillableGatewayConnectionID sets the "gateway_connection_id" field if the given value is not nil.
+func (_u *DepartmentUpdateOne) SetNillableGatewayConnectionID(v *uuid.UUID) *DepartmentUpdateOne {
+	if v != nil {
+		_u.SetGatewayConnectionID(*v)
+	}
+	return _u
+}
+
+// ClearGatewayConnectionID clears the value of the "gateway_connection_id" field.
+func (_u *DepartmentUpdateOne) ClearGatewayConnectionID() *DepartmentUpdateOne {
+	_u.mutation.ClearGatewayConnectionID()
 	return _u
 }
 
@@ -375,6 +421,12 @@ func (_u *DepartmentUpdateOne) sqlSave(ctx context.Context) (_node *Department, 
 	}
 	if _u.mutation.LitellmTeamIDCleared() {
 		_spec.ClearField(department.FieldLitellmTeamID, field.TypeString)
+	}
+	if value, ok := _u.mutation.GatewayConnectionID(); ok {
+		_spec.SetField(department.FieldGatewayConnectionID, field.TypeUUID, value)
+	}
+	if _u.mutation.GatewayConnectionIDCleared() {
+		_spec.ClearField(department.FieldGatewayConnectionID, field.TypeUUID)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &Department{config: _u.config}

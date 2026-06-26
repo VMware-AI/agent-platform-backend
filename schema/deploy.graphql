@@ -25,6 +25,10 @@ input DeployAgentInput {
   templateVersionId: ID!
   # Target vCenter resource pool to place the clone in.
   resourcePoolId: ID!
+  # Department whose gateway issues the agent's virtual key + whose gateway
+  # public_url is baked into cloud-init (LLD-13 §3.3). Omitted → platform default
+  # gateway.
+  departmentId: ID
   # Optional vSphere resource-pool name to place the VM clone in. A true OVA
   # template has NO source resource pool, so vCenter's CloneFromTemplate requires
   # an explicit placement pool for real deploys ("source has no resource pool;

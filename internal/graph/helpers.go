@@ -784,10 +784,16 @@ func orEmptyStrings(s []string) []string {
 }
 
 func toModelGatewayConnection(g *ent.GatewayConnection) *model.GatewayConnection {
+	var publicURL *string
+	if g.PublicURL != "" {
+		publicURL = &g.PublicURL
+	}
 	return &model.GatewayConnection{
 		ID:                  g.ID.String(),
 		Name:                g.Name,
 		Endpoint:            g.Endpoint,
+		PublicURL:           publicURL,
+		IsDefault:           g.IsDefault,
 		Status:              model.GatewayStatus(string(g.Status)),
 		LoadBalanceStrategy: model.LoadBalanceStrategy(string(g.LoadBalanceStrategy)),
 		CreatedAt:           g.CreatedAt,
@@ -893,17 +899,12 @@ func (r *Resolver) backendModelCount(ctx context.Context) (int, error) {
 	return r.Ent.Upstream.Query().Count(ctx)
 }
 
-// gatewayClient builds a litellm client bound to a SPECIFIC gateway row — its own
-// endpoint and its own master key (resolved from the secret store) — so a
-// connection test hits the gateway under test, not a process-wide default. The
+// buildGatewayModels builds a litellm model-manager bound to a SPECIFIC gateway
+// row — its own endpoint and master key (resolved from the secret store) — so a
+// model/connection op hits the right gateway, not a process-wide default. The
 // builder is injectable (GatewayClientFor) so tests can supply a fake.
-func (r *Resolver) gatewayClient(ctx context.Context, g *ent.GatewayConnection) gateway.ModelManager {
-	masterKey := ""
-	if g.MasterKeyRef != "" && r.Secrets != nil {
-		if cred, err := r.Secrets.Resolve(ctx, g.MasterKeyRef); err == nil {
-			masterKey = cred.APIKey
-		}
-	}
+func (r *Resolver) buildGatewayModels(ctx context.Context, g *ent.GatewayConnection) gateway.ModelManager {
+	masterKey := r.gatewayMasterKey(ctx, g)
 	if r.GatewayClientFor != nil {
 		return r.GatewayClientFor(ctx, g.Endpoint, masterKey)
 	}
@@ -1025,6 +1026,10 @@ func toModelDepartment(d *ent.Department) *model.Department {
 	if d.LitellmTeamID != "" {
 		l := d.LitellmTeamID
 		m.LitellmTeamID = &l
+	}
+	if d.GatewayConnectionID != nil {
+		g := d.GatewayConnectionID.String()
+		m.GatewayConnectionID = &g
 	}
 	return m
 }
@@ -1223,16 +1228,12 @@ func tenantMatches(callerTenant string, rowTenant *uuid.UUID) bool {
 // DB persistence failed: destroy the running VM, revoke the live gateway key, and
 // mark the agent exception. Uses a detached context so a canceled request still
 // cleans up. Best-effort — each step is logged on failure, never fatal.
-func (r *Resolver) rollbackDeploy(ctx context.Context, conn VCenterClient, ag *ent.Agent, vmName, key string) {
+func (r *Resolver) rollbackDeploy(ctx context.Context, conn VCenterClient, gw gateway.Client, ag *ent.Agent, vmName, key string) {
 	cctx := context.WithoutCancel(ctx)
 	if err := conn.Destroy(cctx, vmName); err != nil {
 		log.Printf("deploy rollback: orphan VM %q, destroy failed: %v", vmName, err)
 	}
-	if r.Gateway != nil {
-		if err := r.Gateway.DeleteKey(cctx, key); err != nil {
-			log.Printf("deploy rollback: orphan gateway key, revoke failed: %v", err)
-		}
-	}
+	revokeDeployKey(cctx, gw, key, ag.ID.String())
 	if _, err := r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusException).Save(cctx); err != nil {
 		log.Printf("deploy rollback: mark agent %s exception failed: %v", ag.ID, err)
 	}
@@ -1252,17 +1253,27 @@ func (r *Resolver) deleteAgentRow(ctx context.Context, ag *ent.Agent) {
 // and gateway key already exist: destroy the VM, revoke the key, and delete the
 // agent row (it was created by this same deploy and never went live, so unlike
 // rollbackDeploy we drop it rather than mark it exception).
-func (r *Resolver) rollbackDeployCreate(ctx context.Context, conn VCenterClient, ag *ent.Agent, vmName, key string) {
+func (r *Resolver) rollbackDeployCreate(ctx context.Context, conn VCenterClient, gw gateway.Client, ag *ent.Agent, vmName, key string) {
 	cctx := context.WithoutCancel(ctx)
 	if err := conn.Destroy(cctx, vmName); err != nil {
 		log.Printf("deploy rollback: orphan VM %q, destroy failed: %v", vmName, err)
 	}
-	if r.Gateway != nil {
-		if err := r.Gateway.DeleteKey(cctx, key); err != nil {
-			log.Printf("deploy rollback: orphan gateway key, revoke failed: %v", err)
-		}
-	}
+	revokeDeployKey(cctx, gw, key, ag.ID.String())
 	r.deleteAgentRow(cctx, ag)
+}
+
+// revokeDeployKey best-effort revokes a deploy's gateway key during rollback. The
+// key was minted on the agent's department/default gateway (gw, LLD-13 §3.3); the
+// rollback MUST revoke through that SAME client — not a process-wide default that
+// no longer exists — or a failed deploy leaks a live, billable key. Never silent.
+func revokeDeployKey(ctx context.Context, gw gateway.Client, key, agentID string) {
+	if gw == nil {
+		log.Printf("deploy rollback: no gateway to revoke key for agent %s (orphan key)", agentID)
+		return
+	}
+	if err := gw.DeleteKey(ctx, key); err != nil {
+		log.Printf("deploy rollback: orphan gateway key for agent %s, revoke failed: %v", agentID, err)
+	}
 }
 
 // connectAgentVM resolves an agent the caller owns, dials its resource pool's

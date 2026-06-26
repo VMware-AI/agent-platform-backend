@@ -32,11 +32,25 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	if cu == nil {
 		return nil, gqlerror.Errorf("unauthenticated")
 	}
-	if r.Secrets == nil || r.VCenterConnect == nil || r.Gateway == nil {
-		return nil, gqlerror.Errorf("deploy is not configured (gateway/secrets/vcenter required)")
+	if r.Secrets == nil || r.VCenterConnect == nil {
+		return nil, gqlerror.Errorf("deploy is not configured (secrets/vcenter required)")
 	}
 	if input.Name == "" {
 		return nil, gqlerror.Errorf("name is required")
+	}
+	// Resolve the gateway that issues this agent's key + whose public URL the VM
+	// will call (LLD-13 §3.3): the chosen department's gateway, or the default.
+	var deptID *uuid.UUID
+	if input.DepartmentID != nil {
+		did, err := uuid.Parse(*input.DepartmentID)
+		if err != nil {
+			return nil, gqlerror.Errorf("invalid departmentId")
+		}
+		deptID = &did
+	}
+	gw, gwURL := r.deployGateway(ctx, deptID)
+	if gw == nil {
+		return nil, gqlerror.Errorf("deploy is not configured (gateway required)")
 	}
 	ownerID, err := uuid.Parse(cu.ID)
 	if err != nil {
@@ -143,7 +157,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		enrollToken = tok
 	}
 
-	svc := &deploy.Service{Gateway: r.Gateway, VCenter: conn, GatewayURL: r.GatewayURL}
+	svc := &deploy.Service{Gateway: gw, VCenter: conn, GatewayURL: gwURL}
 	res, err := svc.Provision(ctx, deploy.Request{
 		AgentName: ag.Name,
 		UserID:    ag.OwnerUserID.String(),
@@ -185,7 +199,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	}
 	vk, err := vkCreate.Save(ctx)
 	if err != nil {
-		r.rollbackDeployCreate(ctx, conn, ag, vmName, res.VirtualKey)
+		r.rollbackDeployCreate(ctx, conn, gw, ag, vmName, res.VirtualKey)
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
 		return nil, fmt.Errorf("persist virtual key failed: %w", err)
 	}
@@ -202,7 +216,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		if delErr := r.Ent.VirtualKey.DeleteOne(vk).Exec(context.WithoutCancel(ctx)); delErr != nil {
 			log.Printf("deploy rollback: delete dangling vk row %s failed: %v", vk.ID, delErr)
 		}
-		r.rollbackDeployCreate(ctx, conn, ag, vmName, res.VirtualKey)
+		r.rollbackDeployCreate(ctx, conn, gw, ag, vmName, res.VirtualKey)
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
 		return nil, fmt.Errorf("finalize agent failed: %w", err)
 	}
@@ -258,10 +272,13 @@ func (r *mutationResolver) RecycleAgent(ctx context.Context, input model.Recycle
 	// already destroyed, so a revoke failure can't be rolled back — but it must
 	// NOT be silent (that would leave an orphan key). Detached ctx: the request
 	// ctx may be canceled after the slow Destroy.
-	if ag.VirtualKeyID != nil && r.Gateway != nil {
+	if ag.VirtualKeyID != nil {
 		cctx := context.WithoutCancel(ctx)
 		if vk, err := r.Ent.VirtualKey.Get(cctx, *ag.VirtualKeyID); err == nil {
-			if delErr := r.Gateway.DeleteKey(cctx, vk.LitellmKey); delErr != nil {
+			// Route the revoke to the gateway hosting the key's team (LLD-13 §3.3).
+			if gw := r.gatewayKeyClient(cctx, deptIDFromTeam(&vk.TeamID)); gw == nil {
+				log.Printf("recycle agent %s: no gateway to revoke key %s", ag.ID, vk.ID)
+			} else if delErr := gw.DeleteKey(cctx, vk.LitellmKey); delErr != nil {
 				log.Printf("recycle agent %s: orphan gateway key %s, revoke failed: %v", ag.ID, vk.ID, delErr)
 				r.audit(cctx, "key.revoke", "virtual_key", vk.ID.String(), false, cu.ID)
 			} else {

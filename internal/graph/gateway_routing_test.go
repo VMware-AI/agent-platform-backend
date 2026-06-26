@@ -28,6 +28,16 @@ func (f *fakeModelManager) UpsertComplexityRouter(_ context.Context, s gateway.R
 	return nil
 }
 
+// injectFakeGatewayModels makes buildGatewayModels return an in-memory fake, so a
+// test that registers a (now auto-default) gateway doesn't dial its real endpoint
+// when an op syncs to the default gateway's model pool (LLD-13). Lives here so
+// other test files needn't import the gateway package.
+func injectFakeGatewayModels(r *Resolver) {
+	r.GatewayClientFor = func(context.Context, string, string) gateway.ModelManager {
+		return &fakeModelManager{}
+	}
+}
+
 func TestSetRouterTier_SyncsComplexityRouter(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()

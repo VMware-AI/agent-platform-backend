@@ -20,7 +20,10 @@ import (
 // IssueVirtualKey mints a per-user LiteLLM key via the gateway and records its
 // governance metadata. The secret is returned ONCE (LLD-04 §3).
 func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.IssueVirtualKeyInput) (*model.IssuedVirtualKey, error) {
-	if r.Gateway == nil {
+	// Route to the gateway hosting this key's team/department (LLD-13 §3.3), or the
+	// platform default; falls back to the legacy injected gateway.
+	gw := r.gatewayKeyClient(ctx, deptIDFromTeam(input.TeamID))
+	if gw == nil {
 		return nil, gqlerror.Errorf("model gateway is not configured")
 	}
 	userID, err := uuid.Parse(input.UserID)
@@ -79,7 +82,7 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		policyID = &pid
 	}
 
-	resp, err := r.Gateway.GenerateKey(ctx, req)
+	resp, err := gw.GenerateKey(ctx, req)
 	if err != nil {
 		r.audit(ctx, "key.issue", "virtual_key", input.UserID, false, actorID(auth.FromContext(ctx)))
 		return nil, fmt.Errorf("gateway: %w", err)
@@ -119,7 +122,7 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		// which can be the very cause of the failure (C3; cf. deploy.Provision).
 		cctx := context.WithoutCancel(ctx)
 		actor := actorID(auth.FromContext(ctx))
-		if delErr := r.Gateway.DeleteKey(cctx, resp.Key); delErr != nil {
+		if delErr := gw.DeleteKey(cctx, resp.Key); delErr != nil {
 			r.audit(cctx, "key.issue", "virtual_key", input.UserID, false, actor)
 			return nil, fmt.Errorf("persist virtual key failed: %v (orphan revoke also failed: %w)", err, delErr)
 		}
@@ -143,8 +146,8 @@ func (r *mutationResolver) RevokeVirtualKey(ctx context.Context, id string) (boo
 	if err != nil {
 		return false, err
 	}
-	if r.Gateway != nil {
-		if err := r.Gateway.DeleteKey(ctx, vk.LitellmKey); err != nil {
+	if gw := r.gatewayKeyClient(ctx, deptIDFromTeam(&vk.TeamID)); gw != nil {
+		if err := gw.DeleteKey(ctx, vk.LitellmKey); err != nil {
 			return false, fmt.Errorf("gateway: %w", err)
 		}
 	}
@@ -162,9 +165,6 @@ func (r *mutationResolver) RegenerateVirtualKey(ctx context.Context, id string) 
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid id")
 	}
-	if r.Gateway == nil {
-		return nil, gqlerror.Errorf("model gateway is not configured")
-	}
 	vk, err := r.Ent.VirtualKey.Get(ctx, kid)
 	if err != nil {
 		return nil, err
@@ -172,9 +172,13 @@ func (r *mutationResolver) RegenerateVirtualKey(ctx context.Context, id string) 
 	if vk.Status == virtualkey.StatusRevoked {
 		return nil, gqlerror.Errorf("key is revoked and cannot be regenerated")
 	}
+	gw := r.gatewayKeyClient(ctx, deptIDFromTeam(&vk.TeamID))
+	if gw == nil {
+		return nil, gqlerror.Errorf("model gateway is not configured")
+	}
 
 	actor := actorID(auth.FromContext(ctx))
-	resp, err := r.Gateway.RegenerateKey(ctx, vk.LitellmKey)
+	resp, err := gw.RegenerateKey(ctx, vk.LitellmKey)
 	if err != nil {
 		r.audit(ctx, "key.regenerate", "virtual_key", id, false, actor)
 		return nil, fmt.Errorf("gateway: %w", err)

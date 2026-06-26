@@ -206,9 +206,10 @@ type CreateCustomRoleInput struct {
 }
 
 type CreateDepartmentInput struct {
-	TenantID  *string  `json:"tenantId,omitempty"`
-	Name      string   `json:"name"`
-	MaxBudget *float64 `json:"maxBudget,omitempty"`
+	TenantID            *string  `json:"tenantId,omitempty"`
+	Name                string   `json:"name"`
+	MaxBudget           *float64 `json:"maxBudget,omitempty"`
+	GatewayConnectionID *string  `json:"gatewayConnectionId,omitempty"`
 }
 
 type CreateModelRouteInput struct {
@@ -345,11 +346,12 @@ type DeleteUserPayload struct {
 }
 
 type Department struct {
-	ID            string    `json:"id"`
-	TenantID      *string   `json:"tenantId,omitempty"`
-	Name          string    `json:"name"`
-	LitellmTeamID *string   `json:"litellmTeamId,omitempty"`
-	CreatedAt     time.Time `json:"createdAt"`
+	ID                  string    `json:"id"`
+	TenantID            *string   `json:"tenantId,omitempty"`
+	Name                string    `json:"name"`
+	LitellmTeamID       *string   `json:"litellmTeamId,omitempty"`
+	GatewayConnectionID *string   `json:"gatewayConnectionId,omitempty"`
+	CreatedAt           time.Time `json:"createdAt"`
 }
 
 type DeployAgentInput struct {
@@ -357,6 +359,7 @@ type DeployAgentInput struct {
 	TemplateFamilyID   string   `json:"templateFamilyId"`
 	TemplateVersionID  string   `json:"templateVersionId"`
 	ResourcePoolID     string   `json:"resourcePoolId"`
+	DepartmentID       *string  `json:"departmentId,omitempty"`
 	TargetResourcePool *string  `json:"targetResourcePool,omitempty"`
 	Hostname           *string  `json:"hostname,omitempty"`
 	MaxBudget          *float64 `json:"maxBudget,omitempty"`
@@ -373,6 +376,8 @@ type GatewayConnection struct {
 	ID                  string              `json:"id"`
 	Name                string              `json:"name"`
 	Endpoint            string              `json:"endpoint"`
+	PublicURL           *string             `json:"publicUrl,omitempty"`
+	IsDefault           bool                `json:"isDefault"`
 	Status              GatewayStatus       `json:"status"`
 	LoadBalanceStrategy LoadBalanceStrategy `json:"loadBalanceStrategy"`
 	CreatedAt           time.Time           `json:"createdAt"`
@@ -649,6 +654,8 @@ type RegisterGatewayConnectionInput struct {
 	MasterKey           *string              `json:"masterKey,omitempty"`
 	MasterKeyRef        *string              `json:"masterKeyRef,omitempty"`
 	LoadBalanceStrategy *LoadBalanceStrategy `json:"loadBalanceStrategy,omitempty"`
+	PublicURL           *string              `json:"publicUrl,omitempty"`
+	IsDefault           *bool                `json:"isDefault,omitempty"`
 }
 
 type RequestLog struct {

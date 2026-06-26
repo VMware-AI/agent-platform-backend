@@ -219,6 +219,7 @@ var (
 		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "name", Type: field.TypeString},
 		{Name: "litellm_team_id", Type: field.TypeString, Nullable: true},
+		{Name: "gateway_connection_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// DepartmentsTable holds the schema information for the "departments" table.
 	DepartmentsTable = &schema.Table{
@@ -262,6 +263,8 @@ var (
 		{Name: "endpoint", Type: field.TypeString},
 		{Name: "master_key_ref", Type: field.TypeString, Nullable: true},
 		{Name: "admin_url", Type: field.TypeString, Nullable: true},
+		{Name: "public_url", Type: field.TypeString, Nullable: true},
+		{Name: "is_default", Type: field.TypeBool, Default: false},
 		{Name: "last_synced_at", Type: field.TypeTime, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"connected", "disconnected", "error"}, Default: "disconnected"},
 		{Name: "load_balance_strategy", Type: field.TypeEnum, Enums: []string{"simple_shuffle", "latency", "usage_v2", "least_busy", "cost"}, Default: "simple_shuffle"},

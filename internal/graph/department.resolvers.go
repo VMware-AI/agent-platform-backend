@@ -50,16 +50,36 @@ func (r *mutationResolver) CreateDepartment(ctx context.Context, input model.Cre
 			tenantID = &tid
 		}
 	}
+	// Which gateway hosts this department's litellm team (LLD-13 §3.3): the chosen
+	// connection, or the platform default. Persisted on the row so the team's keys
+	// route back to the same gateway later.
+	var gcID *uuid.UUID
+	if input.GatewayConnectionID != nil {
+		gid, err := uuid.Parse(*input.GatewayConnectionID)
+		if err != nil {
+			return nil, gqlerror.Errorf("invalid gatewayConnectionId")
+		}
+		// Validate the target exists before persisting the binding — otherwise the
+		// row points at a non-existent gateway and the team lands on the default.
+		if _, err := r.Ent.GatewayConnection.Get(ctx, gid); err != nil {
+			if ent.IsNotFound(err) {
+				return nil, gqlerror.Errorf("gatewayConnectionId not found")
+			}
+			return nil, err
+		}
+		gcID = &gid
+	}
 	deptID := uuid.New()
 	teamID := deptID.String()
 	c := r.Ent.Department.Create().SetID(deptID).SetName(input.Name).
-		SetLitellmTeamID(teamID).SetNillableTenantID(tenantID)
+		SetLitellmTeamID(teamID).SetNillableTenantID(tenantID).
+		SetNillableGatewayConnectionID(gcID)
 	dept, err := c.Save(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if r.Gateway != nil {
-		if _, err := r.Gateway.CreateTeam(ctx, gateway.TeamRequest{
+	if gw := r.gatewayKeyClientForConn(ctx, gcID); gw != nil {
+		if _, err := gw.CreateTeam(ctx, gateway.TeamRequest{
 			TeamID: teamID, TeamAlias: input.Name, MaxBudget: input.MaxBudget,
 		}); err != nil {
 			_ = r.Ent.Department.DeleteOneID(dept.ID).Exec(ctx) // compensate: no orphan row
@@ -89,8 +109,8 @@ func (r *mutationResolver) DeleteDepartment(ctx context.Context, id string) (boo
 	if err != nil {
 		return false, err
 	}
-	if r.Gateway != nil && dept.LitellmTeamID != "" {
-		if err := r.Gateway.DeleteTeam(ctx, dept.LitellmTeamID); err != nil {
+	if gw := r.gatewayKeyClient(ctx, &did); gw != nil && dept.LitellmTeamID != "" {
+		if err := gw.DeleteTeam(ctx, dept.LitellmTeamID); err != nil {
 			return false, fmt.Errorf("delete litellm team: %w", err)
 		}
 	}

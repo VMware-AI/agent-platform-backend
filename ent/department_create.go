@@ -83,6 +83,20 @@ func (_c *DepartmentCreate) SetNillableLitellmTeamID(v *string) *DepartmentCreat
 	return _c
 }
 
+// SetGatewayConnectionID sets the "gateway_connection_id" field.
+func (_c *DepartmentCreate) SetGatewayConnectionID(v uuid.UUID) *DepartmentCreate {
+	_c.mutation.SetGatewayConnectionID(v)
+	return _c
+}
+
+// SetNillableGatewayConnectionID sets the "gateway_connection_id" field if the given value is not nil.
+func (_c *DepartmentCreate) SetNillableGatewayConnectionID(v *uuid.UUID) *DepartmentCreate {
+	if v != nil {
+		_c.SetGatewayConnectionID(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *DepartmentCreate) SetID(v uuid.UUID) *DepartmentCreate {
 	_c.mutation.SetID(v)
@@ -216,6 +230,10 @@ func (_c *DepartmentCreate) createSpec() (*Department, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.LitellmTeamID(); ok {
 		_spec.SetField(department.FieldLitellmTeamID, field.TypeString, value)
 		_node.LitellmTeamID = value
+	}
+	if value, ok := _c.mutation.GatewayConnectionID(); ok {
+		_spec.SetField(department.FieldGatewayConnectionID, field.TypeUUID, value)
+		_node.GatewayConnectionID = &value
 	}
 	return _node, _spec
 }

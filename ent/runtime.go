@@ -277,6 +277,10 @@ func init() {
 	gatewayconnectionDescEndpoint := gatewayconnectionFields[2].Descriptor()
 	// gatewayconnection.EndpointValidator is a validator for the "endpoint" field. It is called by the builders before save.
 	gatewayconnection.EndpointValidator = gatewayconnectionDescEndpoint.Validators[0].(func(string) error)
+	// gatewayconnectionDescIsDefault is the schema descriptor for is_default field.
+	gatewayconnectionDescIsDefault := gatewayconnectionFields[6].Descriptor()
+	// gatewayconnection.DefaultIsDefault holds the default value on creation for the is_default field.
+	gatewayconnection.DefaultIsDefault = gatewayconnectionDescIsDefault.Default.(bool)
 	// gatewayconnectionDescID is the schema descriptor for id field.
 	gatewayconnectionDescID := gatewayconnectionFields[0].Descriptor()
 	// gatewayconnection.DefaultID holds the default value on creation for the id field.

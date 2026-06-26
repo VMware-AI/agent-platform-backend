@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
+	"github.com/VMware-AI/agent-platform-backend/ent/department"
 	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
 	"github.com/VMware-AI/agent-platform-backend/ent/modelroute"
 	"github.com/VMware-AI/agent-platform-backend/ent/routertier"
@@ -33,12 +34,33 @@ func (r *mutationResolver) RegisterGatewayConnection(ctx context.Context, input 
 	if input.MasterKeyRef != nil {
 		c.SetMasterKeyRef(*input.MasterKeyRef)
 	}
+	if input.PublicURL != nil {
+		c.SetPublicURL(*input.PublicURL)
+	}
 	if input.LoadBalanceStrategy != nil {
 		c.SetLoadBalanceStrategy(gatewayconnection.LoadBalanceStrategy(*input.LoadBalanceStrategy))
 	}
+	// is_default (LLD-13 §3.3): an explicit request, OR auto-default the first-ever
+	// connection so the platform always has a default gateway once one exists (§7 OQ-1).
+	makeDefault := input.IsDefault != nil && *input.IsDefault
+	if !makeDefault {
+		if n, err := r.Ent.GatewayConnection.Query().Count(ctx); err == nil && n == 0 {
+			makeDefault = true
+		}
+	}
+	c.SetIsDefault(makeDefault)
 	g, err := c.Save(ctx)
 	if err != nil {
 		return nil, err
+	}
+	// Singleton invariant: at most one default. If this row became the default,
+	// clear the flag on every other connection.
+	if g.IsDefault {
+		if _, err := r.Ent.GatewayConnection.Update().
+			Where(gatewayconnection.IDNEQ(g.ID), gatewayconnection.IsDefault(true)).
+			SetIsDefault(false).Save(ctx); err != nil {
+			return nil, err
+		}
 	}
 	r.audit(ctx, "gateway.register", "gateway_connection", g.ID.String(), true, actorID(auth.FromContext(ctx)))
 	return toModelGatewayConnection(g), nil
@@ -55,8 +77,8 @@ func (r *mutationResolver) TestGatewayConnection(ctx context.Context, id string)
 		return "", err
 	}
 	status := gatewayconnection.StatusDisconnected
-	if r.GatewayModels != nil {
-		if err := r.GatewayModels.TestConnection(ctx); err == nil {
+	if mm := r.gatewayModelsForConn(ctx, g); mm != nil {
+		if err := mm.TestConnection(ctx); err == nil {
 			status = gatewayconnection.StatusConnected
 		} else {
 			status = gatewayconnection.StatusError
@@ -77,6 +99,21 @@ func (r *mutationResolver) DeleteGatewayConnection(ctx context.Context, id strin
 	gid, err := uuid.Parse(id)
 	if err != nil {
 		return false, gqlerror.Errorf("invalid id")
+	}
+	g, err := r.Ent.GatewayConnection.Get(ctx, gid)
+	if err != nil {
+		return false, err
+	}
+	// gateway_connection_id is a soft reference (no FK). Refuse to orphan the
+	// departments routed here (LLD-13 §3.3) — their key/team ops would silently
+	// break — and refuse to leave the platform with no default gateway.
+	if n, err := r.Ent.Department.Query().Where(department.GatewayConnectionID(gid)).Count(ctx); err != nil {
+		return false, err
+	} else if n > 0 {
+		return false, gqlerror.Errorf("gateway is used by %d department(s); reassign them before deleting", n)
+	}
+	if g.IsDefault {
+		return false, gqlerror.Errorf("cannot delete the default gateway; set another default first")
 	}
 	if err := r.Ent.GatewayConnection.DeleteOneID(gid).Exec(ctx); err != nil {
 		return false, err
@@ -134,8 +171,8 @@ func (r *mutationResolver) UpsertUpstream(ctx context.Context, input model.Upser
 		return nil, err
 	}
 
-	// Sync the deployment into the gateway's model pool (litellm /model/new).
-	if r.GatewayModels != nil {
+	// Sync the deployment into the default gateway's model pool (litellm /model/new).
+	if mm := r.gatewayModels(ctx); mm != nil {
 		apiKey := ""
 		if input.APIKeyRef != nil && r.Secrets != nil {
 			cred, err := r.Secrets.Resolve(ctx, *input.APIKeyRef)
@@ -147,7 +184,7 @@ func (r *mutationResolver) UpsertUpstream(ctx context.Context, input model.Upser
 				apiKey = cred.Password
 			}
 		}
-		if err := r.GatewayModels.NewModel(ctx, gateway.ModelSpec{
+		if err := mm.NewModel(ctx, gateway.ModelSpec{
 			ModelName: u.Name, Model: u.Model, APIBase: u.APIBase, APIKey: apiKey,
 		}); err != nil {
 			return nil, fmt.Errorf("sync upstream to gateway: %w", err)
@@ -333,8 +370,8 @@ func (r *mutationResolver) SetRouterTier(ctx context.Context, tier model.RouterT
 	for _, t := range all {
 		tiers[string(t.Tier)] = t.ModelAlias
 	}
-	if r.GatewayModels != nil {
-		if err := r.GatewayModels.UpsertComplexityRouter(ctx, gateway.RouterSpec{
+	if mm := r.gatewayModels(ctx); mm != nil {
+		if err := mm.UpsertComplexityRouter(ctx, gateway.RouterSpec{
 			ModelName: "smart", Tiers: tiers, DefaultModel: tiers["MEDIUM"],
 		}); err != nil {
 			return nil, fmt.Errorf("sync complexity router: %w", err)

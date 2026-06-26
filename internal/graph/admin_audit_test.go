@@ -39,6 +39,7 @@ func TestPlatformAdminMutations_WriteAudit(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()
 	r.Gateway = &fakeGateway{}
+	injectFakeGatewayModels(r) // registered gateway becomes default; fake its model sync
 	ctx := adminCtx()
 	mr := &mutationResolver{r}
 

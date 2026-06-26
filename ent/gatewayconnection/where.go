@@ -85,6 +85,16 @@ func AdminURL(v string) predicate.GatewayConnection {
 	return predicate.GatewayConnection(sql.FieldEQ(FieldAdminURL, v))
 }
 
+// PublicURL applies equality check predicate on the "public_url" field. It's identical to PublicURLEQ.
+func PublicURL(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldEQ(FieldPublicURL, v))
+}
+
+// IsDefault applies equality check predicate on the "is_default" field. It's identical to IsDefaultEQ.
+func IsDefault(v bool) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldEQ(FieldIsDefault, v))
+}
+
 // LastSyncedAt applies equality check predicate on the "last_synced_at" field. It's identical to LastSyncedAtEQ.
 func LastSyncedAt(v time.Time) predicate.GatewayConnection {
 	return predicate.GatewayConnection(sql.FieldEQ(FieldLastSyncedAt, v))
@@ -448,6 +458,91 @@ func AdminURLEqualFold(v string) predicate.GatewayConnection {
 // AdminURLContainsFold applies the ContainsFold predicate on the "admin_url" field.
 func AdminURLContainsFold(v string) predicate.GatewayConnection {
 	return predicate.GatewayConnection(sql.FieldContainsFold(FieldAdminURL, v))
+}
+
+// PublicURLEQ applies the EQ predicate on the "public_url" field.
+func PublicURLEQ(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldEQ(FieldPublicURL, v))
+}
+
+// PublicURLNEQ applies the NEQ predicate on the "public_url" field.
+func PublicURLNEQ(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldNEQ(FieldPublicURL, v))
+}
+
+// PublicURLIn applies the In predicate on the "public_url" field.
+func PublicURLIn(vs ...string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldIn(FieldPublicURL, vs...))
+}
+
+// PublicURLNotIn applies the NotIn predicate on the "public_url" field.
+func PublicURLNotIn(vs ...string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldNotIn(FieldPublicURL, vs...))
+}
+
+// PublicURLGT applies the GT predicate on the "public_url" field.
+func PublicURLGT(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldGT(FieldPublicURL, v))
+}
+
+// PublicURLGTE applies the GTE predicate on the "public_url" field.
+func PublicURLGTE(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldGTE(FieldPublicURL, v))
+}
+
+// PublicURLLT applies the LT predicate on the "public_url" field.
+func PublicURLLT(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldLT(FieldPublicURL, v))
+}
+
+// PublicURLLTE applies the LTE predicate on the "public_url" field.
+func PublicURLLTE(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldLTE(FieldPublicURL, v))
+}
+
+// PublicURLContains applies the Contains predicate on the "public_url" field.
+func PublicURLContains(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldContains(FieldPublicURL, v))
+}
+
+// PublicURLHasPrefix applies the HasPrefix predicate on the "public_url" field.
+func PublicURLHasPrefix(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldHasPrefix(FieldPublicURL, v))
+}
+
+// PublicURLHasSuffix applies the HasSuffix predicate on the "public_url" field.
+func PublicURLHasSuffix(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldHasSuffix(FieldPublicURL, v))
+}
+
+// PublicURLIsNil applies the IsNil predicate on the "public_url" field.
+func PublicURLIsNil() predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldIsNull(FieldPublicURL))
+}
+
+// PublicURLNotNil applies the NotNil predicate on the "public_url" field.
+func PublicURLNotNil() predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldNotNull(FieldPublicURL))
+}
+
+// PublicURLEqualFold applies the EqualFold predicate on the "public_url" field.
+func PublicURLEqualFold(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldEqualFold(FieldPublicURL, v))
+}
+
+// PublicURLContainsFold applies the ContainsFold predicate on the "public_url" field.
+func PublicURLContainsFold(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldContainsFold(FieldPublicURL, v))
+}
+
+// IsDefaultEQ applies the EQ predicate on the "is_default" field.
+func IsDefaultEQ(v bool) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldEQ(FieldIsDefault, v))
+}
+
+// IsDefaultNEQ applies the NEQ predicate on the "is_default" field.
+func IsDefaultNEQ(v bool) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldNEQ(FieldIsDefault, v))
 }
 
 // LastSyncedAtEQ applies the EQ predicate on the "last_synced_at" field.

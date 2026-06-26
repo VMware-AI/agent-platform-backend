@@ -226,6 +226,7 @@ changePassword(oldPassword: String!, newPassword: String!): Boolean!
 |-------|------|-------------|
 | `email` | `String!` | The console login form collects an email; the backend accepts username or email. |
 | `password` | `String!` | — |
+| `remember` | `Boolean` | When false, the session cookie is a session cookie (cleared on browser close); when true or omitted, it persists for the session TTL ("remember me"). |
 
 ### PageInput
 

@@ -420,6 +420,7 @@ The user's role as a lightweight reference (embedded in AccountUser).
 | `tenantId` | `ID` | — |
 | `name` | `String!` | — |
 | `litellmTeamId` | `String` | — |
+| `gatewayConnectionId` | `ID` | The gateway connection hosting this department's litellm team (LLD-13 §3.3). Null → the platform default gateway. |
 | `createdAt` | `Time!` | — |
 
 ### Membership
@@ -520,6 +521,7 @@ A built-in assignable role surfaced as an entity (id = the role key).
 | `tenantId` | `ID` | — |
 | `name` | `String!` | — |
 | `maxBudget` | `Float` | Shared budget for the litellm team backing this department. |
+| `gatewayConnectionId` | `ID` | Which gateway connection hosts this department's litellm team (LLD-13 §3.3). Omitted → the platform default gateway (GatewayConnection.isDefault). |
 
 ### CreateUserInput
 

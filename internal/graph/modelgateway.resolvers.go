@@ -100,7 +100,7 @@ func (r *mutationResolver) TestModelGatewayConnection(ctx context.Context, id st
 	status := gatewayconnection.StatusConnected
 	message := "connection ok"
 	start := time.Now()
-	terr := r.gatewayClient(ctx, g).TestConnection(ctx)
+	terr := r.buildGatewayModels(ctx, g).TestConnection(ctx)
 	ms := int(time.Since(start).Milliseconds())
 	latency := &ms
 	if terr != nil {
