@@ -8,6 +8,8 @@ mutation RegisterGatewayConnectionEntry($input: RegisterGatewayConnectionInput!)
     id
     name
     endpoint
+    publicUrl
+    isDefault
     status
     loadBalanceStrategy
     createdAt

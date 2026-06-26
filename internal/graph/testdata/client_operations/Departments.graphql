@@ -9,5 +9,6 @@ query Departments {
     tenantId
     name
     litellmTeamId
+    gatewayConnectionId
     createdAt
   }

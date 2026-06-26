@@ -8,6 +8,8 @@ query GatewayConnectionsList {
     id
     name
     endpoint
+    publicUrl
+    isDefault
     status
     loadBalanceStrategy
     createdAt

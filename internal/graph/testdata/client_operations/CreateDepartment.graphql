@@ -9,5 +9,6 @@ mutation CreateDepartment($input: CreateDepartmentInput!) {
     tenantId
     name
     litellmTeamId
+    gatewayConnectionId
     createdAt
   }
