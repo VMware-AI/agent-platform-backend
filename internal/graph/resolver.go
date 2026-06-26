@@ -57,13 +57,14 @@ type Resolver struct {
 	Secrets secrets.Resolver
 	// GatewayURL is the LLM gateway base URL injected into provisioned VMs.
 	GatewayURL string
-	// InstallVars resolves {{PLACEHOLDER}} tokens in AgentTemplate.install_command
-	// (e.g. AGENT_PKG_BASE_URL, AGENT_USER) when returning catalog entries.
+	// InstallVars holds the STATIC env-derived {{PLACEHOLDER}} tokens for
+	// AgentTemplate.install_command (currently just AGENT_PKG_BASE_URL). AGENT_USER
+	// is NOT here — it is a DB platform setting merged in per-request by
+	// renderInstallVars (LLD-13).
 	InstallVars map[string]string
-	// VCenterConnect dials vCenter; nil disables deploy.
+	// VCenterConnect dials vCenter; nil disables deploy. TLS-skip is per-pool
+	// (ResourcePool.insecure, LLD-13), passed into each connect call.
 	VCenterConnect VCenterConnector
-	// VCenterInsecure skips vCenter TLS verification (air-gap self-signed only).
-	VCenterInsecure bool
 	// AgentMgr issues VM enrollments + processes heartbeats (LLD-08); nil disables
 	// agent-manager (deploy then injects no enroll token).
 	AgentMgr *agentmgr.Service

@@ -240,6 +240,7 @@ input CreateResourcePoolInput {
 	contentLibraryName: String
 	datacenterCount: Int
 	clusterCount: Int
+	insecure: Boolean
 	username: String
 	password: String
 	secretRef: String
@@ -627,6 +628,7 @@ type Mutation {
 	deleteResourcePool(id: ID!): DeleteResourcePoolPayload! @hasRole(any: [admin])
 	testResourcePoolConnection(input: TestResourcePoolConnectionInput!): ResourcePoolConnectionTest! @hasRole(any: [admin])
 	syncResourcePool(id: ID!): SyncResourcePoolPayload! @hasRole(any: [admin])
+	updatePlatformSettings(input: UpdatePlatformSettingsInput!): PlatformSettings! @hasRole(any: [admin])
 	issueVirtualKey(input: IssueVirtualKeyInput!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
 	revokeVirtualKey(id: ID!): Boolean! @hasPermission(perm: "key:manage")
 	regenerateVirtualKey(id: ID!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
@@ -709,6 +711,9 @@ type Permission {
 	key: String!
 	description: String
 }
+type PlatformSettings {
+	agentUser: String!
+}
 enum PoolConnectionStatus {
 	CONNECTED
 	DISCONNECTED
@@ -752,6 +757,7 @@ type Query {
 	userRoles(userId: ID!): [CustomRole!]! @hasRole(any: [admin])
 	resourcePools(filter: ResourcePoolFilter, pagination: Pagination, sort: ResourcePoolSort): ResourcePoolConnection! @hasRole(any: [admin])
 	resourcePool(id: ID!): ResourcePool @hasRole(any: [admin])
+	platformSettings: PlatformSettings! @hasRole(any: [admin])
 	virtualKeys(userId: ID): [VirtualKey!]! @hasRole(any: [admin])
 }
 type RateLimitPolicy {
@@ -857,6 +863,7 @@ type ResourcePool {
 	name: String!
 	endpoint: String!
 	contentLibraryName: String!
+	insecure: Boolean!
 	connectionStatus: PoolConnectionStatus!
 	datacenterCount: Int!
 	clusterCount: Int!
@@ -998,12 +1005,16 @@ input UpdateModelRouteInput {
 	uiStrategy: ModelRouteStrategy
 	enabled: Boolean
 }
+input UpdatePlatformSettingsInput {
+	agentUser: String
+}
 input UpdateResourcePoolInput {
 	name: String
 	endpoint: String
 	contentLibraryName: String
 	datacenterCount: Int
 	clusterCount: Int
+	insecure: Boolean
 	username: String
 	password: String
 	secretRef: String

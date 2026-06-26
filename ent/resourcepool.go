@@ -34,6 +34,8 @@ type ResourcePool struct {
 	ContentLibraryName string `json:"content_library_name,omitempty"`
 	// SecretRef holds the value of the "secret_ref" field.
 	SecretRef string `json:"secret_ref,omitempty"`
+	// Insecure holds the value of the "insecure" field.
+	Insecure bool `json:"insecure,omitempty"`
 	// DatacenterCount holds the value of the "datacenter_count" field.
 	DatacenterCount int `json:"datacenter_count,omitempty"`
 	// ClusterCount holds the value of the "cluster_count" field.
@@ -58,6 +60,8 @@ func (*ResourcePool) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case resourcepool.FieldTenantID, resourcepool.FieldEnvironmentID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case resourcepool.FieldInsecure:
+			values[i] = new(sql.NullBool)
 		case resourcepool.FieldDatacenterCount, resourcepool.FieldClusterCount, resourcepool.FieldHostCount, resourcepool.FieldVMCount:
 			values[i] = new(sql.NullInt64)
 		case resourcepool.FieldName, resourcepool.FieldKind, resourcepool.FieldEndpoint, resourcepool.FieldStatus, resourcepool.FieldContentLibraryName, resourcepool.FieldSecretRef:
@@ -134,6 +138,12 @@ func (_m *ResourcePool) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field secret_ref", values[i])
 			} else if value.Valid {
 				_m.SecretRef = value.String
+			}
+		case resourcepool.FieldInsecure:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field insecure", values[i])
+			} else if value.Valid {
+				_m.Insecure = value.Bool
 			}
 		case resourcepool.FieldDatacenterCount:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -239,6 +249,9 @@ func (_m *ResourcePool) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("secret_ref=")
 	builder.WriteString(_m.SecretRef)
+	builder.WriteString(", ")
+	builder.WriteString("insecure=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Insecure))
 	builder.WriteString(", ")
 	builder.WriteString("datacenter_count=")
 	builder.WriteString(fmt.Sprintf("%v", _m.DatacenterCount))

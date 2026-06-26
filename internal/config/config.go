@@ -16,9 +16,6 @@ type Config struct {
 	RedisURL    string // redis://...     (empty => in-memory session store)
 	SessionTTL  int    // seconds
 	Env         string // dev | prod
-	// VCenterInsecure skips vCenter TLS verification. Default false (verify on);
-	// opt in only for air-gapped vCenters with a pinned/self-signed internal CA.
-	VCenterInsecure bool
 	// DBAutoMigrate runs ent auto-migration on startup. Default on for dev, OFF
 	// for prod — prod must use reviewed versioned migrations, never auto-alter
 	// the live schema on boot.
@@ -36,9 +33,6 @@ type Config struct {
 	// substituted for {{AGENT_PKG_BASE_URL}} in catalog install commands. Empty
 	// leaves the placeholder intact (operator must configure the mirror).
 	AgentPkgBaseURL string
-	// AgentUser is the OS user that runs installed agents, substituted for
-	// {{AGENT_USER}} in catalog install commands. Defaults to "agent".
-	AgentUser string
 	// EnvScopeEnabled turns on environment (env_scope) filtering on top of tenant
 	// isolation (LLD-10 §2.3). OFF by default — the tables/columns exist but env
 	// filtering only activates once the frontend X-Environment contract is ready.
@@ -65,7 +59,6 @@ func Load() (*Config, error) {
 	if c.Env != "dev" && c.Env != "prod" {
 		return nil, fmt.Errorf("APP_ENV must be dev|prod, got %q", c.Env)
 	}
-	c.VCenterInsecure = getenv("VCENTER_INSECURE", "false") == "true"
 	defAutoMigrate := "false"
 	if c.Env == "dev" {
 		defAutoMigrate = "true"
@@ -86,7 +79,6 @@ func Load() (*Config, error) {
 	c.ReconcileInterval = ri
 	c.ReconcilePrune = getenv("RECONCILE_PRUNE", "false") == "true"
 	c.AgentPkgBaseURL = strings.TrimRight(os.Getenv("AGENT_PKG_BASE_URL"), "/")
-	c.AgentUser = getenv("AGENT_USER", "agent")
 	c.EnvScopeEnabled = getenv("ENV_SCOPE_ENABLED", "false") == "true"
 	return c, nil
 }

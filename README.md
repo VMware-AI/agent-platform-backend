@@ -65,7 +65,6 @@ dev/prod 行为不同的用 ✅ / ⚠️ 标注。
 | `SESSION_TTL_SECONDS` | `28800`（8h） | 否 | 整数，>0；非整数或 ≤0 fatal |
 | `ALLOWED_ORIGINS` | `http://localhost:5173,https://console.example.com` | dev 否 / prod 是（跨域 CSRF 放行） | 逗号分隔；同源请求始终放行 |
 | `DB_AUTO_MIGRATE` | `true` \| `false` | 否（dev 默认 `true`，prod 默认 `false`） | dev 启动自动改表；prod 必须关，改用 Atlas 版本化迁移 |
-| `VCENTER_INSECURE` | `false` | 否 | `true` → 跳过 vCenter TLS 校验（仅用于自签/内网 CA 的离线 vCenter） |
 | `ADMIN_BOOTSTRAP_PASSWORD` | `AdminLocal123!` | prod 是（dev 否） | 空库时种子 admin 密码；dev 不设会用 `ChangeMe123!` 并强制首登改密 |
 | `LITELLM_BASE_URL` | `http://localhost:4000` | 否 | 空 → 不启用模型网关（`upsertUpstream`/`issueVirtualKey` 等 resolver 拿不到 client） |
 | `LITELLM_MASTER_KEY` | `sk-local-master-…` | 与上一行同时设 | litellm admin API 的 master key（与 litellm 服务端 `LITELLM_MASTER_KEY` 必须一致） |
@@ -75,10 +74,11 @@ dev/prod 行为不同的用 ✅ / ⚠️ 标注。
 | `RECONCILE_INTERVAL_SECONDS` | `300` | 否（默认 `0`=关） | 网关 key 与治理表的对账周期；>0 且配了 litellm 才生效 |
 | `RECONCILE_PRUNE` | `false` | 否 | `true` → 对账时删除孤儿/吊销陈旧行（默认只报告，drift-safe） |
 | `AGENT_PKG_BASE_URL` | `https://mirror.example.com/agent-pkgs` | 否 | 离线镜像基址，替换 catalog 安装命令里的 `{{AGENT_PKG_BASE_URL}}`；空 → 占位符保留 |
-| `AGENT_USER` | `agent` | 否（默认 `agent`） | 安装后跑 agent 的 OS 用户，替换 `{{AGENT_USER}}` |
 | `ENV_SCOPE_ENABLED` | `false` | 否 | LLD-10 环境隔离；前端 `X-Environment` 契约未就绪前保持关 |
 | `ATLAS_DEV_URL` | `postgres://localhost:5432/atlas_dev` | 仅 `make migrate-diff` 时 | Atlas diff 的 dev DB；运行 backend 不读 |
 | `*` (任意) | — | — | `internal/secrets/resolver.go` 允许把任意环境变量名写进 vaultwarden 凭据引用（`vaultwarden://env:USER:PASS:APIKEY` 形式），用于上游 API key 注入 |
+
+> `AGENT_USER`（装机命令里 `{{AGENT_USER}}` 的 OS 用户）不再是启动 env——它是数据库平台设置（LLD-13），在 console「平台设置」页里改，默认 `agent`。
 
 dev 最小集（开箱即跑）：
 

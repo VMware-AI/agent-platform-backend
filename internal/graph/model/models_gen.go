@@ -249,6 +249,7 @@ type CreateResourcePoolInput struct {
 	ContentLibraryName *string `json:"contentLibraryName,omitempty"`
 	DatacenterCount    *int    `json:"datacenterCount,omitempty"`
 	ClusterCount       *int    `json:"clusterCount,omitempty"`
+	Insecure           *bool   `json:"insecure,omitempty"`
 	Username           *string `json:"username,omitempty"`
 	Password           *string `json:"password,omitempty"`
 	SecretRef          *string `json:"secretRef,omitempty"`
@@ -610,6 +611,10 @@ type Permission struct {
 	Description *string `json:"description,omitempty"`
 }
 
+type PlatformSettings struct {
+	AgentUser string `json:"agentUser"`
+}
+
 type Query struct {
 }
 
@@ -723,6 +728,7 @@ type ResourcePool struct {
 	Name               string                `json:"name"`
 	Endpoint           string                `json:"endpoint"`
 	ContentLibraryName string                `json:"contentLibraryName"`
+	Insecure           bool                  `json:"insecure"`
 	ConnectionStatus   PoolConnectionStatus  `json:"connectionStatus"`
 	DatacenterCount    int                   `json:"datacenterCount"`
 	ClusterCount       int                   `json:"clusterCount"`
@@ -843,12 +849,17 @@ type UpdateModelRouteInput struct {
 	Enabled          *bool               `json:"enabled,omitempty"`
 }
 
+type UpdatePlatformSettingsInput struct {
+	AgentUser *string `json:"agentUser,omitempty"`
+}
+
 type UpdateResourcePoolInput struct {
 	Name               *string `json:"name,omitempty"`
 	Endpoint           *string `json:"endpoint,omitempty"`
 	ContentLibraryName *string `json:"contentLibraryName,omitempty"`
 	DatacenterCount    *int    `json:"datacenterCount,omitempty"`
 	ClusterCount       *int    `json:"clusterCount,omitempty"`
+	Insecure           *bool   `json:"insecure,omitempty"`
 	Username           *string `json:"username,omitempty"`
 	Password           *string `json:"password,omitempty"`
 	SecretRef          *string `json:"secretRef,omitempty"`

@@ -85,6 +85,11 @@ func SecretRef(v string) predicate.ResourcePool {
 	return predicate.ResourcePool(sql.FieldEQ(FieldSecretRef, v))
 }
 
+// Insecure applies equality check predicate on the "insecure" field. It's identical to InsecureEQ.
+func Insecure(v bool) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldEQ(FieldInsecure, v))
+}
+
 // DatacenterCount applies equality check predicate on the "datacenter_count" field. It's identical to DatacenterCountEQ.
 func DatacenterCount(v int) predicate.ResourcePool {
 	return predicate.ResourcePool(sql.FieldEQ(FieldDatacenterCount, v))
@@ -518,6 +523,16 @@ func SecretRefEqualFold(v string) predicate.ResourcePool {
 // SecretRefContainsFold applies the ContainsFold predicate on the "secret_ref" field.
 func SecretRefContainsFold(v string) predicate.ResourcePool {
 	return predicate.ResourcePool(sql.FieldContainsFold(FieldSecretRef, v))
+}
+
+// InsecureEQ applies the EQ predicate on the "insecure" field.
+func InsecureEQ(v bool) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldEQ(FieldInsecure, v))
+}
+
+// InsecureNEQ applies the NEQ predicate on the "insecure" field.
+func InsecureNEQ(v bool) predicate.ResourcePool {
+	return predicate.ResourcePool(sql.FieldNEQ(FieldInsecure, v))
 }
 
 // DatacenterCountEQ applies the EQ predicate on the "datacenter_count" field.

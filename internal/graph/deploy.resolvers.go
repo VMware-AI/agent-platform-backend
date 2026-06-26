@@ -126,7 +126,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		return nil, fmt.Errorf("create agent: %w", err)
 	}
 
-	conn, err := r.VCenterConnect(ctx, pool.Endpoint, cred.Username, cred.Password, r.VCenterInsecure)
+	conn, err := r.VCenterConnect(ctx, pool.Endpoint, cred.Username, cred.Password, pool.Insecure)
 	if err != nil {
 		r.deleteAgentRow(ctx, ag)
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)

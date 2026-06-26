@@ -28,6 +28,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/rotationcommand"
 	"github.com/VMware-AI/agent-platform-backend/ent/routertier"
 	"github.com/VMware-AI/agent-platform-backend/ent/schema"
+	"github.com/VMware-AI/agent-platform-backend/ent/setting"
 	"github.com/VMware-AI/agent-platform-backend/ent/skill"
 	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
 	"github.com/VMware-AI/agent-platform-backend/ent/tokenusage"
@@ -532,26 +533,30 @@ func init() {
 	resourcepoolDescContentLibraryName := resourcepoolFields[5].Descriptor()
 	// resourcepool.DefaultContentLibraryName holds the default value on creation for the content_library_name field.
 	resourcepool.DefaultContentLibraryName = resourcepoolDescContentLibraryName.Default.(string)
+	// resourcepoolDescInsecure is the schema descriptor for insecure field.
+	resourcepoolDescInsecure := resourcepoolFields[7].Descriptor()
+	// resourcepool.DefaultInsecure holds the default value on creation for the insecure field.
+	resourcepool.DefaultInsecure = resourcepoolDescInsecure.Default.(bool)
 	// resourcepoolDescDatacenterCount is the schema descriptor for datacenter_count field.
-	resourcepoolDescDatacenterCount := resourcepoolFields[7].Descriptor()
+	resourcepoolDescDatacenterCount := resourcepoolFields[8].Descriptor()
 	// resourcepool.DefaultDatacenterCount holds the default value on creation for the datacenter_count field.
 	resourcepool.DefaultDatacenterCount = resourcepoolDescDatacenterCount.Default.(int)
 	// resourcepool.DatacenterCountValidator is a validator for the "datacenter_count" field. It is called by the builders before save.
 	resourcepool.DatacenterCountValidator = resourcepoolDescDatacenterCount.Validators[0].(func(int) error)
 	// resourcepoolDescClusterCount is the schema descriptor for cluster_count field.
-	resourcepoolDescClusterCount := resourcepoolFields[8].Descriptor()
+	resourcepoolDescClusterCount := resourcepoolFields[9].Descriptor()
 	// resourcepool.DefaultClusterCount holds the default value on creation for the cluster_count field.
 	resourcepool.DefaultClusterCount = resourcepoolDescClusterCount.Default.(int)
 	// resourcepool.ClusterCountValidator is a validator for the "cluster_count" field. It is called by the builders before save.
 	resourcepool.ClusterCountValidator = resourcepoolDescClusterCount.Validators[0].(func(int) error)
 	// resourcepoolDescHostCount is the schema descriptor for host_count field.
-	resourcepoolDescHostCount := resourcepoolFields[9].Descriptor()
+	resourcepoolDescHostCount := resourcepoolFields[10].Descriptor()
 	// resourcepool.DefaultHostCount holds the default value on creation for the host_count field.
 	resourcepool.DefaultHostCount = resourcepoolDescHostCount.Default.(int)
 	// resourcepool.HostCountValidator is a validator for the "host_count" field. It is called by the builders before save.
 	resourcepool.HostCountValidator = resourcepoolDescHostCount.Validators[0].(func(int) error)
 	// resourcepoolDescVMCount is the schema descriptor for vm_count field.
-	resourcepoolDescVMCount := resourcepoolFields[10].Descriptor()
+	resourcepoolDescVMCount := resourcepoolFields[11].Descriptor()
 	// resourcepool.DefaultVMCount holds the default value on creation for the vm_count field.
 	resourcepool.DefaultVMCount = resourcepoolDescVMCount.Default.(int)
 	// resourcepool.VMCountValidator is a validator for the "vm_count" field. It is called by the builders before save.
@@ -633,6 +638,29 @@ func init() {
 	routertierDescID := routertierFields[0].Descriptor()
 	// routertier.DefaultID holds the default value on creation for the id field.
 	routertier.DefaultID = routertierDescID.Default.(func() uuid.UUID)
+	settingMixin := schema.Setting{}.Mixin()
+	settingMixinFields0 := settingMixin[0].Fields()
+	_ = settingMixinFields0
+	settingFields := schema.Setting{}.Fields()
+	_ = settingFields
+	// settingDescCreatedAt is the schema descriptor for created_at field.
+	settingDescCreatedAt := settingMixinFields0[0].Descriptor()
+	// setting.DefaultCreatedAt holds the default value on creation for the created_at field.
+	setting.DefaultCreatedAt = settingDescCreatedAt.Default.(func() time.Time)
+	// settingDescUpdatedAt is the schema descriptor for updated_at field.
+	settingDescUpdatedAt := settingMixinFields0[1].Descriptor()
+	// setting.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	setting.DefaultUpdatedAt = settingDescUpdatedAt.Default.(func() time.Time)
+	// setting.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	setting.UpdateDefaultUpdatedAt = settingDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// settingDescKey is the schema descriptor for key field.
+	settingDescKey := settingFields[1].Descriptor()
+	// setting.KeyValidator is a validator for the "key" field. It is called by the builders before save.
+	setting.KeyValidator = settingDescKey.Validators[0].(func(string) error)
+	// settingDescID is the schema descriptor for id field.
+	settingDescID := settingFields[0].Descriptor()
+	// setting.DefaultID holds the default value on creation for the id field.
+	setting.DefaultID = settingDescID.Default.(func() uuid.UUID)
 	skillMixin := schema.Skill{}.Mixin()
 	skillMixinFields0 := skillMixin[0].Fields()
 	_ = skillMixinFields0

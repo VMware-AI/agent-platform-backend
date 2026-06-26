@@ -485,6 +485,7 @@ var (
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"connected", "disconnected", "error"}, Default: "disconnected"},
 		{Name: "content_library_name", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "secret_ref", Type: field.TypeString, Nullable: true},
+		{Name: "insecure", Type: field.TypeBool, Default: false},
 		{Name: "datacenter_count", Type: field.TypeInt, Default: 0},
 		{Name: "cluster_count", Type: field.TypeInt, Default: 0},
 		{Name: "host_count", Type: field.TypeInt, Default: 0},
@@ -593,6 +594,20 @@ var (
 				Columns: []*schema.Column{RouterTiersColumns[3]},
 			},
 		},
+	}
+	// SettingsColumns holds the columns for the "settings" table.
+	SettingsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "key", Type: field.TypeString, Unique: true},
+		{Name: "value", Type: field.TypeString, Nullable: true},
+	}
+	// SettingsTable holds the schema information for the "settings" table.
+	SettingsTable = &schema.Table{
+		Name:       "settings",
+		Columns:    SettingsColumns,
+		PrimaryKey: []*schema.Column{SettingsColumns[0]},
 	}
 	// SkillsColumns holds the columns for the "skills" table.
 	SkillsColumns = []*schema.Column{
@@ -835,6 +850,7 @@ var (
 		RolesTable,
 		RotationCommandsTable,
 		RouterTiersTable,
+		SettingsTable,
 		SkillsTable,
 		TenantsTable,
 		TokenUsagesTable,
