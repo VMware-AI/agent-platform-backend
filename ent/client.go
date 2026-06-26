@@ -38,6 +38,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/role"
 	"github.com/VMware-AI/agent-platform-backend/ent/rotationcommand"
 	"github.com/VMware-AI/agent-platform-backend/ent/routertier"
+	"github.com/VMware-AI/agent-platform-backend/ent/setting"
 	"github.com/VMware-AI/agent-platform-backend/ent/skill"
 	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
 	"github.com/VMware-AI/agent-platform-backend/ent/tokenusage"
@@ -95,6 +96,8 @@ type Client struct {
 	RotationCommand *RotationCommandClient
 	// RouterTier is the client for interacting with the RouterTier builders.
 	RouterTier *RouterTierClient
+	// Setting is the client for interacting with the Setting builders.
+	Setting *SettingClient
 	// Skill is the client for interacting with the Skill builders.
 	Skill *SkillClient
 	// Tenant is the client for interacting with the Tenant builders.
@@ -140,6 +143,7 @@ func (c *Client) init() {
 	c.Role = NewRoleClient(c.config)
 	c.RotationCommand = NewRotationCommandClient(c.config)
 	c.RouterTier = NewRouterTierClient(c.config)
+	c.Setting = NewSettingClient(c.config)
 	c.Skill = NewSkillClient(c.config)
 	c.Tenant = NewTenantClient(c.config)
 	c.TokenUsage = NewTokenUsageClient(c.config)
@@ -260,6 +264,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Role:               NewRoleClient(cfg),
 		RotationCommand:    NewRotationCommandClient(cfg),
 		RouterTier:         NewRouterTierClient(cfg),
+		Setting:            NewSettingClient(cfg),
 		Skill:              NewSkillClient(cfg),
 		Tenant:             NewTenantClient(cfg),
 		TokenUsage:         NewTokenUsageClient(cfg),
@@ -307,6 +312,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Role:               NewRoleClient(cfg),
 		RotationCommand:    NewRotationCommandClient(cfg),
 		RouterTier:         NewRouterTierClient(cfg),
+		Setting:            NewSettingClient(cfg),
 		Skill:              NewSkillClient(cfg),
 		Tenant:             NewTenantClient(cfg),
 		TokenUsage:         NewTokenUsageClient(cfg),
@@ -346,8 +352,8 @@ func (c *Client) Use(hooks ...Hook) {
 		c.Artifact, c.AuditLog, c.Department, c.Environment, c.GatewayConnection,
 		c.Image, c.Membership, c.ModelRoute, c.OvaTemplateFamily, c.OvaTemplateVersion,
 		c.Permission, c.RateLimitPolicy, c.RequestLog, c.ResourcePool, c.Role,
-		c.RotationCommand, c.RouterTier, c.Skill, c.Tenant, c.TokenUsage, c.Upstream,
-		c.User, c.VirtualKey,
+		c.RotationCommand, c.RouterTier, c.Setting, c.Skill, c.Tenant, c.TokenUsage,
+		c.Upstream, c.User, c.VirtualKey,
 	} {
 		n.Use(hooks...)
 	}
@@ -361,8 +367,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.Artifact, c.AuditLog, c.Department, c.Environment, c.GatewayConnection,
 		c.Image, c.Membership, c.ModelRoute, c.OvaTemplateFamily, c.OvaTemplateVersion,
 		c.Permission, c.RateLimitPolicy, c.RequestLog, c.ResourcePool, c.Role,
-		c.RotationCommand, c.RouterTier, c.Skill, c.Tenant, c.TokenUsage, c.Upstream,
-		c.User, c.VirtualKey,
+		c.RotationCommand, c.RouterTier, c.Setting, c.Skill, c.Tenant, c.TokenUsage,
+		c.Upstream, c.User, c.VirtualKey,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -415,6 +421,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.RotationCommand.mutate(ctx, m)
 	case *RouterTierMutation:
 		return c.RouterTier.mutate(ctx, m)
+	case *SettingMutation:
+		return c.Setting.mutate(ctx, m)
 	case *SkillMutation:
 		return c.Skill.mutate(ctx, m)
 	case *TenantMutation:
@@ -3470,6 +3478,139 @@ func (c *RouterTierClient) mutate(ctx context.Context, m *RouterTierMutation) (V
 	}
 }
 
+// SettingClient is a client for the Setting schema.
+type SettingClient struct {
+	config
+}
+
+// NewSettingClient returns a client for the Setting from the given config.
+func NewSettingClient(c config) *SettingClient {
+	return &SettingClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `setting.Hooks(f(g(h())))`.
+func (c *SettingClient) Use(hooks ...Hook) {
+	c.hooks.Setting = append(c.hooks.Setting, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `setting.Intercept(f(g(h())))`.
+func (c *SettingClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Setting = append(c.inters.Setting, interceptors...)
+}
+
+// Create returns a builder for creating a Setting entity.
+func (c *SettingClient) Create() *SettingCreate {
+	mutation := newSettingMutation(c.config, OpCreate)
+	return &SettingCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Setting entities.
+func (c *SettingClient) CreateBulk(builders ...*SettingCreate) *SettingCreateBulk {
+	return &SettingCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *SettingClient) MapCreateBulk(slice any, setFunc func(*SettingCreate, int)) *SettingCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &SettingCreateBulk{err: fmt.Errorf("calling to SettingClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*SettingCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &SettingCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Setting.
+func (c *SettingClient) Update() *SettingUpdate {
+	mutation := newSettingMutation(c.config, OpUpdate)
+	return &SettingUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *SettingClient) UpdateOne(_m *Setting) *SettingUpdateOne {
+	mutation := newSettingMutation(c.config, OpUpdateOne, withSetting(_m))
+	return &SettingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *SettingClient) UpdateOneID(id uuid.UUID) *SettingUpdateOne {
+	mutation := newSettingMutation(c.config, OpUpdateOne, withSettingID(id))
+	return &SettingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Setting.
+func (c *SettingClient) Delete() *SettingDelete {
+	mutation := newSettingMutation(c.config, OpDelete)
+	return &SettingDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *SettingClient) DeleteOne(_m *Setting) *SettingDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *SettingClient) DeleteOneID(id uuid.UUID) *SettingDeleteOne {
+	builder := c.Delete().Where(setting.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &SettingDeleteOne{builder}
+}
+
+// Query returns a query builder for Setting.
+func (c *SettingClient) Query() *SettingQuery {
+	return &SettingQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeSetting},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Setting entity by its id.
+func (c *SettingClient) Get(ctx context.Context, id uuid.UUID) (*Setting, error) {
+	return c.Query().Where(setting.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *SettingClient) GetX(ctx context.Context, id uuid.UUID) *Setting {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *SettingClient) Hooks() []Hook {
+	return c.hooks.Setting
+}
+
+// Interceptors returns the client interceptors.
+func (c *SettingClient) Interceptors() []Interceptor {
+	return c.inters.Setting
+}
+
+func (c *SettingClient) mutate(ctx context.Context, m *SettingMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&SettingCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&SettingUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&SettingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&SettingDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Setting mutation op: %q", m.Op())
+	}
+}
+
 // SkillClient is a client for the Skill schema.
 type SkillClient struct {
 	config
@@ -4290,14 +4431,14 @@ type (
 		Agent, AgentConfig, AgentEnrollment, AgentHeartbeat, AgentTemplate, Artifact,
 		AuditLog, Department, Environment, GatewayConnection, Image, Membership,
 		ModelRoute, OvaTemplateFamily, OvaTemplateVersion, Permission, RateLimitPolicy,
-		RequestLog, ResourcePool, Role, RotationCommand, RouterTier, Skill, Tenant,
-		TokenUsage, Upstream, User, VirtualKey []ent.Hook
+		RequestLog, ResourcePool, Role, RotationCommand, RouterTier, Setting, Skill,
+		Tenant, TokenUsage, Upstream, User, VirtualKey []ent.Hook
 	}
 	inters struct {
 		Agent, AgentConfig, AgentEnrollment, AgentHeartbeat, AgentTemplate, Artifact,
 		AuditLog, Department, Environment, GatewayConnection, Image, Membership,
 		ModelRoute, OvaTemplateFamily, OvaTemplateVersion, Permission, RateLimitPolicy,
-		RequestLog, ResourcePool, Role, RotationCommand, RouterTier, Skill, Tenant,
-		TokenUsage, Upstream, User, VirtualKey []ent.Interceptor
+		RequestLog, ResourcePool, Role, RotationCommand, RouterTier, Setting, Skill,
+		Tenant, TokenUsage, Upstream, User, VirtualKey []ent.Interceptor
 	}
 )

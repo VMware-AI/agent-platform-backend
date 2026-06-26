@@ -104,10 +104,11 @@ func main() {
 		return vcenter.Connect(ctx, endpoint, user, pass, insecure)
 	}
 
-	// Placeholder values for catalog install_command rendering. AGENT_PKG_BASE_URL
-	// is included only when set, so an unconfigured mirror leaves the placeholder
-	// visible rather than blanking the command.
-	installVars := map[string]string{"AGENT_USER": cfg.AgentUser}
+	// Static placeholder values for catalog install_command rendering. Only
+	// AGENT_PKG_BASE_URL (and then only when set, so an unconfigured mirror leaves
+	// the placeholder visible). AGENT_USER is NOT here — it is a DB platform
+	// setting resolved per-request (LLD-13), not a startup env.
+	installVars := map[string]string{}
 	if cfg.AgentPkgBaseURL != "" {
 		installVars["AGENT_PKG_BASE_URL"] = cfg.AgentPkgBaseURL
 	}

@@ -72,6 +72,9 @@ type RotationCommand func(*sql.Selector)
 // RouterTier is the predicate function for routertier builders.
 type RouterTier func(*sql.Selector)
 
+// Setting is the predicate function for setting builders.
+type Setting func(*sql.Selector)
+
 // Skill is the predicate function for skill builders.
 type Skill func(*sql.Selector)
 

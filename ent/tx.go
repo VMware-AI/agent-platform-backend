@@ -56,6 +56,8 @@ type Tx struct {
 	RotationCommand *RotationCommandClient
 	// RouterTier is the client for interacting with the RouterTier builders.
 	RouterTier *RouterTierClient
+	// Setting is the client for interacting with the Setting builders.
+	Setting *SettingClient
 	// Skill is the client for interacting with the Skill builders.
 	Skill *SkillClient
 	// Tenant is the client for interacting with the Tenant builders.
@@ -221,6 +223,7 @@ func (tx *Tx) init() {
 	tx.Role = NewRoleClient(tx.config)
 	tx.RotationCommand = NewRotationCommandClient(tx.config)
 	tx.RouterTier = NewRouterTierClient(tx.config)
+	tx.Setting = NewSettingClient(tx.config)
 	tx.Skill = NewSkillClient(tx.config)
 	tx.Tenant = NewTenantClient(tx.config)
 	tx.TokenUsage = NewTokenUsageClient(tx.config)

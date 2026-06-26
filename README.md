@@ -75,10 +75,11 @@ dev/prod 行为不同的用 ✅ / ⚠️ 标注。
 | `RECONCILE_INTERVAL_SECONDS` | `300` | 否（默认 `0`=关） | 网关 key 与治理表的对账周期；>0 且配了 litellm 才生效 |
 | `RECONCILE_PRUNE` | `false` | 否 | `true` → 对账时删除孤儿/吊销陈旧行（默认只报告，drift-safe） |
 | `AGENT_PKG_BASE_URL` | `https://mirror.example.com/agent-pkgs` | 否 | 离线镜像基址，替换 catalog 安装命令里的 `{{AGENT_PKG_BASE_URL}}`；空 → 占位符保留 |
-| `AGENT_USER` | `agent` | 否（默认 `agent`） | 安装后跑 agent 的 OS 用户，替换 `{{AGENT_USER}}` |
 | `ENV_SCOPE_ENABLED` | `false` | 否 | LLD-10 环境隔离；前端 `X-Environment` 契约未就绪前保持关 |
 | `ATLAS_DEV_URL` | `postgres://localhost:5432/atlas_dev` | 仅 `make migrate-diff` 时 | Atlas diff 的 dev DB；运行 backend 不读 |
 | `*` (任意) | — | — | `internal/secrets/resolver.go` 允许把任意环境变量名写进 vaultwarden 凭据引用（`vaultwarden://env:USER:PASS:APIKEY` 形式），用于上游 API key 注入 |
+
+> `AGENT_USER`（装机命令里 `{{AGENT_USER}}` 的 OS 用户）不再是启动 env——它是数据库平台设置（LLD-13），在 console「平台设置」页里改，默认 `agent`。
 
 dev 最小集（开箱即跑）：
 

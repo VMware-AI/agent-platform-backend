@@ -65,12 +65,14 @@ func TestUpsertAgentTemplate(t *testing.T) {
 	}
 }
 
-// AgentTemplates resolves {{PLACEHOLDER}} tokens in install_command against the
-// resolver's InstallVars before returning them (LLD-05 §1).
+// AgentTemplates resolves {{PLACEHOLDER}} tokens in install_command (LLD-05 §1):
+// AGENT_PKG_BASE_URL from the static InstallVars, AGENT_USER from the DB platform
+// setting (LLD-13 — defaults to "agent" when unset). See settings_test.go for the
+// DB-driven AGENT_USER path.
 func TestAgentTemplates_ResolvesInstallPlaceholders(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()
-	r.InstallVars = map[string]string{"AGENT_PKG_BASE_URL": "http://mirror/agents", "AGENT_USER": "agent"}
+	r.InstallVars = map[string]string{"AGENT_PKG_BASE_URL": "http://mirror/agents"}
 	ctx := context.Background()
 	mr := &mutationResolver{r}
 	qr := &queryResolver{r}

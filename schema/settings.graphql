@@ -1,0 +1,21 @@
+# Platform-wide settings (LLD-13): operator-editable config that used to be a
+# backend startup env. Currently just agent_user — the OS account installed
+# agents run as (装机命令 su {{AGENT_USER}}).
+
+type PlatformSettings {
+  # OS user that runs installed agents on the VM. Defaults to "agent" when unset.
+  agentUser: String!
+}
+
+input UpdatePlatformSettingsInput {
+  # When provided, sets the agent OS user; omitted = unchanged. Must be non-empty.
+  agentUser: String
+}
+
+extend type Query {
+  platformSettings: PlatformSettings! @hasRole(any: [admin])
+}
+
+extend type Mutation {
+  updatePlatformSettings(input: UpdatePlatformSettingsInput!): PlatformSettings! @hasRole(any: [admin])
+}
