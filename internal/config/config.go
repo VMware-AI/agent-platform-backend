@@ -16,9 +16,6 @@ type Config struct {
 	RedisURL    string // redis://...     (empty => in-memory session store)
 	SessionTTL  int    // seconds
 	Env         string // dev | prod
-	// VCenterInsecure skips vCenter TLS verification. Default false (verify on);
-	// opt in only for air-gapped vCenters with a pinned/self-signed internal CA.
-	VCenterInsecure bool
 	// DBAutoMigrate runs ent auto-migration on startup. Default on for dev, OFF
 	// for prod — prod must use reviewed versioned migrations, never auto-alter
 	// the live schema on boot.
@@ -62,7 +59,6 @@ func Load() (*Config, error) {
 	if c.Env != "dev" && c.Env != "prod" {
 		return nil, fmt.Errorf("APP_ENV must be dev|prod, got %q", c.Env)
 	}
-	c.VCenterInsecure = getenv("VCENTER_INSECURE", "false") == "true"
 	defAutoMigrate := "false"
 	if c.Env == "dev" {
 		defAutoMigrate = "true"

@@ -482,6 +482,7 @@ var (
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"connected", "disconnected", "error"}, Default: "disconnected"},
 		{Name: "content_library_name", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "secret_ref", Type: field.TypeString, Nullable: true},
+		{Name: "insecure", Type: field.TypeBool, Default: false},
 		{Name: "datacenter_count", Type: field.TypeInt, Default: 0},
 		{Name: "cluster_count", Type: field.TypeInt, Default: 0},
 		{Name: "host_count", Type: field.TypeInt, Default: 0},

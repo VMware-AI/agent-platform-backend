@@ -14893,6 +14893,7 @@ type ResourcePoolMutation struct {
 	status               *resourcepool.Status
 	content_library_name *string
 	secret_ref           *string
+	insecure             *bool
 	datacenter_count     *int
 	adddatacenter_count  *int
 	cluster_count        *int
@@ -15328,6 +15329,42 @@ func (m *ResourcePoolMutation) ResetSecretRef() {
 	delete(m.clearedFields, resourcepool.FieldSecretRef)
 }
 
+// SetInsecure sets the "insecure" field.
+func (m *ResourcePoolMutation) SetInsecure(b bool) {
+	m.insecure = &b
+}
+
+// Insecure returns the value of the "insecure" field in the mutation.
+func (m *ResourcePoolMutation) Insecure() (r bool, exists bool) {
+	v := m.insecure
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInsecure returns the old "insecure" field's value of the ResourcePool entity.
+// If the ResourcePool object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ResourcePoolMutation) OldInsecure(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInsecure is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInsecure requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInsecure: %w", err)
+	}
+	return oldValue.Insecure, nil
+}
+
+// ResetInsecure resets all changes to the "insecure" field.
+func (m *ResourcePoolMutation) ResetInsecure() {
+	m.insecure = nil
+}
+
 // SetDatacenterCount sets the "datacenter_count" field.
 func (m *ResourcePoolMutation) SetDatacenterCount(i int) {
 	m.datacenter_count = &i
@@ -15733,7 +15770,7 @@ func (m *ResourcePoolMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ResourcePoolMutation) Fields() []string {
-	fields := make([]string, 0, 15)
+	fields := make([]string, 0, 16)
 	if m.created_at != nil {
 		fields = append(fields, resourcepool.FieldCreatedAt)
 	}
@@ -15757,6 +15794,9 @@ func (m *ResourcePoolMutation) Fields() []string {
 	}
 	if m.secret_ref != nil {
 		fields = append(fields, resourcepool.FieldSecretRef)
+	}
+	if m.insecure != nil {
+		fields = append(fields, resourcepool.FieldInsecure)
 	}
 	if m.datacenter_count != nil {
 		fields = append(fields, resourcepool.FieldDatacenterCount)
@@ -15803,6 +15843,8 @@ func (m *ResourcePoolMutation) Field(name string) (ent.Value, bool) {
 		return m.ContentLibraryName()
 	case resourcepool.FieldSecretRef:
 		return m.SecretRef()
+	case resourcepool.FieldInsecure:
+		return m.Insecure()
 	case resourcepool.FieldDatacenterCount:
 		return m.DatacenterCount()
 	case resourcepool.FieldClusterCount:
@@ -15842,6 +15884,8 @@ func (m *ResourcePoolMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldContentLibraryName(ctx)
 	case resourcepool.FieldSecretRef:
 		return m.OldSecretRef(ctx)
+	case resourcepool.FieldInsecure:
+		return m.OldInsecure(ctx)
 	case resourcepool.FieldDatacenterCount:
 		return m.OldDatacenterCount(ctx)
 	case resourcepool.FieldClusterCount:
@@ -15920,6 +15964,13 @@ func (m *ResourcePoolMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSecretRef(v)
+		return nil
+	case resourcepool.FieldInsecure:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInsecure(v)
 		return nil
 	case resourcepool.FieldDatacenterCount:
 		v, ok := value.(int)
@@ -16126,6 +16177,9 @@ func (m *ResourcePoolMutation) ResetField(name string) error {
 		return nil
 	case resourcepool.FieldSecretRef:
 		m.ResetSecretRef()
+		return nil
+	case resourcepool.FieldInsecure:
+		m.ResetInsecure()
 		return nil
 	case resourcepool.FieldDatacenterCount:
 		m.ResetDatacenterCount()

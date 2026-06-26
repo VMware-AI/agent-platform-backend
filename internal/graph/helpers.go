@@ -314,6 +314,7 @@ func toModelResourcePool(p *ent.ResourcePool) *model.ResourcePool {
 		Name:               p.Name,
 		Endpoint:           p.Endpoint,
 		ContentLibraryName: p.ContentLibraryName,
+		Insecure:           p.Insecure,
 		ConnectionStatus:   poolConnStatus(p.Status),
 		DatacenterCount:    p.DatacenterCount,
 		ClusterCount:       p.ClusterCount,
@@ -1142,7 +1143,7 @@ func (r *Resolver) connectPool(ctx context.Context, pool *ent.ResourcePool) (VCe
 	if err != nil {
 		return nil, fmt.Errorf("resolve credentials: %w", err)
 	}
-	return r.VCenterConnect(ctx, pool.Endpoint, cred.Username, cred.Password, r.VCenterInsecure)
+	return r.VCenterConnect(ctx, pool.Endpoint, cred.Username, cred.Password, pool.Insecure)
 }
 
 // clientIP extracts the remote address from the request in context.

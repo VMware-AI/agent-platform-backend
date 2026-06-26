@@ -248,6 +248,7 @@ type CreateResourcePoolInput struct {
 	ContentLibraryName *string `json:"contentLibraryName,omitempty"`
 	DatacenterCount    *int    `json:"datacenterCount,omitempty"`
 	ClusterCount       *int    `json:"clusterCount,omitempty"`
+	Insecure           *bool   `json:"insecure,omitempty"`
 	Username           *string `json:"username,omitempty"`
 	Password           *string `json:"password,omitempty"`
 	SecretRef          *string `json:"secretRef,omitempty"`
@@ -720,6 +721,7 @@ type ResourcePool struct {
 	Name               string                `json:"name"`
 	Endpoint           string                `json:"endpoint"`
 	ContentLibraryName string                `json:"contentLibraryName"`
+	Insecure           bool                  `json:"insecure"`
 	ConnectionStatus   PoolConnectionStatus  `json:"connectionStatus"`
 	DatacenterCount    int                   `json:"datacenterCount"`
 	ClusterCount       int                   `json:"clusterCount"`
@@ -850,6 +852,7 @@ type UpdateResourcePoolInput struct {
 	ContentLibraryName *string `json:"contentLibraryName,omitempty"`
 	DatacenterCount    *int    `json:"datacenterCount,omitempty"`
 	ClusterCount       *int    `json:"clusterCount,omitempty"`
+	Insecure           *bool   `json:"insecure,omitempty"`
 	Username           *string `json:"username,omitempty"`
 	Password           *string `json:"password,omitempty"`
 	SecretRef          *string `json:"secretRef,omitempty"`

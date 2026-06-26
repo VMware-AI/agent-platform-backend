@@ -647,6 +647,7 @@ type ComplexityRoot struct {
 		Endpoint           func(childComplexity int) int
 		EsxiHostCount      func(childComplexity int) int
 		ID                 func(childComplexity int) int
+		Insecure           func(childComplexity int) int
 		LastSyncedAt       func(childComplexity int) int
 		Name               func(childComplexity int) int
 		SyncStatus         func(childComplexity int) int
@@ -3994,6 +3995,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ResourcePool.ID(childComplexity), true
+	case "ResourcePool.insecure":
+		if e.ComplexityRoot.ResourcePool.Insecure == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ResourcePool.Insecure(childComplexity), true
 	case "ResourcePool.lastSyncedAt":
 		if e.ComplexityRoot.ResourcePool.LastSyncedAt == nil {
 			break
@@ -5981,6 +5988,8 @@ type ResourcePool {
   endpoint: String!
   # Content library the pool deploys OVA templates from (console 接入表单).
   contentLibraryName: String!
+  # Skip vCenter TLS verification for this pool (self-signed/internal CA). LLD-13.
+  insecure: Boolean!
   connectionStatus: PoolConnectionStatus!
   datacenterCount: Int!
   clusterCount: Int!
@@ -6015,6 +6024,8 @@ input CreateResourcePoolInput {
   contentLibraryName: String
   datacenterCount: Int
   clusterCount: Int
+  # 跳过 vCenter TLS 验证(自签名/内网 CA);省略 = false(默认验证)。LLD-13。
+  insecure: Boolean
   # vCenter (JVC) 凭据(可选;真机连接必填,前端表单可后补)。后端写入 secret store
   # (Vaultwarden)并只存返回的引用,明文不落库;优先于 secretRef。
   username: String
@@ -6029,6 +6040,8 @@ input UpdateResourcePoolInput {
   contentLibraryName: String
   datacenterCount: Int
   clusterCount: Int
+  # 跳过 vCenter TLS 验证(自签名/内网 CA);省略 = 不变。LLD-13。
+  insecure: Boolean
   # 重填凭据(轮换):同 create,写 secret store 后只存引用。
   username: String
   password: String
@@ -7242,6 +7255,8 @@ func (ec *executionContext) childFields_ResourcePool(ctx context.Context, field 
 		return ec.fieldContext_ResourcePool_endpoint(ctx, field)
 	case "contentLibraryName":
 		return ec.fieldContext_ResourcePool_contentLibraryName(ctx, field)
+	case "insecure":
+		return ec.fieldContext_ResourcePool_insecure(ctx, field)
 	case "connectionStatus":
 		return ec.fieldContext_ResourcePool_connectionStatus(ctx, field)
 	case "datacenterCount":
@@ -23081,6 +23096,29 @@ func (ec *executionContext) fieldContext_ResourcePool_contentLibraryName(_ conte
 	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _ResourcePool_insecure(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ResourcePool_insecure(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Insecure, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ResourcePool_insecure(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
 func (ec *executionContext) _ResourcePool_connectionStatus(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -26702,7 +26740,7 @@ func (ec *executionContext) unmarshalInputCreateResourcePoolInput(ctx context.Co
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "endpoint", "contentLibraryName", "datacenterCount", "clusterCount", "username", "password", "secretRef"}
+	fieldsInOrder := [...]string{"name", "endpoint", "contentLibraryName", "datacenterCount", "clusterCount", "insecure", "username", "password", "secretRef"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -26744,6 +26782,13 @@ func (ec *executionContext) unmarshalInputCreateResourcePoolInput(ctx context.Co
 				return it, err
 			}
 			it.ClusterCount = data
+		case "insecure":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("insecure"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Insecure = data
 		case "username":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("username"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -28053,7 +28098,7 @@ func (ec *executionContext) unmarshalInputUpdateResourcePoolInput(ctx context.Co
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "endpoint", "contentLibraryName", "datacenterCount", "clusterCount", "username", "password", "secretRef"}
+	fieldsInOrder := [...]string{"name", "endpoint", "contentLibraryName", "datacenterCount", "clusterCount", "insecure", "username", "password", "secretRef"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -28095,6 +28140,13 @@ func (ec *executionContext) unmarshalInputUpdateResourcePoolInput(ctx context.Co
 				return it, err
 			}
 			it.ClusterCount = data
+		case "insecure":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("insecure"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Insecure = data
 		case "username":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("username"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -33980,6 +34032,11 @@ func (ec *executionContext) _ResourcePool(ctx context.Context, sel ast.Selection
 			}
 		case "contentLibraryName":
 			out.Values[i] = ec._ResourcePool_contentLibraryName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "insecure":
+			out.Values[i] = ec._ResourcePool_insecure(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

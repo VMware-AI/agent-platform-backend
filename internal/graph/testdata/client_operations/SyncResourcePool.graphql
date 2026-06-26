@@ -3,6 +3,7 @@ fragment ResourcePoolFields on ResourcePool {
     name
     endpoint
     contentLibraryName
+    insecure
     connectionStatus
     esxiHostCount
     vmInstanceCount

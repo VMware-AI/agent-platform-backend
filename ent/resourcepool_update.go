@@ -132,6 +132,20 @@ func (_u *ResourcePoolUpdate) ClearSecretRef() *ResourcePoolUpdate {
 	return _u
 }
 
+// SetInsecure sets the "insecure" field.
+func (_u *ResourcePoolUpdate) SetInsecure(v bool) *ResourcePoolUpdate {
+	_u.mutation.SetInsecure(v)
+	return _u
+}
+
+// SetNillableInsecure sets the "insecure" field if the given value is not nil.
+func (_u *ResourcePoolUpdate) SetNillableInsecure(v *bool) *ResourcePoolUpdate {
+	if v != nil {
+		_u.SetInsecure(*v)
+	}
+	return _u
+}
+
 // SetDatacenterCount sets the "datacenter_count" field.
 func (_u *ResourcePoolUpdate) SetDatacenterCount(v int) *ResourcePoolUpdate {
 	_u.mutation.ResetDatacenterCount()
@@ -407,6 +421,9 @@ func (_u *ResourcePoolUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if _u.mutation.SecretRefCleared() {
 		_spec.ClearField(resourcepool.FieldSecretRef, field.TypeString)
 	}
+	if value, ok := _u.mutation.Insecure(); ok {
+		_spec.SetField(resourcepool.FieldInsecure, field.TypeBool, value)
+	}
 	if value, ok := _u.mutation.DatacenterCount(); ok {
 		_spec.SetField(resourcepool.FieldDatacenterCount, field.TypeInt, value)
 	}
@@ -570,6 +587,20 @@ func (_u *ResourcePoolUpdateOne) SetNillableSecretRef(v *string) *ResourcePoolUp
 // ClearSecretRef clears the value of the "secret_ref" field.
 func (_u *ResourcePoolUpdateOne) ClearSecretRef() *ResourcePoolUpdateOne {
 	_u.mutation.ClearSecretRef()
+	return _u
+}
+
+// SetInsecure sets the "insecure" field.
+func (_u *ResourcePoolUpdateOne) SetInsecure(v bool) *ResourcePoolUpdateOne {
+	_u.mutation.SetInsecure(v)
+	return _u
+}
+
+// SetNillableInsecure sets the "insecure" field if the given value is not nil.
+func (_u *ResourcePoolUpdateOne) SetNillableInsecure(v *bool) *ResourcePoolUpdateOne {
+	if v != nil {
+		_u.SetInsecure(*v)
+	}
 	return _u
 }
 
@@ -877,6 +908,9 @@ func (_u *ResourcePoolUpdateOne) sqlSave(ctx context.Context) (_node *ResourcePo
 	}
 	if _u.mutation.SecretRefCleared() {
 		_spec.ClearField(resourcepool.FieldSecretRef, field.TypeString)
+	}
+	if value, ok := _u.mutation.Insecure(); ok {
+		_spec.SetField(resourcepool.FieldInsecure, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.DatacenterCount(); ok {
 		_spec.SetField(resourcepool.FieldDatacenterCount, field.TypeInt, value)

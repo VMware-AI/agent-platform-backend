@@ -14,6 +14,15 @@ jobs:
         with:
           go-version: "1.25"
           cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: docs in sync with schema
+        # Regenerate the merged SDL + API reference from schema/*.graphql and fail
+        # if either drifted from what's committed (schema changed but docs weren't
+        # regenerated). Fix locally with `make docs`.
+        run: make docs-check
 
       - name: gofmt
         run: |
