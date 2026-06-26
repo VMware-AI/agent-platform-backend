@@ -22,6 +22,12 @@ import (
 // CreateDepartment creates a department and its backing litellm team. If the
 // team sync fails, the department is rolled back (no orphan — doc43 §2.4).
 func (r *mutationResolver) CreateDepartment(ctx context.Context, input model.CreateDepartmentInput) (*model.Department, error) {
+	// A negative budget is never meaningful and would otherwise be forwarded to the
+	// litellm team verbatim — reject it up front (ent does not constrain this gateway
+	// input). Zero is allowed (an explicit "no spend" cap).
+	if input.MaxBudget != nil && *input.MaxBudget < 0 {
+		return nil, gqlerror.Errorf("maxBudget must be >= 0")
+	}
 	// Pre-generate the id so the litellm team handle is written atomically with
 	// the row — it is never empty/wrong. A crash between this commit and the
 	// gateway call leaves a row pointing at a not-yet-created team; that is
