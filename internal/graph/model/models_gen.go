@@ -606,6 +606,10 @@ type Permission struct {
 	Description *string `json:"description,omitempty"`
 }
 
+type PlatformSettings struct {
+	AgentUser string `json:"agentUser"`
+}
+
 type Query struct {
 }
 
@@ -836,6 +840,10 @@ type UpdateModelRouteInput struct {
 	SupportedModels  []string            `json:"supportedModels,omitempty"`
 	UIStrategy       *ModelRouteStrategy `json:"uiStrategy,omitempty"`
 	Enabled          *bool               `json:"enabled,omitempty"`
+}
+
+type UpdatePlatformSettingsInput struct {
+	AgentUser *string `json:"agentUser,omitempty"`
 }
 
 type UpdateResourcePoolInput struct {

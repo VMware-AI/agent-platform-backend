@@ -34,6 +34,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/role"
 	"github.com/VMware-AI/agent-platform-backend/ent/rotationcommand"
 	"github.com/VMware-AI/agent-platform-backend/ent/routertier"
+	"github.com/VMware-AI/agent-platform-backend/ent/setting"
 	"github.com/VMware-AI/agent-platform-backend/ent/skill"
 	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
 	"github.com/VMware-AI/agent-platform-backend/ent/tokenusage"
@@ -122,6 +123,7 @@ func checkColumn(t, c string) error {
 			role.Table:               role.ValidColumn,
 			rotationcommand.Table:    rotationcommand.ValidColumn,
 			routertier.Table:         routertier.ValidColumn,
+			setting.Table:            setting.ValidColumn,
 			skill.Table:              skill.ValidColumn,
 			tenant.Table:             tenant.ValidColumn,
 			tokenusage.Table:         tokenusage.ValidColumn,
