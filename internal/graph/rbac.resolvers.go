@@ -83,6 +83,7 @@ func (r *mutationResolver) UpsertPermission(ctx context.Context, key string, des
 	if err != nil {
 		return nil, err
 	}
+	r.audit(ctx, "permission.upsert", "permission", p.ID.String(), true, actorID(auth.FromContext(ctx)))
 	return toModelPermission(p), nil
 }
 
