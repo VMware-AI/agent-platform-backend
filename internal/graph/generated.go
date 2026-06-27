@@ -5457,11 +5457,11 @@ input UpdateModelRouteInput {
 
 extend type Query {
   gatewayConnections: [GatewayConnection!]! @hasRole(any: [admin])
-  upstreams: [Upstream!]! @hasPermission(perm: "route:manage")
+  upstreams: [Upstream!]! @hasRole(any: [admin])
   # Model routes are platform-global gateway config (no tenant_id), so admin-only —
   # tenant-admin must not read/write another tenant's routes (no scoping exists).
   modelRoutes: [ModelRoute!]! @hasRole(any: [admin])
-  routerTiers: [RouterTier!]! @hasPermission(perm: "route:manage")
+  routerTiers: [RouterTier!]! @hasRole(any: [admin])
 }
 
 extend type Mutation {
@@ -5469,8 +5469,8 @@ extend type Mutation {
   testGatewayConnection(id: ID!): GatewayStatus! @hasRole(any: [admin])
   deleteGatewayConnection(id: ID!): Boolean! @hasRole(any: [admin])
 
-  upsertUpstream(input: UpsertUpstreamInput!): Upstream! @hasPermission(perm: "route:manage")
-  deleteUpstream(id: ID!): Boolean! @hasPermission(perm: "route:manage")
+  upsertUpstream(input: UpsertUpstreamInput!): Upstream! @hasRole(any: [admin])
+  deleteUpstream(id: ID!): Boolean! @hasRole(any: [admin])
   # Model routes are platform-global gateway config (no tenant_id) → admin-only,
   # mirroring modelGateways. tenant-admin holds "route:manage" but has no tenant
   # scoping here, so a permission gate would leak cross-tenant read/write.
@@ -5483,7 +5483,7 @@ extend type Mutation {
   deleteModelRoute(id: ID!): Boolean! @hasRole(any: [admin])
 
   # The difficulty router: map a tier to a model alias → syncs litellm Complexity Router.
-  setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier! @hasPermission(perm: "route:manage")
+  setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier! @hasRole(any: [admin])
 }
 `, BuiltIn: false},
 	{Name: "../../schema/metering.graphql", Input: `# Metering center (计量中心, 0619 可观测性). Token usage + aggregation.
@@ -17092,16 +17092,16 @@ func (ec *executionContext) _Mutation_upsertUpstream(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				perm, err := ec.unmarshalNString2string(ctx, "route:manage")
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.Upstream
 					return zeroVal, err
 				}
-				if ec.Directives.HasPermission == nil {
+				if ec.Directives.HasRole == nil {
 					var zeroVal *model.Upstream
-					return zeroVal, errors.New("directive hasPermission is not implemented")
+					return zeroVal, errors.New("directive hasRole is not implemented")
 				}
-				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
 			}
 
 			next = directive1
@@ -17154,16 +17154,16 @@ func (ec *executionContext) _Mutation_deleteUpstream(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				perm, err := ec.unmarshalNString2string(ctx, "route:manage")
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
 				}
-				if ec.Directives.HasPermission == nil {
+				if ec.Directives.HasRole == nil {
 					var zeroVal bool
-					return zeroVal, errors.New("directive hasPermission is not implemented")
+					return zeroVal, errors.New("directive hasRole is not implemented")
 				}
-				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
 			}
 
 			next = directive1
@@ -17526,16 +17526,16 @@ func (ec *executionContext) _Mutation_setRouterTier(ctx context.Context, field g
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				perm, err := ec.unmarshalNString2string(ctx, "route:manage")
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.RouterTier
 					return zeroVal, err
 				}
-				if ec.Directives.HasPermission == nil {
+				if ec.Directives.HasRole == nil {
 					var zeroVal *model.RouterTier
-					return zeroVal, errors.New("directive hasPermission is not implemented")
+					return zeroVal, errors.New("directive hasRole is not implemented")
 				}
-				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
 			}
 
 			next = directive1
@@ -21012,16 +21012,16 @@ func (ec *executionContext) _Query_upstreams(ctx context.Context, field graphql.
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				perm, err := ec.unmarshalNString2string(ctx, "route:manage")
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal []model.Upstream
 					return zeroVal, err
 				}
-				if ec.Directives.HasPermission == nil {
+				if ec.Directives.HasRole == nil {
 					var zeroVal []model.Upstream
-					return zeroVal, errors.New("directive hasPermission is not implemented")
+					return zeroVal, errors.New("directive hasRole is not implemented")
 				}
-				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
 			}
 
 			next = directive1
@@ -21112,16 +21112,16 @@ func (ec *executionContext) _Query_routerTiers(ctx context.Context, field graphq
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				perm, err := ec.unmarshalNString2string(ctx, "route:manage")
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal []model.RouterTier
 					return zeroVal, err
 				}
-				if ec.Directives.HasPermission == nil {
+				if ec.Directives.HasRole == nil {
 					var zeroVal []model.RouterTier
-					return zeroVal, errors.New("directive hasPermission is not implemented")
+					return zeroVal, errors.New("directive hasRole is not implemented")
 				}
-				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
 			}
 
 			next = directive1

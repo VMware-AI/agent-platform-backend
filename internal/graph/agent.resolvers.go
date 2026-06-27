@@ -226,9 +226,16 @@ func (r *mutationResolver) CreateAgentConfig(ctx context.Context, input model.Cr
 		return nil, err
 	}
 	if isDefault {
-		if _, err := r.Ent.AgentConfig.Update().
-			Where(agentconfig.AgentType(cfg.AgentType), agentconfig.IDNEQ(cfg.ID)).
-			SetIsDefault(false).Save(ctx); err != nil {
+		// Unset the previous default only within this config's own tenant scope, so a
+		// tenant default never clears another tenant's (or the platform's) default
+		// for the same agent type.
+		unset := r.Ent.AgentConfig.Update().Where(agentconfig.AgentType(cfg.AgentType), agentconfig.IDNEQ(cfg.ID))
+		if cfg.TenantID != nil {
+			unset = unset.Where(agentconfig.TenantID(*cfg.TenantID))
+		} else {
+			unset = unset.Where(agentconfig.TenantIDIsNil())
+		}
+		if _, err := unset.SetIsDefault(false).Save(ctx); err != nil {
 			return nil, err
 		}
 	}
@@ -294,9 +301,15 @@ func (r *mutationResolver) SetDefaultAgentConfig(ctx context.Context, id string)
 	if !writeAllowed(ctx, cfg.TenantID) {
 		return nil, notFoundErr("agent config")
 	}
-	if _, err := r.Ent.AgentConfig.Update().
-		Where(agentconfig.AgentType(cfg.AgentType), agentconfig.IDNEQ(cid)).
-		SetIsDefault(false).Save(ctx); err != nil {
+	// Unset other defaults only within this config's own tenant scope (no
+	// cross-tenant/platform clobber).
+	unset := r.Ent.AgentConfig.Update().Where(agentconfig.AgentType(cfg.AgentType), agentconfig.IDNEQ(cid))
+	if cfg.TenantID != nil {
+		unset = unset.Where(agentconfig.TenantID(*cfg.TenantID))
+	} else {
+		unset = unset.Where(agentconfig.TenantIDIsNil())
+	}
+	if _, err := unset.SetIsDefault(false).Save(ctx); err != nil {
 		return nil, err
 	}
 	cfg, err = r.Ent.AgentConfig.UpdateOne(cfg).SetIsDefault(true).Save(ctx)

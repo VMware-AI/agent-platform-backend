@@ -110,6 +110,18 @@ func (r *mutationResolver) SetRateLimitPolicyEnabled(ctx context.Context, id str
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid id")
 	}
+	// Tenant 404 oracle, mirroring DeleteRateLimitPolicy: a tenant-admin may toggle
+	// only their own tenant's policy; another tenant's reads as missing.
+	pol, err := r.Ent.RateLimitPolicy.Get(ctx, pid)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, notFoundErr("rate-limit policy")
+		}
+		return nil, err
+	}
+	if !writeAllowed(ctx, pol.TenantID) {
+		return nil, notFoundErr("rate-limit policy")
+	}
 	p, err := r.Ent.RateLimitPolicy.UpdateOneID(pid).SetEnabled(enabled).Save(ctx)
 	if err != nil {
 		return nil, err

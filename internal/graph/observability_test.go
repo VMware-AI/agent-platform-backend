@@ -57,7 +57,10 @@ func TestRequestLogs(t *testing.T) {
 func TestRateLimitPolicy(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()
-	ctx := context.Background()
+	// Admin ctx: SetRateLimitPolicyEnabled/DeleteRateLimitPolicy carry a tenant 404
+	// oracle (writeAllowed), so the success path needs an authed caller — in prod the
+	// @hasRole directive guarantees one.
+	ctx := adminCtx()
 	mr := &mutationResolver{r}
 	qr := &queryResolver{r}
 
