@@ -243,10 +243,21 @@ func (s *Service) hasInFlight(ctx context.Context, agentID uuid.UUID, kind rotat
 }
 
 func (s *Service) createCommand(ctx context.Context, agentID uuid.UUID, kind rotationcommand.Kind, reason string) (*ent.RotationCommand, error) {
-	return s.Ent.RotationCommand.Create().
+	cmd, err := s.Ent.RotationCommand.Create().
 		SetCommandID(uuid.New().String()).
 		SetAgentID(agentID).SetKind(kind).SetReason(reason).
 		SetStatus(rotationcommand.StatusPending).Save(ctx)
+	if err != nil {
+		// Lost the race: the partial unique index (agent_id, kind WHERE status in
+		// flight) rejected a duplicate. That's the desired "already in flight"
+		// outcome, not an error — return (nil, nil) so callers no-op, closing the
+		// EXISTS-then-INSERT TOCTOU.
+		if ent.IsConstraintError(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return cmd, nil
 }
 
 // maybeRenew issues a fresh VM token when the current one nears expiry, returning

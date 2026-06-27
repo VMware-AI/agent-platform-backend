@@ -30,7 +30,34 @@ func (r *mutationResolver) RegisterGatewayConnection(ctx context.Context, input 
 	} else if set {
 		input.MasterKeyRef = &ref
 	}
-	c := r.Ent.GatewayConnection.Create().SetName(input.Name).SetEndpoint(input.Endpoint)
+	// is_default (LLD-13 §3.3): an explicit request, OR auto-default the first-ever
+	// connection so the platform always has a default gateway once one exists (§7 OQ-1).
+	makeDefault := input.IsDefault != nil && *input.IsDefault
+	if !makeDefault {
+		if n, err := r.Ent.GatewayConnection.Query().Count(ctx); err == nil && n == 0 {
+			makeDefault = true
+		}
+	}
+
+	// Singleton invariant is now DB-enforced (partial unique index on is_default).
+	// That index forbids two true rows, so we must clear the previous default
+	// BEFORE inserting the new one — and do both in one txn — rather than the old
+	// insert-then-clear (which transiently held two trues and would now be
+	// rejected). Concurrent registers can't both win: the loser's commit trips the
+	// unique constraint.
+	tx, err := r.Ent.Tx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if makeDefault {
+		if _, err := tx.GatewayConnection.Update().
+			Where(gatewayconnection.IsDefault(true)).
+			SetIsDefault(false).Save(ctx); err != nil {
+			return nil, rollback(tx, err)
+		}
+	}
+	c := tx.GatewayConnection.Create().
+		SetName(input.Name).SetEndpoint(input.Endpoint).SetIsDefault(makeDefault)
 	if input.MasterKeyRef != nil {
 		c.SetMasterKeyRef(*input.MasterKeyRef)
 	}
@@ -40,27 +67,12 @@ func (r *mutationResolver) RegisterGatewayConnection(ctx context.Context, input 
 	if input.LoadBalanceStrategy != nil {
 		c.SetLoadBalanceStrategy(gatewayconnection.LoadBalanceStrategy(*input.LoadBalanceStrategy))
 	}
-	// is_default (LLD-13 §3.3): an explicit request, OR auto-default the first-ever
-	// connection so the platform always has a default gateway once one exists (§7 OQ-1).
-	makeDefault := input.IsDefault != nil && *input.IsDefault
-	if !makeDefault {
-		if n, err := r.Ent.GatewayConnection.Query().Count(ctx); err == nil && n == 0 {
-			makeDefault = true
-		}
-	}
-	c.SetIsDefault(makeDefault)
 	g, err := c.Save(ctx)
 	if err != nil {
-		return nil, err
+		return nil, rollback(tx, err)
 	}
-	// Singleton invariant: at most one default. If this row became the default,
-	// clear the flag on every other connection.
-	if g.IsDefault {
-		if _, err := r.Ent.GatewayConnection.Update().
-			Where(gatewayconnection.IDNEQ(g.ID), gatewayconnection.IsDefault(true)).
-			SetIsDefault(false).Save(ctx); err != nil {
-			return nil, err
-		}
+	if err := tx.Commit(); err != nil {
+		return nil, err
 	}
 	r.audit(ctx, "gateway.register", "gateway_connection", g.ID.String(), true, actorID(auth.FromContext(ctx)))
 	return toModelGatewayConnection(g), nil

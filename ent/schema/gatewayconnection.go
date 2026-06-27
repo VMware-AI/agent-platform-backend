@@ -2,7 +2,9 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
 )
 
@@ -39,5 +41,17 @@ func (GatewayConnection) Fields() []ent.Field {
 		field.Enum("load_balance_strategy").
 			Values("simple_shuffle", "latency", "usage_v2", "least_busy", "cost").
 			Default("simple_shuffle"),
+	}
+}
+
+func (GatewayConnection) Indexes() []ent.Index {
+	return []ent.Index{
+		// At most ONE default gateway, enforced by the DB (a partial unique index
+		// over the rows where is_default is true). The resolver still clears the
+		// previous default on set, but this closes the concurrent-set race that
+		// could otherwise leave two defaults. Writers must clear-then-set within a
+		// txn so a single request never transiently holds two true rows.
+		index.Fields("is_default").Unique().
+			Annotations(entsql.IndexWhere("is_default")),
 	}
 }
