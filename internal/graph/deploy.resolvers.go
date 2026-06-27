@@ -171,7 +171,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	res, err := svc.Provision(ctx, deploy.Request{
 		AgentName: ag.Name,
 		UserID:    ag.OwnerUserID.String(),
-		TeamID:    deployTeamID, // department = litellm team (LLD-13 §3.3); empty = default gateway, no team
+		TeamID:    deployTeamID,          // department = litellm team (LLD-13 §3.3); empty = default gateway, no team
 		Template:  version.OvaIdentifier, // clone from the catalog version's OVA
 		VMName:    vmName,
 		// vSphere placement pool. A true OVA template has no source resource pool,
