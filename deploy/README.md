@@ -21,7 +21,8 @@ deploy/
 ├── init-db.sh                  # creates the `litellm_db` database on first boot
 ├── prometheus.yml              # scrape config (litellm:4000 /metrics)
 ├── start_litellm_and_db.sh     # one-command launcher for the data plane + state
-└── start_backend_local.sh      # one-command launcher for the Go control plane
+├── start_backend_local.sh      # one-command launcher for the Go control plane (working tree)
+└── start_backend_docker.sh     # one-command launcher for the Go control plane (container image)
 ```
 
 ## 1. Bring up the data plane + state
@@ -80,6 +81,65 @@ ALLOWED_ORIGINS=http://localhost:5173 \
 ADMIN_BOOTSTRAP_PASSWORD=AdminLocal123! \
 make run
 ```
+
+### 2a. Via the container image
+
+For a "what's on `latest`?" loop without rebuilding locally:
+
+```bash
+cd deploy
+HOST_IP=host.docker.internal ./start_backend_docker.sh      # up (default)
+./start_backend_docker.sh status                            # is the container running?
+./start_backend_docker.sh down                              # stop, keep on disk
+./start_backend_docker.sh clean                             # stop + remove (next up re-pulls)
+HOST_IP=192.168.1.42 ./start_backend_docker.sh              # up with custom host IP
+
+ADMIN_BOOTSTRAP_PASSWORD='MyStrong!Pass1' \
+  HOST_IP=host.docker.internal ./start_backend_docker.sh    # skip the first-login nag
+HTTP_ADDR=:9090 HOST_IP=192.168.1.42 ./start_backend_docker.sh
+                                                            # custom host port + LAN IP
+```
+
+Actions (matches `start_litellm_and_db.sh`):
+
+| action | what it does | needs `HOST_IP`? |
+|---|---|---|
+| `up` *(default)* | pull `latest` and run the container in the foreground | yes |
+| `down` | stop the container, keep it on disk (so the next `up` skips the pull) | no |
+| `clean` | stop + remove the container (next `up` re-pulls + re-creates) | no |
+| `status` | print the container's current state | no |
+| `--help` | show usage + the `HOST_IP` explanation | no |
+
+**`HOST_IP` is required for `up`** — there is no safe default. Inside the
+container, `127.0.0.1` / `localhost` resolve to the container itself, not to
+the host running postgres/redis. The script exits with a reminder if `HOST_IP`
+is unset or any loopback value. Pick one of:
+
+- `host.docker.internal` — works out of the box on Docker Desktop and Linux
+  Docker ≥ 20.10.
+- `<your host LAN IP>` (e.g. `192.168.1.42`) — for older Linux Docker.
+
+`DATABASE_URL`, `REDIS_URL`, and `ALLOWED_ORIGINS` are then derived from
+`HOST_IP` automatically (the latter includes `http://${HOST_IP}:5173` so a
+console reached via the host IP is allowed by CORS).
+
+**Same env contract as `start_backend_local.sh`** for the variables the
+backend actually consumes: `APP_ENV`, `HTTP_ADDR`, `DATABASE_URL`,
+`REDIS_URL`, `ALLOWED_ORIGINS`, `DB_AUTO_MIGRATE`, `SESSION_TTL_SECONDS`,
+`ADMIN_BOOTSTRAP_PASSWORD`. The only extras at the top of the script are
+docker-launcher-specific (`HOST_IP`, `PG_*` / `REDIS_PORT` so you can change
+host-side creds without rewriting the whole URL, and `IMAGE_REPO` / `IMAGE_TAG`
+/ `CONTAINER_NAME` for pinned versions or air-gapped mirrors). No litellm /
+gateway env is read or required by this script.
+
+What it does:
+- Re-uses the Postgres/Redis brought up by `start_litellm_and_db.sh`,
+  reached via `${HOST_IP}`.
+- Pulls `quay.io/vmware-ai/agent-platform-backend:latest` every invocation
+  (`docker run --pull=always`) and removes the container on exit (`--rm`).
+- Honors `HTTP_ADDR` by mapping the host port to the image's `:8080`.
+- Fails fast on a missing/wrong-config prerequisite (HOST_IP unset / loopback,
+  docker daemon, postgres/redis not running, host port already taken).
 
 ## 3. End-to-end smoke (via the console UI or GraphQL)
 

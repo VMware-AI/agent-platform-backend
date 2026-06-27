@@ -72,5 +72,6 @@ release-images: build-images
 		--builder $(BUILDER) \
 		--platform $(PLATFORMS) \
 		--tag $(REGISTRY)/$(IMAGE):$(TAG) \
+		--tag $(REGISTRY)/$(IMAGE):latest \
 		--push \
 		.

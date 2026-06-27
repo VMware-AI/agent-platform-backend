@@ -60,6 +60,66 @@ if [[ -z "${ADMIN_BOOTSTRAP_PASSWORD:-}" ]]; then
   echo "         (first login will force a password change)"
 fi
 
+# ---------- preflight: Go toolchain + modules ----------
+# Fail fast if `make run` (which shells out to `go run`) cannot succeed. The
+# order is intentional: cheap static checks first, expensive network check
+# last, warn-only signals at the bottom.
+
+# Check 1: go.mod / go.sum must exist at the repo root.
+if [[ ! -f "${REPO_ROOT}/go.mod" || ! -f "${REPO_ROOT}/go.sum" ]]; then
+  echo "error: go.mod / go.sum not found at ${REPO_ROOT}; run 'make tidy' or check you are in the correct repo" >&2
+  exit 1
+fi
+
+# Check 2: Go toolchain installed and >= 1.25.0 (mirrors go.mod:3).
+if ! command -v go >/dev/null 2>&1; then
+  echo "error: go not found in PATH; install Go >= 1.25.0 from https://go.dev/dl/" >&2
+  exit 1
+fi
+
+GO_VERSION_RAW="$(go version)"
+# `go version` prints e.g. "go version go1.25.0 darwin/arm64". Extract the
+# `goX.Y[.Z]` token robustly with a regex.
+GO_VERSION=""
+if [[ "${GO_VERSION_RAW}" =~ go([0-9]+(\.[0-9]+)*) ]]; then
+  GO_VERSION="${BASH_REMATCH[1]}"
+fi
+MIN_GO_VERSION="1.25.0"
+
+# Portable version compare: encode (MAJOR*100 + MINOR)*100 + PATCH as a
+# single integer and integer-compare. Handles "1.25" vs "1.25.0" by
+# defaulting missing components to 0.
+ver_to_int() {
+  local v="$1" major minor patch
+  IFS='.' read -r major minor patch <<<"${v}"
+  : "${major:=0}" "${minor:=0}" "${patch:=0}"
+  echo $(( (major * 100 + minor) * 100 + patch ))
+}
+
+if [[ "$(ver_to_int "${GO_VERSION}")" -lt "$(ver_to_int "${MIN_GO_VERSION}")" ]]; then
+  echo "error: Go >= ${MIN_GO_VERSION} required (found ${GO_VERSION}); install from https://go.dev/dl/" >&2
+  exit 1
+fi
+
+# Check 3: `go mod download` validates the module graph resolves on this
+# machine. Idempotent; skippable via SKIP_GO_MOD_DOWNLOAD=1 for warm caches.
+if [[ "${SKIP_GO_MOD_DOWNLOAD:-0}" != "1" ]]; then
+  if ! (cd "${REPO_ROOT}" && go mod download) >/dev/null 2>&1; then
+    echo "error: 'go mod download' failed — check network connectivity and run 'make tidy'" >&2
+    exit 1
+  fi
+fi
+
+# Check 4 (warn-only): ent/ and gqlgen-generated files should be on disk. We
+# intentionally do NOT auto-run `make generate` — it overwrites local edits.
+# gqlgen writes to internal/graph/generated.go per gqlgen.yml:5.
+if [[ ! -d "${REPO_ROOT}/ent" ]]; then
+  echo "warning: ent/ directory not found at ${REPO_ROOT}; you may need to run 'make generate'" >&2
+fi
+if [[ ! -f "${REPO_ROOT}/internal/graph/generated.go" ]]; then
+  echo "warning: internal/graph/generated.go not found; you may need to run 'make generate'" >&2
+fi
+
 # ---------- preflight: docker compose stack is up ----------
 if ! command -v docker >/dev/null 2>&1; then
   echo "error: docker not found in PATH" >&2

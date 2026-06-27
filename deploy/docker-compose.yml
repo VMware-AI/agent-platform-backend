@@ -42,7 +42,7 @@ services:
       POSTGRES_USER: agentplatform_user
       POSTGRES_PASSWORD: agentplatform_passwd
     ports:
-      - "127.0.0.1:5433:5432" # 5433 host → avoid clashing with native/homebrew pg on 5432
+      - "5433:5432" # 5433 host → avoid clashing with native/homebrew pg on 5432
     volumes:
       - pg_data:/var/lib/postgresql/data
       - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
@@ -57,7 +57,7 @@ services:
     image: quay.io/vmware-ai/redis:7
     container_name: redis
     ports:
-      - "127.0.0.1:6379:6379"
+      - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
