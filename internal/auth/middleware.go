@@ -20,7 +20,7 @@ func SessionMiddleware(store session.Store) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := httpx.WithHTTP(r.Context(), w, r)
-			if sid := sessionToken(r); sid != "" {
+			if sid := SessionTokenFromRequest(r); sid != "" {
 				if d, err := store.Get(sid); err == nil {
 					ctx = WithCurrentUser(ctx, &CurrentUser{
 						ID:                 d.UserID,
@@ -36,9 +36,11 @@ func SessionMiddleware(store session.Store) func(http.Handler) http.Handler {
 	}
 }
 
-// sessionToken extracts the session id from the Bearer Authorization header, or
-// the session cookie as a fallback.
-func sessionToken(r *http.Request) string {
+// SessionTokenFromRequest extracts the session id from the Bearer Authorization
+// header, or the session cookie as a fallback. Exported so Logout can revoke the
+// exact session that authenticated the request, using the SAME precedence as the
+// middleware (Bearer-borne sessions, not just cookie ones).
+func SessionTokenFromRequest(r *http.Request) string {
 	if t, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer "); ok {
 		if t = strings.TrimSpace(t); t != "" {
 			return t

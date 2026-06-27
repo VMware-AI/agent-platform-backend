@@ -1086,6 +1086,11 @@ func (r *Resolver) modelCustomRole(ctx context.Context, role *ent.Role) (*model.
 // poolProbeTimeout bounds the pre-save reachability dial (testResourcePoolConnection).
 const poolProbeTimeout = 5 * time.Second
 
+// deployProvisionTimeout bounds a VM clone + power-on, run on a context detached
+// from the HTTP request so the 60s WriteTimeout can't cancel it mid-clone and
+// orphan the VM. Generous — a cold OVA clone can take several minutes.
+const deployProvisionTimeout = 15 * time.Minute
+
 // defaultVCenterPort is the HTTPS port a vCenter endpoint listens on; used when the
 // operator's endpoint omits an explicit port.
 const defaultVCenterPort = "443"

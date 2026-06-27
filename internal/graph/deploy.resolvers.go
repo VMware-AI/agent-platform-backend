@@ -158,7 +158,14 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	}
 
 	svc := &deploy.Service{Gateway: gw, VCenter: conn, GatewayURL: gwURL}
-	res, err := svc.Provision(ctx, deploy.Request{
+	// Decouple provisioning from the HTTP write deadline (server WriteTimeout=60s):
+	// a clone + power-on can run minutes, and if the request ctx is canceled
+	// mid-clone the vCenter task keeps running untracked → orphan VM. Run it on a
+	// detached ctx with a generous deadline so the clone completes (or fails)
+	// within our tracking, and rollback can clean up on a real error.
+	provCtx, cancelProv := context.WithTimeout(context.WithoutCancel(ctx), deployProvisionTimeout)
+	defer cancelProv()
+	res, err := svc.Provision(provCtx, deploy.Request{
 		AgentName: ag.Name,
 		UserID:    ag.OwnerUserID.String(),
 		Template:  version.OvaIdentifier, // clone from the catalog version's OVA
