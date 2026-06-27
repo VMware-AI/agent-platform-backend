@@ -58,6 +58,13 @@ func (f *fakeVCenter) RevertSnapshot(_ context.Context, vmName, snapshotName str
 func (f *fakeVCenter) ListSnapshots(_ context.Context, vmName string) ([]vcenter.SnapshotInfo, error) {
 	return f.snapshots[vmName], nil
 }
+func (f *fakeVCenter) VerifyContentLibrary(_ context.Context, name string) (vcenter.ContentLibraryInfo, error) {
+	// Default fake: any non-empty library name "exists" with no items.
+	return vcenter.ContentLibraryInfo{Found: name != "", ItemCount: 0}, nil
+}
+func (f *fakeVCenter) About() vcenter.AboutInfo {
+	return vcenter.AboutInfo{Version: "8.0.0", Build: "0", FullName: "VMware vCenter Server (fake)"}
+}
 func (f *fakeVCenter) Logout(context.Context) error { f.logouts++; return nil }
 
 // rollbackDeploy must destroy the orphan VM, revoke the live gateway key, and

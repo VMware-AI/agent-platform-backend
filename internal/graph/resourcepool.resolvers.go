@@ -123,38 +123,80 @@ func (r *mutationResolver) DeleteResourcePool(ctx context.Context, id string) (*
 	return &model.DeleteResourcePoolPayload{ID: id, DeletedName: p.Name}, nil
 }
 
-// TestResourcePoolConnection is the 接入表单 pre-save reachability probe. The input
-// carries NO credentials, so this is a REAL but lightweight network check, not a
-// full authenticated vCenter login: it validates the endpoint is a well-formed
-// host/URL and that the vCenter HTTPS port is dial-reachable (TCP). It does NOT
-// authenticate — so vSphereVersion is best-effort ("" when not derivable without
-// a session) and itemCount is 0 (a content-library inventory requires credentials,
-// done later by syncResourcePool). A pool row is NOT created or mutated here.
+// TestResourcePoolConnection is the 接入表单 pre-save probe. It has two modes:
+//
+//   - Credential-less (no username/password): a lightweight reachability check —
+//     the endpoint is well-formed and the vCenter HTTPS port is dial-reachable
+//     (TCP). vSphereVersion/itemCount stay empty, contentLibraryFound=false.
+//   - Authenticated (credentials supplied): a REAL govmomi login that reads the
+//     vSphere version and verifies the content library exists + counts its items —
+//     catching a bad credential or a typo'd contentLibraryName at form time
+//     instead of at deploy. Credentials are used only for this probe.
+//
+// A pool row is NEVER created or mutated here. Raw network/auth errors are logged
+// server-side but never echoed (they can leak internal topology — this is a
+// payload field, so it bypasses the GraphQL ErrorPresenter).
 func (r *mutationResolver) TestResourcePoolConnection(ctx context.Context, input model.TestResourcePoolConnectionInput) (*model.ResourcePoolConnectionTest, error) {
-	host, err := parseEndpointHostPort(input.Endpoint)
-	if err != nil {
-		r.audit(ctx, "resource_pool.test", "resource_pool", input.Name, false, actorID(auth.FromContext(ctx)))
-		return &model.ResourcePoolConnectionTest{Ok: false, Message: err.Error()}, nil
-	}
-	if derr := dialReachable(ctx, host); derr != nil {
-		r.audit(ctx, "resource_pool.test", "resource_pool", input.Name, false, actorID(auth.FromContext(ctx)))
-		// Don't echo the raw dial error to the client — a net.OpError can embed
-		// resolved IPs / internal network topology (bypasses the GraphQL
-		// ErrorPresenter since this is a payload field, not a returned error). Keep
-		// the detail server-side; return a coarse, safe message.
-		log.Printf("resource pool test: %q not reachable: %v", host, derr)
+	actor := actorID(auth.FromContext(ctx))
+	username, password := derefString(input.Username), derefString(input.Password)
+
+	// --- Credential-less reachability path (backward compatible) ---
+	if username == "" && password == "" {
+		host, err := parseEndpointHostPort(input.Endpoint)
+		if err != nil {
+			r.audit(ctx, "resource_pool.test", "resource_pool", input.Name, false, actor)
+			return &model.ResourcePoolConnectionTest{Ok: false, Message: err.Error()}, nil
+		}
+		if derr := dialReachable(ctx, host); derr != nil {
+			r.audit(ctx, "resource_pool.test", "resource_pool", input.Name, false, actor)
+			log.Printf("resource pool test: %q not reachable: %v", host, derr)
+			return &model.ResourcePoolConnectionTest{Ok: false, Message: "endpoint is not reachable"}, nil
+		}
+		r.audit(ctx, "resource_pool.test", "resource_pool", input.Name, true, actor)
 		return &model.ResourcePoolConnectionTest{
-			Ok:      false,
-			Message: "endpoint is not reachable",
+			Ok:      true,
+			Message: fmt.Sprintf("%s is reachable (no credentials given — content library not verified)", host),
+			Detail:  &model.ResourcePoolConnectionDetail{VSphereVersion: "", ItemCount: 0, ContentLibraryFound: false},
 		}, nil
 	}
-	r.audit(ctx, "resource_pool.test", "resource_pool", input.Name, true, actorID(auth.FromContext(ctx)))
+
+	// --- Authenticated probe path ---
+	if r.VCenterConnect == nil {
+		return &model.ResourcePoolConnectionTest{Ok: false, Message: "vCenter access is not configured on this server"}, nil
+	}
+	insecure := input.Insecure != nil && *input.Insecure
+	conn, err := r.VCenterConnect(ctx, input.Endpoint, username, password, insecure)
+	if err != nil {
+		r.audit(ctx, "resource_pool.test", "resource_pool", input.Name, false, actor)
+		log.Printf("resource pool test: connect %q failed: %v", input.Name, err)
+		return &model.ResourcePoolConnectionTest{Ok: false, Message: "vCenter connection or authentication failed"}, nil
+	}
+	defer func() { _ = conn.Logout(ctx) }()
+
+	about := conn.About()
+	lib, err := conn.VerifyContentLibrary(ctx, input.ContentLibraryName)
+	if err != nil {
+		r.audit(ctx, "resource_pool.test", "resource_pool", input.Name, false, actor)
+		log.Printf("resource pool test: verify library %q failed: %v", input.ContentLibraryName, err)
+		return &model.ResourcePoolConnectionTest{
+			Ok:      false,
+			Message: "connected, but the content-library lookup failed",
+			Detail:  &model.ResourcePoolConnectionDetail{VSphereVersion: about.Version, ItemCount: 0, ContentLibraryFound: false},
+		}, nil
+	}
+	if !lib.Found {
+		r.audit(ctx, "resource_pool.test", "resource_pool", input.Name, false, actor)
+		return &model.ResourcePoolConnectionTest{
+			Ok:      false,
+			Message: fmt.Sprintf("connected (vSphere %s), but content library %q was not found", about.Version, input.ContentLibraryName),
+			Detail:  &model.ResourcePoolConnectionDetail{VSphereVersion: about.Version, ItemCount: 0, ContentLibraryFound: false},
+		}, nil
+	}
+	r.audit(ctx, "resource_pool.test", "resource_pool", input.Name, true, actor)
 	return &model.ResourcePoolConnectionTest{
 		Ok:      true,
-		Message: fmt.Sprintf("%s is reachable", host),
-		// Best-effort: a full version/item-count probe needs credentials (done at
-		// syncResourcePool); the pre-save check only confirms reachability.
-		Detail: &model.ResourcePoolConnectionDetail{VSphereVersion: "", ItemCount: 0},
+		Message: fmt.Sprintf("connected (vSphere %s); content library %q OK (%d items)", about.Version, input.ContentLibraryName, lib.ItemCount),
+		Detail:  &model.ResourcePoolConnectionDetail{VSphereVersion: about.Version, ItemCount: lib.ItemCount, ContentLibraryFound: true},
 	}, nil
 }
 

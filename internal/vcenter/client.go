@@ -19,6 +19,10 @@ import (
 // Client is a thin govmomi wrapper scoped to the platform's needs.
 type Client struct {
 	vc *govmomi.Client
+	// userinfo is kept so the vAPI (REST) endpoints — content library, etc. —
+	// can establish their own session, distinct from the SOAP one (govmomi's
+	// REST and SOAP clients each log in separately). See library.go.
+	userinfo *url.Userinfo
 }
 
 // Connect dials a vCenter and authenticates. insecure skips TLS verification
@@ -33,7 +37,7 @@ func Connect(ctx context.Context, endpoint, user, pass string, insecure bool) (*
 	if err != nil {
 		return nil, fmt.Errorf("vcenter: connect %s: %w", u.Host, err)
 	}
-	return &Client{vc: c}, nil
+	return &Client{vc: c, userinfo: u.User}, nil
 }
 
 // VMInfo is a summarized virtual machine for inventory sync.
@@ -431,6 +435,20 @@ func (c *Client) Inventory(ctx context.Context) (Inventory, error) {
 		return inv, err
 	}
 	return inv, nil
+}
+
+// AboutInfo summarizes the vCenter server identity, available without an extra
+// round-trip (govmomi populates ServiceContent.About at connect time).
+type AboutInfo struct {
+	Version  string // e.g. "8.0.3.00800"
+	Build    string // e.g. "25197330"
+	FullName string // e.g. "VMware vCenter Server 8.0.3 build-25197330"
+}
+
+// About returns the connected vCenter's version/build identity.
+func (c *Client) About() AboutInfo {
+	a := c.vc.ServiceContent.About
+	return AboutInfo{Version: a.Version, Build: a.Build, FullName: a.FullName}
 }
 
 // Logout terminates the session.

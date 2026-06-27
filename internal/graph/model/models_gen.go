@@ -747,8 +747,9 @@ type ResourcePoolConnection struct {
 }
 
 type ResourcePoolConnectionDetail struct {
-	VSphereVersion string `json:"vSphereVersion"`
-	ItemCount      int    `json:"itemCount"`
+	VSphereVersion      string `json:"vSphereVersion"`
+	ItemCount           int    `json:"itemCount"`
+	ContentLibraryFound bool   `json:"contentLibraryFound"`
 }
 
 type ResourcePoolConnectionTest struct {
@@ -815,9 +816,12 @@ type SyncResourcePoolPayload struct {
 }
 
 type TestResourcePoolConnectionInput struct {
-	Name               string `json:"name"`
-	Endpoint           string `json:"endpoint"`
-	ContentLibraryName string `json:"contentLibraryName"`
+	Name               string  `json:"name"`
+	Endpoint           string  `json:"endpoint"`
+	ContentLibraryName string  `json:"contentLibraryName"`
+	Username           *string `json:"username,omitempty"`
+	Password           *string `json:"password,omitempty"`
+	Insecure           *bool   `json:"insecure,omitempty"`
 }
 
 type ToggleUserEnabledPayload struct {

@@ -117,13 +117,21 @@ type SyncResourcePoolPayload {
   syncedAt: Time!
 }
 
-# Pre-save reachability probe for the 接入表单 (carries NO credentials): the form
-# checks an endpoint is reachable before the operator commits the pool. A full
-# vCenter inventory probe needs credentials and runs later via syncResourcePool.
+# Pre-save probe for the 接入表单. When username/password are supplied it performs
+# a REAL authenticated probe (login → read vSphere version → verify the content
+# library exists and count its items); without credentials it falls back to a
+# lightweight reachability (TCP) check, as before. Credentials are used only for
+# the probe — never persisted here (createResourcePool stores them).
 input TestResourcePoolConnectionInput {
   name: String!
   endpoint: String!
   contentLibraryName: String!
+  # vCenter 凭据。提供时执行真实认证探测;省略则退化为仅可达性 TCP 拨测(向后兼容)。
+  # 明文不落库、不入日志。
+  username: String
+  password: String
+  # 跳过 vCenter TLS 验证(自签名/内网 CA);省略 = false。与 CreateResourcePoolInput 一致。
+  insecure: Boolean
 }
 
 type ResourcePoolConnectionTest {
@@ -133,8 +141,12 @@ type ResourcePoolConnectionTest {
 }
 
 type ResourcePoolConnectionDetail {
+  # 真实 vSphere 版本(带凭证探测时);仅可达性探测时为空字符串。
   vSphereVersion: String!
+  # 内容库条目数(带凭证且库存在时);否则 0。
   itemCount: Int!
+  # 内容库是否存在(带凭证探测时校验);仅可达性探测时为 false。
+  contentLibraryFound: Boolean!
 }
 
 extend type Query {
