@@ -30,6 +30,15 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid userId")
 	}
+	// Owner-tenant guard: a tenant-admin may not mint a key for a user in another
+	// tenant (a cross-tenant target reads as missing). Only constrains an authed
+	// caller — no-auth ctx occurs only in resolver-level tests (the schema @hasRole
+	// directive enforces auth in prod); a non-existent userId is a data concern.
+	if cu := auth.FromContext(ctx); cu != nil {
+		if u, err := r.Ent.User.Get(ctx, userID); err == nil && !writeAllowed(ctx, u.TenantID) {
+			return nil, notFoundErr("user")
+		}
+	}
 
 	// 1:1 agent↔key (会议 0622: 智能体只绑定一个独立虚拟 K,计费一对一). Reject if the
 	// agent already holds a non-revoked key — a revoked key frees the agent to be
@@ -146,6 +155,9 @@ func (r *mutationResolver) RevokeVirtualKey(ctx context.Context, id string) (boo
 	if err != nil {
 		return false, err
 	}
+	if err := r.assertVirtualKeyOwnerTenant(ctx, vk); err != nil {
+		return false, err
+	}
 	if gw := r.gatewayKeyClient(ctx, deptIDFromTeam(&vk.TeamID)); gw != nil {
 		if err := gw.DeleteKey(ctx, vk.LitellmKey); err != nil {
 			return false, fmt.Errorf("gateway: %w", err)
@@ -167,6 +179,9 @@ func (r *mutationResolver) RegenerateVirtualKey(ctx context.Context, id string) 
 	}
 	vk, err := r.Ent.VirtualKey.Get(ctx, kid)
 	if err != nil {
+		return nil, err
+	}
+	if err := r.assertVirtualKeyOwnerTenant(ctx, vk); err != nil {
 		return nil, err
 	}
 	if vk.Status == virtualkey.StatusRevoked {
@@ -212,6 +227,9 @@ func (r *mutationResolver) SetVirtualKeyEnabled(ctx context.Context, id string, 
 	}
 	vk, err := r.Ent.VirtualKey.Get(ctx, kid)
 	if err != nil {
+		return nil, err
+	}
+	if err := r.assertVirtualKeyOwnerTenant(ctx, vk); err != nil {
 		return nil, err
 	}
 	if vk.Status == virtualkey.StatusRevoked {
