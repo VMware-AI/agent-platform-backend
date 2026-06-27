@@ -8,9 +8,11 @@ import (
 
 // TestUpstreamLifecycle_SyncsAndDeletesGatewayModel pins the orphan-model fix
 // (#29): an upstream's litellm deployment must track its lifecycle —
-//   (1) enabled → pushed, pinned by model_info.id = the Upstream row id;
-//   (2) disabled → removed from the pool (not left serving live);
-//   (3) deleted → its gateway model is deleted (no orphan deployment).
+//
+//	(1) enabled → pushed, pinned by model_info.id = the Upstream row id;
+//	(2) disabled → removed from the pool (not left serving live);
+//	(3) deleted → its gateway model is deleted (no orphan deployment).
+//
 // The litellm contract (custom model_info.id honored + delete-by-that-id works)
 // was verified against a real local litellm; this test pins the backend wiring.
 func TestUpstreamLifecycle_SyncsAndDeletesGatewayModel(t *testing.T) {
