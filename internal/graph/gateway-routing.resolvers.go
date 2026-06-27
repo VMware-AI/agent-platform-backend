@@ -8,6 +8,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/department"
@@ -171,23 +172,30 @@ func (r *mutationResolver) UpsertUpstream(ctx context.Context, input model.Upser
 		return nil, err
 	}
 
-	// Sync the deployment into the default gateway's model pool (litellm /model/new).
+	// Sync the deployment into the default gateway's model pool, keyed by the
+	// Upstream row id (model_info.id). Clear any prior deployment for this id first
+	// so an update is clean (re-POSTing the same id is not an upsert); then push it
+	// only when enabled — a disabled upstream must NOT be left serving live, so it
+	// is removed from the pool instead (audit #29).
 	if mm := r.gatewayModels(ctx); mm != nil {
-		apiKey := ""
-		if input.APIKeyRef != nil && r.Secrets != nil {
-			cred, err := r.Secrets.Resolve(ctx, *input.APIKeyRef)
-			if err != nil {
-				return nil, fmt.Errorf("resolve upstream api key: %w", err)
+		_ = mm.DeleteModel(ctx, u.ID.String()) // best-effort: clears any stale/absent deployment
+		if u.Enabled {
+			apiKey := ""
+			if input.APIKeyRef != nil && r.Secrets != nil {
+				cred, err := r.Secrets.Resolve(ctx, *input.APIKeyRef)
+				if err != nil {
+					return nil, fmt.Errorf("resolve upstream api key: %w", err)
+				}
+				apiKey = cred.APIKey
+				if apiKey == "" {
+					apiKey = cred.Password
+				}
 			}
-			apiKey = cred.APIKey
-			if apiKey == "" {
-				apiKey = cred.Password
+			if err := mm.NewModel(ctx, gateway.ModelSpec{
+				ModelID: u.ID.String(), ModelName: u.Name, Model: u.Model, APIBase: u.APIBase, APIKey: apiKey,
+			}); err != nil {
+				return nil, fmt.Errorf("sync upstream to gateway: %w", err)
 			}
-		}
-		if err := mm.NewModel(ctx, gateway.ModelSpec{
-			ModelName: u.Name, Model: u.Model, APIBase: u.APIBase, APIKey: apiKey,
-		}); err != nil {
-			return nil, fmt.Errorf("sync upstream to gateway: %w", err)
 		}
 	}
 	r.audit(ctx, "upstream.upsert", "upstream", u.ID.String(), true, actorID(auth.FromContext(ctx)))
@@ -202,6 +210,15 @@ func (r *mutationResolver) DeleteUpstream(ctx context.Context, id string) (bool,
 	}
 	if err := r.Ent.Upstream.DeleteOneID(uid).Exec(ctx); err != nil {
 		return false, err
+	}
+	// Remove the upstream's litellm model so the deployment doesn't outlive the row
+	// (an orphan model keeps serving + billing). Best-effort + non-silent: the row
+	// is already gone, so a gateway failure is logged as an orphan rather than
+	// rolled back (mirrors the key-revocation paths).
+	if mm := r.gatewayModels(ctx); mm != nil {
+		if err := mm.DeleteModel(ctx, uid.String()); err != nil {
+			log.Printf("delete upstream %s: orphan litellm model, delete failed: %v", uid, err)
+		}
 	}
 	r.audit(ctx, "upstream.delete", "upstream", id, true, actorID(auth.FromContext(ctx)))
 	return true, nil
