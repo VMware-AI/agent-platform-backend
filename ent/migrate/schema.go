@@ -472,6 +472,16 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{RequestLogsColumns[10]},
 			},
+			{
+				Name:    "requestlog_agent_id",
+				Unique:  false,
+				Columns: []*schema.Column{RequestLogsColumns[3]},
+			},
+			{
+				Name:    "requestlog_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{RequestLogsColumns[2]},
+			},
 		},
 	}
 	// ResourcePoolsColumns holds the columns for the "resource_pools" table.
@@ -673,6 +683,21 @@ var (
 				Name:    "tokenusage_created_at",
 				Unique:  false,
 				Columns: []*schema.Column{TokenUsagesColumns[11]},
+			},
+			{
+				Name:    "tokenusage_tenant_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{TokenUsagesColumns[8], TokenUsagesColumns[11]},
+			},
+			{
+				Name:    "tokenusage_agent_id",
+				Unique:  false,
+				Columns: []*schema.Column{TokenUsagesColumns[2]},
+			},
+			{
+				Name:    "tokenusage_department_id",
+				Unique:  false,
+				Columns: []*schema.Column{TokenUsagesColumns[10]},
 			},
 		},
 	}
