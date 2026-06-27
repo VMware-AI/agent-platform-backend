@@ -171,6 +171,46 @@ func TestDeployAgent_EndToEnd(t *testing.T) {
 	}
 }
 
+// TestDeployAgent_LogsOutVCenterSession guards the vCenter session-leak fix:
+// DeployAgent must release its vCenter connection (defer conn.Logout) like every
+// sibling resolver. Without it each deploy leaks a session until vCenter's
+// per-user session limit is hit. Uses fakeVCenter (no vcsim) so we can count
+// Logout on the exact connection DeployAgent used.
+func TestDeployAgent_LogsOutVCenterSession(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	r.Gateway = &fakeGateway{}
+	r.Secrets = secrets.NewStaticResolver(map[string]secrets.Credential{
+		"vault://oc1": {Username: "svc", Password: "pw"},
+	})
+	r.GatewayURL = "https://gw.internal"
+	fvc := &fakeVCenter{}
+	r.VCenterConnect = func(context.Context, string, string, string, bool) (VCenterClient, error) {
+		return fvc, nil
+	}
+	mr := &mutationResolver{r}
+
+	owner := mkUser(t, mr, ctx, "leaktester", "lk@x.io", model.RoleNameUser)
+	ref := "vault://oc1"
+	createdPool, err := mr.CreateResourcePool(adminCtx(), model.CreateResourcePoolInput{
+		Name: "oc1", Endpoint: "https://vc.example", SecretRef: &ref,
+	})
+	if err != nil {
+		t.Fatalf("CreateResourcePool: %v", err)
+	}
+	familyID, versionID := seedOvaFamilyVersion(t, r, "goose", "tmpl-src")
+	if _, err := mr.DeployAgent(userCtx(owner.ID, "user"), model.DeployAgentInput{
+		Name: "leaky", TemplateFamilyID: familyID, TemplateVersionID: versionID, ResourcePoolID: createdPool.Pool.ID,
+	}); err != nil {
+		t.Fatalf("DeployAgent: %v", err)
+	}
+	if fvc.logouts == 0 {
+		t.Fatal("DeployAgent leaked the vCenter session: conn.Logout was never called")
+	}
+}
+
 // TestDeployAgent_VersionFamilyMismatch rejects a version that belongs to a
 // different family (guards against a malformed deploy form submission).
 func TestDeployAgent_VersionFamilyMismatch(t *testing.T) {

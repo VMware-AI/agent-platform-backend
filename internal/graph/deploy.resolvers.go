@@ -132,6 +132,12 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
 		return nil, fmt.Errorf("connect vcenter: %w", err)
 	}
+	// Release the vCenter session on return — every sibling resolver (recycle,
+	// snapshot, revert, vmTemplates, vsphereResourcePools, agentSnapshots) does
+	// this. Without it each deploy leaks a session until vCenter's per-user
+	// session limit is hit and all subsequent deploy/sync/snapshot calls fail at
+	// connect. Provision uses conn synchronously, so releasing on return is safe.
+	defer func() { _ = conn.Logout(ctx) }()
 
 	// Resolve the agent's inline default_config (agent→config→artifact.content)
 	// so it is embedded into cloud-init at deploy — no fetch from the VM (LLD-09).
