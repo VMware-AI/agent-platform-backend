@@ -28,8 +28,9 @@ type VCenterClient interface {
 	CreateSnapshot(ctx context.Context, vmName, name, description string) error
 	RevertSnapshot(ctx context.Context, vmName, snapshotName string) error
 	ListSnapshots(ctx context.Context, vmName string) ([]vcenter.SnapshotInfo, error)
-	// VerifyContentLibrary checks a content library exists (资源池接入表单 校验).
-	VerifyContentLibrary(ctx context.Context, name string) (vcenter.ContentLibraryInfo, error)
+	// ListContentLibraries returns names of all content libraries on the vCenter
+	// (资源池接入表单 下拉选择).
+	ListContentLibraries(ctx context.Context) ([]string, error)
 	// About returns the vCenter version/build identity (test-connection detail).
 	About() vcenter.AboutInfo
 	Logout(ctx context.Context) error

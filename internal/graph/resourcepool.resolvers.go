@@ -155,8 +155,8 @@ func (r *mutationResolver) TestResourcePoolConnection(ctx context.Context, input
 		r.audit(ctx, "resource_pool.test", "resource_pool", input.Name, true, actor)
 		return &model.ResourcePoolConnectionTest{
 			Ok:      true,
-			Message: fmt.Sprintf("%s is reachable (no credentials given — content library not verified)", host),
-			Detail:  &model.ResourcePoolConnectionDetail{VSphereVersion: "", ItemCount: 0, ContentLibraryFound: false},
+			Message: fmt.Sprintf("%s is reachable (no credentials given — content libraries not fetched)", host),
+			Detail:  &model.ResourcePoolConnectionDetail{VSphereVersion: "", ContentLibraries: []string{}},
 		}, nil
 	}
 
@@ -174,29 +174,21 @@ func (r *mutationResolver) TestResourcePoolConnection(ctx context.Context, input
 	defer func() { _ = conn.Logout(ctx) }()
 
 	about := conn.About()
-	lib, err := conn.VerifyContentLibrary(ctx, input.ContentLibraryName)
+	libs, err := conn.ListContentLibraries(ctx)
 	if err != nil {
 		r.audit(ctx, "resource_pool.test", "resource_pool", input.Name, false, actor)
-		log.Printf("resource pool test: verify library %q failed: %v", input.ContentLibraryName, err)
+		log.Printf("resource pool test: list libraries for %q failed: %v", input.Name, err)
 		return &model.ResourcePoolConnectionTest{
 			Ok:      false,
-			Message: "connected, but the content-library lookup failed",
-			Detail:  &model.ResourcePoolConnectionDetail{VSphereVersion: about.Version, ItemCount: 0, ContentLibraryFound: false},
-		}, nil
-	}
-	if !lib.Found {
-		r.audit(ctx, "resource_pool.test", "resource_pool", input.Name, false, actor)
-		return &model.ResourcePoolConnectionTest{
-			Ok:      false,
-			Message: fmt.Sprintf("connected (vSphere %s), but content library %q was not found", about.Version, input.ContentLibraryName),
-			Detail:  &model.ResourcePoolConnectionDetail{VSphereVersion: about.Version, ItemCount: 0, ContentLibraryFound: false},
+			Message: "connected, but the content-library list request failed",
+			Detail:  &model.ResourcePoolConnectionDetail{VSphereVersion: about.Version, ContentLibraries: []string{}},
 		}, nil
 	}
 	r.audit(ctx, "resource_pool.test", "resource_pool", input.Name, true, actor)
 	return &model.ResourcePoolConnectionTest{
 		Ok:      true,
-		Message: fmt.Sprintf("connected (vSphere %s); content library %q OK (%d items)", about.Version, input.ContentLibraryName, lib.ItemCount),
-		Detail:  &model.ResourcePoolConnectionDetail{VSphereVersion: about.Version, ItemCount: lib.ItemCount, ContentLibraryFound: true},
+		Message: fmt.Sprintf("connected (vSphere %s); found %d content library(s)", about.Version, len(libs)),
+		Detail:  &model.ResourcePoolConnectionDetail{VSphereVersion: about.Version, ContentLibraries: libs},
 	}, nil
 }
 

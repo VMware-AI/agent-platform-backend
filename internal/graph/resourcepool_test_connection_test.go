@@ -73,36 +73,31 @@ func TestTestResourcePoolConnection_Authenticated(t *testing.T) {
 	insecure := true
 	user, pass := "u", "p"
 
-	// Existing library → ok + version + found.
-	ok, err := mr.TestResourcePoolConnection(ctx, model.TestResourcePoolConnectionInput{
-		Name: "oc", Endpoint: vsrv.URL.String(), ContentLibraryName: "tkg",
+	// Authenticated probe → ok=true, vSphere version present, library list includes seeded library.
+	res, err := mr.TestResourcePoolConnection(ctx, model.TestResourcePoolConnectionInput{
+		Name: "oc", Endpoint: vsrv.URL.String(),
 		Username: &user, Password: &pass, Insecure: &insecure,
 	})
 	if err != nil {
 		t.Fatalf("test connection: %v", err)
 	}
-	if !ok.Ok {
-		t.Fatalf("expected ok=true, got %s", ok.Message)
+	if !res.Ok {
+		t.Fatalf("expected ok=true, got %s", res.Message)
 	}
-	if ok.Detail == nil || !ok.Detail.ContentLibraryFound {
-		t.Fatalf("expected contentLibraryFound=true, detail=%+v", ok.Detail)
+	if res.Detail == nil {
+		t.Fatal("expected non-nil detail from the authenticated probe")
 	}
-	if ok.Detail.VSphereVersion == "" {
+	if res.Detail.VSphereVersion == "" {
 		t.Fatal("expected a non-empty vSphereVersion from the authenticated probe")
 	}
-
-	// Missing library → ok=false, found=false, but no transport error.
-	miss, err := mr.TestResourcePoolConnection(ctx, model.TestResourcePoolConnectionInput{
-		Name: "oc", Endpoint: vsrv.URL.String(), ContentLibraryName: "does-not-exist",
-		Username: &user, Password: &pass, Insecure: &insecure,
-	})
-	if err != nil {
-		t.Fatalf("test connection (missing lib): %v", err)
+	found := false
+	for _, name := range res.Detail.ContentLibraries {
+		if name == "tkg" {
+			found = true
+			break
+		}
 	}
-	if miss.Ok {
-		t.Fatal("expected ok=false for a missing content library")
-	}
-	if miss.Detail == nil || miss.Detail.ContentLibraryFound {
-		t.Fatalf("expected contentLibraryFound=false, detail=%+v", miss.Detail)
+	if !found {
+		t.Fatalf("expected 'tkg' in contentLibraries, got %v", res.Detail.ContentLibraries)
 	}
 }

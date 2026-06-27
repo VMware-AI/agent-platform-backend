@@ -55,6 +55,10 @@ type Config struct {
 	// DBConnMaxLifetimeMinutes recycles a connection after this long (0 = never).
 	// A finite lifetime plays well with failover and PgBouncer.
 	DBConnMaxLifetimeMinutes int
+	// PoolSyncIntervalSeconds is how often (seconds) the background goroutine
+	// re-syncs every resource pool that has stored credentials.
+	// 0 (default) disables it.
+	PoolSyncIntervalSeconds int
 }
 
 // Load reads config from the environment and validates it. Fails fast on a
@@ -113,6 +117,9 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	if c.DBConnMaxLifetimeMinutes, err = getenvInt("DB_CONN_MAX_LIFETIME_MINUTES", 30); err != nil {
+		return nil, err
+	}
+	if c.PoolSyncIntervalSeconds, err = getenvInt("POOL_SYNC_INTERVAL_SECONDS", 0); err != nil {
 		return nil, err
 	}
 	return c, nil

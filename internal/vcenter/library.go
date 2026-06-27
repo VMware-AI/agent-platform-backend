@@ -8,44 +8,28 @@ import (
 	"github.com/vmware/govmomi/vapi/rest"
 )
 
-// ContentLibraryInfo summarizes a content library for the 资源池接入表单. Found
-// reports whether a library with the requested name exists on the vCenter;
-// ItemCount is the number of items in it (templates/ISOs), 0 when empty.
-type ContentLibraryInfo struct {
-	Found     bool
-	ItemCount int
-}
-
-// VerifyContentLibrary logs into the vCenter vAPI (REST) endpoint and checks
-// that a content library with the given name exists, returning its item count.
+// ListContentLibraries returns the names of all content libraries on the
+// vCenter. The REST session is opened and closed within this call; the caller
+// supplies only the govmomi client already holding a SOAP session.
 //
-// It is used by the resource-pool onboarding 接入表单 to validate the operator's
-// contentLibraryName against the real vCenter before the pool is committed —
-// catching a typo'd library name at form time instead of at deploy time (when a
-// missing library would otherwise fail an OVA clone). A missing library is a
-// normal negative result (Found=false, nil error), NOT a transport error; only
-// network/auth failures return an error.
-func (c *Client) VerifyContentLibrary(ctx context.Context, name string) (ContentLibraryInfo, error) {
+// An empty slice (not an error) is returned when the vCenter has no content
+// libraries configured.
+func (c *Client) ListContentLibraries(ctx context.Context) ([]string, error) {
 	rc := rest.NewClient(c.vc.Client)
 	if err := rc.Login(ctx, c.userinfo); err != nil {
-		return ContentLibraryInfo{}, fmt.Errorf("vcenter: rest login: %w", err)
+		return nil, fmt.Errorf("vcenter: rest login: %w", err)
 	}
 	defer func() { _ = rc.Logout(ctx) }()
 
 	m := library.NewManager(rc)
-	// FindLibrary returns matching ids ([] when none) — distinguishes a genuinely
-	// missing library from a transport error, unlike GetLibraryByName (which errors
-	// on not-found).
-	ids, err := m.FindLibrary(ctx, library.Find{Name: name})
+	// GetLibraries returns all libraries in one request (name + metadata).
+	libs, err := m.GetLibraries(ctx)
 	if err != nil {
-		return ContentLibraryInfo{}, fmt.Errorf("vcenter: find library %q: %w", name, err)
+		return nil, fmt.Errorf("vcenter: get libraries: %w", err)
 	}
-	if len(ids) == 0 {
-		return ContentLibraryInfo{Found: false}, nil
+	names := make([]string, 0, len(libs))
+	for _, lib := range libs {
+		names = append(names, lib.Name)
 	}
-	items, err := m.ListLibraryItems(ctx, ids[0])
-	if err != nil {
-		return ContentLibraryInfo{}, fmt.Errorf("vcenter: list items of library %q: %w", name, err)
-	}
-	return ContentLibraryInfo{Found: true, ItemCount: len(items)}, nil
+	return names, nil
 }
