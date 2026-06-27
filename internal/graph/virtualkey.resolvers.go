@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
@@ -117,16 +118,20 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 	vk, err := create.Save(ctx)
 	if err != nil {
 		// Compensate: the gateway minted the key but its governance row failed to
-		// persist. Revoke the key so it does not linger as an orphan. Use a
-		// detached context — the original may already be canceled/timed-out,
-		// which can be the very cause of the failure (C3; cf. deploy.Provision).
+		// persist — including losing the 1:1 agent↔key race to a concurrent issue,
+		// now caught deterministically by the partial unique index. Revoke the key
+		// so it does not linger as an orphan. Detached context — the original may
+		// already be canceled/timed-out, which can be the very cause (C3).
 		cctx := context.WithoutCancel(ctx)
 		actor := actorID(auth.FromContext(ctx))
-		if delErr := gw.DeleteKey(cctx, resp.Key); delErr != nil {
-			r.audit(cctx, "key.issue", "virtual_key", input.UserID, false, actor)
+		delErr := gw.DeleteKey(cctx, resp.Key)
+		r.audit(cctx, "key.issue", "virtual_key", input.UserID, false, actor)
+		if ent.IsConstraintError(err) {
+			return nil, gqlerror.Errorf("agent already has a virtual key (one key per agent)")
+		}
+		if delErr != nil {
 			return nil, fmt.Errorf("persist virtual key failed: %v (orphan revoke also failed: %w)", err, delErr)
 		}
-		r.audit(cctx, "key.issue", "virtual_key", input.UserID, false, actor)
 		return nil, fmt.Errorf("persist virtual key failed: %w", err)
 	}
 	r.audit(ctx, "key.issue", "virtual_key", vk.ID.String(), true, actorID(auth.FromContext(ctx)))

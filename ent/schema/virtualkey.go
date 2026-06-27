@@ -2,6 +2,7 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -40,5 +41,11 @@ func (VirtualKey) Fields() []ent.Field {
 func (VirtualKey) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("user_id"),
+		// Enforce the 1:1 agent↔key invariant at the DB layer so two concurrent
+		// IssueVirtualKey calls can't both mint a key for the same agent (the
+		// read-then-create check in the resolver is racy). Partial: a revoked key
+		// frees the agent to be re-issued; a NULL agent_id (user-level keys) is
+		// naturally unconstrained.
+		index.Fields("agent_id").Unique().Annotations(entsql.IndexWhere("status <> 'revoked'")),
 	}
 }
