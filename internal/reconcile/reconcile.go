@@ -15,6 +15,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"runtime/debug"
 	"time"
 
 	"github.com/google/uuid"
@@ -44,6 +45,12 @@ type Reconciler struct {
 	// Prune enables healing: delete gateway orphans + revoke stale DB rows. When
 	// false (default) the reconciler only reports.
 	Prune bool
+	// IsLeader, when set, gates each cycle: the cycle runs only when it returns
+	// true. This single-flights the (destructive, under Prune) reconcile across
+	// replicas — the bare `go rec.Run` is started on every replica, so without a
+	// gate all of them would race to delete gateway keys/teams and revoke rows.
+	// nil = always leader (single-replica / dev / sqlite).
+	IsLeader func(ctx context.Context) bool
 }
 
 // Report summarizes one reconciliation pass. Key identifiers are kept here for
@@ -240,23 +247,45 @@ func (r *Reconciler) Run(ctx context.Context, interval time.Duration) {
 	t := time.NewTicker(interval)
 	defer t.Stop()
 	for {
-		// Resolve the gateway to reconcile this cycle (default GatewayConnection).
-		// Run is a single goroutine, so mutating r.Gateway here is race-free.
-		if r.GatewayFunc != nil {
-			r.Gateway = r.GatewayFunc(ctx)
-		}
-		if r.Gateway != nil {
-			if _, err := r.ReconcileKeys(ctx); err != nil {
-				log.Printf("reconcile keys cycle error: %v", err)
-			}
-			if _, err := r.ReconcileTeams(ctx); err != nil {
-				log.Printf("reconcile teams cycle error: %v", err)
-			}
-		}
+		r.runCycle(ctx)
 		select {
 		case <-ctx.Done():
 			return
 		case <-t.C:
 		}
+	}
+}
+
+// runCycle executes one reconciliation pass under a recover guard. The
+// reconciler runs as a bare `go rec.Run` directly under main() — not under
+// net/http, the only thing in this process that auto-recovers panics — so an
+// unrecovered panic on the gateway-client / ent path would crash the entire
+// control plane (GraphQL API included). Recovering here logs the stack and lets
+// the ticker continue: one bad cycle never takes down the process.
+func (r *Reconciler) runCycle(ctx context.Context) {
+	defer func() {
+		if p := recover(); p != nil {
+			log.Printf("reconcile: panic recovered, skipping cycle: %v\n%s", p, debug.Stack())
+		}
+	}()
+	// Single-flight across replicas: only the elected leader reconciles, so the
+	// destructive prune isn't duplicated. nil gate = always run (dev/single).
+	if r.IsLeader != nil && !r.IsLeader(ctx) {
+		return
+	}
+	// Resolve the gateway to reconcile this cycle (default GatewayConnection).
+	// runCycle is called sequentially from Run's loop, so mutating r.Gateway here
+	// is race-free.
+	if r.GatewayFunc != nil {
+		r.Gateway = r.GatewayFunc(ctx)
+	}
+	if r.Gateway == nil {
+		return
+	}
+	if _, err := r.ReconcileKeys(ctx); err != nil {
+		log.Printf("reconcile keys cycle error: %v", err)
+	}
+	if _, err := r.ReconcileTeams(ctx); err != nil {
+		log.Printf("reconcile teams cycle error: %v", err)
 	}
 }

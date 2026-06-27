@@ -24,6 +24,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/config"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph"
 	"github.com/VMware-AI/agent-platform-backend/internal/httpx"
+	"github.com/VMware-AI/agent-platform-backend/internal/leader"
 	"github.com/VMware-AI/agent-platform-backend/internal/ratelimit"
 	"github.com/VMware-AI/agent-platform-backend/internal/reconcile"
 	"github.com/VMware-AI/agent-platform-backend/internal/secrets"
@@ -32,6 +33,11 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 )
 
+// reconcileLeaseKey is the Postgres advisory-lock key that single-flights the
+// gateway-key reconciler across replicas. Arbitrary but fixed and unique to this
+// job (ASCII "rcncl-gw").
+const reconcileLeaseKey int64 = 0x72636e636c2d6777
+
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -39,7 +45,11 @@ func main() {
 	}
 	ctx := context.Background()
 
-	client, err := store.Open(ctx, cfg.DatabaseURL, cfg.DBAutoMigrate)
+	client, db, err := store.OpenWithPool(ctx, cfg.DatabaseURL, cfg.DBAutoMigrate, store.PoolConfig{
+		MaxOpenConns:    cfg.DBMaxOpenConns,
+		MaxIdleConns:    cfg.DBMaxIdleConns,
+		ConnMaxLifetime: time.Duration(cfg.DBConnMaxLifetimeMinutes) * time.Minute,
+	})
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}
@@ -142,6 +152,14 @@ func main() {
 			// (LLD-13 §3.3); cycles are skipped until a default gateway exists.
 			GatewayFunc: func(ctx context.Context) reconcile.Gateway { return resolver.ReconcileGateway(ctx) },
 			Prune:       cfg.ReconcilePrune,
+		}
+		// Single-flight across replicas via a Postgres advisory lock so the prune
+		// runs on exactly one replica (postgres only — the dev sqlite path has a
+		// single in-memory replica, so it's always leader).
+		if cfg.DatabaseURL != "" {
+			lease := leader.NewPGLease(db, reconcileLeaseKey)
+			defer lease.Release(context.Background())
+			rec.IsLeader = lease.IsLeader
 		}
 		interval := time.Duration(cfg.ReconcileInterval) * time.Second
 		log.Printf("gateway-key reconciler: every %s (prune=%v), default gateway", interval, cfg.ReconcilePrune)
