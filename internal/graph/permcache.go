@@ -9,6 +9,13 @@ import (
 // @hasPermission directive doesn't hit the DB on every guarded field. Entries
 // expire after a short TTL; mutations that change roles invalidate eagerly.
 // nil-safe: a nil *permCache simply disables caching (always query).
+//
+// ⚠️ PROCESS-LOCAL: invalidate/clear only evict THIS replica's map. Under a
+// multi-replica deployment a role/permission revocation does NOT propagate to
+// other replicas — they keep honoring the stale permission set until its TTL
+// expires. It is therefore disabled by default (PERM_CACHE_TTL_SECONDS=0) and
+// should be enabled single-replica only, until a shared (Redis pub/sub)
+// invalidation channel lands.
 type permCache struct {
 	mu  sync.Mutex
 	m   map[string]permCacheEntry

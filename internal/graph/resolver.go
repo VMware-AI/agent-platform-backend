@@ -82,8 +82,10 @@ type Resolver struct {
 }
 
 // EnablePermissionCache turns on memoization of custom-role permission sets for
-// the @hasPermission directive (recommended in production). Entries expire after
-// ttl and are invalidated eagerly when roles change.
+// the @hasPermission directive. Entries expire after ttl and are invalidated
+// eagerly when roles change — but only on THIS replica (the cache is
+// process-local), so enable it single-replica only (see permcache.go). Disabled
+// by default; opt in via PERM_CACHE_TTL_SECONDS.
 func (r *Resolver) EnablePermissionCache(ttl time.Duration) {
 	r.permCache = newPermCache(ttl)
 }

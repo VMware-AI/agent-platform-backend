@@ -162,7 +162,7 @@ func (r *mutationResolver) RemoveUserRole(ctx context.Context, userID string, ro
 	if err := r.Ent.User.UpdateOneID(uid).RemoveRoleIDs(rid).Exec(ctx); err != nil {
 		return false, err
 	}
-	r.permCache.invalidate(userID) // revoke takes effect immediately, not after TTL
+	r.permCache.invalidate(userID) // evicts THIS replica only; others clear at TTL (permcache.go)
 	r.audit(ctx, "user.remove_role", "user", userID, true, actorID(auth.FromContext(ctx)))
 	return true, nil
 }

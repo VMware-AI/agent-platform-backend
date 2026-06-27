@@ -62,3 +62,30 @@ func TestLoad_ReconcileDefaults(t *testing.T) {
 		t.Errorf("explicit config not applied: interval=%d prune=%v", c.ReconcileInterval, c.ReconcilePrune)
 	}
 }
+
+// permCache is process-local, so it must default OFF — a multi-replica deploy would
+// otherwise serve stale permissions after a revocation (the eviction is local to
+// the mutating replica). Single-replica deployments opt in explicitly.
+func TestLoad_PermCacheDisabledByDefault(t *testing.T) {
+	t.Setenv("DATABASE_URL", "")
+	t.Setenv("APP_ENV", "dev")
+	t.Setenv("PERM_CACHE_TTL_SECONDS", "")
+	c, err := Load()
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if c.PermCacheTTLSeconds != 0 {
+		t.Errorf("perm cache must default DISABLED (multi-replica safe), got %d", c.PermCacheTTLSeconds)
+	}
+
+	t.Setenv("PERM_CACHE_TTL_SECONDS", "-1")
+	if _, err := Load(); err == nil {
+		t.Error("negative PERM_CACHE_TTL_SECONDS must fail validation")
+	}
+
+	t.Setenv("PERM_CACHE_TTL_SECONDS", "60")
+	c, _ = Load()
+	if c.PermCacheTTLSeconds != 60 {
+		t.Errorf("explicit PERM_CACHE_TTL_SECONDS=60 not applied, got %d", c.PermCacheTTLSeconds)
+	}
+}
