@@ -25,10 +25,27 @@ type Client struct {
 	userinfo *url.Userinfo
 }
 
-// Connect dials a vCenter and authenticates. insecure skips TLS verification
-// (use only with a pinned internal CA in air-gapped environments).
-func Connect(ctx context.Context, endpoint, user, pass string, insecure bool) (*Client, error) {
+// normalizeEndpoint ensures the endpoint targets the vCenter SOAP SDK path.
+// Operators commonly enter just the host (e.g. https://vc.example.local), but
+// govmomi requires the /sdk endpoint — without it the SOAP POST hits "/" and
+// vCenter answers 400. We append /sdk only when no meaningful path is present;
+// an explicit path (an existing /sdk, or a reverse-proxy prefix) is left as-is.
+func normalizeEndpoint(endpoint string) string {
 	u, err := url.Parse(endpoint)
+	if err != nil {
+		return endpoint // let Connect surface the parse error
+	}
+	if u.Path == "" || u.Path == "/" {
+		u.Path = "/sdk"
+	}
+	return u.String()
+}
+
+// Connect dials a vCenter and authenticates. insecure skips TLS verification
+// (use only with a pinned internal CA in air-gapped environments). The endpoint
+// is normalized to the /sdk path when the caller omits it (see normalizeEndpoint).
+func Connect(ctx context.Context, endpoint, user, pass string, insecure bool) (*Client, error) {
+	u, err := url.Parse(normalizeEndpoint(endpoint))
 	if err != nil {
 		return nil, fmt.Errorf("vcenter: parse endpoint: %w", err)
 	}
