@@ -49,18 +49,29 @@ func (r *mutationResolver) UpdateModelGateway(ctx context.Context, id string, in
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid id")
 	}
+	existing, err := r.Ent.GatewayConnection.Get(ctx, gid)
+	if err != nil {
+		return nil, err
+	}
 	u := r.Ent.GatewayConnection.UpdateOneID(gid).SetName(input.Name).SetEndpoint(input.Endpoint)
 	if input.AdminURL != nil {
 		u.SetAdminURL(*input.AdminURL)
 	}
+	// On a re-submitted masterKey the secret store mints a NEW ref; remember the
+	// prior one so we can delete it after the row is updated (no orphan on rotate).
+	rotatedFrom := ""
 	if ref, set, err := r.resolveKeySecretRef(ctx, "gateway/"+input.Name, input.MasterKey, nil); err != nil {
 		return nil, err
-	} else if set {
+	} else if set && ref != existing.MasterKeyRef {
 		u.SetMasterKeyRef(ref)
+		rotatedFrom = existing.MasterKeyRef
 	}
 	g, err := u.Save(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if rotatedFrom != "" {
+		r.deleteSecretRef(ctx, rotatedFrom) // best-effort: retire the rotated-away key
 	}
 	r.audit(ctx, "model_gateway.update", "gateway_connection", id, true, actorID(auth.FromContext(ctx)))
 	cnt, err := r.backendModelCount(ctx)
@@ -70,15 +81,26 @@ func (r *mutationResolver) UpdateModelGateway(ctx context.Context, id string, in
 	return toModelGateway(g, cnt), nil
 }
 
-// DeleteModelGateway removes a gateway, returning its id for the toast.
+// DeleteModelGateway removes a gateway, returning its id for the toast. Shares
+// the orphan/default guards + master-key secret cleanup with
+// DeleteGatewayConnection (same table, two façades).
 func (r *mutationResolver) DeleteModelGateway(ctx context.Context, id string) (*model.DeleteModelGatewayPayload, error) {
 	gid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid id")
 	}
+	g, err := r.Ent.GatewayConnection.Get(ctx, gid)
+	if err != nil {
+		return nil, err
+	}
+	if err := r.assertGatewayDeletable(ctx, g); err != nil {
+		return nil, err
+	}
 	if err := r.Ent.GatewayConnection.DeleteOneID(gid).Exec(ctx); err != nil {
 		return nil, err
 	}
+	// Don't orphan the master-key secret in the store (best-effort; row is gone).
+	r.deleteSecretRef(ctx, g.MasterKeyRef)
 	r.audit(ctx, "model_gateway.delete", "gateway_connection", id, true, actorID(auth.FromContext(ctx)))
 	return &model.DeleteModelGatewayPayload{DeletedID: id}, nil
 }
