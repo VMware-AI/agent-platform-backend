@@ -29,6 +29,12 @@ func (r *mutationResolver) RecordTokenUsage(ctx context.Context, input model.Rec
 		SetModel(input.Model).
 		SetInputTokens(input.InputTokens).
 		SetOutputTokens(input.OutputTokens)
+	// Stamp tenant_id from the attributed user (the gateway usage callback carries
+	// no caller tenant). Without it every metering row is NULL-tenant and a
+	// tenant-admin — whose reads are constrained by tenantScopeFor — sees nothing.
+	if u, err := r.Ent.User.Get(ctx, userID); err == nil {
+		c.SetNillableTenantID(u.TenantID)
+	}
 	if input.AgentID != nil {
 		if aid, err := uuid.Parse(*input.AgentID); err == nil {
 			c.SetAgentID(aid)

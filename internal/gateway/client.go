@@ -77,12 +77,17 @@ type KeyResponse struct {
 	Spend     float64  `json:"spend"`
 }
 
-// UpdateKeyRequest changes budget/limits on an existing key.
+// UpdateKeyRequest changes budget/limits on an existing key, or toggles it
+// blocked/unblocked (litellm /key/update). All fields are optional — only set
+// ones change.
 type UpdateKeyRequest struct {
 	Key       string   `json:"key"`
 	MaxBudget *float64 `json:"max_budget,omitempty"`
 	RPMLimit  *int     `json:"rpm_limit,omitempty"`
 	TPMLimit  *int     `json:"tpm_limit,omitempty"`
+	// Blocked toggles the key's enabled state at the gateway: true disables it
+	// (requests rejected) and false re-enables it, without deleting the key.
+	Blocked *bool `json:"blocked,omitempty"`
 }
 
 // TeamRequest creates a team (= department) carrying a shared budget.

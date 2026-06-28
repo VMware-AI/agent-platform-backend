@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
@@ -29,6 +30,15 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 	userID, err := uuid.Parse(input.UserID)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid userId")
+	}
+	// Owner-tenant guard: a tenant-admin may not mint a key for a user in another
+	// tenant (a cross-tenant target reads as missing). Only constrains an authed
+	// caller — no-auth ctx occurs only in resolver-level tests (the schema @hasRole
+	// directive enforces auth in prod); a non-existent userId is a data concern.
+	if cu := auth.FromContext(ctx); cu != nil {
+		if u, err := r.Ent.User.Get(ctx, userID); err == nil && !writeAllowed(ctx, u.TenantID) {
+			return nil, notFoundErr("user")
+		}
 	}
 
 	// 1:1 agent↔key (会议 0622: 智能体只绑定一个独立虚拟 K,计费一对一). Reject if the
@@ -117,16 +127,20 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 	vk, err := create.Save(ctx)
 	if err != nil {
 		// Compensate: the gateway minted the key but its governance row failed to
-		// persist. Revoke the key so it does not linger as an orphan. Use a
-		// detached context — the original may already be canceled/timed-out,
-		// which can be the very cause of the failure (C3; cf. deploy.Provision).
+		// persist — including losing the 1:1 agent↔key race to a concurrent issue,
+		// now caught deterministically by the partial unique index. Revoke the key
+		// so it does not linger as an orphan. Detached context — the original may
+		// already be canceled/timed-out, which can be the very cause (C3).
 		cctx := context.WithoutCancel(ctx)
 		actor := actorID(auth.FromContext(ctx))
-		if delErr := gw.DeleteKey(cctx, resp.Key); delErr != nil {
-			r.audit(cctx, "key.issue", "virtual_key", input.UserID, false, actor)
+		delErr := gw.DeleteKey(cctx, resp.Key)
+		r.audit(cctx, "key.issue", "virtual_key", input.UserID, false, actor)
+		if ent.IsConstraintError(err) {
+			return nil, gqlerror.Errorf("agent already has a virtual key (one key per agent)")
+		}
+		if delErr != nil {
 			return nil, fmt.Errorf("persist virtual key failed: %v (orphan revoke also failed: %w)", err, delErr)
 		}
-		r.audit(cctx, "key.issue", "virtual_key", input.UserID, false, actor)
 		return nil, fmt.Errorf("persist virtual key failed: %w", err)
 	}
 	r.audit(ctx, "key.issue", "virtual_key", vk.ID.String(), true, actorID(auth.FromContext(ctx)))
@@ -146,10 +160,18 @@ func (r *mutationResolver) RevokeVirtualKey(ctx context.Context, id string) (boo
 	if err != nil {
 		return false, err
 	}
-	if gw := r.gatewayKeyClient(ctx, deptIDFromTeam(&vk.TeamID)); gw != nil {
-		if err := gw.DeleteKey(ctx, vk.LitellmKey); err != nil {
-			return false, fmt.Errorf("gateway: %w", err)
-		}
+	if err := r.assertVirtualKeyOwnerTenant(ctx, vk); err != nil {
+		return false, err
+	}
+	// Revoke at the gateway FIRST, and only then mark the row revoked. If no
+	// gateway resolves, fail rather than flip the status: marking a still-live key
+	// "revoked" hides it from the reconciler (terminal state) and it keeps billing.
+	gw := r.gatewayKeyClient(ctx, deptIDFromTeam(&vk.TeamID))
+	if gw == nil {
+		return false, gqlerror.Errorf("model gateway is not configured; key not revoked at gateway")
+	}
+	if err := gw.DeleteKey(ctx, vk.LitellmKey); err != nil {
+		return false, fmt.Errorf("gateway: %w", err)
 	}
 	if _, err := r.Ent.VirtualKey.UpdateOne(vk).SetStatus(virtualkey.StatusRevoked).Save(ctx); err != nil {
 		return false, err
@@ -167,6 +189,9 @@ func (r *mutationResolver) RegenerateVirtualKey(ctx context.Context, id string) 
 	}
 	vk, err := r.Ent.VirtualKey.Get(ctx, kid)
 	if err != nil {
+		return nil, err
+	}
+	if err := r.assertVirtualKeyOwnerTenant(ctx, vk); err != nil {
 		return nil, err
 	}
 	if vk.Status == virtualkey.StatusRevoked {
@@ -214,8 +239,22 @@ func (r *mutationResolver) SetVirtualKeyEnabled(ctx context.Context, id string, 
 	if err != nil {
 		return nil, err
 	}
+	if err := r.assertVirtualKeyOwnerTenant(ctx, vk); err != nil {
+		return nil, err
+	}
 	if vk.Status == virtualkey.StatusRevoked {
 		return nil, gqlerror.Errorf("key is revoked and cannot be re-enabled")
+	}
+	// Propagate the toggle to the gateway so a disabled key actually stops working
+	// there — not just in our DB (litellm /key/update `blocked`). Gateway-first:
+	// only flip the row after the gateway confirms; require a gateway, like revoke.
+	gw := r.gatewayKeyClient(ctx, deptIDFromTeam(&vk.TeamID))
+	if gw == nil {
+		return nil, gqlerror.Errorf("model gateway is not configured")
+	}
+	blocked := !enabled
+	if err := gw.UpdateKey(ctx, gateway.UpdateKeyRequest{Key: vk.LitellmKey, Blocked: &blocked}); err != nil {
+		return nil, fmt.Errorf("gateway: %w", err)
 	}
 	status := virtualkey.StatusDisabled
 	if enabled {

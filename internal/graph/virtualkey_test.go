@@ -57,13 +57,17 @@ type fakeGateway struct {
 	deletedTeams []string
 	listed       []gateway.KeyInfo
 	regenerated  []string
+	updated      []gateway.UpdateKeyRequest
 }
 
 func (f *fakeGateway) GenerateKey(_ context.Context, req gateway.GenerateKeyRequest) (*gateway.KeyResponse, error) {
 	f.generated = append(f.generated, req)
 	return &gateway.KeyResponse{Key: "sk-fake-123", Token: "tok-fake-123", UserID: req.UserID}, nil
 }
-func (f *fakeGateway) UpdateKey(context.Context, gateway.UpdateKeyRequest) error { return nil }
+func (f *fakeGateway) UpdateKey(_ context.Context, req gateway.UpdateKeyRequest) error {
+	f.updated = append(f.updated, req)
+	return nil
+}
 func (f *fakeGateway) DeleteKey(_ context.Context, key string) error {
 	f.deleted = append(f.deleted, key)
 	return nil

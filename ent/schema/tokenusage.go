@@ -37,5 +37,11 @@ func (TokenUsage) Indexes() []ent.Index {
 		index.Fields("user_id"),
 		index.Fields("model"),
 		index.Fields("created_at"),
+		// Time-windowed tenant metering: (tenant_id, created_at) matches the
+		// scopedTokenUsageQuery tenant filter + range scan; agent_id and
+		// department_id back the per-agent / per-department breakdowns.
+		index.Fields("tenant_id", "created_at"),
+		index.Fields("agent_id"),
+		index.Fields("department_id"),
 	}
 }

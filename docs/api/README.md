@@ -14,7 +14,7 @@ All operations are served from a single endpoint: **`POST /query`**.
 | [Virtual Keys & Rate Limits](./virtual-keys.md) | Per-user LiteLLM virtual keys and rate-limit policies |
 | [Observability (Request Logs, Audit Logs, Metrics)](./observability.md) | Request logs, audit logs, request metrics, rate-limit policies |
 | [Metering](./metering.md) | Token usage and cost aggregation (metering center) |
-| [Platform (Users, Roles, Permissions, Departments)](./platform.md) | Users, built-in roles, custom roles, permissions, departments, memberships |
+| [Platform (Users, Roles, Permissions, Departments, Settings)](./platform.md) | Users, built-in roles, custom roles, permissions, departments, memberships |
 | [Resource Pools & vSphere](./resource-pools.md) | vCenter resource pools and vSphere placement pools |
 | [OVA Marketplace](./ova-marketplace.md) | OVA template families and versions (agent marketplace catalog) |
 | [Dashboard](./dashboard.md) | Console overview: stat cards, recent agents, system notices |

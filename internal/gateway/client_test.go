@@ -99,6 +99,39 @@ func TestDeleteTeam_RequiresTeamID(t *testing.T) {
 	}
 }
 
+func TestUpdateKey_Blocked(t *testing.T) {
+	var gotPath string
+	var gotBody map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		body, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(body, &gotBody)
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer srv.Close()
+	c := NewHTTPClient(srv.URL, "sk-master")
+	blocked := true
+	if err := c.UpdateKey(context.Background(), UpdateKeyRequest{Key: "sk-x", Blocked: &blocked}); err != nil {
+		t.Fatalf("UpdateKey: %v", err)
+	}
+	if gotPath != "/key/update" {
+		t.Errorf("path = %q, want /key/update", gotPath)
+	}
+	if gotBody["key"] != "sk-x" {
+		t.Errorf("key not sent: %+v", gotBody)
+	}
+	if b, ok := gotBody["blocked"].(bool); !ok || !b {
+		t.Errorf("blocked=true not sent: %+v", gotBody)
+	}
+}
+
+func TestUpdateKey_RequiresKey(t *testing.T) {
+	c := NewHTTPClient("http://unused", "sk-master")
+	if err := c.UpdateKey(context.Background(), UpdateKeyRequest{}); err == nil {
+		t.Fatal("UpdateKey with empty key should error")
+	}
+}
+
 func TestGet_RetriesOnServerError(t *testing.T) {
 	var attempts int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

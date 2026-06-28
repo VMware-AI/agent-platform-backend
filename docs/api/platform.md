@@ -1,8 +1,8 @@
-# Platform (Users, Roles, Permissions, Departments)
+# Platform (Users, Roles, Permissions, Departments, Settings)
 
 [← API Reference index](./README.md)
 
-> Source: `schema/account.graphql`, `schema/rbac.graphql`, `schema/department.graphql`
+> Source: `schema/account.graphql`, `schema/rbac.graphql`, `schema/department.graphql`, `schema/settings.graphql`
 
 ## Queries
 
@@ -117,6 +117,15 @@ departmentMembers(departmentId: ID!): [Membership!]!
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
 | `departmentId` | `ID!` | yes | — |
+
+### `platformSettings`
+
+```graphql
+platformSettings: PlatformSettings!
+```
+
+- **Returns:** `PlatformSettings!`
+- **Auth:** `@hasRole(any: [admin])`
 
 ## Mutations
 
@@ -342,6 +351,19 @@ removeMembership(userId: ID!, departmentId: ID!): Boolean!
 | `userId` | `ID!` | yes | — |
 | `departmentId` | `ID!` | yes | — |
 
+### `updatePlatformSettings`
+
+```graphql
+updatePlatformSettings(input: UpdatePlatformSettingsInput!): PlatformSettings!
+```
+
+- **Returns:** `PlatformSettings!`
+- **Auth:** `@hasRole(any: [admin])`
+
+| Argument | Type | Required | Default |
+|----------|------|----------|---------|
+| `input` | `UpdatePlatformSettingsInput!` | yes | — |
+
 ## Types
 
 ### AccountRoleRef
@@ -444,6 +466,14 @@ The user's role as a lightweight reference (embedded in AccountUser).
 | `key` | `String!` | — |
 | `description` | `String` | — |
 
+### PlatformSettings
+
+*Object*
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agentUser` | `String!` | OS user that runs installed agents on the VM. Defaults to "agent" when unset. |
+
 ### ResetPasswordPayload
 
 *Object*
@@ -536,6 +566,14 @@ A built-in assignable role surfaced as an entity (id = the role key).
 | `passwordMode` | `PasswordMode!` | — | — |
 | `customPassword` | `String` | — | — |
 | `enabled` | `Boolean` | `true` | — |
+
+### UpdatePlatformSettingsInput
+
+*Input*
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agentUser` | `String` | When provided, sets the agent OS user; omitted = unchanged. Must be non-empty. |
 
 ### UpdateUserInput
 

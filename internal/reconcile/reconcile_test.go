@@ -375,3 +375,55 @@ func TestReconcileTeams_ListError(t *testing.T) {
 		t.Fatal("expected error when ListTeams fails")
 	}
 }
+
+// panicGateway records that it was reached, then panics — used to prove the
+// leader gate keeps a non-leader from touching the gateway, and that runCycle's
+// recover keeps a gateway panic from crashing the process.
+type panicGateway struct{ reached bool }
+
+func (p *panicGateway) ListKeys(context.Context) ([]gateway.KeyInfo, error) {
+	p.reached = true
+	panic("gateway boom")
+}
+func (p *panicGateway) DeleteKey(context.Context, string) error               { return nil }
+func (p *panicGateway) ListTeams(context.Context) ([]gateway.TeamInfo, error) { return nil, nil }
+func (p *panicGateway) DeleteTeam(context.Context, string) error              { return nil }
+
+// A non-leader cycle must not touch the gateway at all (single-flight the prune).
+func TestRunCycle_NonLeaderSkips(t *testing.T) {
+	db, cleanup := newDB(t)
+	defer cleanup()
+	gw := &panicGateway{}
+	r := &Reconciler{Ent: db, Gateway: gw, Prune: true, IsLeader: func(context.Context) bool { return false }}
+	r.runCycle(context.Background())
+	if gw.reached {
+		t.Fatal("non-leader cycle reached the gateway; leader gate did not block it")
+	}
+}
+
+// The elected leader runs the full reconcile (orphan pruned).
+func TestRunCycle_LeaderRuns(t *testing.T) {
+	db, cleanup := newDB(t)
+	defer cleanup()
+	mkKey(t, db, "sk-A", virtualkey.StatusActive)
+	gw := &fakeKeyGateway{keys: []gateway.KeyInfo{{Key: "sk-A"}, {Key: "sk-B"}}}
+	r := &Reconciler{Ent: db, Gateway: gw, Prune: true, IsLeader: func(context.Context) bool { return true }}
+	r.runCycle(context.Background())
+	if len(gw.deleted) != 1 || gw.deleted[0] != "sk-B" {
+		t.Fatalf("leader cycle should prune orphan sk-B, got %v", gw.deleted)
+	}
+}
+
+// A panic on the gateway path must be recovered so one bad cycle never crashes
+// the control-plane process. runCycle returning normally here is the assertion —
+// an unrecovered panic would crash the test goroutine.
+func TestRunCycle_RecoversPanic(t *testing.T) {
+	db, cleanup := newDB(t)
+	defer cleanup()
+	gw := &panicGateway{}
+	r := &Reconciler{Ent: db, Gateway: gw} // IsLeader nil = always leader
+	r.runCycle(context.Background())
+	if !gw.reached {
+		t.Fatal("leader cycle should have reached the (panicking) gateway")
+	}
+}

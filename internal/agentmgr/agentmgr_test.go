@@ -23,6 +23,7 @@ type failStore struct{}
 func (failStore) Put(context.Context, string, secrets.Credential) (string, error) {
 	return "", errors.New("vault down")
 }
+func (failStore) Delete(context.Context, string) error { return nil }
 
 func newTestService(t *testing.T) (*Service, *time.Time, func()) {
 	t.Helper()

@@ -362,12 +362,22 @@ func (c *Client) findVM(ctx context.Context, name string) (*object.VirtualMachin
 	if err := v.Retrieve(ctx, []string{"VirtualMachine"}, []string{"name"}, &vms); err != nil {
 		return nil, err
 	}
+	var match *object.VirtualMachine
 	for _, vm := range vms {
 		if vm.Name == name {
-			return object.NewVirtualMachine(c.vc.Client, vm.Reference()), nil
+			if match != nil {
+				// Display names are mutable and not guaranteed unique in vCenter. A
+				// destructive op (power/destroy) must never guess which duplicate to
+				// hit — fail loudly instead of silently taking the first match.
+				return nil, fmt.Errorf("vcenter: multiple VMs named %q; refusing op on an ambiguous name", name)
+			}
+			match = object.NewVirtualMachine(c.vc.Client, vm.Reference())
 		}
 	}
-	return nil, fmt.Errorf("vcenter: vm %q not found", name)
+	if match == nil {
+		return nil, fmt.Errorf("vcenter: vm %q not found", name)
+	}
+	return match, nil
 }
 
 // Inventory counts the resource pool's datacenters/clusters/hosts/VMs

@@ -36,5 +36,10 @@ func (RequestLog) Indexes() []ent.Index {
 		index.Fields("request_id"),
 		index.Fields("status_code"),
 		index.Fields("created_at"),
+		// Hot filter columns: the request-log UI filters by agent, and the monitor
+		// + tenant scoping resolve traffic by user/agent. Without these, every such
+		// query full-scans an append-only (ever-growing) table.
+		index.Fields("agent_id"),
+		index.Fields("user_id"),
 	}
 }

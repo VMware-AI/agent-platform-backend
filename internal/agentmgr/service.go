@@ -215,6 +215,9 @@ func (s *Service) RequestRotation(ctx context.Context, agentID uuid.UUID, kind r
 	if err != nil {
 		return nil, err
 	}
+	if cmd == nil {
+		return nil, nil // raced an in-flight rotation (caught by the unique index) — no-op
+	}
 	s.audit(ctx, "rotation.request", "rotation_command", cmd.ID.String(), true, actorID)
 	return cmd, nil
 }

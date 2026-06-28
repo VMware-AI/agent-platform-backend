@@ -28,6 +28,11 @@ type ModelSpec struct {
 	APIBase   string   // litellm_params.api_base
 	APIKey    string   // litellm_params.api_key (resolved secret, in memory only)
 	Tags      []string // optional tag-based routing
+	// ModelID pins litellm's model_info.id to a caller-owned id (we use the Upstream
+	// row id) so the deployment can later be deleted deterministically via
+	// /model/delete {"id": ...}. Verified against a real litellm: it honors a custom
+	// model_info.id and delete-by-that-id succeeds. Empty → litellm assigns its own.
+	ModelID string
 }
 
 // RouterSpec configures the Complexity Router "smart" model.
@@ -69,8 +74,15 @@ func (c *HTTPClient) NewModel(ctx context.Context, spec ModelSpec) error {
 		"model_name":     spec.ModelName,
 		"litellm_params": params,
 	}
+	modelInfo := map[string]any{}
+	if spec.ModelID != "" {
+		modelInfo["id"] = spec.ModelID // pin the id so DeleteModel can target it later
+	}
 	if len(spec.Tags) > 0 {
-		body["model_info"] = map[string]any{"tags": spec.Tags}
+		modelInfo["tags"] = spec.Tags
+	}
+	if len(modelInfo) > 0 {
+		body["model_info"] = modelInfo
 	}
 	return c.post(ctx, "/model/new", body, nil)
 }

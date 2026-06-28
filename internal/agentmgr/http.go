@@ -2,8 +2,12 @@ package agentmgr
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
+	"runtime/debug"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 const maxBody = 1 << 20 // 1 MiB cap on daemon request bodies
@@ -19,7 +23,24 @@ func Handler(svc *Service) http.Handler {
 	// LLD-11 §6: knowledge-pack delivery over the same authenticated channel.
 	mux.HandleFunc("GET /v1/agents/{vm_id}/knowledge", svc.handleKnowledgeList)
 	mux.HandleFunc("GET /v1/agents/{vm_id}/knowledge/{artifact_id}", svc.handleKnowledgeGet)
-	return mux
+	return recoverMiddleware(mux)
+}
+
+// recoverMiddleware mirrors the GraphQL plane's panic masking (graph.RecoverFunc):
+// a panic in a daemon handler is logged with a stack + correlation id and
+// returned as an opaque 500, so one bad request can't crash the server or leak
+// internals — both planes fail uniformly.
+func recoverMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if p := recover(); p != nil {
+				id := uuid.NewString()
+				log.Printf("agentmgr REST panic [%s] %s %s: %v\n%s", id, r.Method, r.URL.Path, p, debug.Stack())
+				writeErr(w, http.StatusInternalServerError)
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
 }
 
 // bearer extracts the token from an "Authorization: Bearer <t>" header.

@@ -131,3 +131,30 @@ func (v *VaultwardenResolver) Put(ctx context.Context, name string, cred Credent
 	}
 	return "vault://" + created.Data.ID, nil
 }
+
+// Delete removes an item via `bw serve` (DELETE /object/item/<id>) so a deleted
+// or rotated secret doesn't orphan in the vault. Idempotent: a 404 (already
+// gone) reads as success.
+func (v *VaultwardenResolver) Delete(ctx context.Context, ref string) error {
+	id, ok := strings.CutPrefix(ref, "vault://")
+	if !ok {
+		return fmt.Errorf("%w: VaultwardenResolver expects vault:// ref, got %q", ErrNotFound, ref)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, v.baseURL+"/object/item/"+id, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := v.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("vaultwarden delete: %w", err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if resp.StatusCode == http.StatusNotFound {
+		return nil // already gone — idempotent
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("vaultwarden delete: status %d: %s", resp.StatusCode, string(body))
+	}
+	return nil
+}

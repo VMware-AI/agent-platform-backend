@@ -2,6 +2,7 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -46,5 +47,14 @@ func (RotationCommand) Indexes() []ent.Index {
 		index.Fields("agent_id"),
 		index.Fields("status"),
 		index.Fields("agent_id", "status"),
+		// At most ONE in-flight command per (agent, kind): the DB enforces the
+		// "one rotation in flight" invariant so a TOCTOU between the EXISTS check
+		// and the INSERT (concurrent heartbeats / a heartbeat racing a manual
+		// RequestRotation) can't enqueue duplicate pending rotations. Phrased as the
+		// complement of the terminal states (completed/failed) — two simple `<>`
+		// clauses normalize stably on Postgres replay, unlike an IN(...) list which
+		// re-expands to ANY(ARRAY[...]) and makes migrate-diff non-idempotent.
+		index.Fields("agent_id", "kind").Unique().
+			Annotations(entsql.IndexWhere("status <> 'completed' AND status <> 'failed'")),
 	}
 }

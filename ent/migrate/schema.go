@@ -274,6 +274,16 @@ var (
 		Name:       "gateway_connections",
 		Columns:    GatewayConnectionsColumns,
 		PrimaryKey: []*schema.Column{GatewayConnectionsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "gatewayconnection_is_default",
+				Unique:  true,
+				Columns: []*schema.Column{GatewayConnectionsColumns[8]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "is_default",
+				},
+			},
+		},
 	}
 	// ImagesColumns holds the columns for the "images" table.
 	ImagesColumns = []*schema.Column{
@@ -472,6 +482,16 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{RequestLogsColumns[10]},
 			},
+			{
+				Name:    "requestlog_agent_id",
+				Unique:  false,
+				Columns: []*schema.Column{RequestLogsColumns[3]},
+			},
+			{
+				Name:    "requestlog_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{RequestLogsColumns[2]},
+			},
 		},
 	}
 	// ResourcePoolsColumns holds the columns for the "resource_pools" table.
@@ -571,6 +591,14 @@ var (
 				Name:    "rotationcommand_agent_id_status",
 				Unique:  false,
 				Columns: []*schema.Column{RotationCommandsColumns[4], RotationCommandsColumns[6]},
+			},
+			{
+				Name:    "rotationcommand_agent_id_kind",
+				Unique:  true,
+				Columns: []*schema.Column{RotationCommandsColumns[4], RotationCommandsColumns[5]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "status <> 'completed' AND status <> 'failed'",
+				},
 			},
 		},
 	}
@@ -674,6 +702,21 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{TokenUsagesColumns[11]},
 			},
+			{
+				Name:    "tokenusage_tenant_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{TokenUsagesColumns[8], TokenUsagesColumns[11]},
+			},
+			{
+				Name:    "tokenusage_agent_id",
+				Unique:  false,
+				Columns: []*schema.Column{TokenUsagesColumns[2]},
+			},
+			{
+				Name:    "tokenusage_department_id",
+				Unique:  false,
+				Columns: []*schema.Column{TokenUsagesColumns[10]},
+			},
 		},
 	}
 	// UpstreamsColumns holds the columns for the "upstreams" table.
@@ -748,6 +791,14 @@ var (
 				Name:    "virtualkey_user_id",
 				Unique:  false,
 				Columns: []*schema.Column{VirtualKeysColumns[6]},
+			},
+			{
+				Name:    "virtualkey_agent_id",
+				Unique:  true,
+				Columns: []*schema.Column{VirtualKeysColumns[7]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "status <> 'revoked'",
+				},
 			},
 		},
 	}

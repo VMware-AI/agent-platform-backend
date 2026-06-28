@@ -109,6 +109,13 @@ func (r *mutationResolver) DeleteDepartment(ctx context.Context, id string) (boo
 	if err != nil {
 		return false, err
 	}
+	// Don't orphan memberships (user↔department, no FK cascade). Refuse while the
+	// department still has members so they aren't left pointing at a gone row.
+	if n, err := r.Ent.Membership.Query().Where(membership.DepartmentID(did)).Count(ctx); err != nil {
+		return false, err
+	} else if n > 0 {
+		return false, gqlerror.Errorf("department has %d member(s); remove them before deleting", n)
+	}
 	if gw := r.gatewayKeyClient(ctx, &did); gw != nil && dept.LitellmTeamID != "" {
 		if err := gw.DeleteTeam(ctx, dept.LitellmTeamID); err != nil {
 			return false, fmt.Errorf("delete litellm team: %w", err)

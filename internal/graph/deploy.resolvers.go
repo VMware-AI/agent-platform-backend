@@ -48,6 +48,16 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		}
 		deptID = &did
 	}
+	// The key's team == its litellm team == the department (LLD-13 §3.3, where
+	// CreateDepartment sets teamID = deptID.String()). Persist it on the key and
+	// pass it to GenerateKey so the key (a) is grouped under the department's
+	// litellm team for budgeting and (b) RecycleAgent can route the revoke back to
+	// the department's gateway via deptIDFromTeam(vk.TeamID). Empty (no department)
+	// → default gateway, no team.
+	var deployTeamID string
+	if deptID != nil {
+		deployTeamID = deptID.String()
+	}
 	gw, gwURL := r.deployGateway(ctx, deptID)
 	if gw == nil {
 		return nil, gqlerror.Errorf("deploy is not configured (gateway required)")
@@ -132,6 +142,12 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
 		return nil, fmt.Errorf("connect vcenter: %w", err)
 	}
+	// Release the vCenter session on return — every sibling resolver (recycle,
+	// snapshot, revert, vmTemplates, vsphereResourcePools, agentSnapshots) does
+	// this. Without it each deploy leaks a session until vCenter's per-user
+	// session limit is hit and all subsequent deploy/sync/snapshot calls fail at
+	// connect. Provision uses conn synchronously, so releasing on return is safe.
+	defer func() { _ = conn.Logout(ctx) }()
 
 	// Resolve the agent's inline default_config (agent→config→artifact.content)
 	// so it is embedded into cloud-init at deploy — no fetch from the VM (LLD-09).
@@ -158,9 +174,17 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	}
 
 	svc := &deploy.Service{Gateway: gw, VCenter: conn, GatewayURL: gwURL}
-	res, err := svc.Provision(ctx, deploy.Request{
+	// Decouple provisioning from the HTTP write deadline (server WriteTimeout=60s):
+	// a clone + power-on can run minutes, and if the request ctx is canceled
+	// mid-clone the vCenter task keeps running untracked → orphan VM. Run it on a
+	// detached ctx with a generous deadline so the clone completes (or fails)
+	// within our tracking, and rollback can clean up on a real error.
+	provCtx, cancelProv := context.WithTimeout(context.WithoutCancel(ctx), deployProvisionTimeout)
+	defer cancelProv()
+	res, err := svc.Provision(provCtx, deploy.Request{
 		AgentName: ag.Name,
 		UserID:    ag.OwnerUserID.String(),
+		TeamID:    deployTeamID,          // department = litellm team (LLD-13 §3.3); empty = default gateway, no team
 		Template:  version.OvaIdentifier, // clone from the catalog version's OVA
 		VMName:    vmName,
 		// vSphere placement pool. A true OVA template has no source resource pool,
@@ -194,6 +218,11 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		SetUserID(ag.OwnerUserID).
 		SetModels([]string{"smart"}).
 		SetAlias(ag.Name)
+	if deployTeamID != "" {
+		// Bind the key to its department/team so RecycleAgent revokes on the
+		// department's gateway (deptIDFromTeam(vk.TeamID)), not the default.
+		vkCreate.SetTeamID(deployTeamID)
+	}
 	if res.VirtualKeyToken != "" {
 		vkCreate.SetLitellmToken(res.VirtualKeyToken) // gateway reconciliation id
 	}

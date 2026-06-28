@@ -20,6 +20,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
+	"github.com/VMware-AI/agent-platform-backend/ent/department"
 	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
@@ -171,6 +172,34 @@ func (r *Resolver) assertUserInCallerTenant(ctx context.Context, id uuid.UUID) e
 	}
 	if !writeAllowed(ctx, u.TenantID) {
 		return notFoundErr("user")
+	}
+	return nil
+}
+
+// assertVirtualKeyOwnerTenant enforces the tenant 404 oracle for by-id virtual-key
+// mutations (revoke / regenerate / setEnabled): a key whose owning user is in
+// another tenant reads as missing to a tenant-admin, so it cannot revoke / rotate
+// / toggle another tenant's billable key by id. Platform admin: any.
+func (r *Resolver) assertVirtualKeyOwnerTenant(ctx context.Context, vk *ent.VirtualKey) error {
+	// Only constrain an authed caller — no-auth ctx occurs only in resolver-level
+	// tests (the schema @hasRole directive enforces auth in prod).
+	if auth.FromContext(ctx) == nil {
+		return nil
+	}
+	owner, err := r.Ent.User.Get(ctx, vk.UserID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			// Orphan key (owner deleted): a platform admin may still act on it; a
+			// tenant-admin can't claim it (unknown owner tenant) → reads as missing.
+			if writeAllowed(ctx, nil) {
+				return nil
+			}
+			return notFoundErr("virtual key")
+		}
+		return err
+	}
+	if !writeAllowed(ctx, owner.TenantID) {
+		return notFoundErr("virtual key")
 	}
 	return nil
 }
@@ -1086,6 +1115,11 @@ func (r *Resolver) modelCustomRole(ctx context.Context, role *ent.Role) (*model.
 // poolProbeTimeout bounds the pre-save reachability dial (testResourcePoolConnection).
 const poolProbeTimeout = 5 * time.Second
 
+// deployProvisionTimeout bounds a VM clone + power-on, run on a context detached
+// from the HTTP request so the 60s WriteTimeout can't cancel it mid-clone and
+// orphan the VM. Generous — a cold OVA clone can take several minutes.
+const deployProvisionTimeout = 15 * time.Minute
+
 // defaultVCenterPort is the HTTPS port a vCenter endpoint listens on; used when the
 // operator's endpoint omits an explicit port.
 const defaultVCenterPort = "443"
@@ -1151,7 +1185,13 @@ func (r *Resolver) connectPool(ctx context.Context, pool *ent.ResourcePool) (VCe
 	return r.VCenterConnect(ctx, pool.Endpoint, cred.Username, cred.Password, pool.Insecure)
 }
 
-// clientIP extracts the remote address from the request in context.
+// clientIP extracts the remote address from the request in context. It uses
+// RemoteAddr ONLY — never X-Forwarded-For / X-Real-IP — because those headers are
+// client-controlled, and trusting them unconditionally would let an attacker
+// spoof both the audit IP and the login-throttle key. This is correct when the
+// backend is the network edge. Behind a trusted reverse proxy, parse XFF ONLY
+// from a configured trusted-proxy allowlist (not implemented here — until then
+// the backend MUST be the edge, or audit IPs/throttle keys read as the proxy IP).
 func clientIP(ctx context.Context) string {
 	if r := httpx.Request(ctx); r != nil {
 		return r.RemoteAddr
@@ -1437,6 +1477,42 @@ func (r *Resolver) resolveKeySecretRef(ctx context.Context, label string, rawKey
 		return *existingRef, true, nil
 	}
 	return "", false, nil
+}
+
+// assertGatewayDeletable refuses to delete a GatewayConnection that is still
+// referenced by a department (gateway_connection_id is a soft FK — deleting
+// would silently break those departments' key/team ops, LLD-13 §3.3) or that is
+// the platform default (the platform must always keep one). Shared by both
+// delete façades (DeleteGatewayConnection + DeleteModelGateway) so they enforce
+// the same guards.
+func (r *Resolver) assertGatewayDeletable(ctx context.Context, g *ent.GatewayConnection) error {
+	if n, err := r.Ent.Department.Query().Where(department.GatewayConnectionID(g.ID)).Count(ctx); err != nil {
+		return err
+	} else if n > 0 {
+		return gqlerror.Errorf("gateway is used by %d department(s); reassign them before deleting", n)
+	}
+	if g.IsDefault {
+		return gqlerror.Errorf("cannot delete the default gateway; set another default first")
+	}
+	return nil
+}
+
+// deleteSecretRef best-effort removes a secret-store entry (e.g. a gateway master
+// key) when its owning row is deleted or its key rotated, so the store doesn't
+// accumulate orphans. Never fatal — a resolver that can't delete (store missing,
+// or not a Store) is logged, not surfaced: the DB row is already gone, so failing
+// the mutation would be worse than a lingering secret.
+func (r *Resolver) deleteSecretRef(ctx context.Context, ref string) {
+	if ref == "" {
+		return
+	}
+	store, ok := r.Secrets.(secrets.Store)
+	if !ok {
+		return
+	}
+	if err := store.Delete(ctx, ref); err != nil {
+		log.Printf("secret cleanup: delete ref failed (orphan possible): %v", err)
+	}
 }
 
 // applyUserSort orders the user query per the requested field (模块① 用户与权限),
