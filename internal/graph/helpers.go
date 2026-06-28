@@ -1265,21 +1265,6 @@ func tenantMatches(callerTenant string, rowTenant *uuid.UUID) bool {
 	return tid == *rowTenant
 }
 
-// rollbackDeploy tears down a half-deployed agent after Provision succeeded but
-// DB persistence failed: destroy the running VM, revoke the live gateway key, and
-// mark the agent exception. Uses a detached context so a canceled request still
-// cleans up. Best-effort — each step is logged on failure, never fatal.
-func (r *Resolver) rollbackDeploy(ctx context.Context, conn VCenterClient, gw gateway.Client, ag *ent.Agent, vmName, key string) {
-	cctx := context.WithoutCancel(ctx)
-	if err := conn.Destroy(cctx, vmName); err != nil {
-		log.Printf("deploy rollback: orphan VM %q, destroy failed: %v", vmName, err)
-	}
-	revokeDeployKey(cctx, gw, key, ag.ID.String())
-	if _, err := r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusException).Save(cctx); err != nil {
-		log.Printf("deploy rollback: mark agent %s exception failed: %v", ag.ID, err)
-	}
-}
-
 // deleteAgentRow drops a freshly-created agent row when its deploy aborts before
 // any VM/key exists (create-from-OVA flow). The row was created by DeployAgent
 // itself, so removing it leaves no orphan. Detached ctx so cleanup runs even if
@@ -1292,8 +1277,8 @@ func (r *Resolver) deleteAgentRow(ctx context.Context, ag *ent.Agent) {
 
 // rollbackDeployCreate compensates a failed create-from-OVA deploy AFTER the VM
 // and gateway key already exist: destroy the VM, revoke the key, and delete the
-// agent row (it was created by this same deploy and never went live, so unlike
-// rollbackDeploy we drop it rather than mark it exception).
+// agent row (it was created by this same deploy and never went live, so we drop
+// it rather than marking it exception).
 func (r *Resolver) rollbackDeployCreate(ctx context.Context, conn VCenterClient, gw gateway.Client, ag *ent.Agent, vmName, key string) {
 	cctx := context.WithoutCancel(ctx)
 	if err := conn.Destroy(cctx, vmName); err != nil {

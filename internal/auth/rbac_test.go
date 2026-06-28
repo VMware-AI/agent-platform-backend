@@ -28,15 +28,6 @@ func TestRolePermissionMatrix(t *testing.T) {
 	}
 }
 
-func TestHasAnyRole(t *testing.T) {
-	if !RoleAdmin.HasAnyRole(RoleAdmin, RoleTenantAdmin) {
-		t.Error("admin should match")
-	}
-	if RoleUser.HasAnyRole(RoleAdmin, RoleTenantAdmin) {
-		t.Error("user should not match admin/tenant-admin")
-	}
-}
-
 func TestCurrentUserContext(t *testing.T) {
 	ctx := context.Background()
 	if FromContext(ctx) != nil {

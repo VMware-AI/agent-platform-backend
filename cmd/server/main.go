@@ -118,8 +118,9 @@ func main() {
 	}
 
 	// agent-manager backend (LLD-08): VM enrollment + heartbeat + rotation. Its
-	// secret store needs write access (Vaultwarden); EnvResolver (dev) is read-only,
-	// so rotation completions can't persist there — acceptable for dev.
+	// secret store needs write access; both Vaultwarden (prod) and the dev in-memory
+	// StaticResolver implement secrets.Store, so rotation completions persist
+	// (in-process only for dev, lost on restart).
 	agentMgr := &agentmgr.Service{Ent: client}
 	if st, ok := sec.(secrets.Store); ok {
 		agentMgr.Secrets = st

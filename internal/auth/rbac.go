@@ -48,16 +48,6 @@ func (r Role) HasPermission(perm string) bool {
 	return rolePermissions[r][perm]
 }
 
-// HasAnyRole reports whether r is one of the allowed roles.
-func (r Role) HasAnyRole(allowed ...Role) bool {
-	for _, a := range allowed {
-		if r == a {
-			return true
-		}
-	}
-	return false
-}
-
 // CurrentUser is the authenticated principal carried in the request context.
 type CurrentUser struct {
 	ID                 string
