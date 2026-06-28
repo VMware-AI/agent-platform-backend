@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
+	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
@@ -105,6 +106,14 @@ func (r *mutationResolver) DeleteResourcePool(ctx context.Context, id string) (*
 	p, err := r.Ent.ResourcePool.Get(ctx, pid)
 	if err != nil {
 		return nil, err
+	}
+	// resource_pool_id is a soft reference (no FK). Refuse to orphan agents whose
+	// VMs live in this pool — RecycleAgent/sync resolve the VM via its pool, so a
+	// dangling reference would silently break them.
+	if n, err := r.Ent.Agent.Query().Where(agent.ResourcePoolID(pid)).Count(ctx); err != nil {
+		return nil, err
+	} else if n > 0 {
+		return nil, gqlerror.Errorf("resource pool is used by %d agent(s); recycle or reassign them first", n)
 	}
 	if err := r.Ent.ResourcePool.DeleteOneID(pid).Exec(ctx); err != nil {
 		return nil, err
