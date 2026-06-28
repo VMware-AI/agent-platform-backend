@@ -222,11 +222,7 @@ func (r *queryResolver) Artifacts(ctx context.Context, kind *model.ArtifactKind)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.Artifact, 0, len(as))
-	for _, a := range as {
-		out = append(out, *toModelArtifact(a))
-	}
-	return out, nil
+	return mapSlice(as, toModelArtifact), nil
 }
 
 // ArtifactVersions lists every version of a named artifact, newest first (制品库
@@ -247,11 +243,7 @@ func (r *queryResolver) ArtifactVersions(ctx context.Context, name string) ([]mo
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.Artifact, 0, len(as))
-	for _, a := range as {
-		out = append(out, *toModelArtifact(a))
-	}
-	return out, nil
+	return mapSlice(as, toModelArtifact), nil
 }
 
 // Skills is the resolver for the skills field.
@@ -260,11 +252,7 @@ func (r *queryResolver) Skills(ctx context.Context) ([]model.Skill, error) {
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.Skill, 0, len(ss))
-	for _, s := range ss {
-		out = append(out, *toModelSkill(s))
-	}
-	return out, nil
+	return mapSlice(ss, toModelSkill), nil
 }
 
 // Images is the resolver for the images field.
@@ -273,9 +261,5 @@ func (r *queryResolver) Images(ctx context.Context) ([]model.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.Image, 0, len(is))
-	for _, i := range is {
-		out = append(out, *toModelImage(i))
-	}
-	return out, nil
+	return mapSlice(is, toModelImage), nil
 }

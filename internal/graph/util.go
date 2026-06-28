@@ -42,3 +42,13 @@ func orEmptyStrings(s []string) []string {
 	}
 	return s
 }
+
+// mapSlice projects a slice of ent rows to a value slice of GraphQL models,
+// preserving order. f must return a non-nil pointer for every element.
+func mapSlice[E any, M any](xs []*E, f func(*E) *M) []M {
+	out := make([]M, 0, len(xs))
+	for _, x := range xs {
+		out = append(out, *f(x))
+	}
+	return out
+}

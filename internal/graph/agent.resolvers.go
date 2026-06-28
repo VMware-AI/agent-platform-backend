@@ -89,11 +89,7 @@ func (r *agentConfigResolver) Knowledge(ctx context.Context, obj *model.AgentCon
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.Artifact, 0, len(arts))
-	for _, a := range arts {
-		out = append(out, *toModelArtifact(a))
-	}
-	return out, nil
+	return mapSlice(arts, toModelArtifact), nil
 }
 
 // UpsertAgentTemplate creates or updates a catalog entry keyed by kind.
@@ -402,11 +398,7 @@ func (r *queryResolver) AgentConfigs(ctx context.Context, agentType *string) ([]
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.AgentConfig, 0, len(cs))
-	for _, c := range cs {
-		out = append(out, *toModelAgentConfig(c))
-	}
-	return out, nil
+	return mapSlice(cs, toModelAgentConfig), nil
 }
 
 // Agents lists agents (admin: all; user: own — owner scope, LLD-01 §4.1).

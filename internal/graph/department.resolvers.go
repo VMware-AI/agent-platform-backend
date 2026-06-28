@@ -224,11 +224,7 @@ func (r *queryResolver) Departments(ctx context.Context) ([]model.Department, er
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.Department, 0, len(ds))
-	for _, d := range ds {
-		out = append(out, *toModelDepartment(d))
-	}
-	return out, nil
+	return mapSlice(ds, toModelDepartment), nil
 }
 
 // DepartmentMembers is the resolver for the departmentMembers field.
@@ -246,9 +242,5 @@ func (r *queryResolver) DepartmentMembers(ctx context.Context, departmentID stri
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.Membership, 0, len(ms))
-	for _, m := range ms {
-		out = append(out, *toModelMembership(m))
-	}
-	return out, nil
+	return mapSlice(ms, toModelMembership), nil
 }

@@ -75,11 +75,7 @@ func (r *queryResolver) TokenUsage(ctx context.Context, userID *string, page *mo
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.TokenUsage, 0, len(rows))
-	for _, t := range rows {
-		out = append(out, *toModelTokenUsage(t))
-	}
-	return out, nil
+	return mapSlice(rows, toModelTokenUsage), nil
 }
 
 // MeteringSummary aggregates token usage totals + per-model breakdown.
