@@ -881,7 +881,7 @@ type ResourcePoolConnection {
 }
 type ResourcePoolConnectionDetail {
 	vSphereVersion: String!
-	itemCount: Int!
+	contentLibraries: [String!]!
 }
 type ResourcePoolConnectionTest {
 	ok: Boolean!
@@ -977,7 +977,9 @@ type SyncResourcePoolPayload {
 input TestResourcePoolConnectionInput {
 	name: String!
 	endpoint: String!
-	contentLibraryName: String!
+	username: String
+	password: String
+	insecure: Boolean
 }
 scalar Time
 type ToggleUserEnabledPayload {
