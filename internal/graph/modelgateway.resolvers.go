@@ -85,22 +85,9 @@ func (r *mutationResolver) UpdateModelGateway(ctx context.Context, id string, in
 // the orphan/default guards + master-key secret cleanup with
 // DeleteGatewayConnection (same table, two façades).
 func (r *mutationResolver) DeleteModelGateway(ctx context.Context, id string) (*model.DeleteModelGatewayPayload, error) {
-	gid, err := uuid.Parse(id)
-	if err != nil {
-		return nil, gqlerror.Errorf("invalid id")
-	}
-	g, err := r.Ent.GatewayConnection.Get(ctx, gid)
-	if err != nil {
+	if err := r.deleteGatewayByID(ctx, id); err != nil {
 		return nil, err
 	}
-	if err := r.assertGatewayDeletable(ctx, g); err != nil {
-		return nil, err
-	}
-	if err := r.Ent.GatewayConnection.DeleteOneID(gid).Exec(ctx); err != nil {
-		return nil, err
-	}
-	// Don't orphan the master-key secret in the store (best-effort; row is gone).
-	r.deleteSecretRef(ctx, g.MasterKeyRef)
 	r.audit(ctx, "model_gateway.delete", "gateway_connection", id, true, actorID(auth.FromContext(ctx)))
 	return &model.DeleteModelGatewayPayload{DeletedID: id}, nil
 }
