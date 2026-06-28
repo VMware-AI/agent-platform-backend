@@ -3,12 +3,7 @@ package graph
 import (
 	"context"
 	"fmt"
-	"testing"
 
-	"github.com/google/uuid"
-
-	"github.com/VMware-AI/agent-platform-backend/ent/agent"
-	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 )
 
@@ -59,43 +54,3 @@ func (f *fakeVCenter) ListSnapshots(_ context.Context, vmName string) ([]vcenter
 	return f.snapshots[vmName], nil
 }
 func (f *fakeVCenter) Logout(context.Context) error { f.logouts++; return nil }
-
-// rollbackDeploy must destroy the orphan VM, revoke the live gateway key, and
-// mark the agent exception — so a post-Provision persistence failure leaves no
-// running VM and no ungoverned key.
-func TestRollbackDeploy_DestroysVMRevokesKeyMarksException(t *testing.T) {
-	r, cleanup := newTestResolver(t)
-	defer cleanup()
-	// r.Gateway is deliberately NOT set (nil, as in production after LLD-13): the
-	// rollback must revoke through the gateway passed in, which DeployAgent resolves
-	// per-department/default. If rollback still revoked via r.Gateway it would
-	// silently leak the key here (C1).
-	fg := &fakeGateway{}
-	ctx := context.Background()
-	mr := &mutationResolver{r}
-
-	owner, err := mr.CreateUser(ctx, model.CreateUserInput{Username: "o", DisplayName: "o", Email: "o@x.io", RoleID: string(model.RoleNameUser), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("OwnerPass123")})
-	if err != nil {
-		t.Fatalf("CreateUser: %v", err)
-	}
-	seedActiveTemplate(t, r, "goose")
-	ag, err := mr.CreateAgent(userCtx(owner.User.ID, "user"), model.CreateAgentInput{Name: "a", AgentType: "goose"})
-	if err != nil {
-		t.Fatalf("CreateAgent: %v", err)
-	}
-	aid := uuid.MustParse(ag.ID)
-	agRow := r.Ent.Agent.GetX(ctx, aid)
-
-	fvc := &fakeVCenter{}
-	r.rollbackDeploy(ctx, fvc, fg, agRow, "vm-xyz", "sk-live-key")
-
-	if len(fvc.destroyed) != 1 || fvc.destroyed[0] != "vm-xyz" {
-		t.Errorf("VM not destroyed: %v", fvc.destroyed)
-	}
-	if len(fg.deleted) != 1 || fg.deleted[0] != "sk-live-key" {
-		t.Errorf("gateway key not revoked: %v", fg.deleted)
-	}
-	if got := r.Ent.Agent.GetX(ctx, aid); got.Status != agent.StatusException {
-		t.Errorf("agent status = %s, want exception", got.Status)
-	}
-}

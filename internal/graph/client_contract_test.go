@@ -34,10 +34,11 @@ func TestClientOperationsMatchSchema(t *testing.T) {
 			if err != nil {
 				t.Fatalf("read %s: %v", f, err)
 			}
-			// LoadQuery parses AND validates the operation against the schema:
+			// LoadQueryWithRules parses AND validates the operation against the schema:
 			// unknown fields/args, bad fragment targets, undeclared variables, and
-			// type mismatches all surface as errors here.
-			if _, errs := gqlparser.LoadQuery(schema, string(doc)); len(errs) > 0 {
+			// type mismatches all surface as errors here. nil rules => default ruleset
+			// (same validation the deprecated LoadQuery applied).
+			if _, errs := gqlparser.LoadQueryWithRules(schema, string(doc), nil); len(errs) > 0 {
 				for _, e := range errs {
 					t.Errorf("operation does not match backend schema: %s", e.Message)
 				}
