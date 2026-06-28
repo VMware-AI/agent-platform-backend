@@ -48,6 +48,16 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		}
 		deptID = &did
 	}
+	// The key's team == its litellm team == the department (LLD-13 §3.3, where
+	// CreateDepartment sets teamID = deptID.String()). Persist it on the key and
+	// pass it to GenerateKey so the key (a) is grouped under the department's
+	// litellm team for budgeting and (b) RecycleAgent can route the revoke back to
+	// the department's gateway via deptIDFromTeam(vk.TeamID). Empty (no department)
+	// → default gateway, no team.
+	var deployTeamID string
+	if deptID != nil {
+		deployTeamID = deptID.String()
+	}
 	gw, gwURL := r.deployGateway(ctx, deptID)
 	if gw == nil {
 		return nil, gqlerror.Errorf("deploy is not configured (gateway required)")
@@ -167,6 +177,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	res, err := svc.Provision(ctx, deploy.Request{
 		AgentName: ag.Name,
 		UserID:    ag.OwnerUserID.String(),
+		TeamID:    deployTeamID,          // department = litellm team (LLD-13 §3.3); empty = default gateway, no team
 		Template:  version.OvaIdentifier, // clone from the catalog version's OVA
 		VMName:    vmName,
 		// vSphere placement pool. A true OVA template has no source resource pool,
@@ -200,6 +211,11 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		SetUserID(ag.OwnerUserID).
 		SetModels([]string{"smart"}).
 		SetAlias(ag.Name)
+	if deployTeamID != "" {
+		// Bind the key to its department/team so RecycleAgent revokes on the
+		// department's gateway (deptIDFromTeam(vk.TeamID)), not the default.
+		vkCreate.SetTeamID(deployTeamID)
+	}
 	if res.VirtualKeyToken != "" {
 		vkCreate.SetLitellmToken(res.VirtualKeyToken) // gateway reconciliation id
 	}
