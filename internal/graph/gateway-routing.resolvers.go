@@ -25,10 +25,14 @@ import (
 // RegisterGatewayConnection is the resolver for the registerGatewayConnection field.
 func (r *mutationResolver) RegisterGatewayConnection(ctx context.Context, input model.RegisterGatewayConnectionInput) (*model.GatewayConnection, error) {
 	// Raw master key from the form → secret store; downstream uses the ref (明文不落库).
-	if ref, set, err := r.resolveKeySecretRef(ctx, "gateway/"+input.Name, input.MasterKey, input.MasterKeyRef); err != nil {
+	// Put happens OUTSIDE the tx below, so a failed insert/rollback must retire the
+	// freshly-minted ref itself (mintedRef) — the tx rollback can't undo the store.
+	mintedKeyRef, mintedKey := "", false
+	if ref, set, minted, err := r.resolveKeySecretRef(ctx, "gateway/"+input.Name, input.MasterKey, input.MasterKeyRef); err != nil {
 		return nil, err
 	} else if set {
 		input.MasterKeyRef = &ref
+		mintedKeyRef, mintedKey = ref, minted
 	}
 	// is_default (LLD-13 §3.3): an explicit request, OR auto-default the first-ever
 	// connection so the platform always has a default gateway once one exists (§7 OQ-1).
@@ -53,7 +57,9 @@ func (r *mutationResolver) RegisterGatewayConnection(ctx context.Context, input 
 		if _, err := tx.GatewayConnection.Update().
 			Where(gatewayconnection.IsDefault(true)).
 			SetIsDefault(false).Save(ctx); err != nil {
-			return nil, rollback(tx, err)
+			rerr := rollback(tx, err)
+			r.cleanupMintedSecretOnErr(ctx, mintedKey, mintedKeyRef, rerr)
+			return nil, rerr
 		}
 	}
 	c := tx.GatewayConnection.Create().
@@ -69,9 +75,15 @@ func (r *mutationResolver) RegisterGatewayConnection(ctx context.Context, input 
 	}
 	g, err := c.Save(ctx)
 	if err != nil {
-		return nil, rollback(tx, err)
+		// Insert failed (e.g. duplicate name trips the unique constraint). The tx
+		// rollback can't undo the out-of-tx store.Put, so retire the orphan here.
+		rerr := rollback(tx, err)
+		r.cleanupMintedSecretOnErr(ctx, mintedKey, mintedKeyRef, rerr)
+		return nil, rerr
 	}
 	if err := tx.Commit(); err != nil {
+		// Commit failed → the row was not persisted; the minted ref is orphaned.
+		r.cleanupMintedSecretOnErr(ctx, mintedKey, mintedKeyRef, err)
 		return nil, err
 	}
 	r.audit(ctx, "gateway.register", "gateway_connection", g.ID.String(), true, actorID(auth.FromContext(ctx)))
@@ -108,22 +120,9 @@ func (r *mutationResolver) TestGatewayConnection(ctx context.Context, id string)
 
 // DeleteGatewayConnection is the resolver for the deleteGatewayConnection field.
 func (r *mutationResolver) DeleteGatewayConnection(ctx context.Context, id string) (bool, error) {
-	gid, err := uuid.Parse(id)
-	if err != nil {
-		return false, gqlerror.Errorf("invalid id")
-	}
-	g, err := r.Ent.GatewayConnection.Get(ctx, gid)
-	if err != nil {
+	if err := r.deleteGatewayByID(ctx, id); err != nil {
 		return false, err
 	}
-	if err := r.assertGatewayDeletable(ctx, g); err != nil {
-		return false, err
-	}
-	if err := r.Ent.GatewayConnection.DeleteOneID(gid).Exec(ctx); err != nil {
-		return false, err
-	}
-	// Don't orphan the master-key secret in the store (best-effort; row is gone).
-	r.deleteSecretRef(ctx, g.MasterKeyRef)
 	r.audit(ctx, "gateway.delete", "gateway_connection", id, true, actorID(auth.FromContext(ctx)))
 	return true, nil
 }
@@ -132,10 +131,12 @@ func (r *mutationResolver) DeleteGatewayConnection(ctx context.Context, id strin
 func (r *mutationResolver) UpsertUpstream(ctx context.Context, input model.UpsertUpstreamInput) (*model.Upstream, error) {
 	// Raw upstream apiKey from the form → secret store; the rest of the flow (DB +
 	// litellm sync) consumes the ref (明文不落库).
-	if ref, set, err := r.resolveKeySecretRef(ctx, "upstream/"+input.Name, input.APIKey, input.APIKeyRef); err != nil {
+	mintedKeyRef, mintedKey := "", false
+	if ref, set, minted, err := r.resolveKeySecretRef(ctx, "upstream/"+input.Name, input.APIKey, input.APIKeyRef); err != nil {
 		return nil, err
 	} else if set {
 		input.APIKeyRef = &ref
+		mintedKeyRef, mintedKey = ref, minted
 	}
 	enabled := true
 	if input.Enabled != nil {
@@ -149,12 +150,7 @@ func (r *mutationResolver) UpsertUpstream(ctx context.Context, input model.Upser
 				SetProvider(upstream.Provider(input.Provider)).
 				SetModel(input.Model).
 				SetEnabled(enabled)
-			if input.APIBase != nil {
-				c.SetAPIBase(*input.APIBase)
-			}
-			if input.APIKeyRef != nil {
-				c.SetAPIKeyRef(*input.APIKeyRef)
-			}
+			applyUpstreamOptionals(c.Mutation(), input)
 			return c.Save(ctx)
 		}
 		if err != nil {
@@ -164,16 +160,15 @@ func (r *mutationResolver) UpsertUpstream(ctx context.Context, input model.Upser
 			SetProvider(upstream.Provider(input.Provider)).
 			SetModel(input.Model).
 			SetEnabled(enabled)
-		if input.APIBase != nil {
-			u.SetAPIBase(*input.APIBase)
-		}
-		if input.APIKeyRef != nil {
-			u.SetAPIKeyRef(*input.APIKeyRef)
-		}
+		applyUpstreamOptionals(u.Mutation(), input)
 		return u.Save(ctx)
 	}
 	u, err := apply(true)
 	if err != nil {
+		// DB upsert failed after the apiKey was Put (e.g. a create racing the unique
+		// name) — retire the orphan. Past this point the row exists and owns the
+		// ref, so later gateway-sync failures must NOT delete it.
+		r.cleanupMintedSecretOnErr(ctx, mintedKey, mintedKeyRef, err)
 		return nil, err
 	}
 
@@ -394,7 +389,7 @@ func (r *mutationResolver) SetRouterTier(ctx context.Context, tier model.RouterT
 	}
 	if mm := r.gatewayModels(ctx); mm != nil {
 		if err := mm.UpsertComplexityRouter(ctx, gateway.RouterSpec{
-			ModelName: "smart", Tiers: tiers, DefaultModel: tiers["MEDIUM"],
+			ModelName: gateway.DefaultRouterModel, Tiers: tiers, DefaultModel: tiers["MEDIUM"],
 		}); err != nil {
 			return nil, fmt.Errorf("sync complexity router: %w", err)
 		}
@@ -409,11 +404,7 @@ func (r *queryResolver) GatewayConnections(ctx context.Context) ([]model.Gateway
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.GatewayConnection, 0, len(gs))
-	for _, g := range gs {
-		out = append(out, *toModelGatewayConnection(g))
-	}
-	return out, nil
+	return mapSlice(gs, toModelGatewayConnection), nil
 }
 
 // Upstreams is the resolver for the upstreams field.
@@ -422,11 +413,7 @@ func (r *queryResolver) Upstreams(ctx context.Context) ([]model.Upstream, error)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.Upstream, 0, len(us))
-	for _, u := range us {
-		out = append(out, *toModelUpstream(u))
-	}
-	return out, nil
+	return mapSlice(us, toModelUpstream), nil
 }
 
 // ModelRoutes is the resolver for the modelRoutes field.
@@ -435,11 +422,7 @@ func (r *queryResolver) ModelRoutes(ctx context.Context) ([]model.ModelRoute, er
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.ModelRoute, 0, len(rs))
-	for _, mr := range rs {
-		out = append(out, *toModelModelRoute(mr))
-	}
-	return out, nil
+	return mapSlice(rs, toModelModelRoute), nil
 }
 
 // RouterTiers is the resolver for the routerTiers field.
@@ -448,9 +431,5 @@ func (r *queryResolver) RouterTiers(ctx context.Context) ([]model.RouterTier, er
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.RouterTier, 0, len(ts))
-	for _, t := range ts {
-		out = append(out, *toModelRouterTier(t))
-	}
-	return out, nil
+	return mapSlice(ts, toModelRouterTier), nil
 }

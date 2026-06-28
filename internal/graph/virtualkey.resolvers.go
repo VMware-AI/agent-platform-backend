@@ -40,6 +40,15 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 			return nil, notFoundErr("user")
 		}
 	}
+	// Department/team guard (LLD-13 §3.3): teamId is a department id used to route
+	// the mint to that department's litellm team/gateway. A tenant-admin may not
+	// mint under another tenant's department (its budget would be billed) — a
+	// foreign department reads as missing. Mirrors the gateway routing at line 26.
+	if did := deptIDFromTeam(input.TeamID); did != nil {
+		if err := r.assertDepartmentReferenceManageable(ctx, *did); err != nil {
+			return nil, err
+		}
+	}
 
 	// 1:1 agent↔key (会议 0622: 智能体只绑定一个独立虚拟 K,计费一对一). Reject if the
 	// agent already holds a non-revoked key — a revoked key frees the agent to be
@@ -48,6 +57,13 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		aid, err := uuid.Parse(*input.AgentID)
 		if err != nil {
 			return nil, gqlerror.Errorf("invalid agentId")
+		}
+		// Owner/tenant guard (LLD-10 §1.3): the caller must own the agent (regular
+		// user) or it must be in their tenant (tenant-admin) — admin: any. A foreign
+		// agent reads as missing, so a tenant-admin cannot bind a key to another
+		// tenant's agent and occupy its unique 1:1 key slot (cross-tenant DoS).
+		if err := r.assertAgentReferenceVisible(ctx, aid); err != nil {
+			return nil, err
 		}
 		bound, err := r.Ent.VirtualKey.Query().
 			Where(virtualkey.AgentID(aid), virtualkey.StatusNEQ(virtualkey.StatusRevoked)).
@@ -82,6 +98,12 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		pol, err := r.Ent.RateLimitPolicy.Get(ctx, pid)
 		if err != nil {
 			return nil, gqlerror.Errorf("rate-limit policy not found")
+		}
+		// Owner-tenant guard: a tenant-admin may apply only their own tenant's
+		// policy; another tenant's reads as missing, so its rpm/tpm never leak into a
+		// foreign key (and a missing id is not a cross-tenant existence oracle).
+		if err := r.assertRateLimitPolicyReadable(ctx, pol); err != nil {
+			return nil, err
 		}
 		if pol.Rpm != nil {
 			req.RPMLimit = pol.Rpm
@@ -295,9 +317,5 @@ func (r *queryResolver) VirtualKeys(ctx context.Context, userID *string) ([]mode
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.VirtualKey, 0, len(keys))
-	for _, k := range keys {
-		out = append(out, *toModelVirtualKey(k))
-	}
-	return out, nil
+	return mapSlice(keys, toModelVirtualKey), nil
 }

@@ -41,7 +41,7 @@ func withSimLibrary(t *testing.T, libName string) (*Client, string, func()) {
 }
 
 // seedLibrary creates one LOCAL content library named name on the default
-// datastore (vcsim) so VerifyContentLibrary has something to find.
+// datastore (vcsim) so ListContentLibraries returns at least one entry.
 func seedLibrary(t *testing.T, c *Client, name string) {
 	t.Helper()
 	ctx := context.Background()
@@ -66,31 +66,39 @@ func seedLibrary(t *testing.T, c *Client, name string) {
 	}
 }
 
-func TestVerifyContentLibrary_Found(t *testing.T) {
+// ListContentLibraries returns the seeded library when the vCenter has one.
+func TestListContentLibraries_Found(t *testing.T) {
 	c, name, cleanup := withSimLibrary(t, "tkg")
 	defer cleanup()
 
-	info, err := c.VerifyContentLibrary(context.Background(), name)
+	libs, err := c.ListContentLibraries(context.Background())
 	if err != nil {
-		t.Fatalf("VerifyContentLibrary: %v", err)
+		t.Fatalf("ListContentLibraries: %v", err)
 	}
-	if !info.Found {
-		t.Fatalf("expected library %q to be found", name)
+	found := false
+	for _, l := range libs {
+		if l == name {
+			found = true
+			break
+		}
 	}
-	if info.ItemCount < 0 {
-		t.Fatalf("itemCount must be non-negative, got %d", info.ItemCount)
+	if !found {
+		t.Fatalf("expected seeded library %q in %v", name, libs)
 	}
 }
 
-func TestVerifyContentLibrary_NotFound(t *testing.T) {
+// ListContentLibraries must not report a library that was never created.
+func TestListContentLibraries_ExcludesAbsent(t *testing.T) {
 	c, _, cleanup := withSimLibrary(t, "tkg")
 	defer cleanup()
 
-	info, err := c.VerifyContentLibrary(context.Background(), "does-not-exist")
+	libs, err := c.ListContentLibraries(context.Background())
 	if err != nil {
-		t.Fatalf("VerifyContentLibrary should not error on a missing library: %v", err)
+		t.Fatalf("ListContentLibraries: %v", err)
 	}
-	if info.Found {
-		t.Fatal("expected Found=false for a missing library")
+	for _, l := range libs {
+		if l == "does-not-exist" {
+			t.Fatalf("library %q was never seeded but appears in %v", "does-not-exist", libs)
+		}
 	}
 }

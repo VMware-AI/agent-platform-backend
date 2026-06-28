@@ -147,7 +147,7 @@ func TestTestResourcePoolConnection_Unreachable_Edge(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			res, err := mr.TestResourcePoolConnection(ctx, model.TestResourcePoolConnectionInput{
-				Name: "probe-" + tc.name, Endpoint: tc.endpoint, ContentLibraryName: "lib",
+				Name: "probe-" + tc.name, Endpoint: tc.endpoint,
 			})
 			if err != nil {
 				t.Fatalf("probe returned a Go error (should be a soft failure): %v", err)
@@ -175,8 +175,8 @@ func TestTestResourcePoolConnection_Unreachable_Edge(t *testing.T) {
 }
 
 // testResourcePoolConnection on a reachable endpoint reports ok=true and returns a
-// best-effort detail block: vSphereVersion is "" and itemCount is 0 because the
-// credential-less probe cannot inventory the content library.
+// best-effort detail block: vSphereVersion is "" and contentLibraries is empty
+// because the credential-less probe cannot inventory the content library.
 func TestTestResourcePoolConnection_ReachableDetail_Edge(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()
@@ -193,7 +193,7 @@ func TestTestResourcePoolConnection_ReachableDetail_Edge(t *testing.T) {
 	endpoint := "https://" + ln.Addr().String()
 
 	res, err := mr.TestResourcePoolConnection(ctx, model.TestResourcePoolConnectionInput{
-		Name: "reachable", Endpoint: endpoint, ContentLibraryName: "lib",
+		Name: "reachable", Endpoint: endpoint,
 	})
 	if err != nil {
 		t.Fatalf("probe(reachable): %v", err)
@@ -211,8 +211,8 @@ func TestTestResourcePoolConnection_ReachableDetail_Edge(t *testing.T) {
 	if res.Detail.VSphereVersion != "" {
 		t.Fatalf("credential-less probe should not derive a version, got %q", res.Detail.VSphereVersion)
 	}
-	if res.Detail.ItemCount != 0 {
-		t.Fatalf("credential-less probe itemCount = %d, want 0", res.Detail.ItemCount)
+	if len(res.Detail.ContentLibraries) != 0 {
+		t.Fatalf("credential-less probe contentLibraries = %v, want empty", res.Detail.ContentLibraries)
 	}
 }
 

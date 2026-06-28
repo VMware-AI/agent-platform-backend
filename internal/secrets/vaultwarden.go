@@ -24,11 +24,14 @@ type VaultwardenResolver struct {
 	http    *http.Client
 }
 
+// vaultwardenHTTPTimeout bounds calls to the local `bw serve` endpoint.
+const vaultwardenHTTPTimeout = 10 * time.Second
+
 // NewVaultwardenResolver returns a resolver targeting a `bw serve` endpoint.
 func NewVaultwardenResolver(baseURL string) *VaultwardenResolver {
 	return &VaultwardenResolver{
 		baseURL: strings.TrimRight(baseURL, "/"),
-		http:    &http.Client{Timeout: 10 * time.Second},
+		http:    &http.Client{Timeout: vaultwardenHTTPTimeout},
 	}
 }
 

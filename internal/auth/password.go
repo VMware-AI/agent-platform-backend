@@ -4,6 +4,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"unicode"
 
 	"golang.org/x/crypto/bcrypt"
@@ -17,7 +18,7 @@ const MinPasswordLength = 12
 
 var (
 	// ErrPasswordTooShort is returned when a password is below MinPasswordLength.
-	ErrPasswordTooShort = errors.New("password must be at least 12 characters")
+	ErrPasswordTooShort = fmt.Errorf("password must be at least %d characters", MinPasswordLength)
 	// ErrPasswordTooWeak is returned when a password lacks character diversity.
 	ErrPasswordTooWeak = errors.New("password must include upper, lower, and digit characters")
 	// ErrPasswordMismatch is returned when a password does not match its hash.

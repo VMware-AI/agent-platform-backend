@@ -75,6 +75,10 @@ func (r *Resolver) effectivePerms(ctx context.Context, userID string) (map[strin
 	if set, ok := r.permCache.get(userID); ok {
 		return set, nil
 	}
+	// Capture the cache generation BEFORE the DB read: if a role revocation
+	// invalidates this user between here and the put() below, put() drops the
+	// (now-stale) set rather than resurrecting just-revoked permissions for a TTL.
+	gen := r.permCache.generation()
 	uid, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, err
@@ -91,6 +95,6 @@ func (r *Resolver) effectivePerms(ctx context.Context, userID string) (map[strin
 	for _, p := range perms {
 		set[p.Key] = true
 	}
-	r.permCache.put(userID, set)
+	r.permCache.put(userID, set, gen)
 	return set, nil
 }

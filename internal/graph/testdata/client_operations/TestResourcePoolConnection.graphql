@@ -4,7 +4,7 @@ mutation TestResourcePoolConnection($input: TestResourcePoolConnectionInput!) {
       message
       detail {
         vSphereVersion
-        itemCount
+        contentLibraries
       }
     }
   }

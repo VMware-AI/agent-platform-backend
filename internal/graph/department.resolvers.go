@@ -12,6 +12,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/department"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
+	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
@@ -115,6 +116,22 @@ func (r *mutationResolver) DeleteDepartment(ctx context.Context, id string) (boo
 		return false, err
 	} else if n > 0 {
 		return false, gqlerror.Errorf("department has %d member(s); remove them before deleting", n)
+	}
+	// Don't orphan active billable keys. A key minted under this department's
+	// litellm team stores team_id = the department id and is revoked by
+	// re-resolving the department's gateway at revoke time (deptIDFromTeam →
+	// resolveDeptGateway). Once the department row is gone, that routing falls back
+	// to the platform default gateway, so a key on this department's (possibly
+	// NON-default) gateway can never be revoked — a permanent ungoverned billable
+	// key (the reconciler only sweeps the default gateway, OQ-5). Refuse while any
+	// non-revoked key still references this team; recycle/revoke those agents first
+	// (that revokes on the correct gateway while the department still resolves).
+	if n, err := r.Ent.VirtualKey.Query().
+		Where(virtualkey.TeamID(did.String()), virtualkey.StatusNEQ(virtualkey.StatusRevoked)).
+		Count(ctx); err != nil {
+		return false, err
+	} else if n > 0 {
+		return false, gqlerror.Errorf("department has %d active virtual key(s); recycle or revoke those agents before deleting", n)
 	}
 	if gw := r.gatewayKeyClient(ctx, &did); gw != nil && dept.LitellmTeamID != "" {
 		if err := gw.DeleteTeam(ctx, dept.LitellmTeamID); err != nil {
@@ -224,11 +241,7 @@ func (r *queryResolver) Departments(ctx context.Context) ([]model.Department, er
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.Department, 0, len(ds))
-	for _, d := range ds {
-		out = append(out, *toModelDepartment(d))
-	}
-	return out, nil
+	return mapSlice(ds, toModelDepartment), nil
 }
 
 // DepartmentMembers is the resolver for the departmentMembers field.
@@ -246,9 +259,5 @@ func (r *queryResolver) DepartmentMembers(ctx context.Context, departmentID stri
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.Membership, 0, len(ms))
-	for _, m := range ms {
-		out = append(out, *toModelMembership(m))
-	}
-	return out, nil
+	return mapSlice(ms, toModelMembership), nil
 }

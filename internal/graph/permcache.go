@@ -20,6 +20,12 @@ type permCache struct {
 	mu  sync.Mutex
 	m   map[string]permCacheEntry
 	ttl time.Duration
+	// gen advances on every invalidate/clear. A reader captures gen BEFORE its DB
+	// read and passes it to put(); if gen moved (a revocation landed during the
+	// read) put drops the now-stale set instead of caching it — closing the
+	// stale-reload race where a put could resurrect a just-revoked permission set
+	// for the full TTL.
+	gen uint64
 }
 
 type permCacheEntry struct {
@@ -44,12 +50,27 @@ func (c *permCache) get(userID string) (map[string]bool, bool) {
 	return e.set, true
 }
 
-func (c *permCache) put(userID string, set map[string]bool) {
+// generation returns the current invalidation generation. Capture it before a DB
+// read and feed it back to put() so a revocation that lands during the read is
+// not overwritten by a stale put.
+func (c *permCache) generation() uint64 {
+	if c == nil {
+		return 0
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.gen
+}
+
+func (c *permCache) put(userID string, set map[string]bool, genSeen uint64) {
 	if c == nil {
 		return
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.gen != genSeen {
+		return // invalidated during the caller's DB read — don't cache a stale set
+	}
 	c.m[userID] = permCacheEntry{set: set, exp: time.Now().Add(c.ttl)}
 }
 
@@ -60,6 +81,7 @@ func (c *permCache) invalidate(userID string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	delete(c.m, userID)
+	c.gen++
 }
 
 func (c *permCache) clear() {
@@ -69,4 +91,5 @@ func (c *permCache) clear() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.m = make(map[string]permCacheEntry)
+	c.gen++
 }

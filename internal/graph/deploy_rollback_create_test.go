@@ -12,8 +12,7 @@ import (
 // #36 coverage: rollbackDeployCreate compensates a failed create-from-OVA deploy
 // AFTER the VM + key exist — it must destroy the VM, revoke the key through the
 // passed-in gateway (NOT a nil r.Gateway), and DELETE the freshly-created agent
-// row (unlike rollbackDeploy, which marks it exception). Mirrors the existing
-// rollbackDeploy key-leak regression.
+// row (rather than marking it exception).
 func TestRollbackDeployCreate_DestroysVMRevokesKeyDeletesRow(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()
@@ -44,7 +43,7 @@ func TestRollbackDeployCreate_DestroysVMRevokesKeyDeletesRow(t *testing.T) {
 	if len(fg.deleted) != 1 || fg.deleted[0] != "sk-live-key" {
 		t.Errorf("gateway key not revoked through passed-in gateway: %v", fg.deleted)
 	}
-	// create-from-OVA rollback DELETES the row (it never went live), unlike rollbackDeploy.
+	// create-from-OVA rollback DELETES the row (it never went live), rather than marking it exception.
 	if _, err := r.Ent.Agent.Get(ctx, aid); err == nil {
 		t.Error("agent row should be deleted by rollbackDeployCreate")
 	}

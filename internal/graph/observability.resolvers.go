@@ -205,11 +205,7 @@ func (r *queryResolver) RequestLogs(ctx context.Context, filter *model.RequestLo
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.RequestLog, 0, len(rows))
-	for _, l := range rows {
-		out = append(out, *toModelRequestLog(l))
-	}
-	return out, nil
+	return mapSlice(rows, toModelRequestLog), nil
 }
 
 // RateLimitPolicies lists all policies.
@@ -230,11 +226,7 @@ func (r *queryResolver) RateLimitPolicies(ctx context.Context) ([]model.RateLimi
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.RateLimitPolicy, 0, len(ps))
-	for _, p := range ps {
-		out = append(out, *toModelRateLimitPolicy(p))
-	}
-	return out, nil
+	return mapSlice(ps, toModelRateLimitPolicy), nil
 }
 
 // RequestMetrics returns windowed, gap-filled request-traffic metrics bucketed

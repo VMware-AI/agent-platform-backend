@@ -201,11 +201,7 @@ func (r *queryResolver) Permissions(ctx context.Context) ([]model.Permission, er
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.Permission, 0, len(ps))
-	for _, p := range ps {
-		out = append(out, *toModelPermission(p))
-	}
-	return out, nil
+	return mapSlice(ps, toModelPermission), nil
 }
 
 // UserRoles is the resolver for the userRoles field.
