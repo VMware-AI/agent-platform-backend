@@ -38,9 +38,24 @@ func uniqueVMName(displayName string, id uuid.UUID) string {
 // any VM/key exists (create-from-OVA flow). The row was created by DeployAgent
 // itself, so removing it leaves no orphan. Detached ctx so cleanup runs even if
 // the request ctx was canceled. Failures are logged (never swallowed).
+//
+// It also retires the agent's AgentEnrollment, if any. DeployAgent calls
+// IssueEnrollment (when r.AgentMgr != nil) BEFORE provisioning, persisting a
+// pending enrollment row whose agent_id is a soft reference (no FK), so deleting
+// the agent row does NOT cascade it. Every deploy-fail compensation path funnels
+// through here (Provision-fail directly; vk-persist/finalize-fail via
+// rollbackDeployCreate), so cleaning the enrollment here keeps a failed deploy
+// from leaking an orphan pending enrollment. Best-effort, on the SAME detached
+// ctx; failures are logged (never swallowed).
 func (r *Resolver) deleteAgentRow(ctx context.Context, ag *ent.Agent) {
-	if err := r.Ent.Agent.DeleteOne(ag).Exec(context.WithoutCancel(ctx)); err != nil {
+	cctx := context.WithoutCancel(ctx)
+	if err := r.Ent.Agent.DeleteOne(ag).Exec(cctx); err != nil {
 		log.Printf("deploy rollback: delete agent row %s failed: %v", ag.ID, err)
+	}
+	if r.AgentMgr != nil {
+		if err := r.AgentMgr.DeleteEnrollment(cctx, ag.ID); err != nil {
+			log.Printf("deploy rollback: delete enrollment for agent %s failed: %v", ag.ID, err)
+		}
 	}
 }
 
