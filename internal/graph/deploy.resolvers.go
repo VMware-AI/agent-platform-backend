@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/rotationcommand"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
@@ -33,111 +32,32 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	if cu == nil {
 		return nil, gqlerror.Errorf("unauthenticated")
 	}
-	if r.Secrets == nil || r.VCenterConnect == nil {
-		return nil, gqlerror.Errorf("deploy is not configured (secrets/vcenter required)")
-	}
-	if input.Name == "" {
-		return nil, gqlerror.Errorf("name is required")
-	}
-	// Resolve the gateway that issues this agent's key + whose public URL the VM
-	// will call (LLD-13 §3.3): the chosen department's gateway, or the default.
-	var deptID *uuid.UUID
-	if input.DepartmentID != nil {
-		did, err := uuid.Parse(*input.DepartmentID)
-		if err != nil {
-			return nil, gqlerror.Errorf("invalid departmentId")
-		}
-		deptID = &did
-	}
-	// The key's team == its litellm team == the department (LLD-13 §3.3, where
-	// CreateDepartment sets teamID = deptID.String()). Persist it on the key and
-	// pass it to GenerateKey so the key (a) is grouped under the department's
-	// litellm team for budgeting and (b) RecycleAgent can route the revoke back to
-	// the department's gateway via deptIDFromTeam(vk.TeamID). Empty (no department)
-	// → default gateway, no team.
-	var deployTeamID string
-	if deptID != nil {
-		deployTeamID = deptID.String()
-	}
-	gw, gwURL := r.deployGateway(ctx, deptID)
-	if gw == nil {
-		return nil, gqlerror.Errorf("deploy is not configured (gateway required)")
-	}
-	ownerID, err := uuid.Parse(cu.ID)
+	// Read-only validation/resolution phase (no side effects): config+input
+	// checks, dept-gateway resolution, owner parse, catalog family/version, pool
+	// + credentials, write-tenant scope. resolveDeployTargets returns the SAME
+	// first error for the same bad input. The risky VM/key/row lifecycle below is
+	// unchanged.
+	t, err := r.resolveDeployTargets(ctx, input)
 	if err != nil {
-		return nil, gqlerror.Errorf("invalid current user")
-	}
-
-	// 1) Resolve the catalog family (its `type` = the agent kind) + the chosen
-	//    version (its ova_identifier = the source template) and validate the
-	//    version belongs to the family.
-	familyID, err := uuid.Parse(input.TemplateFamilyID)
-	if err != nil {
-		return nil, gqlerror.Errorf("invalid templateFamilyId")
-	}
-	versionID, err := uuid.Parse(input.TemplateVersionID)
-	if err != nil {
-		return nil, gqlerror.Errorf("invalid templateVersionId")
-	}
-	fam, err := r.Ent.OvaTemplateFamily.Get(ctx, familyID)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, gqlerror.Errorf("template family not found")
-		}
 		return nil, err
-	}
-	version, err := r.Ent.OvaTemplateVersion.Get(ctx, versionID)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, gqlerror.Errorf("template version not found")
-		}
-		return nil, err
-	}
-	verFamily, err := version.QueryFamily().Only(ctx)
-	if err != nil || verFamily.ID != familyID {
-		return nil, gqlerror.Errorf("template version does not belong to the family")
-	}
-
-	// 2) Resolve the target pool + its vCenter credentials.
-	poolID, err := uuid.Parse(input.ResourcePoolID)
-	if err != nil {
-		return nil, gqlerror.Errorf("invalid resourcePoolId")
-	}
-	pool, err := r.Ent.ResourcePool.Get(ctx, poolID)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, gqlerror.Errorf("resource pool not found")
-		}
-		return nil, err
-	}
-	if pool.SecretRef == "" {
-		return nil, gqlerror.Errorf("resource pool has no secret_ref")
-	}
-	cred, err := r.Secrets.Resolve(ctx, pool.SecretRef)
-	if err != nil {
-		return nil, fmt.Errorf("resolve pool credentials: %w", err)
 	}
 
 	// 3) Create the agent row up front (status=provisioning) so the VM/key are
 	//    always tied to a persisted owner. tenant from the caller's write scope.
-	tenantID, err := writeTenant(ctx)
-	if err != nil {
-		return nil, err
-	}
 	ag, err := r.Ent.Agent.Create().
 		SetName(input.Name).
-		SetAgentType(fam.Type).
-		SetOwnerUserID(ownerID).
-		SetNillableTenantID(tenantID).
-		SetResourcePoolID(poolID).
-		SetTemplateFamilyID(familyID).
-		SetTemplateVersionID(versionID).
+		SetAgentType(t.fam.Type).
+		SetOwnerUserID(t.ownerID).
+		SetNillableTenantID(t.tenantID).
+		SetResourcePoolID(t.poolID).
+		SetTemplateFamilyID(t.familyID).
+		SetTemplateVersionID(t.versionID).
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create agent: %w", err)
 	}
 
-	conn, err := r.VCenterConnect(ctx, pool.Endpoint, cred.Username, cred.Password, pool.Insecure)
+	conn, err := r.VCenterConnect(ctx, t.pool.Endpoint, t.cred.Username, t.cred.Password, t.pool.Insecure)
 	if err != nil {
 		r.deleteAgentRow(ctx, ag)
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
@@ -174,7 +94,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		enrollToken = tok
 	}
 
-	svc := &deploy.Service{Gateway: gw, VCenter: conn, GatewayURL: gwURL}
+	svc := &deploy.Service{Gateway: t.gw, VCenter: conn, GatewayURL: t.gwURL}
 	// Decouple provisioning from the HTTP write deadline (server WriteTimeout=60s):
 	// a clone + power-on can run minutes, and if the request ctx is canceled
 	// mid-clone the vCenter task keeps running untracked → orphan VM. Run it on a
@@ -185,8 +105,8 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	res, err := svc.Provision(provCtx, deploy.Request{
 		AgentName: ag.Name,
 		UserID:    ag.OwnerUserID.String(),
-		TeamID:    deployTeamID,          // department = litellm team (LLD-13 §3.3); empty = default gateway, no team
-		Template:  version.OvaIdentifier, // clone from the catalog version's OVA
+		TeamID:    t.deployTeamID,          // department = litellm team (LLD-13 §3.3); empty = default gateway, no team
+		Template:  t.version.OvaIdentifier, // clone from the catalog version's OVA
 		VMName:    vmName,
 		// vSphere placement pool. A true OVA template has no source resource pool,
 		// so a real deploy MUST supply one or CloneFromTemplate fails ("source has
@@ -219,17 +139,17 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		SetUserID(ag.OwnerUserID).
 		SetModels([]string{gateway.DefaultRouterModel}).
 		SetAlias(ag.Name)
-	if deployTeamID != "" {
+	if t.deployTeamID != "" {
 		// Bind the key to its department/team so RecycleAgent revokes on the
 		// department's gateway (deptIDFromTeam(vk.TeamID)), not the default.
-		vkCreate.SetTeamID(deployTeamID)
+		vkCreate.SetTeamID(t.deployTeamID)
 	}
 	if res.VirtualKeyToken != "" {
 		vkCreate.SetLitellmToken(res.VirtualKeyToken) // gateway reconciliation id
 	}
 	vk, err := vkCreate.Save(ctx)
 	if err != nil {
-		r.rollbackDeployCreate(ctx, conn, gw, ag, vmName, res.VirtualKey)
+		r.rollbackDeployCreate(ctx, conn, t.gw, ag, vmName, res.VirtualKey)
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
 		return nil, fmt.Errorf("persist virtual key failed: %w", err)
 	}
@@ -246,7 +166,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		if delErr := r.Ent.VirtualKey.DeleteOne(vk).Exec(context.WithoutCancel(ctx)); delErr != nil {
 			log.Printf("deploy rollback: delete dangling vk row %s failed: %v", vk.ID, delErr)
 		}
-		r.rollbackDeployCreate(ctx, conn, gw, ag, vmName, res.VirtualKey)
+		r.rollbackDeployCreate(ctx, conn, t.gw, ag, vmName, res.VirtualKey)
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
 		return nil, fmt.Errorf("finalize agent failed: %w", err)
 	}
@@ -255,8 +175,8 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	return &model.DeployedAgent{
 		Agent:            toModelAgent(updated),
 		VirtualKeySecret: res.VirtualKey,
-		TemplateVersion:  toModelOvaVersion(version, familyID.String()),
-		ResourcePool:     toModelResourcePool(pool),
+		TemplateVersion:  toModelOvaVersion(t.version, t.familyID.String()),
+		ResourcePool:     toModelResourcePool(t.pool),
 	}, nil
 }
 
