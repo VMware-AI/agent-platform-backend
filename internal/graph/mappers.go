@@ -19,7 +19,7 @@ func toModelUser(u *ent.User) *model.User {
 		Email:              u.Email,
 		Role:               entRoleToGQL(string(u.Role)),
 		MustChangePassword: u.MustChangePassword,
-		IsActive:           u.IsActive,
+		Enabled:            u.IsActive,
 		CreatedAt:          u.CreatedAt,
 	}
 	if u.TenantID != nil {

@@ -951,16 +951,17 @@ type Upstream struct {
 }
 
 type User struct {
-	ID                 string     `json:"id"`
-	Username           string     `json:"username"`
-	DisplayName        string     `json:"displayName"`
-	Email              string     `json:"email"`
-	Role               RoleName   `json:"role"`
-	TenantID           *string    `json:"tenantId,omitempty"`
-	MustChangePassword bool       `json:"mustChangePassword"`
-	IsActive           bool       `json:"isActive"`
-	LastLoginAt        *time.Time `json:"lastLoginAt,omitempty"`
-	CreatedAt          time.Time  `json:"createdAt"`
+	ID                 string           `json:"id"`
+	Username           string           `json:"username"`
+	DisplayName        string           `json:"displayName"`
+	Email              string           `json:"email"`
+	Role               RoleName         `json:"role"`
+	TenantID           *string          `json:"tenantId,omitempty"`
+	MustChangePassword bool             `json:"mustChangePassword"`
+	Enabled            bool             `json:"enabled"`
+	ConnectionStatus   ConnectionStatus `json:"connectionStatus"`
+	LastLoginAt        *time.Time       `json:"lastLoginAt,omitempty"`
+	CreatedAt          time.Time        `json:"createdAt"`
 }
 
 type UserConnection struct {

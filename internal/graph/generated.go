@@ -739,11 +739,12 @@ type ComplexityRoot struct {
 	}
 
 	User struct {
+		ConnectionStatus   func(childComplexity int) int
 		CreatedAt          func(childComplexity int) int
 		DisplayName        func(childComplexity int) int
 		Email              func(childComplexity int) int
+		Enabled            func(childComplexity int) int
 		ID                 func(childComplexity int) int
-		IsActive           func(childComplexity int) int
 		LastLoginAt        func(childComplexity int) int
 		MustChangePassword func(childComplexity int) int
 		Role               func(childComplexity int) int
@@ -922,6 +923,8 @@ type QueryResolver interface {
 }
 type UserResolver interface {
 	DisplayName(ctx context.Context, obj *model.User) (string, error)
+
+	ConnectionStatus(ctx context.Context, obj *model.User) (model.ConnectionStatus, error)
 }
 
 // endregion ************************** generated!.gotpl **************************
@@ -4329,6 +4332,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Upstream.Provider(childComplexity), true
 
+	case "User.connectionStatus":
+		if e.ComplexityRoot.User.ConnectionStatus == nil {
+			break
+		}
+
+		return e.ComplexityRoot.User.ConnectionStatus(childComplexity), true
 	case "User.createdAt":
 		if e.ComplexityRoot.User.CreatedAt == nil {
 			break
@@ -4347,18 +4356,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.User.Email(childComplexity), true
+	case "User.enabled":
+		if e.ComplexityRoot.User.Enabled == nil {
+			break
+		}
+
+		return e.ComplexityRoot.User.Enabled(childComplexity), true
 	case "User.id":
 		if e.ComplexityRoot.User.ID == nil {
 			break
 		}
 
 		return e.ComplexityRoot.User.ID(childComplexity), true
-	case "User.isActive":
-		if e.ComplexityRoot.User.IsActive == nil {
-			break
-		}
-
-		return e.ComplexityRoot.User.IsActive(childComplexity), true
 	case "User.lastLoginAt":
 		if e.ComplexityRoot.User.LastLoginAt == nil {
 			break
@@ -6180,7 +6189,10 @@ type User {
   role: RoleName!
   tenantId: ID
   mustChangePassword: Boolean!
-  isActive: Boolean!
+  enabled: Boolean!
+  # ONLINE when the user currently has at least one live session (derived from the
+  # session store, not a column). For the ` + "`" + `me` + "`" + ` caller this is necessarily ONLINE.
+  connectionStatus: ConnectionStatus! @goField(forceResolver: true)
   lastLoginAt: Time
   createdAt: Time!
 }
@@ -7509,8 +7521,10 @@ func (ec *executionContext) childFields_User(ctx context.Context, field graphql.
 		return ec.fieldContext_User_tenantId(ctx, field)
 	case "mustChangePassword":
 		return ec.fieldContext_User_mustChangePassword(ctx, field)
-	case "isActive":
-		return ec.fieldContext_User_isActive(ctx, field)
+	case "enabled":
+		return ec.fieldContext_User_enabled(ctx, field)
+	case "connectionStatus":
+		return ec.fieldContext_User_connectionStatus(ctx, field)
 	case "lastLoginAt":
 		return ec.fieldContext_User_lastLoginAt(ctx, field)
 	case "createdAt":
@@ -24694,16 +24708,16 @@ func (ec *executionContext) fieldContext_User_mustChangePassword(_ context.Conte
 	return graphql.NewScalarFieldContext("User", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
-func (ec *executionContext) _User_isActive(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_enabled(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_User_isActive(ctx, field)
+			return ec.fieldContext_User_enabled(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return obj.IsActive, nil
+			return obj.Enabled, nil
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
@@ -24713,8 +24727,31 @@ func (ec *executionContext) _User_isActive(ctx context.Context, field graphql.Co
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_User_isActive(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_User_enabled(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("User", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _User_connectionStatus(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_User_connectionStatus(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.User().ConnectionStatus(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.ConnectionStatus) graphql.Marshaler {
+			return ec.marshalNConnectionStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐConnectionStatus(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_User_connectionStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("User", field, true, true, errors.New("field of type ConnectionStatus does not have child fields"))
 }
 
 func (ec *executionContext) _User_lastLoginAt(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
@@ -34993,11 +35030,47 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
-		case "isActive":
-			out.Values[i] = ec._User_isActive(ctx, field, obj)
+		case "enabled":
+			out.Values[i] = ec._User_enabled(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "connectionStatus":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_connectionStatus(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "lastLoginAt":
 			out.Values[i] = ec._User_lastLoginAt(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {

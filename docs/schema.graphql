@@ -1109,7 +1109,8 @@ type User {
 	role: RoleName!
 	tenantId: ID
 	mustChangePassword: Boolean!
-	isActive: Boolean!
+	enabled: Boolean!
+	connectionStatus: ConnectionStatus! @goField(forceResolver: true)
 	lastLoginAt: Time
 	createdAt: Time!
 }
