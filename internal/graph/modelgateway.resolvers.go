@@ -25,13 +25,18 @@ func (r *mutationResolver) CreateModelGateway(ctx context.Context, input model.M
 	if input.AdminURL != nil {
 		c.SetAdminURL(*input.AdminURL)
 	}
-	if ref, set, err := r.resolveKeySecretRef(ctx, "gateway/"+input.Name, input.MasterKey, nil); err != nil {
+	ref, set, minted, err := r.resolveKeySecretRef(ctx, "gateway/"+input.Name, input.MasterKey, nil)
+	if err != nil {
 		return nil, err
-	} else if set {
+	}
+	if set {
 		c.SetMasterKeyRef(ref)
 	}
 	g, err := c.Save(ctx)
 	if err != nil {
+		// DB write failed after the masterKey was Put (e.g. duplicate name trips
+		// the unique constraint) — retire the orphan so plaintext doesn't linger.
+		r.cleanupMintedSecretOnErr(ctx, minted, ref, err)
 		return nil, err
 	}
 	r.audit(ctx, "model_gateway.create", "gateway_connection", g.ID.String(), true, actorID(auth.FromContext(ctx)))
@@ -60,14 +65,19 @@ func (r *mutationResolver) UpdateModelGateway(ctx context.Context, id string, in
 	// On a re-submitted masterKey the secret store mints a NEW ref; remember the
 	// prior one so we can delete it after the row is updated (no orphan on rotate).
 	rotatedFrom := ""
-	if ref, set, err := r.resolveKeySecretRef(ctx, "gateway/"+input.Name, input.MasterKey, nil); err != nil {
+	newRef, mintedRef := "", false
+	if ref, set, minted, err := r.resolveKeySecretRef(ctx, "gateway/"+input.Name, input.MasterKey, nil); err != nil {
 		return nil, err
 	} else if set && ref != existing.MasterKeyRef {
 		u.SetMasterKeyRef(ref)
 		rotatedFrom = existing.MasterKeyRef
+		newRef, mintedRef = ref, minted
 	}
 	g, err := u.Save(ctx)
 	if err != nil {
+		// Rotation failed: retire the just-minted ref (the orphan) and leave the
+		// prior ref — still referenced by the unchanged row — untouched.
+		r.cleanupMintedSecretOnErr(ctx, mintedRef, newRef, err)
 		return nil, err
 	}
 	if rotatedFrom != "" {

@@ -25,7 +25,7 @@ import (
 // secretRef is reused. Optional seed counts are honored; real counts come from
 // syncResourcePool.
 func (r *mutationResolver) CreateResourcePool(ctx context.Context, input model.CreateResourcePoolInput) (*model.CreateResourcePoolPayload, error) {
-	ref, set, err := r.resolvePoolSecretRef(ctx, input.Name, input.Username, input.Password, input.SecretRef)
+	ref, set, minted, err := r.resolvePoolSecretRef(ctx, input.Name, input.Username, input.Password, input.SecretRef)
 	if err != nil {
 		return nil, err
 	}
@@ -49,6 +49,9 @@ func (r *mutationResolver) CreateResourcePool(ctx context.Context, input model.C
 	}
 	p, err := create.Save(ctx)
 	if err != nil {
+		// DB write failed after the vCenter credential was Put (validation/constraint/
+		// connectivity) — retire the orphan so the plaintext password doesn't linger.
+		r.cleanupMintedSecretOnErr(ctx, minted, ref, err)
 		return nil, err
 	}
 	r.audit(ctx, "resource_pool.create", "resource_pool", p.ID.String(), true, actorID(auth.FromContext(ctx)))
@@ -83,7 +86,7 @@ func (r *mutationResolver) UpdateResourcePool(ctx context.Context, id string, in
 	}
 	// Credential rotation: re-submitted username/password → secret store; or a new
 	// explicit secretRef. Untouched when none provided.
-	ref, set, err := r.resolvePoolSecretRef(ctx, id, input.Username, input.Password, input.SecretRef)
+	ref, set, minted, err := r.resolvePoolSecretRef(ctx, id, input.Username, input.Password, input.SecretRef)
 	if err != nil {
 		return nil, err
 	}
@@ -92,6 +95,9 @@ func (r *mutationResolver) UpdateResourcePool(ctx context.Context, id string, in
 	}
 	p, err := u.Save(ctx)
 	if err != nil {
+		// Rotation failed after the new credential was Put — retire the just-minted
+		// orphan (the prior secret_ref on the unchanged row stays untouched).
+		r.cleanupMintedSecretOnErr(ctx, minted, ref, err)
 		return nil, err
 	}
 	r.audit(ctx, "resource_pool.update", "resource_pool", id, true, actorID(auth.FromContext(ctx)))

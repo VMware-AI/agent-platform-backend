@@ -25,10 +25,14 @@ import (
 // RegisterGatewayConnection is the resolver for the registerGatewayConnection field.
 func (r *mutationResolver) RegisterGatewayConnection(ctx context.Context, input model.RegisterGatewayConnectionInput) (*model.GatewayConnection, error) {
 	// Raw master key from the form → secret store; downstream uses the ref (明文不落库).
-	if ref, set, err := r.resolveKeySecretRef(ctx, "gateway/"+input.Name, input.MasterKey, input.MasterKeyRef); err != nil {
+	// Put happens OUTSIDE the tx below, so a failed insert/rollback must retire the
+	// freshly-minted ref itself (mintedRef) — the tx rollback can't undo the store.
+	mintedKeyRef, mintedKey := "", false
+	if ref, set, minted, err := r.resolveKeySecretRef(ctx, "gateway/"+input.Name, input.MasterKey, input.MasterKeyRef); err != nil {
 		return nil, err
 	} else if set {
 		input.MasterKeyRef = &ref
+		mintedKeyRef, mintedKey = ref, minted
 	}
 	// is_default (LLD-13 §3.3): an explicit request, OR auto-default the first-ever
 	// connection so the platform always has a default gateway once one exists (§7 OQ-1).
@@ -53,7 +57,9 @@ func (r *mutationResolver) RegisterGatewayConnection(ctx context.Context, input 
 		if _, err := tx.GatewayConnection.Update().
 			Where(gatewayconnection.IsDefault(true)).
 			SetIsDefault(false).Save(ctx); err != nil {
-			return nil, rollback(tx, err)
+			rerr := rollback(tx, err)
+			r.cleanupMintedSecretOnErr(ctx, mintedKey, mintedKeyRef, rerr)
+			return nil, rerr
 		}
 	}
 	c := tx.GatewayConnection.Create().
@@ -69,9 +75,15 @@ func (r *mutationResolver) RegisterGatewayConnection(ctx context.Context, input 
 	}
 	g, err := c.Save(ctx)
 	if err != nil {
-		return nil, rollback(tx, err)
+		// Insert failed (e.g. duplicate name trips the unique constraint). The tx
+		// rollback can't undo the out-of-tx store.Put, so retire the orphan here.
+		rerr := rollback(tx, err)
+		r.cleanupMintedSecretOnErr(ctx, mintedKey, mintedKeyRef, rerr)
+		return nil, rerr
 	}
 	if err := tx.Commit(); err != nil {
+		// Commit failed → the row was not persisted; the minted ref is orphaned.
+		r.cleanupMintedSecretOnErr(ctx, mintedKey, mintedKeyRef, err)
 		return nil, err
 	}
 	r.audit(ctx, "gateway.register", "gateway_connection", g.ID.String(), true, actorID(auth.FromContext(ctx)))
@@ -119,10 +131,12 @@ func (r *mutationResolver) DeleteGatewayConnection(ctx context.Context, id strin
 func (r *mutationResolver) UpsertUpstream(ctx context.Context, input model.UpsertUpstreamInput) (*model.Upstream, error) {
 	// Raw upstream apiKey from the form → secret store; the rest of the flow (DB +
 	// litellm sync) consumes the ref (明文不落库).
-	if ref, set, err := r.resolveKeySecretRef(ctx, "upstream/"+input.Name, input.APIKey, input.APIKeyRef); err != nil {
+	mintedKeyRef, mintedKey := "", false
+	if ref, set, minted, err := r.resolveKeySecretRef(ctx, "upstream/"+input.Name, input.APIKey, input.APIKeyRef); err != nil {
 		return nil, err
 	} else if set {
 		input.APIKeyRef = &ref
+		mintedKeyRef, mintedKey = ref, minted
 	}
 	enabled := true
 	if input.Enabled != nil {
@@ -151,6 +165,10 @@ func (r *mutationResolver) UpsertUpstream(ctx context.Context, input model.Upser
 	}
 	u, err := apply(true)
 	if err != nil {
+		// DB upsert failed after the apiKey was Put (e.g. a create racing the unique
+		// name) — retire the orphan. Past this point the row exists and owns the
+		// ref, so later gateway-sync failures must NOT delete it.
+		r.cleanupMintedSecretOnErr(ctx, mintedKey, mintedKeyRef, err)
 		return nil, err
 	}
 
