@@ -286,6 +286,17 @@ func (r *userResolver) DisplayName(ctx context.Context, obj *model.User) (string
 	return obj.Username, nil
 }
 
+// ConnectionStatus reports ONLINE when the user has at least one live session.
+// For the `me` caller this is necessarily ONLINE; for any other User surfaced via
+// this type (e.g. an agent's owner) it reflects that user's real session state.
+func (r *userResolver) ConnectionStatus(ctx context.Context, obj *model.User) (model.ConnectionStatus, error) {
+	online, _ := r.Sessions.ActiveByUser(obj.ID)
+	if online {
+		return model.ConnectionStatusOnline, nil
+	}
+	return model.ConnectionStatusOffline, nil
+}
+
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 

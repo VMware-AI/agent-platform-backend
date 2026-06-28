@@ -204,7 +204,8 @@ changePassword(oldPassword: String!, newPassword: String!): Boolean!
 | `role` | `RoleName!` | — |
 | `tenantId` | `ID` | — |
 | `mustChangePassword` | `Boolean!` | — |
-| `isActive` | `Boolean!` | — |
+| `enabled` | `Boolean!` | — |
+| `connectionStatus` | `ConnectionStatus!` | ONLINE when the user currently has at least one live session (derived from the session store, not a column). For the `me` caller this is necessarily ONLINE. |
 | `lastLoginAt` | `Time` | — |
 | `createdAt` | `Time!` | — |
 
