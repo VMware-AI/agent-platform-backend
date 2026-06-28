@@ -185,6 +185,16 @@ func (s *Service) Revoke(ctx context.Context, agentID uuid.UUID, actorID string)
 	return nil
 }
 
+// DeleteEnrollment removes an agent's enrollment row entirely. Used by deploy
+// rollback: the agent never went live, so its (pending) enrollment must not
+// linger as an orphan. Idempotent — a missing enrollment is a no-op.
+func (s *Service) DeleteEnrollment(ctx context.Context, agentID uuid.UUID) error {
+	_, err := s.Ent.AgentEnrollment.Delete().
+		Where(agentenrollment.AgentID(agentID)).
+		Exec(ctx)
+	return err
+}
+
 // audit writes an AuditLog row for a security-relevant agent-manager event
 // (command state change, token rotation, secret write, revoke). Heartbeats
 // themselves are not audited (high-frequency noise). Best-effort: a failed audit

@@ -316,6 +316,14 @@ func (r *mutationResolver) RecycleAgent(ctx context.Context, input model.Recycle
 			}
 		}
 	}
+	// Revoke the agent-manager enrollment so the destroyed VM's long-lived bearer
+	// token stops authenticating against the daemon control plane (heartbeat /
+	// knowledge / rotation). Best-effort, detached ctx; never silent.
+	if r.AgentMgr != nil {
+		if err := r.AgentMgr.Revoke(context.WithoutCancel(ctx), agentID, cu.ID); err != nil {
+			log.Printf("recycle agent %s: revoke enrollment failed: %v", ag.ID, err)
+		}
+	}
 	ag, err = r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusStopped).SetVMRef("").Save(ctx)
 	if err != nil {
 		return nil, err
