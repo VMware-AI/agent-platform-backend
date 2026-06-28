@@ -13,6 +13,11 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 )
 
+const (
+	defaultDashboardLimit = 5
+	maxDashboardLimit     = 50
+)
+
 // dashboardStats counts the platform entities the overview cards show + the
 // current calendar month's usage totals.
 func (r *Resolver) dashboardStats(ctx context.Context) (*model.DashboardStats, error) {

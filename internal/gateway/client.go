@@ -15,6 +15,11 @@ import (
 	"time"
 )
 
+const (
+	gatewayHTTPTimeout  = 15 * time.Second
+	gatewayRetryBackoff = 200 * time.Millisecond
+)
+
 // Client governs the LiteLLM proxy via its admin API.
 type Client interface {
 	GenerateKey(ctx context.Context, req GenerateKeyRequest) (*KeyResponse, error)
@@ -120,9 +125,9 @@ func NewHTTPClient(baseURL, masterKey string) *HTTPClient {
 	return &HTTPClient{
 		baseURL:      strings.TrimRight(baseURL, "/"),
 		masterKey:    masterKey,
-		http:         &http.Client{Timeout: 15 * time.Second},
+		http:         &http.Client{Timeout: gatewayHTTPTimeout},
 		maxAttempts:  3,
-		retryBackoff: 200 * time.Millisecond,
+		retryBackoff: gatewayRetryBackoff,
 	}
 }
 

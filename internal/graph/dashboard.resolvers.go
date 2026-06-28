@@ -22,11 +22,11 @@ func (r *queryResolver) DashboardOverview(ctx context.Context, recentLimit *int,
 	if err != nil {
 		return nil, err
 	}
-	recent, err := r.dashboardRecentAgents(ctx, clampLimit(recentLimit, 5, 50))
+	recent, err := r.dashboardRecentAgents(ctx, clampLimit(recentLimit, defaultDashboardLimit, maxDashboardLimit))
 	if err != nil {
 		return nil, err
 	}
-	notices, err := r.dashboardNotices(ctx, clampLimit(noticeLimit, 5, 50))
+	notices, err := r.dashboardNotices(ctx, clampLimit(noticeLimit, defaultDashboardLimit, maxDashboardLimit))
 	if err != nil {
 		return nil, err
 	}

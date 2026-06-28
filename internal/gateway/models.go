@@ -35,6 +35,9 @@ type ModelSpec struct {
 	ModelID string
 }
 
+// DefaultRouterModel is the default alias of the Complexity Router model.
+const DefaultRouterModel = "smart"
+
 // RouterSpec configures the Complexity Router "smart" model.
 type RouterSpec struct {
 	ModelName    string            // usually "smart"
@@ -100,7 +103,7 @@ func (c *HTTPClient) UpsertComplexityRouter(ctx context.Context, spec RouterSpec
 	}
 	name := spec.ModelName
 	if name == "" {
-		name = "smart"
+		name = DefaultRouterModel
 	}
 	cfg := map[string]any{"tiers": spec.Tiers}
 	params := map[string]any{

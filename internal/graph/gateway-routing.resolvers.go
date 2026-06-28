@@ -394,7 +394,7 @@ func (r *mutationResolver) SetRouterTier(ctx context.Context, tier model.RouterT
 	}
 	if mm := r.gatewayModels(ctx); mm != nil {
 		if err := mm.UpsertComplexityRouter(ctx, gateway.RouterSpec{
-			ModelName: "smart", Tiers: tiers, DefaultModel: tiers["MEDIUM"],
+			ModelName: gateway.DefaultRouterModel, Tiers: tiers, DefaultModel: tiers["MEDIUM"],
 		}); err != nil {
 			return nil, fmt.Errorf("sync complexity router: %w", err)
 		}
