@@ -16,6 +16,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/deploy"
+	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
@@ -216,7 +217,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	vkCreate := r.Ent.VirtualKey.Create().
 		SetLitellmKey(res.VirtualKey).
 		SetUserID(ag.OwnerUserID).
-		SetModels([]string{"smart"}).
+		SetModels([]string{gateway.DefaultRouterModel}).
 		SetAlias(ag.Name)
 	if deployTeamID != "" {
 		// Bind the key to its department/team so RecycleAgent revokes on the

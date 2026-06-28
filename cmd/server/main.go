@@ -38,6 +38,15 @@ import (
 // job (ASCII "rcncl-gw").
 const reconcileLeaseKey int64 = 0x72636e636c2d6777
 
+// HTTP server timeouts.
+const (
+	readHeaderTimeout   = 10 * time.Second
+	readTimeout         = 30 * time.Second
+	writeTimeout        = 60 * time.Second
+	idleTimeout         = 120 * time.Second
+	serverShutdownGrace = 15 * time.Second
+)
+
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -214,10 +223,10 @@ func main() {
 	httpSrv := &http.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           httpx.RequestLogger(mux),
-		ReadHeaderTimeout: 10 * time.Second,
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      60 * time.Second,
-		IdleTimeout:       120 * time.Second,
+		ReadHeaderTimeout: readHeaderTimeout,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
 	}
 
 	shutCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -231,7 +240,7 @@ func main() {
 
 	<-shutCtx.Done()
 	log.Printf("shutting down…")
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), serverShutdownGrace)
 	defer cancel()
 	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
 		log.Printf("graceful shutdown failed: %v", err)
