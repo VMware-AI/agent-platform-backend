@@ -18,6 +18,7 @@ type fakeVCenter struct {
 	destroyed []string
 	snapshots map[string][]vcenter.SnapshotInfo
 	reverted  []string
+	logouts   int
 }
 
 func (f *fakeVCenter) CloneFromTemplate(context.Context, vcenter.CloneSpec) (*vcenter.VMInfo, error) {
@@ -57,7 +58,7 @@ func (f *fakeVCenter) RevertSnapshot(_ context.Context, vmName, snapshotName str
 func (f *fakeVCenter) ListSnapshots(_ context.Context, vmName string) ([]vcenter.SnapshotInfo, error) {
 	return f.snapshots[vmName], nil
 }
-func (f *fakeVCenter) Logout(context.Context) error { return nil }
+func (f *fakeVCenter) Logout(context.Context) error { f.logouts++; return nil }
 
 // rollbackDeploy must destroy the orphan VM, revoke the live gateway key, and
 // mark the agent exception — so a post-Provision persistence failure leaves no
