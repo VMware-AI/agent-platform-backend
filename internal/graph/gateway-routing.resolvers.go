@@ -108,22 +108,9 @@ func (r *mutationResolver) TestGatewayConnection(ctx context.Context, id string)
 
 // DeleteGatewayConnection is the resolver for the deleteGatewayConnection field.
 func (r *mutationResolver) DeleteGatewayConnection(ctx context.Context, id string) (bool, error) {
-	gid, err := uuid.Parse(id)
-	if err != nil {
-		return false, gqlerror.Errorf("invalid id")
-	}
-	g, err := r.Ent.GatewayConnection.Get(ctx, gid)
-	if err != nil {
+	if err := r.deleteGatewayByID(ctx, id); err != nil {
 		return false, err
 	}
-	if err := r.assertGatewayDeletable(ctx, g); err != nil {
-		return false, err
-	}
-	if err := r.Ent.GatewayConnection.DeleteOneID(gid).Exec(ctx); err != nil {
-		return false, err
-	}
-	// Don't orphan the master-key secret in the store (best-effort; row is gone).
-	r.deleteSecretRef(ctx, g.MasterKeyRef)
 	r.audit(ctx, "gateway.delete", "gateway_connection", id, true, actorID(auth.FromContext(ctx)))
 	return true, nil
 }

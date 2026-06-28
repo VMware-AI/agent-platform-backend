@@ -10,6 +10,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
+	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
@@ -169,5 +170,32 @@ func (r *Resolver) assertGatewayDeletable(ctx context.Context, g *ent.GatewayCon
 	if g.IsDefault {
 		return gqlerror.Errorf("cannot delete the default gateway; set another default first")
 	}
+	return nil
+}
+
+// deleteGatewayByID runs the shared delete sequence both gateway façades use:
+// parse → load → deletable-guard → delete row → retire the master-key secret
+// (best-effort; the row is already gone). The two façade resolvers wrap this
+// with their own return projection + audit action string — the ONLY way the
+// delete paths differ. Audit stays at the call site (success-only) so each keeps
+// its distinct action ("model_gateway.delete" vs "gateway.delete"). The test and
+// create/register paths are deliberately NOT shared — their status-default and
+// is_default-singleton logic genuinely differ (see modelgateway/gateway-routing).
+func (r *Resolver) deleteGatewayByID(ctx context.Context, id string) error {
+	gid, err := uuid.Parse(id)
+	if err != nil {
+		return gqlerror.Errorf("invalid id")
+	}
+	g, err := r.Ent.GatewayConnection.Get(ctx, gid)
+	if err != nil {
+		return err
+	}
+	if err := r.assertGatewayDeletable(ctx, g); err != nil {
+		return err
+	}
+	if err := r.Ent.GatewayConnection.DeleteOneID(gid).Exec(ctx); err != nil {
+		return err
+	}
+	r.deleteSecretRef(ctx, g.MasterKeyRef) // best-effort; row is gone
 	return nil
 }
