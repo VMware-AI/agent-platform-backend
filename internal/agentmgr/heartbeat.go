@@ -103,6 +103,15 @@ func (s *Service) ProcessHeartbeat(ctx context.Context, enr *ent.AgentEnrollment
 	// 4) max-age policy: enqueue a UI-password rotation if overdue and none in flight.
 	s.applyMaxAge(ctx, enr)
 
+	// 5+6) Dispatch pending commands and assemble the response (incl. sliding
+	// VM-token renewal).
+	return s.dispatchAndAssemble(ctx, enr, now)
+}
+
+// dispatchAndAssemble selects pending commands → marks them dispatched → returns
+// them, then layers on a sliding VM-token renewal when the current token nears
+// expiry (LLD-08 §5.3 steps 5+6). Extracted from ProcessHeartbeat verbatim.
+func (s *Service) dispatchAndAssemble(ctx context.Context, enr *ent.AgentEnrollment, now time.Time) (HeartbeatResponse, error) {
 	// 5) Select pending commands → mark dispatched → return them.
 	pending, err := s.Ent.RotationCommand.Query().
 		Where(rotationcommand.AgentID(enr.AgentID), rotationcommand.StatusEQ(rotationcommand.StatusPending)).

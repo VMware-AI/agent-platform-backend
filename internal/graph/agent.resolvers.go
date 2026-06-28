@@ -408,32 +408,9 @@ func (r *queryResolver) Agents(ctx context.Context, filter *model.AgentFilter, p
 		return nil, gqlerror.Errorf("unauthenticated")
 	}
 	q := r.Ent.Agent.Query()
-	// Three-track visibility (LLD-10 §1.3): admin → all; tenant-admin → their
-	// whole tenant; regular user → only their own agents (owner track).
-	switch {
-	case cu.Role == auth.RoleAdmin:
-		// no filter
-	case cu.Role == auth.RoleTenantAdmin:
-		if d := tenantScopeFor(ctx); d.apply {
-			if d.denyAll {
-				q = q.Where(agent.IDEQ(uuid.Nil))
-			} else {
-				q = q.Where(agent.TenantID(d.tenant))
-			}
-		}
-	default:
-		// Regular user: only their own agents (owner track). Fail CLOSED — a
-		// session id that isn't a valid UUID must scope to zero rows, never fall
-		// through to an unscoped (all-agents) query.
-		if uid, err := uuid.Parse(cu.ID); err == nil {
-			q = q.Where(agent.OwnerUserID(uid))
-		} else {
-			q = q.Where(agent.IDEQ(uuid.Nil))
-		}
-	}
-	if env, ok := r.envScopeFor(ctx); ok { // soft env filter, after tenant (LLD-10 §2.3)
-		q = q.Where(agent.Or(agent.EnvironmentID(env), agent.EnvironmentIDIsNil()))
-	}
+	// Three-track visibility + soft env filter (LLD-10 §1.3 + §2.3), extracted
+	// into a single SECURITY-SENSITIVE predicate builder.
+	q = q.Where(r.agentVisibilityPredicates(ctx, cu)...)
 
 	// Apply the UI filters on top of the visibility scope (前后端整合契约). Cross-
 	// entity keywords (owner/key) resolve matching ids first, then constrain by FK.
