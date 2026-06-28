@@ -43,6 +43,18 @@ type Config struct {
 	// honored on other replicas until TTL). Safe only for single-replica deployments
 	// until a shared (Redis pub/sub) invalidation channel lands; set >0 to opt in.
 	PermCacheTTLSeconds int
+	// DBMaxOpenConns bounds the postgres pool's total open connections. Go's
+	// default is 0 = UNLIMITED, which lets concurrent load open connections without
+	// ceiling and exhaust Postgres max_connections (worse across replicas), so we
+	// default to a finite value. 0 restores the unlimited default. Ignored for the
+	// dev sqlite path.
+	DBMaxOpenConns int
+	// DBMaxIdleConns is the idle-connection ceiling kept warm in the pool (Go's
+	// default of 2 causes connect/close churn under load).
+	DBMaxIdleConns int
+	// DBConnMaxLifetimeMinutes recycles a connection after this long (0 = never).
+	// A finite lifetime plays well with failover and PgBouncer.
+	DBConnMaxLifetimeMinutes int
 }
 
 // Load reads config from the environment and validates it. Fails fast on a
@@ -94,6 +106,15 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("PERM_CACHE_TTL_SECONDS must be >= 0, got %d", pcttl)
 	}
 	c.PermCacheTTLSeconds = pcttl
+	if c.DBMaxOpenConns, err = getenvInt("DB_MAX_OPEN_CONNS", 20); err != nil {
+		return nil, err
+	}
+	if c.DBMaxIdleConns, err = getenvInt("DB_MAX_IDLE_CONNS", 10); err != nil {
+		return nil, err
+	}
+	if c.DBConnMaxLifetimeMinutes, err = getenvInt("DB_CONN_MAX_LIFETIME_MINUTES", 30); err != nil {
+		return nil, err
+	}
 	return c, nil
 }
 
@@ -102,4 +123,21 @@ func getenv(key, def string) string {
 		return v
 	}
 	return def
+}
+
+// getenvInt parses a non-negative integer env var, falling back to def when
+// unset. A malformed or negative value is a fail-fast startup error.
+func getenvInt(key string, def int) (int, error) {
+	v := os.Getenv(key)
+	if v == "" {
+		return def, nil
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return 0, fmt.Errorf("%s must be an integer: %w", key, err)
+	}
+	if n < 0 {
+		return 0, fmt.Errorf("%s must be >= 0, got %d", key, n)
+	}
+	return n, nil
 }
