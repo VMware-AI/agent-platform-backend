@@ -48,7 +48,7 @@ upstreams: [Upstream!]!
 ```
 
 - **Returns:** `[Upstream!]!`
-- **Auth:** `@hasPermission(perm: "route:manage")`
+- **Auth:** `@hasRole(any: [admin])`
 
 ### `modelRoutes`
 
@@ -68,7 +68,7 @@ routerTiers: [RouterTier!]!
 ```
 
 - **Returns:** `[RouterTier!]!`
-- **Auth:** `@hasPermission(perm: "route:manage")`
+- **Auth:** `@hasRole(any: [admin])`
 
 ## Mutations
 
@@ -171,7 +171,7 @@ upsertUpstream(input: UpsertUpstreamInput!): Upstream!
 ```
 
 - **Returns:** `Upstream!`
-- **Auth:** `@hasPermission(perm: "route:manage")`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -184,7 +184,7 @@ deleteUpstream(id: ID!): Boolean!
 ```
 
 - **Returns:** `Boolean!`
-- **Auth:** `@hasPermission(perm: "route:manage")`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -270,7 +270,7 @@ setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier!
 ```
 
 - **Returns:** `RouterTier!`
-- **Auth:** `@hasPermission(perm: "route:manage")`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
