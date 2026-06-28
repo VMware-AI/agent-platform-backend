@@ -14,6 +14,7 @@ import (
 type fakeModelManager struct {
 	models  []gateway.ModelSpec
 	routers []gateway.RouterSpec
+	deleted []string
 	testErr error
 }
 
@@ -22,7 +23,10 @@ func (f *fakeModelManager) NewModel(_ context.Context, s gateway.ModelSpec) erro
 	f.models = append(f.models, s)
 	return nil
 }
-func (f *fakeModelManager) DeleteModel(context.Context, string) error { return nil }
+func (f *fakeModelManager) DeleteModel(_ context.Context, id string) error {
+	f.deleted = append(f.deleted, id)
+	return nil
+}
 func (f *fakeModelManager) UpsertComplexityRouter(_ context.Context, s gateway.RouterSpec) error {
 	f.routers = append(f.routers, s)
 	return nil
