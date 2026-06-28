@@ -37,6 +37,12 @@ type Config struct {
 	// isolation (LLD-10 §2.3). OFF by default — the tables/columns exist but env
 	// filtering only activates once the frontend X-Environment contract is ready.
 	EnvScopeEnabled bool
+	// PermCacheTTLSeconds enables the in-process @hasPermission cache with this TTL.
+	// 0 (default) DISABLES it: the cache is process-local, so role/permission
+	// revocation does not propagate across replicas (a revoked permission stays
+	// honored on other replicas until TTL). Safe only for single-replica deployments
+	// until a shared (Redis pub/sub) invalidation channel lands; set >0 to opt in.
+	PermCacheTTLSeconds int
 }
 
 // Load reads config from the environment and validates it. Fails fast on a
@@ -80,6 +86,14 @@ func Load() (*Config, error) {
 	c.ReconcilePrune = getenv("RECONCILE_PRUNE", "false") == "true"
 	c.AgentPkgBaseURL = strings.TrimRight(os.Getenv("AGENT_PKG_BASE_URL"), "/")
 	c.EnvScopeEnabled = getenv("ENV_SCOPE_ENABLED", "false") == "true"
+	pcttl, err := strconv.Atoi(getenv("PERM_CACHE_TTL_SECONDS", "0"))
+	if err != nil {
+		return nil, fmt.Errorf("PERM_CACHE_TTL_SECONDS must be an integer: %w", err)
+	}
+	if pcttl < 0 {
+		return nil, fmt.Errorf("PERM_CACHE_TTL_SECONDS must be >= 0, got %d", pcttl)
+	}
+	c.PermCacheTTLSeconds = pcttl
 	return c, nil
 }
 

@@ -128,7 +128,12 @@ func main() {
 		ControlPlaneURL: os.Getenv("CONTROL_PLANE_URL"),
 		EnvScopeEnabled: cfg.EnvScopeEnabled,
 	}
-	resolver.EnablePermissionCache(60 * time.Second)
+	// In-process @hasPermission cache (process-local; see permcache.go). Disabled by
+	// default — enable it (single-replica only) via PERM_CACHE_TTL_SECONDS>0, so a
+	// multi-replica deployment never serves stale permissions after a revocation.
+	if cfg.PermCacheTTLSeconds > 0 {
+		resolver.EnablePermissionCache(time.Duration(cfg.PermCacheTTLSeconds) * time.Second)
+	}
 
 	// Periodically reconcile gateway keys against governance rows (detect/heal
 	// ungoverned orphans + stale rows). Disabled unless an interval is set AND a
