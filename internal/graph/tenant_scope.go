@@ -171,6 +171,91 @@ func (r *Resolver) assertVirtualKeyOwnerTenant(ctx context.Context, vk *ent.Virt
 	return nil
 }
 
+// assertAgentReferenceVisible enforces the agent-visibility rule (LLD-10 §1.3,
+// the same three tracks as agentVisibilityPredicates) for a by-id agent
+// REFERENCE supplied to a mutation (e.g. IssueVirtualKey's agentId): admin → any;
+// tenant-admin → only an agent in their own tenant; regular user → only an agent
+// they own. A cross-tenant / non-owned agent reads as missing (notFoundErr), so a
+// caller cannot bind a key to — or probe the existence of — another tenant's
+// agent (cross-tenant 1:1-slot DoS). Only constrains an authed caller; a no-auth
+// ctx (resolver-level tests; @hasRole enforces auth in prod) and a not-yet-created
+// soft reference (agent_id has no FK) fall through, mirroring the UserID guard.
+func (r *Resolver) assertAgentReferenceVisible(ctx context.Context, id uuid.UUID) error {
+	cu := auth.FromContext(ctx)
+	if cu == nil {
+		return nil
+	}
+	ag, err := r.Ent.Agent.Get(ctx, id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			// Binding to a non-existent agent id can't reach another tenant's slot;
+			// leave the soft reference (no FK) intact, as the UserID guard does for a
+			// missing user. The 1:1-slot check still runs on the real binding.
+			return nil
+		}
+		return err
+	}
+	switch {
+	case cu.Role == auth.RoleAdmin:
+		return nil
+	case cu.Role == auth.RoleTenantAdmin:
+		if !writeAllowed(ctx, ag.TenantID) {
+			return notFoundErr("agent")
+		}
+	default: // regular user: only their own agent (owner track)
+		if ag.OwnerUserID.String() != cu.ID {
+			return notFoundErr("agent")
+		}
+	}
+	return nil
+}
+
+// assertDepartmentReferenceManageable enforces the department/tenant rule for a
+// by-id team REFERENCE supplied to a mutation (IssueVirtualKey's teamId, which is
+// interpreted as a department id — LLD-13 §3.3): the caller must be able to manage
+// that department (platform/tenant admin of its tenant, or its dept-admin). A
+// department in another tenant reads as missing, so a tenant-admin cannot mint a
+// key under another tenant's litellm team on its gateway (budget misattribution).
+// Only constrains an authed caller; a no-auth ctx (resolver-level tests) and a
+// teamId that is not an existing department (free-form team / routes to default,
+// no cross-tenant reach) fall through, mirroring the agent guard.
+func (r *Resolver) assertDepartmentReferenceManageable(ctx context.Context, did uuid.UUID) error {
+	if auth.FromContext(ctx) == nil {
+		return nil
+	}
+	if _, err := r.Ent.Department.Get(ctx, did); err != nil {
+		if ent.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	ok, err := r.canManageDepartment(ctx, did)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return notFoundErr("department")
+	}
+	return nil
+}
+
+// assertRateLimitPolicyReadable enforces the tenant 404 oracle for a by-id
+// rate-limit-policy REFERENCE supplied to a mutation (IssueVirtualKey's
+// rateLimitPolicyId): a tenant-admin may apply only their own tenant's policy;
+// another tenant's policy reads as missing, so its rpm/tpm are never copied into a
+// foreign key and a missing id is not an existence oracle. Mirrors
+// DeleteRateLimitPolicy / SetRateLimitPolicyEnabled. Only constrains an authed
+// caller (no-auth ctx = resolver-level tests).
+func (r *Resolver) assertRateLimitPolicyReadable(ctx context.Context, pol *ent.RateLimitPolicy) error {
+	if auth.FromContext(ctx) == nil {
+		return nil
+	}
+	if !writeAllowed(ctx, pol.TenantID) {
+		return notFoundErr("rate-limit policy")
+	}
+	return nil
+}
+
 // writeTenant decides which tenant a newly created tenant-scoped resource should
 // be stamped with (LLD-10 §1.6 STAMP). A caller with a tenant (tenant-admin or a
 // regular user) always stamps their own tenant — they cannot create cross-tenant
