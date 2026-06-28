@@ -35,6 +35,10 @@ type Resolver interface {
 // the pointer, never the plaintext.
 type Store interface {
 	Put(ctx context.Context, name string, cred Credential) (ref string, err error)
+	// Delete removes a previously Put secret by its ref, so deleting/rotating the
+	// owning row (e.g. a gateway master key) doesn't orphan it in the store.
+	// Idempotent: a missing ref is not an error (desired end-state already holds).
+	Delete(ctx context.Context, ref string) error
 }
 
 // StaticResolver resolves refs from an in-memory map (dev/test). It also
@@ -70,6 +74,13 @@ func (s *StaticResolver) Put(_ context.Context, name string, cred Credential) (s
 	ref := fmt.Sprintf("vault://%s-%d", name, s.seq)
 	s.m[ref] = cred
 	return ref, nil
+}
+
+// Delete removes a ref from the in-memory map (idempotent — deleting an absent
+// ref is a no-op).
+func (s *StaticResolver) Delete(_ context.Context, ref string) error {
+	delete(s.m, ref)
+	return nil
 }
 
 // EnvResolver resolves refs of the form "env://USER_VAR,PASS_VAR" (or

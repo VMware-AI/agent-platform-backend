@@ -11,7 +11,6 @@ import (
 	"log"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
-	"github.com/VMware-AI/agent-platform-backend/ent/department"
 	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
 	"github.com/VMware-AI/agent-platform-backend/ent/modelroute"
 	"github.com/VMware-AI/agent-platform-backend/ent/routertier"
@@ -105,20 +104,14 @@ func (r *mutationResolver) DeleteGatewayConnection(ctx context.Context, id strin
 	if err != nil {
 		return false, err
 	}
-	// gateway_connection_id is a soft reference (no FK). Refuse to orphan the
-	// departments routed here (LLD-13 §3.3) — their key/team ops would silently
-	// break — and refuse to leave the platform with no default gateway.
-	if n, err := r.Ent.Department.Query().Where(department.GatewayConnectionID(gid)).Count(ctx); err != nil {
+	if err := r.assertGatewayDeletable(ctx, g); err != nil {
 		return false, err
-	} else if n > 0 {
-		return false, gqlerror.Errorf("gateway is used by %d department(s); reassign them before deleting", n)
-	}
-	if g.IsDefault {
-		return false, gqlerror.Errorf("cannot delete the default gateway; set another default first")
 	}
 	if err := r.Ent.GatewayConnection.DeleteOneID(gid).Exec(ctx); err != nil {
 		return false, err
 	}
+	// Don't orphan the master-key secret in the store (best-effort; row is gone).
+	r.deleteSecretRef(ctx, g.MasterKeyRef)
 	r.audit(ctx, "gateway.delete", "gateway_connection", id, true, actorID(auth.FromContext(ctx)))
 	return true, nil
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
+	"github.com/VMware-AI/agent-platform-backend/ent/department"
 	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
@@ -1465,6 +1466,42 @@ func (r *Resolver) resolveKeySecretRef(ctx context.Context, label string, rawKey
 		return *existingRef, true, nil
 	}
 	return "", false, nil
+}
+
+// assertGatewayDeletable refuses to delete a GatewayConnection that is still
+// referenced by a department (gateway_connection_id is a soft FK — deleting
+// would silently break those departments' key/team ops, LLD-13 §3.3) or that is
+// the platform default (the platform must always keep one). Shared by both
+// delete façades (DeleteGatewayConnection + DeleteModelGateway) so they enforce
+// the same guards.
+func (r *Resolver) assertGatewayDeletable(ctx context.Context, g *ent.GatewayConnection) error {
+	if n, err := r.Ent.Department.Query().Where(department.GatewayConnectionID(g.ID)).Count(ctx); err != nil {
+		return err
+	} else if n > 0 {
+		return gqlerror.Errorf("gateway is used by %d department(s); reassign them before deleting", n)
+	}
+	if g.IsDefault {
+		return gqlerror.Errorf("cannot delete the default gateway; set another default first")
+	}
+	return nil
+}
+
+// deleteSecretRef best-effort removes a secret-store entry (e.g. a gateway master
+// key) when its owning row is deleted or its key rotated, so the store doesn't
+// accumulate orphans. Never fatal — a resolver that can't delete (store missing,
+// or not a Store) is logged, not surfaced: the DB row is already gone, so failing
+// the mutation would be worse than a lingering secret.
+func (r *Resolver) deleteSecretRef(ctx context.Context, ref string) {
+	if ref == "" {
+		return
+	}
+	store, ok := r.Secrets.(secrets.Store)
+	if !ok {
+		return
+	}
+	if err := store.Delete(ctx, ref); err != nil {
+		log.Printf("secret cleanup: delete ref failed (orphan possible): %v", err)
+	}
 }
 
 // applyUserSort orders the user query per the requested field (模块① 用户与权限),

@@ -163,10 +163,15 @@ func (r *mutationResolver) RevokeVirtualKey(ctx context.Context, id string) (boo
 	if err := r.assertVirtualKeyOwnerTenant(ctx, vk); err != nil {
 		return false, err
 	}
-	if gw := r.gatewayKeyClient(ctx, deptIDFromTeam(&vk.TeamID)); gw != nil {
-		if err := gw.DeleteKey(ctx, vk.LitellmKey); err != nil {
-			return false, fmt.Errorf("gateway: %w", err)
-		}
+	// Revoke at the gateway FIRST, and only then mark the row revoked. If no
+	// gateway resolves, fail rather than flip the status: marking a still-live key
+	// "revoked" hides it from the reconciler (terminal state) and it keeps billing.
+	gw := r.gatewayKeyClient(ctx, deptIDFromTeam(&vk.TeamID))
+	if gw == nil {
+		return false, gqlerror.Errorf("model gateway is not configured; key not revoked at gateway")
+	}
+	if err := gw.DeleteKey(ctx, vk.LitellmKey); err != nil {
+		return false, fmt.Errorf("gateway: %w", err)
 	}
 	if _, err := r.Ent.VirtualKey.UpdateOne(vk).SetStatus(virtualkey.StatusRevoked).Save(ctx); err != nil {
 		return false, err
@@ -239,6 +244,17 @@ func (r *mutationResolver) SetVirtualKeyEnabled(ctx context.Context, id string, 
 	}
 	if vk.Status == virtualkey.StatusRevoked {
 		return nil, gqlerror.Errorf("key is revoked and cannot be re-enabled")
+	}
+	// Propagate the toggle to the gateway so a disabled key actually stops working
+	// there — not just in our DB (litellm /key/update `blocked`). Gateway-first:
+	// only flip the row after the gateway confirms; require a gateway, like revoke.
+	gw := r.gatewayKeyClient(ctx, deptIDFromTeam(&vk.TeamID))
+	if gw == nil {
+		return nil, gqlerror.Errorf("model gateway is not configured")
+	}
+	blocked := !enabled
+	if err := gw.UpdateKey(ctx, gateway.UpdateKeyRequest{Key: vk.LitellmKey, Blocked: &blocked}); err != nil {
+		return nil, fmt.Errorf("gateway: %w", err)
 	}
 	status := virtualkey.StatusDisabled
 	if enabled {
