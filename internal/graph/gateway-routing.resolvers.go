@@ -409,11 +409,7 @@ func (r *queryResolver) GatewayConnections(ctx context.Context) ([]model.Gateway
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.GatewayConnection, 0, len(gs))
-	for _, g := range gs {
-		out = append(out, *toModelGatewayConnection(g))
-	}
-	return out, nil
+	return mapSlice(gs, toModelGatewayConnection), nil
 }
 
 // Upstreams is the resolver for the upstreams field.
@@ -422,11 +418,7 @@ func (r *queryResolver) Upstreams(ctx context.Context) ([]model.Upstream, error)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.Upstream, 0, len(us))
-	for _, u := range us {
-		out = append(out, *toModelUpstream(u))
-	}
-	return out, nil
+	return mapSlice(us, toModelUpstream), nil
 }
 
 // ModelRoutes is the resolver for the modelRoutes field.
@@ -435,11 +427,7 @@ func (r *queryResolver) ModelRoutes(ctx context.Context) ([]model.ModelRoute, er
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.ModelRoute, 0, len(rs))
-	for _, mr := range rs {
-		out = append(out, *toModelModelRoute(mr))
-	}
-	return out, nil
+	return mapSlice(rs, toModelModelRoute), nil
 }
 
 // RouterTiers is the resolver for the routerTiers field.
@@ -448,9 +436,5 @@ func (r *queryResolver) RouterTiers(ctx context.Context) ([]model.RouterTier, er
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.RouterTier, 0, len(ts))
-	for _, t := range ts {
-		out = append(out, *toModelRouterTier(t))
-	}
-	return out, nil
+	return mapSlice(ts, toModelRouterTier), nil
 }

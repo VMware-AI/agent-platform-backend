@@ -295,9 +295,5 @@ func (r *queryResolver) VirtualKeys(ctx context.Context, userID *string) ([]mode
 	if err != nil {
 		return nil, err
 	}
-	out := make([]model.VirtualKey, 0, len(keys))
-	for _, k := range keys {
-		out = append(out, *toModelVirtualKey(k))
-	}
-	return out, nil
+	return mapSlice(keys, toModelVirtualKey), nil
 }
