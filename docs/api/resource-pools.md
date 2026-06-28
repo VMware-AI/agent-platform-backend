@@ -160,8 +160,8 @@ syncResourcePool(id: ID!): SyncResourcePoolPayload!
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `vSphereVersion` | `String!` | — |
-| `itemCount` | `Int!` | — |
+| `vSphereVersion` | `String!` | 真实 vSphere 版本(带凭证探测时);仅可达性探测时为空字符串。 |
+| `contentLibraries` | `[String!]!` | vCenter 上所有内容库名称列表(带凭证探测时返回);仅可达性探测时为空数组。 |
 
 ### ResourcePoolConnectionTest
 
@@ -229,13 +229,15 @@ syncResourcePool(id: ID!): SyncResourcePoolPayload!
 
 *Input*
 
-Pre-save reachability probe for the 接入表单 (carries NO credentials): the form checks an endpoint is reachable before the operator commits the pool. A full vCenter inventory probe needs credentials and runs later via syncResourcePool.
+Pre-save probe for the 接入表单. When username/password are supplied it performs a REAL authenticated probe (login → read vSphere version → verify the content library exists and count its items); without credentials it falls back to a lightweight reachability (TCP) check, as before. Credentials are used only for the probe — never persisted here (createResourcePool stores them).
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `name` | `String!` | — |
 | `endpoint` | `String!` | — |
-| `contentLibraryName` | `String!` | — |
+| `username` | `String` | vCenter 凭据。提供时执行真实认证探测并返回内容库列表;省略则退化为仅可达性 TCP 拨测(向后兼容)。 明文不落库、不入日志。 |
+| `password` | `String` | — |
+| `insecure` | `Boolean` | 跳过 vCenter TLS 验证(自签名/内网 CA);省略 = false。与 CreateResourcePoolInput 一致。 |
 
 ### UpdateResourcePoolInput
 

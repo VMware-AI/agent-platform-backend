@@ -53,4 +53,10 @@ func (f *fakeVCenter) RevertSnapshot(_ context.Context, vmName, snapshotName str
 func (f *fakeVCenter) ListSnapshots(_ context.Context, vmName string) ([]vcenter.SnapshotInfo, error) {
 	return f.snapshots[vmName], nil
 }
+func (f *fakeVCenter) ListContentLibraries(context.Context) ([]string, error) {
+	return []string{"tkg", "iso"}, nil
+}
+func (f *fakeVCenter) About() vcenter.AboutInfo {
+	return vcenter.AboutInfo{Version: "8.0.0", Build: "0", FullName: "VMware vCenter Server (fake)"}
+}
 func (f *fakeVCenter) Logout(context.Context) error { f.logouts++; return nil }

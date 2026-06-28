@@ -181,6 +181,14 @@ func main() {
 		go rec.Run(reconcileCtx, interval)
 	}
 
+	// Periodically re-sync resource pools that have stored credentials.
+	// Disabled unless POOL_SYNC_INTERVAL_SECONDS > 0.
+	if cfg.PoolSyncIntervalSeconds > 0 {
+		poolSyncCtx, stopPoolSync := context.WithCancel(context.Background())
+		defer stopPoolSync()
+		go resolver.StartAutoSync(poolSyncCtx, time.Duration(cfg.PoolSyncIntervalSeconds)*time.Second)
+	}
+
 	es := graph.NewExecutableSchema(graph.Config{
 		Resolvers: resolver,
 		Directives: graph.DirectiveRoot{

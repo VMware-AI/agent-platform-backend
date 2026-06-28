@@ -665,8 +665,8 @@ type ComplexityRoot struct {
 	}
 
 	ResourcePoolConnectionDetail struct {
-		ItemCount      func(childComplexity int) int
-		VSphereVersion func(childComplexity int) int
+		ContentLibraries func(childComplexity int) int
+		VSphereVersion   func(childComplexity int) int
 	}
 
 	ResourcePoolConnectionTest struct {
@@ -4072,12 +4072,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.ResourcePoolConnection.TotalCount(childComplexity), true
 
-	case "ResourcePoolConnectionDetail.itemCount":
-		if e.ComplexityRoot.ResourcePoolConnectionDetail.ItemCount == nil {
+	case "ResourcePoolConnectionDetail.contentLibraries":
+		if e.ComplexityRoot.ResourcePoolConnectionDetail.ContentLibraries == nil {
 			break
 		}
 
-		return e.ComplexityRoot.ResourcePoolConnectionDetail.ItemCount(childComplexity), true
+		return e.ComplexityRoot.ResourcePoolConnectionDetail.ContentLibraries(childComplexity), true
 	case "ResourcePoolConnectionDetail.vSphereVersion":
 		if e.ComplexityRoot.ResourcePoolConnectionDetail.VSphereVersion == nil {
 			break
@@ -6105,13 +6105,20 @@ type SyncResourcePoolPayload {
   syncedAt: Time!
 }
 
-# Pre-save reachability probe for the 接入表单 (carries NO credentials): the form
-# checks an endpoint is reachable before the operator commits the pool. A full
-# vCenter inventory probe needs credentials and runs later via syncResourcePool.
+# Pre-save probe for the 接入表单. When username/password are supplied it performs
+# a REAL authenticated probe (login → read vSphere version → verify the content
+# library exists and count its items); without credentials it falls back to a
+# lightweight reachability (TCP) check, as before. Credentials are used only for
+# the probe — never persisted here (createResourcePool stores them).
 input TestResourcePoolConnectionInput {
   name: String!
   endpoint: String!
-  contentLibraryName: String!
+  # vCenter 凭据。提供时执行真实认证探测并返回内容库列表;省略则退化为仅可达性 TCP 拨测(向后兼容)。
+  # 明文不落库、不入日志。
+  username: String
+  password: String
+  # 跳过 vCenter TLS 验证(自签名/内网 CA);省略 = false。与 CreateResourcePoolInput 一致。
+  insecure: Boolean
 }
 
 type ResourcePoolConnectionTest {
@@ -6121,8 +6128,10 @@ type ResourcePoolConnectionTest {
 }
 
 type ResourcePoolConnectionDetail {
+  # 真实 vSphere 版本(带凭证探测时);仅可达性探测时为空字符串。
   vSphereVersion: String!
-  itemCount: Int!
+  # vCenter 上所有内容库名称列表(带凭证探测时返回);仅可达性探测时为空数组。
+  contentLibraries: [String!]!
 }
 
 extend type Query {
@@ -7340,8 +7349,8 @@ func (ec *executionContext) childFields_ResourcePoolConnectionDetail(ctx context
 	switch field.Name {
 	case "vSphereVersion":
 		return ec.fieldContext_ResourcePoolConnectionDetail_vSphereVersion(ctx, field)
-	case "itemCount":
-		return ec.fieldContext_ResourcePoolConnectionDetail_itemCount(ctx, field)
+	case "contentLibraries":
+		return ec.fieldContext_ResourcePoolConnectionDetail_contentLibraries(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type ResourcePoolConnectionDetail", field.Name)
 }
@@ -23550,27 +23559,27 @@ func (ec *executionContext) fieldContext_ResourcePoolConnectionDetail_vSphereVer
 	return graphql.NewScalarFieldContext("ResourcePoolConnectionDetail", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
-func (ec *executionContext) _ResourcePoolConnectionDetail_itemCount(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePoolConnectionDetail) (ret graphql.Marshaler) {
+func (ec *executionContext) _ResourcePoolConnectionDetail_contentLibraries(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePoolConnectionDetail) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ResourcePoolConnectionDetail_itemCount(ctx, field)
+			return ec.fieldContext_ResourcePoolConnectionDetail_contentLibraries(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return obj.ItemCount, nil
+			return obj.ContentLibraries, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
-			return ec.marshalNInt2int(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v []string) graphql.Marshaler {
+			return ec.marshalNString2ᚕstringᚄ(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_ResourcePoolConnectionDetail_itemCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ResourcePoolConnectionDetail", field, false, false, errors.New("field of type Int does not have child fields"))
+func (ec *executionContext) fieldContext_ResourcePoolConnectionDetail_contentLibraries(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ResourcePoolConnectionDetail", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _ResourcePoolConnectionTest_ok(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePoolConnectionTest) (ret graphql.Marshaler) {
@@ -28064,7 +28073,7 @@ func (ec *executionContext) unmarshalInputTestResourcePoolConnectionInput(ctx co
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "endpoint", "contentLibraryName"}
+	fieldsInOrder := [...]string{"name", "endpoint", "username", "password", "insecure"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -28085,13 +28094,27 @@ func (ec *executionContext) unmarshalInputTestResourcePoolConnectionInput(ctx co
 				return it, err
 			}
 			it.Endpoint = data
-		case "contentLibraryName":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("contentLibraryName"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+		case "username":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("username"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.ContentLibraryName = data
+			it.Username = data
+		case "password":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("password"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Password = data
+		case "insecure":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("insecure"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Insecure = data
 		}
 	}
 	return it, nil
@@ -34330,8 +34353,8 @@ func (ec *executionContext) _ResourcePoolConnectionDetail(ctx context.Context, s
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "itemCount":
-			out.Values[i] = ec._ResourcePoolConnectionDetail_itemCount(ctx, field, obj)
+		case "contentLibraries":
+			out.Values[i] = ec._ResourcePoolConnectionDetail_contentLibraries(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
