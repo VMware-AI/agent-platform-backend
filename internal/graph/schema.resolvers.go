@@ -106,8 +106,11 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 // Logout is the resolver for the logout field.
 func (r *mutationResolver) Logout(ctx context.Context) (bool, error) {
 	if req := httpx.Request(ctx); req != nil {
-		if c, err := req.Cookie(auth.SessionCookie); err == nil {
-			_ = r.Sessions.Delete(c.Value)
+		// Revoke the session that authenticated THIS request — Bearer header first
+		// (the console's transport), then cookie. Cookie-only revocation left a
+		// Bearer-borne session live until its TTL.
+		if sid := auth.SessionTokenFromRequest(req); sid != "" {
+			_ = r.Sessions.Delete(sid)
 		}
 	}
 	if w := httpx.Writer(ctx); w != nil {
