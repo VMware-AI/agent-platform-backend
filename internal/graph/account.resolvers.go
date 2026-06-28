@@ -7,9 +7,11 @@ package graph
 
 import (
 	"context"
+	"log"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
+	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/google/uuid"
@@ -120,6 +122,12 @@ func (r *mutationResolver) DeleteUser(ctx context.Context, id string) (*model.De
 	if err := r.assertUserInCallerTenant(ctx, uid); err != nil {
 		return nil, err
 	}
+	// Revoke the user's live virtual keys BEFORE deleting the row — virtual_keys has
+	// no FK cascade on user_id, so deleting the user would otherwise leave its
+	// litellm keys live at the gateway (ungoverned, billable, and undetectable by
+	// reconcile once the row is gone). Best-effort: a gateway failure is logged +
+	// audited as an orphan but does not block the delete.
+	r.revokeUserKeys(ctx, uid)
 	if err := r.Ent.User.DeleteOneID(uid).Exec(ctx); err != nil {
 		if ent.IsNotFound(err) {
 			return nil, notFoundErr("user")
@@ -129,6 +137,36 @@ func (r *mutationResolver) DeleteUser(ctx context.Context, id string) (*model.De
 	_ = r.Sessions.DeleteByUser(uid.String())
 	r.audit(ctx, "user.delete", "user", id, true, actorID(auth.FromContext(ctx)))
 	return &model.DeleteUserPayload{ID: id}, nil
+}
+
+// revokeUserKeys best-effort revokes all of a user's non-revoked virtual keys at
+// their (per-department) gateways and marks the rows revoked. A missing gateway or
+// a gateway failure is logged + audited as an orphan rather than aborting — the
+// caller (DeleteUser) must still proceed. Mirrors RecycleAgent's non-silent
+// compensation so a leaked billable key is at least observable.
+func (r *mutationResolver) revokeUserKeys(ctx context.Context, uid uuid.UUID) {
+	keys, err := r.Ent.VirtualKey.Query().
+		Where(virtualkey.UserID(uid), virtualkey.StatusNEQ(virtualkey.StatusRevoked)).
+		All(ctx)
+	if err != nil {
+		log.Printf("delete user %s: list virtual keys failed: %v", uid, err)
+		return
+	}
+	actor := actorID(auth.FromContext(ctx))
+	for _, vk := range keys {
+		gw := r.gatewayKeyClient(ctx, deptIDFromTeam(&vk.TeamID))
+		if gw == nil {
+			log.Printf("delete user %s: no gateway to revoke key %s (orphan)", uid, vk.ID)
+			r.audit(ctx, "key.revoke", "virtual_key", vk.ID.String(), false, actor)
+			continue
+		}
+		if err := gw.DeleteKey(ctx, vk.LitellmKey); err != nil {
+			log.Printf("delete user %s: orphan gateway key %s, revoke failed: %v", uid, vk.ID, err)
+			r.audit(ctx, "key.revoke", "virtual_key", vk.ID.String(), false, actor)
+			continue
+		}
+		_, _ = r.Ent.VirtualKey.UpdateOne(vk).SetStatus(virtualkey.StatusRevoked).Save(ctx)
+	}
 }
 
 // ResetUserPassword sets a fresh temp password (returned once), forces a change,
