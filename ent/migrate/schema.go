@@ -274,6 +274,16 @@ var (
 		Name:       "gateway_connections",
 		Columns:    GatewayConnectionsColumns,
 		PrimaryKey: []*schema.Column{GatewayConnectionsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "gatewayconnection_is_default",
+				Unique:  true,
+				Columns: []*schema.Column{GatewayConnectionsColumns[8]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "is_default",
+				},
+			},
+		},
 	}
 	// ImagesColumns holds the columns for the "images" table.
 	ImagesColumns = []*schema.Column{
@@ -581,6 +591,14 @@ var (
 				Name:    "rotationcommand_agent_id_status",
 				Unique:  false,
 				Columns: []*schema.Column{RotationCommandsColumns[4], RotationCommandsColumns[6]},
+			},
+			{
+				Name:    "rotationcommand_agent_id_kind",
+				Unique:  true,
+				Columns: []*schema.Column{RotationCommandsColumns[4], RotationCommandsColumns[5]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "status <> 'completed' AND status <> 'failed'",
+				},
 			},
 		},
 	}
