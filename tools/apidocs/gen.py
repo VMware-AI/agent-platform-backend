@@ -32,8 +32,8 @@ DOMAINS = [
     ("virtual-keys", "Virtual Keys & Rate Limits", ["virtualkey"]),
     ("observability", "Observability (Request Logs, Audit Logs, Metrics)", ["observability"]),
     ("metering", "Metering", ["metering"]),
-    ("platform", "Platform (Users, Roles, Permissions, Departments)",
-     ["account", "rbac", "department"]),
+    ("platform", "Platform (Users, Roles, Permissions, Departments, Settings)",
+     ["account", "rbac", "department", "settings"]),
     ("resource-pools", "Resource Pools & vSphere", ["resourcepool"]),
     ("ova-marketplace", "OVA Marketplace", ["ova"]),
     ("dashboard", "Dashboard", ["dashboard"]),
@@ -444,6 +444,19 @@ def main():
         mutations_by_module[module] = mops
         for t in types:
             all_types[t.name] = t
+
+    # Fail-fast on drift: every schema/*.graphql module must be mapped to a
+    # DOMAINS page or be the CORE_MODULE, else its types/ops are silently dropped
+    # from the reference (and docs-check would not notice). Make adding a new
+    # schema module without a docs home a hard error.
+    mapped = {m for _, _, mods in DOMAINS for m in mods} | {CORE_MODULE}
+    unmapped = sorted(set(types_by_module) - mapped)
+    if unmapped:
+        raise SystemExit(
+            f"apidocs: schema module(s) {unmapped} are not mapped to any DOMAINS "
+            f"page or CORE_MODULE — add them to gen.py DOMAINS so the API reference "
+            f"covers them (and docs-check catches the drift)."
+        )
 
     os.makedirs(OUT_DIR, exist_ok=True)
 

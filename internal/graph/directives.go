@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"log"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/google/uuid"
@@ -57,6 +58,9 @@ func (r *Resolver) HasPermission(ctx context.Context, _ any, next graphql.Resolv
 	}
 	set, err := r.effectivePerms(ctx, u.ID)
 	if err != nil {
+		// Mask to the client, but never swallow the cause: log it server-side like
+		// every other internal-error path so a failing permission check is diagnosable.
+		log.Printf("hasPermission: effectivePerms failed for user %s (perm %q): %v", u.ID, perm, err)
 		return nil, gqlerror.Errorf("permission check failed")
 	}
 	if set[perm] {

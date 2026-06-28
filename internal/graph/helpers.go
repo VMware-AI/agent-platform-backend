@@ -1185,7 +1185,13 @@ func (r *Resolver) connectPool(ctx context.Context, pool *ent.ResourcePool) (VCe
 	return r.VCenterConnect(ctx, pool.Endpoint, cred.Username, cred.Password, pool.Insecure)
 }
 
-// clientIP extracts the remote address from the request in context.
+// clientIP extracts the remote address from the request in context. It uses
+// RemoteAddr ONLY — never X-Forwarded-For / X-Real-IP — because those headers are
+// client-controlled, and trusting them unconditionally would let an attacker
+// spoof both the audit IP and the login-throttle key. This is correct when the
+// backend is the network edge. Behind a trusted reverse proxy, parse XFF ONLY
+// from a configured trusted-proxy allowlist (not implemented here — until then
+// the backend MUST be the edge, or audit IPs/throttle keys read as the proxy IP).
 func clientIP(ctx context.Context) string {
 	if r := httpx.Request(ctx); r != nil {
 		return r.RemoteAddr

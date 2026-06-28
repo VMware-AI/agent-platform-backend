@@ -8,6 +8,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
@@ -137,9 +138,14 @@ func (r *mutationResolver) TestResourcePoolConnection(ctx context.Context, input
 	}
 	if derr := dialReachable(ctx, host); derr != nil {
 		r.audit(ctx, "resource_pool.test", "resource_pool", input.Name, false, actorID(auth.FromContext(ctx)))
+		// Don't echo the raw dial error to the client — a net.OpError can embed
+		// resolved IPs / internal network topology (bypasses the GraphQL
+		// ErrorPresenter since this is a payload field, not a returned error). Keep
+		// the detail server-side; return a coarse, safe message.
+		log.Printf("resource pool test: %q not reachable: %v", host, derr)
 		return &model.ResourcePoolConnectionTest{
 			Ok:      false,
-			Message: fmt.Sprintf("endpoint %q is not reachable: %v", host, derr),
+			Message: "endpoint is not reachable",
 		}, nil
 	}
 	r.audit(ctx, "resource_pool.test", "resource_pool", input.Name, true, actorID(auth.FromContext(ctx)))
