@@ -175,6 +175,34 @@ func (r *Resolver) assertUserInCallerTenant(ctx context.Context, id uuid.UUID) e
 	return nil
 }
 
+// assertVirtualKeyOwnerTenant enforces the tenant 404 oracle for by-id virtual-key
+// mutations (revoke / regenerate / setEnabled): a key whose owning user is in
+// another tenant reads as missing to a tenant-admin, so it cannot revoke / rotate
+// / toggle another tenant's billable key by id. Platform admin: any.
+func (r *Resolver) assertVirtualKeyOwnerTenant(ctx context.Context, vk *ent.VirtualKey) error {
+	// Only constrain an authed caller — no-auth ctx occurs only in resolver-level
+	// tests (the schema @hasRole directive enforces auth in prod).
+	if auth.FromContext(ctx) == nil {
+		return nil
+	}
+	owner, err := r.Ent.User.Get(ctx, vk.UserID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			// Orphan key (owner deleted): a platform admin may still act on it; a
+			// tenant-admin can't claim it (unknown owner tenant) → reads as missing.
+			if writeAllowed(ctx, nil) {
+				return nil
+			}
+			return notFoundErr("virtual key")
+		}
+		return err
+	}
+	if !writeAllowed(ctx, owner.TenantID) {
+		return notFoundErr("virtual key")
+	}
+	return nil
+}
+
 // writeTenant decides which tenant a newly created tenant-scoped resource should
 // be stamped with (LLD-10 §1.6 STAMP). A caller with a tenant (tenant-admin or a
 // regular user) always stamps their own tenant — they cannot create cross-tenant
