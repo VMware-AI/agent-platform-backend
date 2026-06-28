@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 )
 
 // ErrNotFound is returned when a reference cannot be resolved.
@@ -42,8 +43,14 @@ type Store interface {
 }
 
 // StaticResolver resolves refs from an in-memory map (dev/test). It also
-// implements Store so tests can exercise the rotation write path.
+// implements Store so tests can exercise the rotation write path. A single
+// instance is shared across request + agent-manager-heartbeat goroutines (it is
+// the default secret store when VAULTWARDEN_URL is unset — dev/CI and supported
+// air-gapped installs), so mu guards m/seq: an unguarded concurrent map
+// read+write would raise Go's unrecoverable "concurrent map" fatal error and
+// abort the whole control plane.
 type StaticResolver struct {
+	mu  sync.RWMutex
 	m   map[string]Credential
 	seq int
 }
@@ -58,7 +65,9 @@ func NewStaticResolver(m map[string]Credential) *StaticResolver {
 }
 
 func (s *StaticResolver) Resolve(_ context.Context, ref string) (Credential, error) {
+	s.mu.RLock()
 	c, ok := s.m[ref]
+	s.mu.RUnlock()
 	if !ok {
 		return Credential{}, fmt.Errorf("%w: %s", ErrNotFound, ref)
 	}
@@ -67,6 +76,8 @@ func (s *StaticResolver) Resolve(_ context.Context, ref string) (Credential, err
 
 // Put stores the credential under a generated ref (dev/test in-memory Store).
 func (s *StaticResolver) Put(_ context.Context, name string, cred Credential) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if s.m == nil {
 		s.m = map[string]Credential{}
 	}
@@ -79,7 +90,9 @@ func (s *StaticResolver) Put(_ context.Context, name string, cred Credential) (s
 // Delete removes a ref from the in-memory map (idempotent — deleting an absent
 // ref is a no-op).
 func (s *StaticResolver) Delete(_ context.Context, ref string) error {
+	s.mu.Lock()
 	delete(s.m, ref)
+	s.mu.Unlock()
 	return nil
 }
 
