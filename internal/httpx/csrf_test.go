@@ -44,3 +44,22 @@ func TestCSRF(t *testing.T) {
 		})
 	}
 }
+
+// A non-allowlisted Origin that is also unparseable as a URL (here: an embedded
+// control character) must make sameOrigin's url.Parse fail closed → the request
+// is rejected, never accidentally treated as same-origin. Covers the error
+// branch of sameOrigin.
+func TestCSRF_UnparseableOriginRejected(t *testing.T) {
+	ok := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
+	h := CSRF([]string{"https://app.example.com"})(ok)
+
+	req := httptest.NewRequest(http.MethodPost, "/query", nil)
+	req.Host = "api.example.com"
+	req.Header.Set("Origin", "http://api.example.com\x7f") // DEL byte → url.Parse error
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403 for unparseable origin", rec.Code)
+	}
+}
