@@ -149,12 +149,7 @@ func (r *mutationResolver) UpsertUpstream(ctx context.Context, input model.Upser
 				SetProvider(upstream.Provider(input.Provider)).
 				SetModel(input.Model).
 				SetEnabled(enabled)
-			if input.APIBase != nil {
-				c.SetAPIBase(*input.APIBase)
-			}
-			if input.APIKeyRef != nil {
-				c.SetAPIKeyRef(*input.APIKeyRef)
-			}
+			applyUpstreamOptionals(c.Mutation(), input)
 			return c.Save(ctx)
 		}
 		if err != nil {
@@ -164,12 +159,7 @@ func (r *mutationResolver) UpsertUpstream(ctx context.Context, input model.Upser
 			SetProvider(upstream.Provider(input.Provider)).
 			SetModel(input.Model).
 			SetEnabled(enabled)
-		if input.APIBase != nil {
-			u.SetAPIBase(*input.APIBase)
-		}
-		if input.APIKeyRef != nil {
-			u.SetAPIKeyRef(*input.APIKeyRef)
-		}
+		applyUpstreamOptionals(u.Mutation(), input)
 		return u.Save(ctx)
 	}
 	u, err := apply(true)
