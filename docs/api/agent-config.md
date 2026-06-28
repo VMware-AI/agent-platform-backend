@@ -63,7 +63,7 @@ upsertArtifact(input: UpsertArtifactInput!): Artifact!
 ```
 
 - **Returns:** `Artifact!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -76,7 +76,7 @@ deleteArtifact(id: ID!): Boolean!
 ```
 
 - **Returns:** `Boolean!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|

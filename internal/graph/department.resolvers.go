@@ -34,19 +34,11 @@ func (r *mutationResolver) CreateDepartment(ctx context.Context, input model.Cre
 	// gateway call leaves a row pointing at a not-yet-created team; that is
 	// recoverable by re-running (the team id is deterministic = dept id) and is
 	// also surfaced as a DanglingDepts entry by reconcile.ReconcileTeams. C3.
-	// Tenant STAMP/GUARD (LLD-10 §1.5): a tenant-admin's department lands in their
-	// own tenant and may not target another; a platform admin may set it explicitly.
+	// Tenant stamp (LLD-10 §1.5): tenant-admin branch removed in the 3-role
+	// refactor; the platform admin (now the only caller of createDepartment via
+	// @hasRole([admin])) may set it explicitly via input.
 	var tenantID *uuid.UUID
-	if cu := auth.FromContext(ctx); cu != nil && cu.Role == auth.RoleTenantAdmin {
-		tid, err := uuid.Parse(cu.TenantID)
-		if err != nil {
-			return nil, gqlerror.Errorf("forbidden")
-		}
-		if input.TenantID != nil && *input.TenantID != tid.String() {
-			return nil, gqlerror.Errorf("forbidden: cannot create department in another tenant")
-		}
-		tenantID = &tid
-	} else if input.TenantID != nil {
+	if input.TenantID != nil {
 		if tid, err := uuid.Parse(*input.TenantID); err == nil {
 			tenantID = &tid
 		}
@@ -160,9 +152,10 @@ func (r *mutationResolver) AddMembership(ctx context.Context, userID string, dep
 	} else if !ok {
 		return nil, gqlerror.Errorf("forbidden: not a department admin")
 	}
-	// Delegated admins (tenant-admin / dept-admin) may only add a user from the
-	// department's OWN tenant — otherwise a tenant-A admin could pull a tenant-B
-	// user (even as dept-admin) into A. Platform admin may cross tenants.
+	// Delegated admins (dept-admin) may only add a user from the department's OWN
+	// tenant — otherwise a dept-A admin could pull a dept-B user into A. Platform
+	// admin may cross tenants. (Tenant-admin branch removed in the 3-role refactor;
+	// the existing dept-admin path still applies.)
 	if cu := auth.FromContext(ctx); cu == nil || cu.Role != auth.RoleAdmin {
 		targetUser, err := r.Ent.User.Get(ctx, uid)
 		if err != nil {

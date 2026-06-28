@@ -776,6 +776,7 @@ type RevertAgentSnapshotInput struct {
 
 type Role struct {
 	ID          string `json:"id"`
+	RoleKey     string `json:"roleKey"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	UserCount   int    `json:"userCount"`
@@ -2465,22 +2466,20 @@ func (e ResourcePoolSyncState) MarshalJSON() ([]byte, error) {
 type RoleName string
 
 const (
-	RoleNameAdmin         RoleName = "admin"
-	RoleNameUser          RoleName = "user"
-	RoleNameObservability RoleName = "observability"
-	RoleNameTenantAdmin   RoleName = "tenant_admin"
+	RoleNameAdmin    RoleName = "admin"
+	RoleNameUser     RoleName = "user"
+	RoleNameReadOnly RoleName = "read_only"
 )
 
 var AllRoleName = []RoleName{
 	RoleNameAdmin,
 	RoleNameUser,
-	RoleNameObservability,
-	RoleNameTenantAdmin,
+	RoleNameReadOnly,
 }
 
 func (e RoleName) IsValid() bool {
 	switch e {
-	case RoleNameAdmin, RoleNameUser, RoleNameObservability, RoleNameTenantAdmin:
+	case RoleNameAdmin, RoleNameUser, RoleNameReadOnly:
 		return true
 	}
 	return false

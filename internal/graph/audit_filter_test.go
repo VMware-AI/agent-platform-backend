@@ -15,7 +15,7 @@ func TestAuditLogFilters(t *testing.T) {
 	qr := &queryResolver{r}
 
 	// generate audit entries of different categories
-	if _, err := mr.CreateUser(ctx, model.CreateUserInput{Username: "audita", DisplayName: "audita", Email: "a@x.io", RoleID: string(model.RoleNameUser), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("AuditPass1234")}); err != nil {
+	if _, err := mr.CreateUser(ctx, model.CreateUserInput{Username: "audita", DisplayName: "audita", Email: "a@x.io", RoleID: builtinRoleUUID(string(model.RoleNameUser)), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("AuditPass1234")}); err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
 	rpm := 60

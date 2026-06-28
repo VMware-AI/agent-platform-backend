@@ -29,15 +29,14 @@ type tenantScopeDecision struct {
 // resolver applies it with its own ent predicate package (ent predicates are
 // per-type, so the decision is shared but its application is not). Apply denyAll
 // with a never-matching predicate (e.g. <entity>.IDEQ(uuid.Nil)).
-func tenantScopeFor(ctx context.Context) tenantScopeDecision {
-	cu := auth.FromContext(ctx)
-	if cu == nil || cu.Role != auth.RoleTenantAdmin {
-		return tenantScopeDecision{}
-	}
-	if id, err := uuid.Parse(cu.TenantID); err == nil {
-		return tenantScopeDecision{apply: true, tenant: id}
-	}
-	return tenantScopeDecision{apply: true, denyAll: true}
+//
+// After the 3-role refactor (tenant-admin removed) every caller is
+// admin/user/read_only — none of which scope by tenant in the new model —
+// so this always returns the zero value (no scoping). Kept as a no-op so call
+// sites compile and so a future tenant-scoped decision can plug in here
+// without re-touching every resolver.
+func tenantScopeFor(_ context.Context) tenantScopeDecision {
+	return tenantScopeDecision{}
 }
 
 // writeAllowed reports whether the caller may mutate (update/delete) a row owned
@@ -80,25 +79,12 @@ func (r *Resolver) assertAgentConfigWritable(ctx context.Context, id uuid.UUID) 
 	return nil
 }
 
-// resolveUserWriteTenant decides which tenant a created user lands in and guards
-// against escalation (LLD-10 §1.5): a tenant-admin is confined to their own
-// tenant and may not mint admin/tenant-admin users; a platform admin may target
-// any tenant via explicit input (or none = untenanted platform user).
-func (r *Resolver) resolveUserWriteTenant(ctx context.Context, inputTenantID *string, role model.RoleName) (*uuid.UUID, error) {
-	cu := auth.FromContext(ctx)
-	if cu != nil && cu.Role == auth.RoleTenantAdmin {
-		tid, err := uuid.Parse(cu.TenantID)
-		if err != nil {
-			return nil, gqlerror.Errorf("forbidden")
-		}
-		if inputTenantID != nil && *inputTenantID != tid.String() {
-			return nil, gqlerror.Errorf("forbidden: cannot create users in another tenant")
-		}
-		if role == model.RoleNameAdmin || role == model.RoleNameTenantAdmin {
-			return nil, gqlerror.Errorf("forbidden: tenant-admin cannot grant admin roles")
-		}
-		return &tid, nil
-	}
+// resolveUserWriteTenant decides which tenant a created user lands in.
+//
+// After the 3-role refactor (tenant-admin removed) only admin can create
+// users, so the tenant-admin escalation guard is gone — every input is
+// honored as-is. Kept as a function so the call site reads naturally.
+func (r *Resolver) resolveUserWriteTenant(_ context.Context, inputTenantID *string, _ model.RoleName) (*uuid.UUID, error) {
 	if inputTenantID != nil {
 		tid, err := uuid.Parse(*inputTenantID)
 		if err != nil {
@@ -198,10 +184,8 @@ func (r *Resolver) assertAgentReferenceVisible(ctx context.Context, id uuid.UUID
 	switch {
 	case cu.Role == auth.RoleAdmin:
 		return nil
-	case cu.Role == auth.RoleTenantAdmin:
-		if !writeAllowed(ctx, ag.TenantID) {
-			return notFoundErr("agent")
-		}
+	// (tenant-admin case removed in the 3-role refactor; read_only and user
+	// fall through to the owner-only default branch.)
 	default: // regular user: only their own agent (owner track)
 		if ag.OwnerUserID.String() != cu.ID {
 			return notFoundErr("agent")
@@ -354,16 +338,7 @@ func (r *Resolver) canManageDepartment(ctx context.Context, did uuid.UUID) (bool
 	}
 	// Tenant admin: ONLY departments in their own tenant (C1 — without this a
 	// tenant-admin could manage/read any tenant's departments).
-	if cu.Role == auth.RoleTenantAdmin {
-		dept, err := r.Ent.Department.Get(ctx, did)
-		if err != nil {
-			if ent.IsNotFound(err) {
-				return false, nil
-			}
-			return false, err
-		}
-		return tenantMatches(cu.TenantID, dept.TenantID), nil
-	}
+	// (tenant-admin case removed in the 3-role refactor; falls through to dept-admin delegation)
 	// Dept-admin delegation: a dept-admin membership in THIS department.
 	uid, err := uuid.Parse(cu.ID)
 	if err != nil {

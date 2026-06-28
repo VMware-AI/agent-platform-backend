@@ -18,13 +18,13 @@ import (
 
 // CreateUser creates a user (用户与权限页). passwordMode AUTO → the backend
 // generates a temp password (returned once + forced change); CUSTOM → uses
-// customPassword. roleId is a built-in role key.
+// customPassword. roleId is the UUID of a built-in role (see the roles query).
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.CreateUserInput) (*model.CreateUserPayload, error) {
 	actor := actorID(auth.FromContext(ctx))
-	if _, _, ok := builtinRole(input.RoleID); !ok {
-		return nil, gqlerror.Errorf("unknown role: %s", input.RoleID)
+	_, _, roleKey, ok := builtinRoleByID(input.RoleID)
+	if !ok {
+		return nil, gqlerror.Errorf("unknown role id: %s", input.RoleID)
 	}
-	role := model.RoleName(input.RoleID)
 
 	var plain string
 	var generated *string
@@ -45,14 +45,14 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.CreateUse
 	if err != nil {
 		return nil, err
 	}
-	tenantID, err := r.resolveUserWriteTenant(ctx, nil, role)
+	tenantID, err := r.resolveUserWriteTenant(ctx, nil, model.RoleName(roleKey))
 	if err != nil {
 		return nil, err
 	}
 	enabled := input.Enabled == nil || *input.Enabled
 	u, err := r.Ent.User.Create().
 		SetUsername(input.Username).SetEmail(input.Email).SetPasswordHash(hash).
-		SetRole(user.Role(gqlRoleToEnt(role))).SetMustChangePassword(mustChange).
+		SetRole(user.Role(roleKey)).SetMustChangePassword(mustChange).
 		SetIsActive(enabled).SetNillableTenantID(tenantID).Save(ctx)
 	if err != nil {
 		r.audit(ctx, "user.create", "user", input.Username, false, actor)
@@ -82,15 +82,13 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, id string, input mode
 	}
 	roleChanged := false
 	if input.RoleID != nil {
-		if _, _, ok := builtinRole(*input.RoleID); !ok {
-			return nil, gqlerror.Errorf("unknown role: %s", *input.RoleID)
+		_, _, roleKey, ok := builtinRoleByID(*input.RoleID)
+		if !ok {
+			return nil, gqlerror.Errorf("unknown role id: %s", *input.RoleID)
 		}
-		newRole := model.RoleName(*input.RoleID)
-		if cu := auth.FromContext(ctx); cu != nil && cu.Role == auth.RoleTenantAdmin &&
-			(newRole == model.RoleNameAdmin || newRole == model.RoleNameTenantAdmin) {
-			return nil, gqlerror.Errorf("forbidden: tenant-admin cannot grant admin roles")
-		}
-		upd.SetRole(user.Role(gqlRoleToEnt(newRole)))
+		// Note: tenant-admin escalation guard removed in the 3-role refactor.
+		// Only admin can call updateUser now (gated by @hasRole([admin])).
+		upd.SetRole(user.Role(roleKey))
 		roleChanged = true
 	}
 	disabled := false
@@ -195,18 +193,16 @@ func (r *mutationResolver) ToggleUserEnabled(ctx context.Context, id string) (*m
 }
 
 // AssignUsersToRole sets the role of multiple users (skipping cross-tenant ones),
-// revoking each affected user's sessions.
+// revoking each affected user's sessions. input.RoleID is the UUID of a built-in
+// role (see the roles query).
 func (r *mutationResolver) AssignUsersToRole(ctx context.Context, input model.AssignUsersToRoleInput) (*model.AssignUsersToRolePayload, error) {
-	if _, _, ok := builtinRole(input.RoleID); !ok {
-		return nil, gqlerror.Errorf("unknown role: %s", input.RoleID)
+	_, _, roleKey, ok := builtinRoleByID(input.RoleID)
+	if !ok {
+		return nil, gqlerror.Errorf("unknown role id: %s", input.RoleID)
 	}
-	newRole := model.RoleName(input.RoleID)
-	cu := auth.FromContext(ctx)
-	if cu != nil && cu.Role == auth.RoleTenantAdmin &&
-		(newRole == model.RoleNameAdmin || newRole == model.RoleNameTenantAdmin) {
-		return nil, gqlerror.Errorf("forbidden: tenant-admin cannot grant admin roles")
-	}
-	entRole := user.Role(gqlRoleToEnt(newRole))
+	// Note: tenant-admin escalation guard removed in the 3-role refactor.
+	// Only admin can call assignUsersToRole now (gated by @hasRole([admin])).
+	entRole := user.Role(roleKey)
 	assigned := 0
 	for _, uidStr := range input.UserIds {
 		uid, err := uuid.Parse(uidStr)
@@ -222,7 +218,7 @@ func (r *mutationResolver) AssignUsersToRole(ctx context.Context, input model.As
 		_ = r.Sessions.DeleteByUser(uid.String())
 		assigned++
 	}
-	r.audit(ctx, "user.assign_role", "role", input.RoleID, true, actorID(cu))
+	r.audit(ctx, "user.assign_role", "role", input.RoleID, true, actorID(auth.FromContext(ctx)))
 	cnt, err := r.roleUserCount(ctx, input.RoleID)
 	if err != nil {
 		return nil, err
@@ -252,7 +248,14 @@ func (r *queryResolver) Users(ctx context.Context, filter *model.UserFilter, pag
 			base = base.Where(user.RoleIn(matchRoleKeyword(v)...)) // empty → matches nothing
 		}
 		if filter.RoleID != nil && *filter.RoleID != "" {
-			base = base.Where(user.RoleEQ(user.Role(gqlRoleToEnt(model.RoleName(*filter.RoleID)))))
+			// filter.RoleID is a built-in role UUID (see the roles query). Resolve
+			// it back to the storage role key for the SQL filter; unknown UUIDs
+			// silently match nothing rather than 500 (UI gracefully shows empty).
+			if _, _, roleKey, ok := builtinRoleByID(*filter.RoleID); ok {
+				base = base.Where(user.RoleEQ(user.Role(roleKey)))
+			} else {
+				base = base.Where(user.IDEQ(uuid.Nil))
+			}
 		}
 		// statusKeyword (ONLINE/OFFLINE) is derived from live sessions, not a column,
 		// so it is not applied as a SQL filter (would break pagination counts).
@@ -288,14 +291,18 @@ func (r *queryResolver) Users(ctx context.Context, filter *model.UserFilter, pag
 }
 
 // Roles lists the built-in assignable roles as entities, each with its user count.
+// Each entity's id is a deterministic UUID derived from the role key; roleKey
+// is the stable string identifier usable in @hasRole directives etc.
 func (r *queryResolver) Roles(ctx context.Context, pagination *model.Pagination) (*model.RoleConnection, error) {
-	nodes := make([]model.Role, 0, len(builtinRoles))
-	for _, br := range builtinRoles {
-		cnt, err := r.roleUserCount(ctx, br.id)
+	entities := roleEntities() // already has UUIDs + roleKey + name + desc
+	nodes := make([]model.Role, 0, len(entities))
+	for _, ent := range entities {
+		cnt, err := r.roleUserCount(ctx, ent.ID)
 		if err != nil {
 			return nil, err
 		}
-		nodes = append(nodes, *roleEntity(br.id, cnt))
+		ent.UserCount = cnt
+		nodes = append(nodes, *ent)
 	}
 	total := len(nodes)
 	return &model.RoleConnection{
@@ -305,9 +312,9 @@ func (r *queryResolver) Roles(ctx context.Context, pagination *model.Pagination)
 	}, nil
 }
 
-// Role returns one built-in role by id, or nil if unknown.
+// Role returns one built-in role by UUID, or nil if unknown.
 func (r *queryResolver) Role(ctx context.Context, id string) (*model.Role, error) {
-	if _, _, ok := builtinRole(id); !ok {
+	if _, _, _, ok := builtinRoleByID(id); !ok {
 		return nil, nil
 	}
 	cnt, err := r.roleUserCount(ctx, id)

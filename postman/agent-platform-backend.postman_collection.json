@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "agent-platform-backend-v1",
     "name": "Agent Platform Backend API",
-    "description": "GraphQL API collection for the VMware AI Agent Platform backend.\n\n**Endpoint:** `POST http://localhost:8080/query`\n\n**Auth options:**\n1. Bearer token in `Authorization: Bearer <token>` header (returned from the `login` mutation — simplest in Postman).\n2. Session cookie `ap_session` (set automatically by browser when posting from same origin).\n\n**Required headers (every POST to /query):**\n- `Content-Type: application/json`\n- `Origin: http://localhost:8080` — required by the CSRF middleware (Origin or Referer must be present, and must be same-origin or allowlisted).\n\n**CORS allowlist headers (also valid):**\n- `Authorization` (Bearer)\n- `X-Environment`\n\n**Source of truth:** GraphQL schema at `/schema/*.graphql`. Generated from `internal/graph/testdata/client_operations/*.graphql` (these are the operations the front-end actually runs).\n\n**Authorization model:**\n- `admin` — full access\n- `tenant_admin` — tenant-scoped admin\n- `observability` — read-only dashboards/metering\n- `user` — owner-scoped access (their own agents/keys)\n\n**Default admin (dev):** username `admin@platform.local`, password `ChangeMe123!` (forces password change on first login unless `ADMIN_BOOTSTRAP_PASSWORD` env var is set).",
+    "description": "GraphQL API collection for the VMware AI Agent Platform backend.\n\n**Endpoint:** `POST http://localhost:8080/query`\n\n**Auth options:**\n1. Bearer token in `Authorization: Bearer <token>` header (returned from the `login` mutation — simplest in Postman).\n2. Session cookie `ap_session` (set automatically by browser when posting from same origin).\n\n**Required headers (every POST to /query):**\n- `Content-Type: application/json`\n- `Origin: http://localhost:8080` — required by the CSRF middleware (Origin or Referer must be present, and must be same-origin or allowlisted).\n\n**CORS allowlist headers (also valid):**\n- `Authorization` (Bearer)\n- `X-Environment`\n\n**Source of truth:** GraphQL schema at `/schema/*.graphql`. Generated from `internal/graph/testdata/client_operations/*.graphql` (these are the operations the front-end actually runs).\n\n**Authorization model (3 roles, post #56 refactor):**\n- `admin` — full access to every operation (only role that can write)\n- `read_only` — read-only access to most business objects (agents list, virtual keys list, dashboard, audit, metering); cannot mutate anything\n- `user` — owner-scoped access to their own agents/keys; unchanged\n\n**Default admin (dev):** username `admin@platform.local`, password `ChangeMe123!` (forces password change on first login unless `ADMIN_BOOTSTRAP_PASSWORD` env var is set).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -216,7 +216,7 @@
                 "query"
               ]
             },
-            "description": "Console overview page — stat cards, recent agents, system notices. Restricted to `admin` / `observability`."
+            "description": "Console overview page — stat cards, recent agents, system notices. Restricted to `admin` / `read_only`."
           },
           "response": []
         }
@@ -241,7 +241,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query Users($filter: UserFilter, $pagination: Pagination, $sort: UserSort) {\\n  users(filter: $filter, pagination: $pagination, sort: $sort) {\\n    nodes {\\n      id\\n      username\\n      displayName\\n      email\\n      role { id name }\\n      connectionStatus\\n      lastLoginAt\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n    totalCount\\n    pageInfo { page pageSize totalPages }\\n  }\\n}\",\n  \"variables\": {\n    \"pagination\": {\n      \"page\": 1,\n      \"pageSize\": 20\n    },\n    \"sort\": {\n      \"field\": \"CREATED_AT\",\n      \"direction\": \"DESC\"\n    },\n    \"filter\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"query Users($filter: UserFilter, $pagination: Pagination, $sort: UserSort) {\\n  users(filter: $filter, pagination: $pagination, sort: $sort) {\\n    nodes {\\n      id\\n      username\\n      displayName\\n      email\\n      role { id roleKey name }\\n      connectionStatus\\n      lastLoginAt\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n    totalCount\\n    pageInfo { page pageSize totalPages }\\n  }\\n}\",\n  \"variables\": {\n    \"pagination\": {\n      \"page\": 1,\n      \"pageSize\": 20\n    },\n    \"sort\": {\n      \"field\": \"CREATED_AT\",\n      \"direction\": \"DESC\"\n    },\n    \"filter\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -253,7 +253,7 @@
                 "query"
               ]
             },
-            "description": "Paginated/filtered/sorted user list. Restricted to `admin` / `tenant_admin`."
+            "description": "Paginated/filtered/sorted user list. Restricted to `admin` only."
           },
           "response": []
         },
@@ -285,7 +285,7 @@
                 "query"
               ]
             },
-            "description": "Debounced dedupe check for the create-user form. Returns `Boolean!`. Restricted to `admin` / `tenant_admin`."
+            "description": "Debounced dedupe check for the create-user form. Returns `Boolean!`. Restricted to `admin` only."
           },
           "response": []
         },
@@ -305,7 +305,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query UsersByRole($roleId: ID!) {\\n  users(filter: { roleId: $roleId }) {\\n    nodes { id username displayName email role { id name } connectionStatus lastLoginAt enabled createdAt updatedAt }\\n    totalCount\\n  }\\n}\",\n  \"variables\": {\n    \"roleId\": \"REPLACE_WITH_ROLE_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query UsersByRole($roleId: ID!) {\\n  users(filter: { roleId: $roleId }) {\\n    nodes { id username displayName email role { id roleKey name } connectionStatus lastLoginAt enabled createdAt updatedAt }\\n    totalCount\\n  }\\n}\",\n  \"variables\": {\n    \"roleId\": \"REPLACE_WITH_ROLE_ID\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -317,7 +317,7 @@
                 "query"
               ]
             },
-            "description": "List all users assigned to a given role id. Restricted to `admin` / `tenant_admin`."
+            "description": "List all users assigned to a given role id. Restricted to `admin` only."
           },
           "response": []
         },
@@ -337,7 +337,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateUser($input: CreateUserInput!) {\\n  createUser(input: $input) {\\n    user {\\n      id\\n      username\\n      displayName\\n      email\\n      role { id name }\\n      connectionStatus\\n      lastLoginAt\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n    generatedPassword\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"username\": \"alice\",\n      \"displayName\": \"Alice Example\",\n      \"email\": \"alice@example.com\",\n      \"roleId\": \"REPLACE_WITH_ROLE_ID\",\n      \"passwordMode\": \"CUSTOM\",\n      \"customPassword\": \"TempPass123!\",\n      \"enabled\": true\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation CreateUser($input: CreateUserInput!) {\\n  createUser(input: $input) {\\n    user {\\n      id\\n      username\\n      displayName\\n      email\\n      role { id roleKey name }\\n      connectionStatus\\n      lastLoginAt\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n    generatedPassword\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"username\": \"alice\",\n      \"displayName\": \"Alice Example\",\n      \"email\": \"alice@example.com\",\n      \"roleId\": \"REPLACE_WITH_ROLE_ID\",\n      \"passwordMode\": \"CUSTOM\",\n      \"customPassword\": \"TempPass123!\",\n      \"enabled\": true\n    }\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -369,7 +369,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {\\n  updateUser(id: $id, input: $input) {\\n    id\\n    username\\n    displayName\\n    email\\n    role { id name }\\n    connectionStatus\\n    lastLoginAt\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_USER_ID\",\n    \"input\": {\n      \"displayName\": \"Alice New Name\",\n      \"email\": \"alice.new@example.com\",\n      \"roleId\": \"REPLACE_WITH_ROLE_ID\",\n      \"enabled\": true\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {\\n  updateUser(id: $id, input: $input) {\\n    id\\n    username\\n    displayName\\n    email\\n    role { id roleKey name }\\n    connectionStatus\\n    lastLoginAt\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_USER_ID\",\n    \"input\": {\n      \"displayName\": \"Alice New Name\",\n      \"email\": \"alice.new@example.com\",\n      \"roleId\": \"REPLACE_WITH_ROLE_ID\",\n      \"enabled\": true\n    }\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -433,7 +433,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation ResetUserPassword($id: ID!) {\\n  resetUserPassword(id: $id) {\\n    user { id username displayName email role { id name } connectionStatus lastLoginAt enabled createdAt updatedAt }\\n    generatedPassword\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_USER_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation ResetUserPassword($id: ID!) {\\n  resetUserPassword(id: $id) {\\n    user { id username displayName email role { id roleKey name } connectionStatus lastLoginAt enabled createdAt updatedAt }\\n    generatedPassword\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_USER_ID\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -465,7 +465,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation ToggleUserEnabled($id: ID!) {\\n  toggleUserEnabled(id: $id) {\\n    user { id username displayName email role { id name } connectionStatus lastLoginAt enabled createdAt updatedAt }\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_USER_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation ToggleUserEnabled($id: ID!) {\\n  toggleUserEnabled(id: $id) {\\n    user { id username displayName email role { id roleKey name } connectionStatus lastLoginAt enabled createdAt updatedAt }\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_USER_ID\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -497,7 +497,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation AssignUsersToRole($input: AssignUsersToRoleInput!) {\\n  assignUsersToRole(input: $input) {\\n    role { id name description userCount builtIn }\\n    assignedCount\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"roleId\": \"REPLACE_WITH_ROLE_ID\",\n      \"userIds\": [\n        \"REPLACE_WITH_USER_ID_1\",\n        \"REPLACE_WITH_USER_ID_2\"\n      ]\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation AssignUsersToRole($input: AssignUsersToRoleInput!) {\\n  assignUsersToRole(input: $input) {\\n    role { id roleKey name description userCount builtIn }\\n    assignedCount\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"roleId\": \"REPLACE_WITH_ROLE_ID\",\n      \"userIds\": [\n        \"REPLACE_WITH_USER_ID_1\",\n        \"REPLACE_WITH_USER_ID_2\"\n      ]\n    }\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -541,7 +541,7 @@
                 "query"
               ]
             },
-            "description": "List built-in and custom roles. Restricted to `admin` / `tenant_admin`."
+            "description": "List built-in and custom roles. Restricted to `admin` only."
           },
           "response": []
         },
@@ -561,7 +561,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query Role($id: ID!) {\\n  role(id: $id) { id name description userCount builtIn }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_ROLE_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query Role($id: ID!) {\\n  role(id: $id) { id roleKey name description userCount builtIn }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_ROLE_ID\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -610,7 +610,7 @@
                 "query"
               ]
             },
-            "description": "List custom (non-built-in) roles. Restricted to `admin` / `tenant_admin`."
+            "description": "List custom (non-built-in) roles. Restricted to `admin` only."
           },
           "response": []
         },
@@ -674,7 +674,7 @@
                 "query"
               ]
             },
-            "description": "Create a custom role (initially with no permissions). Restricted to `admin` / `tenant_admin`."
+            "description": "Create a custom role (initially with no permissions). Restricted to `admin` only."
           },
           "response": []
         },
@@ -834,7 +834,7 @@
                 "query"
               ]
             },
-            "description": "Assign a single custom role to a user. Restricted to `admin` / `tenant_admin`."
+            "description": "Assign a single custom role to a user. Restricted to `admin` only."
           },
           "response": []
         },
@@ -903,7 +903,7 @@
                 "query"
               ]
             },
-            "description": "List departments. Restricted to `admin` / `tenant_admin`."
+            "description": "List departments. Restricted to `admin` only."
           },
           "response": []
         },
@@ -2287,7 +2287,7 @@
                 "query"
               ]
             },
-            "description": "List rate-limit policies. Restricted to `admin` / `tenant_admin`."
+            "description": "List rate-limit policies. Restricted to `admin` only."
           },
           "response": []
         },
@@ -2420,7 +2420,7 @@
                 "query"
               ]
             },
-            "description": "Paginated agent list. Admin sees all, tenant_admin sees their tenant, user sees their own."
+            "description": "Paginated agent list. Admin and read_only see all; user sees only their own (owner scope). Gated `@hasRole(any: [admin, read_only, user])` so all 3 roles can read."
           },
           "response": []
         },
@@ -2644,7 +2644,7 @@
                 "query"
               ]
             },
-            "description": "Replace the config's mounted OKF knowledge packs (LLD-11 K2). Set replaced wholesale. Restricted to `admin` / `tenant_admin`."
+            "description": "Replace the config's mounted OKF knowledge packs (LLD-11 K2). Set replaced wholesale. Restricted to `admin` only."
           },
           "response": []
         },
@@ -2772,7 +2772,7 @@
                 "query"
               ]
             },
-            "description": "Create an agent config (智能体配置). Restricted to `admin` / `tenant_admin`."
+            "description": "Create an agent config (智能体配置). Restricted to `admin` only."
           },
           "response": []
         },

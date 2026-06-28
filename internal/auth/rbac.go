@@ -7,10 +7,9 @@ import "context"
 type Role string
 
 const (
-	RoleAdmin         Role = "admin"         // 超级管理员 — platform-wide
-	RoleUser          Role = "user"          // 普通用户 — own resources
-	RoleObservability Role = "observability" // 可观测性专员 — read-only observability
-	RoleTenantAdmin   Role = "tenant-admin"  // tenant-wide (progressive)
+	RoleAdmin    Role = "admin"     // 超级管理员 — platform-wide
+	RoleUser     Role = "user"      // 普通用户 — own resources
+	RoleReadOnly Role = "read_only" // 只读用户 — read-only of most objects (audit/metering/agents/keys); never writes
 )
 
 // Permission keys (LLD-01 §4.3 权限矩阵).
@@ -26,21 +25,18 @@ const (
 // rolePermissions encodes the M1.0 权限矩阵. "own" scoping (resources the user
 // owns) is enforced at the resolver via owner_id, not by this table — this table
 // is platform/tenant-level grants only (判权三轨不交叉, LLD-01 §4.1).
+//
+// Note: read_only deliberately has NO entries here. Read access for the
+// 只读用户 role is enforced via explicit @hasRole(any: [admin, read_only])
+// gates on the read-only fields, NOT via permissions — keeping this matrix
+// authoritative for mutations keeps writes admin-only by construction.
 var rolePermissions = map[Role]map[string]bool{
 	RoleAdmin: {
 		PermAgentManage: true, PermKeyManage: true, PermRouteManage: true,
 		PermAuditView: true, PermMeteringView: true, PermUserManage: true,
 	},
-	RoleObservability: {
-		PermAuditView: true, PermMeteringView: true,
-	},
-	RoleUser: {
-		// own-scoped perms are resolved per-resource, not granted platform-wide
-	},
-	RoleTenantAdmin: {
-		PermAgentManage: true, PermKeyManage: true, PermRouteManage: true,
-		PermAuditView: true, PermMeteringView: true, PermUserManage: true,
-	},
+	RoleReadOnly: {},
+	RoleUser:     {},
 }
 
 // HasPermission reports whether the role holds a platform/tenant-level permission.

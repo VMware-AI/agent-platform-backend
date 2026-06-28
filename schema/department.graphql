@@ -34,7 +34,7 @@ input CreateDepartmentInput {
 }
 
 extend type Query {
-  departments: [Department!]! @hasRole(any: [admin, tenant_admin])
+  departments: [Department!]! @hasRole(any: [admin])
   # Platform/tenant admins OR the department's own dept-admin (delegation checked
   # in-resolver — LLD-01 §4.1 三轨判权).
   departmentMembers(departmentId: ID!): [Membership!]!
@@ -42,8 +42,8 @@ extend type Query {
 
 extend type Mutation {
   # Creates the department AND its litellm team (no orphan: rolls back on sync failure).
-  createDepartment(input: CreateDepartmentInput!): Department! @hasRole(any: [admin, tenant_admin])
-  deleteDepartment(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
+  createDepartment(input: CreateDepartmentInput!): Department! @hasRole(any: [admin])
+  deleteDepartment(id: ID!): Boolean! @hasRole(any: [admin])
   # Membership management is delegated: platform/tenant admins OR the department's
   # dept-admin (checked in-resolver, since @hasRole only covers platform/tenant level).
   addMembership(userId: ID!, departmentId: ID!, role: MembershipRole): Membership!

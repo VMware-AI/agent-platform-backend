@@ -39,7 +39,7 @@ Either one works; the collection uses the Bearer path.
 | Group | Count | Notes |
 |---|---:|---|
 | Auth | 4 | Login (auto-captures token), Me, ChangePassword, Logout |
-| Dashboard | 1 | DashboardOverview (admin / observability) |
+| Dashboard | 1 | DashboardOverview (admin / read_only) |
 | Users & Roles | 11 | Users list, CreateUser (AUTO/CUSTOM), ResetPassword, Toggle, … |
 | RBAC | 9 | Custom roles, permission catalog, role-permission matrix |
 | Departments & Memberships | 6 | Add/RemoveMembership delegated to dept-admins |

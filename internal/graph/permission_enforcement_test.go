@@ -19,7 +19,7 @@ func TestHasPermission_CustomRoleEnforcement(t *testing.T) {
 	ctx := adminCtx()
 	mr := &mutationResolver{r}
 
-	u, err := mr.CreateUser(ctx, model.CreateUserInput{Username: "analyst", DisplayName: "analyst", Email: "a@x.io", RoleID: string(model.RoleNameUser), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("AnalystPass1")})
+	u, err := mr.CreateUser(ctx, model.CreateUserInput{Username: "analyst", DisplayName: "analyst", Email: "a@x.io", RoleID: builtinRoleUUID(string(model.RoleNameUser)), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("AnalystPass1")})
 	if err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}

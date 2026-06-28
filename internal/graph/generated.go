@@ -680,6 +680,7 @@ type ComplexityRoot struct {
 		Description func(childComplexity int) int
 		ID          func(childComplexity int) int
 		Name        func(childComplexity int) int
+		RoleKey     func(childComplexity int) int
 		UserCount   func(childComplexity int) int
 	}
 
@@ -4131,6 +4132,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Role.Name(childComplexity), true
+	case "Role.roleKey":
+		if e.ComplexityRoot.Role.RoleKey == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Role.RoleKey(childComplexity), true
 	case "Role.userCount":
 		if e.ComplexityRoot.Role.UserCount == nil {
 			break
@@ -4668,7 +4675,10 @@ enum UserSortField {
   UPDATED_AT
 }
 
-# The user's role as a lightweight reference (embedded in AccountUser).
+# The user's role as a lightweight reference (embedded in AccountUser). id is a
+# standard UUID, derived from the same role key as the corresponding Role entity
+# in the roles query — so AccountUser.role.id === roles(roleId).id for the same
+# role key.
 type AccountRoleRef {
   id: ID!
   name: String!
@@ -4694,9 +4704,13 @@ type UserConnection {
   pageInfo: PageInfo!
 }
 
-# A built-in assignable role surfaced as an entity (id = the role key).
+# A built-in assignable role surfaced as an entity.
+# id is a standard UUID (deterministically derived from roleKey — see roles_builtin.go).
+# roleKey is the stable string key ("admin" | "user" | "read_only") used in @hasRole
+# directives and as a logical identifier.
 type Role {
   id: ID!
+  roleKey: String!
   name: String!
   description: String!
   userCount: Int!
@@ -4714,6 +4728,7 @@ input UserFilter {
   roleKeyword: String
   emailKeyword: String
   statusKeyword: ConnectionStatus
+  # Built-in role UUID (from the roles query).
   roleId: ID
 }
 
@@ -4740,6 +4755,8 @@ input UpdateUserInput {
 }
 
 input AssignUsersToRoleInput {
+  # Built-in role UUID (from the roles query). User-id-as-string mapping is now
+  # server-driven via Role.roleKey.
   roleId: ID!
   userIds: [ID!]!
 }
@@ -4770,21 +4787,21 @@ type AssignUsersToRolePayload {
 
 extend type Query {
   users(filter: UserFilter, pagination: Pagination, sort: UserSort): UserConnection!
-    @hasRole(any: [admin, tenant_admin])
-  roles(pagination: Pagination): RoleConnection! @hasRole(any: [admin, tenant_admin])
-  role(id: ID!): Role @hasRole(any: [admin, tenant_admin])
+    @hasRole(any: [admin])
+  roles(pagination: Pagination): RoleConnection! @hasRole(any: [admin])
+  role(id: ID!): Role @hasRole(any: [admin])
   # Debounced dedupe check for the create-user form.
-  userExists(username: String, email: String): Boolean! @hasRole(any: [admin, tenant_admin])
+  userExists(username: String, email: String): Boolean! @hasRole(any: [admin])
 }
 
 extend type Mutation {
-  createUser(input: CreateUserInput!): CreateUserPayload! @hasRole(any: [admin, tenant_admin])
-  updateUser(id: ID!, input: UpdateUserInput!): AccountUser! @hasRole(any: [admin, tenant_admin])
-  deleteUser(id: ID!): DeleteUserPayload! @hasRole(any: [admin, tenant_admin])
-  resetUserPassword(id: ID!): ResetPasswordPayload! @hasRole(any: [admin, tenant_admin])
-  toggleUserEnabled(id: ID!): ToggleUserEnabledPayload! @hasRole(any: [admin, tenant_admin])
+  createUser(input: CreateUserInput!): CreateUserPayload! @hasRole(any: [admin])
+  updateUser(id: ID!, input: UpdateUserInput!): AccountUser! @hasRole(any: [admin])
+  deleteUser(id: ID!): DeleteUserPayload! @hasRole(any: [admin])
+  resetUserPassword(id: ID!): ResetPasswordPayload! @hasRole(any: [admin])
+  toggleUserEnabled(id: ID!): ToggleUserEnabledPayload! @hasRole(any: [admin])
   assignUsersToRole(input: AssignUsersToRoleInput!): AssignUsersToRolePayload!
-    @hasRole(any: [admin, tenant_admin])
+    @hasRole(any: [admin])
 }
 `, BuiltIn: false},
 	{Name: "../../schema/agent.graphql", Input: `# Agent center (智能体中心): catalog/market, configs, and deployed instances.
@@ -4959,9 +4976,10 @@ extend type Query {
   # Catalog and configs are browsable by any authenticated user.
   agentTemplates: [AgentTemplate!]!
   agentConfigs(agentType: String): [AgentConfig!]!
-  # Admin sees all agents; tenant-admin their tenant; a regular user only their own
-  # (owner scope). Paged/filtered/sorted connection (前后端整合契约).
+  # Admin + read_only see all agents; a regular user only their own (owner scope).
+  # Paged/filtered/sorted connection (前后端整合契约).
   agents(filter: AgentFilter, pagination: Pagination, sort: AgentSort): AgentConnection!
+    @hasRole(any: [admin, read_only, user])
 }
 
 extend type Mutation {
@@ -4972,15 +4990,15 @@ extend type Mutation {
   setAgentStatus(id: ID!, status: AgentStatus!): Agent!
 
   # Agent config management (智能体配置).
-  createAgentConfig(input: CreateAgentConfigInput!): AgentConfig! @hasRole(any: [admin, tenant_admin])
-  updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig! @hasRole(any: [admin, tenant_admin])
-  deleteAgentConfig(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
+  createAgentConfig(input: CreateAgentConfigInput!): AgentConfig! @hasRole(any: [admin])
+  updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig! @hasRole(any: [admin])
+  deleteAgentConfig(id: ID!): Boolean! @hasRole(any: [admin])
   # Mark this config the default for its agent type (unsets others of that type).
-  setDefaultAgentConfig(id: ID!): AgentConfig! @hasRole(any: [admin, tenant_admin])
+  setDefaultAgentConfig(id: ID!): AgentConfig! @hasRole(any: [admin])
   # Replace the config's mounted OKF knowledge packs (LLD-11 K2). Each id must be a
   # kind=knowledge artifact visible to the caller's tenant; the set is replaced wholesale.
   setAgentConfigKnowledge(configId: ID!, knowledgeArtifactIds: [ID!]!): AgentConfig!
-    @hasRole(any: [admin, tenant_admin])
+    @hasRole(any: [admin])
 }
 `, BuiltIn: false},
 	{Name: "../../schema/content.graphql", Input: `# Content lib (制品库) / Skill hub / Harbor (镜像仓) CRUD. See LLD-06.
@@ -5059,8 +5077,8 @@ extend type Query {
 }
 
 extend type Mutation {
-  upsertArtifact(input: UpsertArtifactInput!): Artifact! @hasRole(any: [admin, tenant_admin])
-  deleteArtifact(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
+  upsertArtifact(input: UpsertArtifactInput!): Artifact! @hasRole(any: [admin])
+  deleteArtifact(id: ID!): Boolean! @hasRole(any: [admin])
   upsertSkill(input: UpsertSkillInput!): Skill! @hasRole(any: [admin])
   deleteSkill(id: ID!): Boolean! @hasRole(any: [admin])
   upsertImage(input: UpsertImageInput!): Image! @hasRole(any: [admin])
@@ -5129,10 +5147,10 @@ type DashboardOverview {
 extend type Query {
   # The console overview page. recentLimit/noticeLimit cap the two lists (默认 5).
   # Figures are platform-global (counts/notices are not tenant-scoped yet), so this
-  # is restricted to platform roles — exposing it to tenant_admin would leak other
+  # is restricted to platform roles — exposing it to read_only would leak other
   # tenants' counts/usage/audit. Per-tenant dashboard scoping is future work (C1).
   dashboardOverview(recentLimit: Int = 5, noticeLimit: Int = 5): DashboardOverview!
-    @hasRole(any: [admin, observability])
+    @hasRole(any: [admin, read_only])
 }
 `, BuiltIn: false},
 	{Name: "../../schema/department.graphql", Input: `# Departments (部门 = litellm team) + memberships. See doc43 / LLD-01.
@@ -5171,7 +5189,7 @@ input CreateDepartmentInput {
 }
 
 extend type Query {
-  departments: [Department!]! @hasRole(any: [admin, tenant_admin])
+  departments: [Department!]! @hasRole(any: [admin])
   # Platform/tenant admins OR the department's own dept-admin (delegation checked
   # in-resolver — LLD-01 §4.1 三轨判权).
   departmentMembers(departmentId: ID!): [Membership!]!
@@ -5179,8 +5197,8 @@ extend type Query {
 
 extend type Mutation {
   # Creates the department AND its litellm team (no orphan: rolls back on sync failure).
-  createDepartment(input: CreateDepartmentInput!): Department! @hasRole(any: [admin, tenant_admin])
-  deleteDepartment(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
+  createDepartment(input: CreateDepartmentInput!): Department! @hasRole(any: [admin])
+  deleteDepartment(id: ID!): Boolean! @hasRole(any: [admin])
   # Membership management is delegated: platform/tenant admins OR the department's
   # dept-admin (checked in-resolver, since @hasRole only covers platform/tenant level).
   addMembership(userId: ID!, departmentId: ID!, role: MembershipRole): Membership!
@@ -5608,7 +5626,7 @@ type MeteringOverview {
 }
 
 extend type Query {
-  # metering:view permission (admin + observability).
+  # metering:view permission (admin + read_only).
   tokenUsage(userId: ID, page: PageInput): [TokenUsage!]! @hasPermission(perm: "metering:view")
   meteringSummary(userId: ID): MeteringSummary! @hasPermission(perm: "metering:view")
   # Aggregated metering for the console 计量中心 over a time range (默认近7天).
@@ -5722,7 +5740,7 @@ input ModelGatewayInput {
 }
 
 extend type Query {
-  # page is the shared PageInput (limit/offset) defined alongside audit/observability.
+  # page is the shared PageInput (limit/offset) defined alongside audit/read_only.
   modelGateways(filter: ModelGatewayFilterInput, page: PageInput!, sort: ModelGatewaySort): ModelGatewayConnection! @hasRole(any: [admin])
   modelGatewaySyncSummary: ModelGatewaySyncSummary! @hasRole(any: [admin])
 }
@@ -5823,7 +5841,7 @@ input UpsertRateLimitPolicyInput {
 
 extend type Query {
   requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
-  rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin, tenant_admin])
+  rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin])
   requestMetrics(from: Time!, to: Time!, granularity: RequestMetricsBucketGranularity!, filter: RequestMetricsFilter): RequestMetrics! @hasPermission(perm: "audit:view")
 }
 
@@ -5980,19 +5998,19 @@ input CreateCustomRoleInput {
 }
 
 extend type Query {
-  customRoles: [CustomRole!]! @hasRole(any: [admin, tenant_admin])
+  customRoles: [CustomRole!]! @hasRole(any: [admin])
   permissions: [Permission!]! @hasRole(any: [admin])
   userRoles(userId: ID!): [CustomRole!]! @hasRole(any: [admin])
 }
 
 extend type Mutation {
-  createCustomRole(input: CreateCustomRoleInput!): CustomRole! @hasRole(any: [admin, tenant_admin])
-  deleteCustomRole(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
+  createCustomRole(input: CreateCustomRoleInput!): CustomRole! @hasRole(any: [admin])
+  deleteCustomRole(id: ID!): Boolean! @hasRole(any: [admin])
   upsertPermission(key: String!, description: String): Permission! @hasRole(any: [admin])
   # Replace the role's permission set (the matrix row).
-  setRolePermissions(roleId: ID!, permissionKeys: [String!]!): CustomRole! @hasRole(any: [admin, tenant_admin])
-  assignUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
-  removeUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
+  setRolePermissions(roleId: ID!, permissionKeys: [String!]!): CustomRole! @hasRole(any: [admin])
+  assignUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin])
+  removeUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin])
 }
 `, BuiltIn: false},
 	{Name: "../../schema/resourcepool.graphql", Input: `# Resource pool (vCenter) registration + inventory. See LLD-03 / LLD-06, 0619 第13页.
@@ -6175,8 +6193,7 @@ scalar Map
 enum RoleName {
   admin
   user
-  observability
-  tenant_admin
+  read_only
 }
 
 type User {
@@ -6331,7 +6348,7 @@ input IssueVirtualKeyInput {
 }
 
 extend type Query {
-  virtualKeys(userId: ID): [VirtualKey!]! @hasRole(any: [admin])
+  virtualKeys(userId: ID): [VirtualKey!]! @hasRole(any: [admin, read_only])
 }
 
 extend type Mutation {
@@ -7383,6 +7400,8 @@ func (ec *executionContext) childFields_Role(ctx context.Context, field graphql.
 	switch field.Name {
 	case "id":
 		return ec.fieldContext_Role_id(ctx, field)
+	case "roleKey":
+		return ec.fieldContext_Role_roleKey(ctx, field)
 	case "name":
 		return ec.fieldContext_Role_name(ctx, field)
 	case "description":
@@ -15231,7 +15250,7 @@ func (ec *executionContext) _Mutation_createUser(ctx context.Context, field grap
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.CreateUserPayload
 					return zeroVal, err
@@ -15293,7 +15312,7 @@ func (ec *executionContext) _Mutation_updateUser(ctx context.Context, field grap
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.AccountUser
 					return zeroVal, err
@@ -15355,7 +15374,7 @@ func (ec *executionContext) _Mutation_deleteUser(ctx context.Context, field grap
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.DeleteUserPayload
 					return zeroVal, err
@@ -15417,7 +15436,7 @@ func (ec *executionContext) _Mutation_resetUserPassword(ctx context.Context, fie
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.ResetPasswordPayload
 					return zeroVal, err
@@ -15479,7 +15498,7 @@ func (ec *executionContext) _Mutation_toggleUserEnabled(ctx context.Context, fie
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.ToggleUserEnabledPayload
 					return zeroVal, err
@@ -15541,7 +15560,7 @@ func (ec *executionContext) _Mutation_assignUsersToRole(ctx context.Context, fie
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.AssignUsersToRolePayload
 					return zeroVal, err
@@ -15753,7 +15772,7 @@ func (ec *executionContext) _Mutation_createAgentConfig(ctx context.Context, fie
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.AgentConfig
 					return zeroVal, err
@@ -15815,7 +15834,7 @@ func (ec *executionContext) _Mutation_updateAgentConfig(ctx context.Context, fie
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.AgentConfig
 					return zeroVal, err
@@ -15877,7 +15896,7 @@ func (ec *executionContext) _Mutation_deleteAgentConfig(ctx context.Context, fie
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
@@ -15939,7 +15958,7 @@ func (ec *executionContext) _Mutation_setDefaultAgentConfig(ctx context.Context,
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.AgentConfig
 					return zeroVal, err
@@ -16001,7 +16020,7 @@ func (ec *executionContext) _Mutation_setAgentConfigKnowledge(ctx context.Contex
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.AgentConfig
 					return zeroVal, err
@@ -16063,7 +16082,7 @@ func (ec *executionContext) _Mutation_upsertArtifact(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.Artifact
 					return zeroVal, err
@@ -16125,7 +16144,7 @@ func (ec *executionContext) _Mutation_deleteArtifact(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
@@ -16435,7 +16454,7 @@ func (ec *executionContext) _Mutation_createDepartment(ctx context.Context, fiel
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.Department
 					return zeroVal, err
@@ -16497,7 +16516,7 @@ func (ec *executionContext) _Mutation_deleteDepartment(ctx context.Context, fiel
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
@@ -18293,7 +18312,7 @@ func (ec *executionContext) _Mutation_createCustomRole(ctx context.Context, fiel
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.CustomRole
 					return zeroVal, err
@@ -18355,7 +18374,7 @@ func (ec *executionContext) _Mutation_deleteCustomRole(ctx context.Context, fiel
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
@@ -18479,7 +18498,7 @@ func (ec *executionContext) _Mutation_setRolePermissions(ctx context.Context, fi
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.CustomRole
 					return zeroVal, err
@@ -18541,7 +18560,7 @@ func (ec *executionContext) _Mutation_assignUserRole(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
@@ -18603,7 +18622,7 @@ func (ec *executionContext) _Mutation_removeUserRole(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
@@ -20160,7 +20179,7 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.UserConnection
 					return zeroVal, err
@@ -20222,7 +20241,7 @@ func (ec *executionContext) _Query_roles(ctx context.Context, field graphql.Coll
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.RoleConnection
 					return zeroVal, err
@@ -20284,7 +20303,7 @@ func (ec *executionContext) _Query_role(ctx context.Context, field graphql.Colle
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.Role
 					return zeroVal, err
@@ -20346,7 +20365,7 @@ func (ec *executionContext) _Query_userExists(ctx context.Context, field graphql
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
@@ -20480,7 +20499,25 @@ func (ec *executionContext) _Query_agents(ctx context.Context, field graphql.Col
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Query().Agents(ctx, fc.Args["filter"].(*model.AgentFilter), fc.Args["pagination"].(*model.Pagination), fc.Args["sort"].(*model.AgentSort))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "read_only", "user"})
+				if err != nil {
+					var zeroVal *model.AgentConnection
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.AgentConnection
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
 		func(ctx context.Context, selections ast.SelectionSet, v *model.AgentConnection) graphql.Marshaler {
 			return ec.marshalNAgentConnection2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentConnection(ctx, selections, v)
 		},
@@ -20680,7 +20717,7 @@ func (ec *executionContext) _Query_dashboardOverview(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "observability"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "read_only"})
 				if err != nil {
 					var zeroVal *model.DashboardOverview
 					return zeroVal, err
@@ -20741,7 +20778,7 @@ func (ec *executionContext) _Query_departments(ctx context.Context, field graphq
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal []model.Department
 					return zeroVal, err
@@ -21545,7 +21582,7 @@ func (ec *executionContext) _Query_rateLimitPolicies(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal []model.RateLimitPolicy
 					return zeroVal, err
@@ -21781,7 +21818,7 @@ func (ec *executionContext) _Query_customRoles(ctx context.Context, field graphq
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal []model.CustomRole
 					return zeroVal, err
@@ -22118,7 +22155,7 @@ func (ec *executionContext) _Query_virtualKeys(ctx context.Context, field graphq
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "read_only"})
 				if err != nil {
 					var zeroVal []model.VirtualKey
 					return zeroVal, err
@@ -23695,6 +23732,29 @@ func (ec *executionContext) _Role_id(ctx context.Context, field graphql.Collecte
 }
 func (ec *executionContext) fieldContext_Role_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Role", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _Role_roleKey(ctx context.Context, field graphql.CollectedField, obj *model.Role) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Role_roleKey(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RoleKey, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Role_roleKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Role", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _Role_name(ctx context.Context, field graphql.CollectedField, obj *model.Role) (ret graphql.Marshaler) {
@@ -34480,6 +34540,11 @@ func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = graphql.MarshalString("Role")
 		case "id":
 			out.Values[i] = ec._Role_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "roleKey":
+			out.Values[i] = ec._Role_roleKey(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

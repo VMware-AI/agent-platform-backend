@@ -22,7 +22,7 @@ func TestRollbackDeployCreate_DestroysVMRevokesKeyDeletesRow(t *testing.T) {
 	ctx := context.Background()
 	mr := &mutationResolver{r}
 
-	owner, err := mr.CreateUser(ctx, model.CreateUserInput{Username: "o", DisplayName: "o", Email: "o@x.io", RoleID: string(model.RoleNameUser), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("OwnerPass123")})
+	owner, err := mr.CreateUser(ctx, model.CreateUserInput{Username: "o", DisplayName: "o", Email: "o@x.io", RoleID: builtinRoleUUID(string(model.RoleNameUser)), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("OwnerPass123")})
 	if err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
