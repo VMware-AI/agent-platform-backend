@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -11,6 +12,11 @@ import (
 type ModelManager interface {
 	// TestConnection verifies the gateway is reachable + authorized.
 	TestConnection(ctx context.Context) error
+	// GetRoutingStrategy returns the gateway's currently-configured global
+	// routing strategy (GET /config/router). Best-effort: callers should treat
+	// any error (transport, 5xx, or ErrUnknownRoutingStrategy) as "unknown" and
+	// not fail the broader operation.
+	GetRoutingStrategy(ctx context.Context) (RoutingStrategy, error)
 	// NewModel adds (or, via UpdateModel semantics, refreshes) a deployment
 	// without restarting the proxy (POST /model/new).
 	NewModel(ctx context.Context, spec ModelSpec) error
@@ -37,6 +43,26 @@ type ModelSpec struct {
 
 // DefaultRouterModel is the default alias of the Complexity Router model.
 const DefaultRouterModel = "smart"
+
+// RoutingStrategy is the global load-balancing strategy that litellm is currently
+// configured to use (the "routing_strategy" field of /config/router). The string
+// values are the literal names litellm uses on the wire; the console maps them to
+// the wider LoadBalancingStrategy enum exposed via GraphQL.
+type RoutingStrategy string
+
+const (
+	RoutingStrategyRoundRobin   RoutingStrategy = "simple_shuffle"
+	RoutingStrategyLatencyBased RoutingStrategy = "latency"
+	RoutingStrategyUsageBasedV2 RoutingStrategy = "usage_v2"
+	RoutingStrategyLeastBusy    RoutingStrategy = "least_busy"
+	RoutingStrategyCostBased    RoutingStrategy = "cost"
+)
+
+// ErrUnknownRoutingStrategy is returned by GetRoutingStrategy when the litellm
+// version reports a routing_strategy value we don't recognise. Callers should log
+// and treat the field as "unknown" rather than failing the broader operation —
+// the strategy is best-effort metadata, not a hard contract.
+var ErrUnknownRoutingStrategy = errors.New("gateway: unknown routing strategy")
 
 // RouterSpec configures the Complexity Router "smart" model.
 type RouterSpec struct {
@@ -117,4 +143,28 @@ func (c *HTTPClient) UpsertComplexityRouter(ctx context.Context, spec RouterSpec
 		"model_name":     name,
 		"litellm_params": params,
 	}, nil)
+}
+
+// GetRoutingStrategy calls GET /config/router and maps the response's
+// "routing_strategy" field to a RoutingStrategy. Transport errors, 5xx (after
+// retry), and 4xx all return their underlying error verbatim; unmapped wire
+// values return ErrUnknownRoutingStrategy so callers can decide to treat the
+// field as "unknown" rather than fail the broader operation.
+func (c *HTTPClient) GetRoutingStrategy(ctx context.Context) (RoutingStrategy, error) {
+	var out struct {
+		RoutingStrategy string `json:"routing_strategy"`
+	}
+	if err := c.get(ctx, "/config/router", &out); err != nil {
+		return "", err
+	}
+	switch RoutingStrategy(out.RoutingStrategy) {
+	case RoutingStrategyRoundRobin,
+		RoutingStrategyLatencyBased,
+		RoutingStrategyUsageBasedV2,
+		RoutingStrategyLeastBusy,
+		RoutingStrategyCostBased:
+		return RoutingStrategy(out.RoutingStrategy), nil
+	default:
+		return "", fmt.Errorf("%w: %q", ErrUnknownRoutingStrategy, out.RoutingStrategy)
+	}
 }

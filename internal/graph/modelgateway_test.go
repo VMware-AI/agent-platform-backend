@@ -15,10 +15,9 @@ import (
 func mkGateway(t *testing.T, mr *mutationResolver, ctx context.Context, name, endpoint string) *model.ModelGateway {
 	t.Helper()
 	g, err := mr.CreateModelGateway(ctx, model.ModelGatewayInput{
-		Name:                  name,
-		Provider:              model.ModelGatewayProviderLitellm,
-		Endpoint:              endpoint,
-		LoadBalancingStrategy: model.LoadBalancingStrategyRoundRobin,
+		Name:     name,
+		Provider: model.ModelGatewayProviderLitellm,
+		Endpoint: endpoint,
 	})
 	if err != nil {
 		t.Fatalf("CreateModelGateway(%s): %v", name, err)
@@ -37,7 +36,7 @@ func TestModelGateways_Projection(t *testing.T) {
 
 	g := mkGateway(t, mr, ctx, "litellm-prod", "https://llm.internal:4000")
 	if g.Provider != model.ModelGatewayProviderLitellm ||
-		g.LoadBalancingStrategy != model.LoadBalancingStrategyRoundRobin ||
+		g.LoadBalancingStrategy != nil ||
 		g.Status != model.ModelGatewayStatusDisconnected {
 		t.Fatalf("projection defaults wrong: %+v", g)
 	}
@@ -191,14 +190,13 @@ func TestModelGateway_AdminURLPersistedOrDerived(t *testing.T) {
 	custom := "https://litellm.internal/admin"
 	withURL, err := mr.CreateModelGateway(ctx, model.ModelGatewayInput{
 		Name: "with", Provider: model.ModelGatewayProviderLitellm, Endpoint: "https://gw:4000",
-		LoadBalancingStrategy: model.LoadBalancingStrategyRoundRobin, AdminURL: &custom,
+		AdminURL: &custom,
 	})
 	if err != nil || withURL.AdminURL == nil || *withURL.AdminURL != custom {
 		t.Fatalf("adminUrl not persisted: %+v / %v", withURL.AdminURL, err)
 	}
 	without, _ := mr.CreateModelGateway(ctx, model.ModelGatewayInput{
 		Name: "without", Provider: model.ModelGatewayProviderLitellm, Endpoint: "https://gw2:4000",
-		LoadBalancingStrategy: model.LoadBalancingStrategyRoundRobin,
 	})
 	if without.AdminURL == nil || *without.AdminURL != "https://gw2:4000/ui" {
 		t.Fatalf("adminUrl not derived: %+v", without.AdminURL)
@@ -229,7 +227,6 @@ func TestModelGateway_LastSyncTracking(t *testing.T) {
 	// an unrelated update must NOT move lastSyncAt (M3 fix)
 	upd, err := mr.UpdateModelGateway(ctx, g.ID, model.ModelGatewayInput{
 		Name: "renamed", Provider: model.ModelGatewayProviderLitellm, Endpoint: "https://gw:4000",
-		LoadBalancingStrategy: model.LoadBalancingStrategyRoundRobin,
 	})
 	if err != nil || upd.LastSyncAt == nil || !upd.LastSyncAt.Equal(synced) {
 		t.Fatalf("update must not change lastSyncAt: got %v, want %v", upd.LastSyncAt, synced)
@@ -291,7 +288,7 @@ func TestModelGateway_TestUsesPerGatewayClient(t *testing.T) {
 
 	g, err := mr.CreateModelGateway(ctx, model.ModelGatewayInput{
 		Name: "gw", Provider: model.ModelGatewayProviderLitellm, Endpoint: "https://vc-x:4000",
-		LoadBalancingStrategy: model.LoadBalancingStrategyRoundRobin, MasterKey: ptr("sk-secret-xyz"),
+		MasterKey: ptr("sk-secret-xyz"),
 	})
 	if err != nil {
 		t.Fatalf("CreateModelGateway: %v", err)
@@ -340,7 +337,6 @@ func TestModelGateway_UpdateDelete(t *testing.T) {
 	g := mkGateway(t, mr, ctx, "old", "https://old:4000")
 	upd, err := mr.UpdateModelGateway(ctx, g.ID, model.ModelGatewayInput{
 		Name: "new", Provider: model.ModelGatewayProviderLitellm, Endpoint: "https://new:4000",
-		LoadBalancingStrategy: model.LoadBalancingStrategyRoundRobin,
 	})
 	if err != nil || upd.Name != "new" || upd.Endpoint != "https://new:4000" {
 		t.Fatalf("update: %+v / %v", upd, err)
@@ -353,5 +349,72 @@ func TestModelGateway_UpdateDelete(t *testing.T) {
 	conn, _ := qr.ModelGateways(ctx, nil, model.PageInput{}, nil)
 	if conn.TotalCount != 0 {
 		t.Fatalf("gateway should be deleted, got %d", conn.TotalCount)
+	}
+}
+
+// H3: a successful test-connection populates LoadBalancingStrategy on the
+// result AND on the projected gateway, with the value reported by the live
+// probe. Query paths (ModelGateways) leave the field nil until a test runs.
+func TestModelGateway_TestProbesRoutingStrategy(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	r.GatewayClientFor = func(context.Context, string, string) gateway.ModelManager {
+		return &fakeModelManager{strategy: gateway.RoutingStrategyLatencyBased}
+	}
+	ctx := adminCtx()
+	mr := &mutationResolver{r}
+	qr := &queryResolver{r}
+
+	g := mkGateway(t, mr, ctx, "g-lat", "https://llm:4000")
+	// before any test: nil
+	pre, _ := qr.ModelGateways(ctx, nil, model.PageInput{}, nil)
+	if pre.Nodes[0].LoadBalancingStrategy != nil {
+		t.Fatalf("query path must not probe: got %v", pre.Nodes[0].LoadBalancingStrategy)
+	}
+
+	res, err := mr.TestModelGatewayConnection(ctx, g.ID)
+	if err != nil {
+		t.Fatalf("TestModelGatewayConnection: %v", err)
+	}
+	if res.LoadBalancingStrategy == nil || *res.LoadBalancingStrategy != model.LoadBalancingStrategyLatencyBased {
+		t.Fatalf("result.LoadBalancingStrategy = %v, want LATENCY_BASED", res.LoadBalancingStrategy)
+	}
+	if res.Gateway.LoadBalancingStrategy == nil || *res.Gateway.LoadBalancingStrategy != model.LoadBalancingStrategyLatencyBased {
+		t.Fatalf("gateway.LoadBalancingStrategy = %v, want LATENCY_BASED", res.Gateway.LoadBalancingStrategy)
+	}
+
+	// after the test: the query path leaves the field nil — we deliberately do
+	// not cache the probed value on the row (re-probed on every test click).
+	post, _ := qr.ModelGateways(ctx, nil, model.PageInput{}, nil)
+	if post.Nodes[0].LoadBalancingStrategy != nil {
+		t.Fatalf("post-test query must not cache: got %v", post.Nodes[0].LoadBalancingStrategy)
+	}
+}
+
+// H4: a probe failure must NOT downgrade a successful connectivity test. The
+// test reports success=true, status=CONNECTED, and loadBalancingStrategy is
+// nil. The same applies to the projected gateway inside the result.
+func TestModelGateway_TestProbeFailureLeavesFieldNull(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	r.GatewayClientFor = func(context.Context, string, string) gateway.ModelManager {
+		return &fakeModelManager{strategyErr: errors.New("router down")}
+	}
+	ctx := adminCtx()
+	mr := &mutationResolver{r}
+
+	g := mkGateway(t, mr, ctx, "g-fail", "https://llm:4000")
+	res, err := mr.TestModelGatewayConnection(ctx, g.ID)
+	if err != nil {
+		t.Fatalf("TestModelGatewayConnection: %v", err)
+	}
+	if !res.Success || res.Status != model.ModelGatewayStatusConnected {
+		t.Fatalf("connectivity succeeded, probe failed → still success: %+v", res)
+	}
+	if res.LoadBalancingStrategy != nil {
+		t.Fatalf("LoadBalancingStrategy must be nil when probe fails, got %v", *res.LoadBalancingStrategy)
+	}
+	if res.Gateway.LoadBalancingStrategy != nil {
+		t.Fatalf("gateway.LoadBalancingStrategy must be nil when probe fails, got %v", *res.Gateway.LoadBalancingStrategy)
 	}
 }

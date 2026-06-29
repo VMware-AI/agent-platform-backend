@@ -451,20 +451,20 @@ type MeteringSummary struct {
 }
 
 type ModelGateway struct {
-	ID                    string                `json:"id"`
-	Name                  string                `json:"name"`
-	Provider              ModelGatewayProvider  `json:"provider"`
-	Endpoint              string                `json:"endpoint"`
-	Status                ModelGatewayStatus    `json:"status"`
-	BackendModelCount     int                   `json:"backendModelCount"`
-	LoadBalancingStrategy LoadBalancingStrategy `json:"loadBalancingStrategy"`
-	LatencyMs             *int                  `json:"latencyMs,omitempty"`
-	AdminURL              *string               `json:"adminUrl,omitempty"`
-	LastSyncAt            *time.Time            `json:"lastSyncAt,omitempty"`
-	LastSyncStatus        ModelGatewaySyncState `json:"lastSyncStatus"`
-	LastSyncMessage       *string               `json:"lastSyncMessage,omitempty"`
-	CreatedAt             time.Time             `json:"createdAt"`
-	UpdatedAt             time.Time             `json:"updatedAt"`
+	ID                    string                 `json:"id"`
+	Name                  string                 `json:"name"`
+	Provider              ModelGatewayProvider   `json:"provider"`
+	Endpoint              string                 `json:"endpoint"`
+	Status                ModelGatewayStatus     `json:"status"`
+	BackendModelCount     int                    `json:"backendModelCount"`
+	LoadBalancingStrategy *LoadBalancingStrategy `json:"loadBalancingStrategy,omitempty"`
+	LatencyMs             *int                   `json:"latencyMs,omitempty"`
+	AdminURL              *string                `json:"adminUrl,omitempty"`
+	LastSyncAt            *time.Time             `json:"lastSyncAt,omitempty"`
+	LastSyncStatus        ModelGatewaySyncState  `json:"lastSyncStatus"`
+	LastSyncMessage       *string                `json:"lastSyncMessage,omitempty"`
+	CreatedAt             time.Time              `json:"createdAt"`
+	UpdatedAt             time.Time              `json:"updatedAt"`
 }
 
 type ModelGatewayConnection struct {
@@ -478,12 +478,11 @@ type ModelGatewayFilterInput struct {
 }
 
 type ModelGatewayInput struct {
-	Name                  string                `json:"name"`
-	Provider              ModelGatewayProvider  `json:"provider"`
-	Endpoint              string                `json:"endpoint"`
-	AdminURL              *string               `json:"adminUrl,omitempty"`
-	MasterKey             *string               `json:"masterKey,omitempty"`
-	LoadBalancingStrategy LoadBalancingStrategy `json:"loadBalancingStrategy"`
+	Name      string               `json:"name"`
+	Provider  ModelGatewayProvider `json:"provider"`
+	Endpoint  string               `json:"endpoint"`
+	AdminURL  *string              `json:"adminUrl,omitempty"`
+	MasterKey *string              `json:"masterKey,omitempty"`
 }
 
 type ModelGatewaySort struct {
@@ -500,12 +499,13 @@ type ModelGatewaySyncSummary struct {
 }
 
 type ModelGatewayTestResult struct {
-	Success   bool               `json:"success"`
-	Status    ModelGatewayStatus `json:"status"`
-	LatencyMs *int               `json:"latencyMs,omitempty"`
-	Message   string             `json:"message"`
-	TestedAt  time.Time          `json:"testedAt"`
-	Gateway   *ModelGateway      `json:"gateway"`
+	Success               bool                   `json:"success"`
+	Status                ModelGatewayStatus     `json:"status"`
+	LatencyMs             *int                   `json:"latencyMs,omitempty"`
+	Message               string                 `json:"message"`
+	TestedAt              time.Time              `json:"testedAt"`
+	Gateway               *ModelGateway          `json:"gateway"`
+	LoadBalancingStrategy *LoadBalancingStrategy `json:"loadBalancingStrategy,omitempty"`
 }
 
 type ModelRoute struct {
@@ -1592,16 +1592,24 @@ func (e LoadBalanceStrategy) MarshalJSON() ([]byte, error) {
 type LoadBalancingStrategy string
 
 const (
-	LoadBalancingStrategyRoundRobin LoadBalancingStrategy = "ROUND_ROBIN"
+	LoadBalancingStrategyRoundRobin   LoadBalancingStrategy = "ROUND_ROBIN"
+	LoadBalancingStrategyLatencyBased LoadBalancingStrategy = "LATENCY_BASED"
+	LoadBalancingStrategyUsageBasedV2 LoadBalancingStrategy = "USAGE_BASED_V2"
+	LoadBalancingStrategyLeastBusy    LoadBalancingStrategy = "LEAST_BUSY"
+	LoadBalancingStrategyCostBased    LoadBalancingStrategy = "COST_BASED"
 )
 
 var AllLoadBalancingStrategy = []LoadBalancingStrategy{
 	LoadBalancingStrategyRoundRobin,
+	LoadBalancingStrategyLatencyBased,
+	LoadBalancingStrategyUsageBasedV2,
+	LoadBalancingStrategyLeastBusy,
+	LoadBalancingStrategyCostBased,
 }
 
 func (e LoadBalancingStrategy) IsValid() bool {
 	switch e {
-	case LoadBalancingStrategyRoundRobin:
+	case LoadBalancingStrategyRoundRobin, LoadBalancingStrategyLatencyBased, LoadBalancingStrategyUsageBasedV2, LoadBalancingStrategyLeastBusy, LoadBalancingStrategyCostBased:
 		return true
 	}
 	return false

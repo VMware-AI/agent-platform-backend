@@ -12,13 +12,21 @@ import (
 )
 
 type fakeModelManager struct {
-	models  []gateway.ModelSpec
-	routers []gateway.RouterSpec
-	deleted []string
-	testErr error
+	models      []gateway.ModelSpec
+	routers     []gateway.RouterSpec
+	deleted     []string
+	testErr     error
+	strategy    gateway.RoutingStrategy
+	strategyErr error
 }
 
 func (f *fakeModelManager) TestConnection(context.Context) error { return f.testErr }
+func (f *fakeModelManager) GetRoutingStrategy(context.Context) (gateway.RoutingStrategy, error) {
+	if f.strategy == "" {
+		return gateway.RoutingStrategyRoundRobin, f.strategyErr
+	}
+	return f.strategy, f.strategyErr
+}
 func (f *fakeModelManager) NewModel(_ context.Context, s gateway.ModelSpec) error {
 	f.models = append(f.models, s)
 	return nil

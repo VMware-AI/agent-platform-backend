@@ -45,6 +45,32 @@ func modelGatewayStatus(s gatewayconnection.Status) model.ModelGatewayStatus {
 	}
 }
 
+// mapRoutingStrategy converts the wire-level RoutingStrategy (litellm's
+// internal names) to the console's GraphQL LoadBalancingStrategy enum. Both
+// sets have 5 values; the mapping is the literal identity in this codebase —
+// a wire value of "latency" maps to the console value LATENCY_BASED, etc.
+// We do the mapping explicitly (rather than via a string lookup table) so the
+// relationship is auditable in one place.
+func mapRoutingStrategy(rs gateway.RoutingStrategy) model.LoadBalancingStrategy {
+	switch rs {
+	case gateway.RoutingStrategyRoundRobin:
+		return model.LoadBalancingStrategyRoundRobin
+	case gateway.RoutingStrategyLatencyBased:
+		return model.LoadBalancingStrategyLatencyBased
+	case gateway.RoutingStrategyUsageBasedV2:
+		return model.LoadBalancingStrategyUsageBasedV2
+	case gateway.RoutingStrategyLeastBusy:
+		return model.LoadBalancingStrategyLeastBusy
+	case gateway.RoutingStrategyCostBased:
+		return model.LoadBalancingStrategyCostBased
+	default:
+		// Unreachable from HTTPClient.GetRoutingStrategy (it returns
+		// ErrUnknownRoutingStrategy for unmapped wire values), but defend
+		// against a future caller that bypasses that path.
+		return model.LoadBalancingStrategyRoundRobin
+	}
+}
+
 // entGatewayStatus maps the console status enum back to the ent column (filter).
 func entGatewayStatus(s model.ModelGatewayStatus) gatewayconnection.Status {
 	switch s {
@@ -72,12 +98,14 @@ func modelGatewaySyncState(s gatewayconnection.Status) model.ModelGatewaySyncSta
 }
 
 // toModelGateway projects a GatewayConnection (+ the live backend-model count) into
-// the console's ModelGateway aggregate. provider/strategy are the console's single
-// supported values; adminUrl is the operator-set admin_url, falling back to the
-// derived <endpoint>/ui; latencyMs is transient (only a live test sets it);
-// lastSyncAt is the real last_synced_at column (nil until the gateway has ever
-// successfully connected), and never moves on an unrelated edit.
-func toModelGateway(g *ent.GatewayConnection, backendModelCount int) *model.ModelGateway {
+// the console's ModelGateway aggregate. provider is the console's single
+// supported value; loadBalancingStrategy is nullable — populated only by a live
+// probe in TestModelGatewayConnection, left nil for query paths. adminUrl is the
+// operator-set admin_url, falling back to the derived <endpoint>/ui; latencyMs is
+// transient (only a live test sets it); lastSyncAt is the real last_synced_at
+// column (nil until the gateway has ever successfully connected), and never
+// moves on an unrelated edit.
+func toModelGateway(g *ent.GatewayConnection, backendModelCount int, strategy *model.LoadBalancingStrategy) *model.ModelGateway {
 	adminURL := g.AdminURL
 	if adminURL == "" {
 		adminURL = strings.TrimRight(g.Endpoint, "/") + "/ui"
@@ -89,7 +117,7 @@ func toModelGateway(g *ent.GatewayConnection, backendModelCount int) *model.Mode
 		Endpoint:              g.Endpoint,
 		Status:                modelGatewayStatus(g.Status),
 		BackendModelCount:     backendModelCount,
-		LoadBalancingStrategy: model.LoadBalancingStrategyRoundRobin,
+		LoadBalancingStrategy: strategy,
 		AdminURL:              &adminURL,
 		LastSyncAt:            g.LastSyncedAt,
 		LastSyncStatus:        modelGatewaySyncState(g.Status),

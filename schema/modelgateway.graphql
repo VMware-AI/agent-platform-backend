@@ -24,6 +24,10 @@ enum ModelGatewaySyncState {
 
 enum LoadBalancingStrategy {
   ROUND_ROBIN
+  LATENCY_BASED
+  USAGE_BASED_V2
+  LEAST_BUSY
+  COST_BASED
 }
 
 type ModelGateway {
@@ -33,7 +37,7 @@ type ModelGateway {
   endpoint: String!
   status: ModelGatewayStatus!
   backendModelCount: Int!
-  loadBalancingStrategy: LoadBalancingStrategy!
+  loadBalancingStrategy: LoadBalancingStrategy
   latencyMs: Int
   adminUrl: String
   lastSyncAt: Time
@@ -76,6 +80,7 @@ type ModelGatewayTestResult {
   message: String!
   testedAt: Time!
   gateway: ModelGateway!
+  loadBalancingStrategy: LoadBalancingStrategy
 }
 
 type DeleteModelGatewayPayload {
@@ -94,7 +99,6 @@ input ModelGatewayInput {
   adminUrl: String
   # litellm master key(接入表单填写)→ 后端写 secret store,只存引用,明文不落库。
   masterKey: String
-  loadBalancingStrategy: LoadBalancingStrategy!
 }
 
 extend type Query {

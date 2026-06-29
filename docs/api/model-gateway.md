@@ -314,7 +314,7 @@ setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier!
 | `endpoint` | `String!` | — |
 | `status` | `ModelGatewayStatus!` | — |
 | `backendModelCount` | `Int!` | — |
-| `loadBalancingStrategy` | `LoadBalancingStrategy!` | — |
+| `loadBalancingStrategy` | `LoadBalancingStrategy` | — |
 | `latencyMs` | `Int` | — |
 | `adminUrl` | `String` | — |
 | `lastSyncAt` | `Time` | — |
@@ -356,6 +356,7 @@ setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier!
 | `message` | `String!` | — |
 | `testedAt` | `Time!` | — |
 | `gateway` | `ModelGateway!` | — |
+| `loadBalancingStrategy` | `LoadBalancingStrategy` | — |
 
 ### ModelRoute
 
@@ -435,7 +436,6 @@ Console 模型路由 create form (创建路由). modelAlias defaults to name whe
 | `endpoint` | `String!` | — |
 | `adminUrl` | `String` | — |
 | `masterKey` | `String` | litellm master key(接入表单填写)→ 后端写 secret store,只存引用,明文不落库。 |
-| `loadBalancingStrategy` | `LoadBalancingStrategy!` | — |
 
 ### ModelGatewaySort
 
@@ -531,6 +531,10 @@ Console 模型路由 edit form (编辑路由). All fields optional — only set 
 | Value | Description |
 |-------|-------------|
 | `ROUND_ROBIN` | — |
+| `LATENCY_BASED` | — |
+| `USAGE_BASED_V2` | — |
+| `LEAST_BUSY` | — |
+| `COST_BASED` | — |
 
 ### ModelGatewayProvider
 

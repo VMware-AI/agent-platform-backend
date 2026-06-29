@@ -44,7 +44,7 @@ func (r *mutationResolver) CreateModelGateway(ctx context.Context, input model.M
 	if err != nil {
 		return nil, err
 	}
-	return toModelGateway(g, cnt), nil
+	return toModelGateway(g, cnt, nil), nil
 }
 
 // UpdateModelGateway edits a gateway's name/endpoint and (on a re-submitted
@@ -88,7 +88,7 @@ func (r *mutationResolver) UpdateModelGateway(ctx context.Context, id string, in
 	if err != nil {
 		return nil, err
 	}
-	return toModelGateway(g, cnt), nil
+	return toModelGateway(g, cnt, nil), nil
 }
 
 // DeleteModelGateway removes a gateway, returning its id for the toast. Shares
@@ -103,7 +103,12 @@ func (r *mutationResolver) DeleteModelGateway(ctx context.Context, id string) (*
 }
 
 // TestModelGatewayConnection pings the live litellm gateway, records the status,
-// and returns the measured round-trip latency.
+// returns the measured round-trip latency, and on a successful connectivity
+// probe ALSO fetches the gateway's current global routing strategy so the
+// console can surface it as a read-only field (loadBalancingStrategy is no
+// longer a writable input — see schema/modelgateway.graphql). The strategy
+// probe is best-effort: a probe failure must not downgrade a successful
+// connectivity test to a failure.
 func (r *mutationResolver) TestModelGatewayConnection(ctx context.Context, id string) (*model.ModelGatewayTestResult, error) {
 	gid, err := uuid.Parse(id)
 	if err != nil {
@@ -116,10 +121,11 @@ func (r *mutationResolver) TestModelGatewayConnection(ctx context.Context, id st
 	// Test the gateway under test specifically: a client bound to its own endpoint
 	// and master key (resolved from the secret store), not a process-wide default —
 	// so the result and persisted status reflect this row even with many gateways.
+	mgr := r.buildGatewayModels(ctx, g)
 	status := gatewayconnection.StatusConnected
 	message := "connection ok"
 	start := time.Now()
-	terr := r.buildGatewayModels(ctx, g).TestConnection(ctx)
+	terr := mgr.TestConnection(ctx)
 	ms := int(time.Since(start).Milliseconds())
 	latency := &ms
 	if terr != nil {
@@ -129,6 +135,20 @@ func (r *mutationResolver) TestModelGatewayConnection(ctx context.Context, id st
 		message = "connection failed"
 		log.Printf("model gateway test failed (id=%s): %v", id, terr)
 	}
+
+	// Best-effort: probe the gateway's current routing strategy. Only attempted
+	// on a successful connectivity test; failure here is logged and the field
+	// stays nil — the test still reports success.
+	var strategy *model.LoadBalancingStrategy
+	if terr == nil {
+		if rs, serr := mgr.GetRoutingStrategy(ctx); serr != nil {
+			log.Printf("model gateway routing-strategy probe failed (id=%s): %v", id, serr)
+		} else {
+			mapped := mapRoutingStrategy(rs)
+			strategy = &mapped
+		}
+	}
+
 	// Persist status + (on success) last_synced_at via the shared helper so this
 	// page and the routing page agree on "last synced".
 	g, err = r.applyGatewayTestResult(ctx, g, status)
@@ -142,12 +162,13 @@ func (r *mutationResolver) TestModelGatewayConnection(ctx context.Context, id st
 		return nil, err
 	}
 	return &model.ModelGatewayTestResult{
-		Success:   ok,
-		Status:    modelGatewayStatus(status),
-		LatencyMs: latency,
-		Message:   message,
-		TestedAt:  time.Now(),
-		Gateway:   toModelGateway(g, cnt),
+		Success:               ok,
+		Status:                modelGatewayStatus(status),
+		LatencyMs:             latency,
+		Message:               message,
+		TestedAt:              time.Now(),
+		Gateway:               toModelGateway(g, cnt, strategy),
+		LoadBalancingStrategy: strategy,
 	}, nil
 }
 
@@ -187,7 +208,7 @@ func (r *queryResolver) ModelGateways(ctx context.Context, filter *model.ModelGa
 	}
 	nodes := make([]model.ModelGateway, 0, len(gws))
 	for _, g := range gws {
-		nodes = append(nodes, *toModelGateway(g, cnt))
+		nodes = append(nodes, *toModelGateway(g, cnt, nil))
 	}
 	return &model.ModelGatewayConnection{Nodes: nodes, TotalCount: total}, nil
 }

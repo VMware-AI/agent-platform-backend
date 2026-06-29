@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -87,5 +88,75 @@ func TestTestConnection(t *testing.T) {
 	}
 	if err := NewHTTPClient(ok.URL, "wrong").TestConnection(context.Background()); err == nil {
 		t.Fatal("bad key should fail TestConnection")
+	}
+}
+
+func TestHTTPClient_GetRoutingStrategy_AllKnownValues(t *testing.T) {
+	cases := []struct {
+		wire string
+		want RoutingStrategy
+	}{
+		{"simple_shuffle", RoutingStrategyRoundRobin},
+		{"latency", RoutingStrategyLatencyBased},
+		{"usage_v2", RoutingStrategyUsageBasedV2},
+		{"least_busy", RoutingStrategyLeastBusy},
+		{"cost", RoutingStrategyCostBased},
+	}
+	for _, tc := range cases {
+		t.Run(tc.wire, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/config/router" {
+					t.Errorf("path = %q, want /config/router", r.URL.Path)
+				}
+				if r.Header.Get("Authorization") != "Bearer sk-master" {
+					t.Errorf("auth header = %q", r.Header.Get("Authorization"))
+				}
+				_, _ = w.Write([]byte(`{"routing_strategy":"` + tc.wire + `"}`))
+			}))
+			defer srv.Close()
+			got, err := NewHTTPClient(srv.URL, "sk-master").GetRoutingStrategy(context.Background())
+			if err != nil {
+				t.Fatalf("GetRoutingStrategy: %v", err)
+			}
+			if got != tc.want {
+				t.Fatalf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestHTTPClient_GetRoutingStrategy_UnknownValue(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"routing_strategy":"vendor_custom"}`))
+	}))
+	defer srv.Close()
+	_, err := NewHTTPClient(srv.URL, "sk-master").GetRoutingStrategy(context.Background())
+	if !errors.Is(err, ErrUnknownRoutingStrategy) {
+		t.Fatalf("err = %v, want ErrUnknownRoutingStrategy", err)
+	}
+}
+
+func TestHTTPClient_GetRoutingStrategy_5xx(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "boom", http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+	_, err := NewHTTPClient(srv.URL, "sk-master").GetRoutingStrategy(context.Background())
+	if err == nil {
+		t.Fatal("5xx should fail")
+	}
+	if errors.Is(err, ErrUnknownRoutingStrategy) {
+		t.Fatalf("5xx must not return ErrUnknownRoutingStrategy: %v", err)
+	}
+}
+
+func TestHTTPClient_GetRoutingStrategy_4xx(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "nope", http.StatusNotFound)
+	}))
+	defer srv.Close()
+	_, err := NewHTTPClient(srv.URL, "sk-master").GetRoutingStrategy(context.Background())
+	if err == nil {
+		t.Fatal("4xx should fail")
 	}
 }

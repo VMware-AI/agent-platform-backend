@@ -376,12 +376,13 @@ type ComplexityRoot struct {
 	}
 
 	ModelGatewayTestResult struct {
-		Gateway   func(childComplexity int) int
-		LatencyMs func(childComplexity int) int
-		Message   func(childComplexity int) int
-		Status    func(childComplexity int) int
-		Success   func(childComplexity int) int
-		TestedAt  func(childComplexity int) int
+		Gateway               func(childComplexity int) int
+		LatencyMs             func(childComplexity int) int
+		LoadBalancingStrategy func(childComplexity int) int
+		Message               func(childComplexity int) int
+		Status                func(childComplexity int) int
+		Success               func(childComplexity int) int
+		TestedAt              func(childComplexity int) int
 	}
 
 	ModelRoute struct {
@@ -2229,6 +2230,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelGatewayTestResult.LatencyMs(childComplexity), true
+	case "ModelGatewayTestResult.loadBalancingStrategy":
+		if e.ComplexityRoot.ModelGatewayTestResult.LoadBalancingStrategy == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewayTestResult.LoadBalancingStrategy(childComplexity), true
 	case "ModelGatewayTestResult.message":
 		if e.ComplexityRoot.ModelGatewayTestResult.Message == nil {
 			break
@@ -5648,6 +5655,10 @@ enum ModelGatewaySyncState {
 
 enum LoadBalancingStrategy {
   ROUND_ROBIN
+  LATENCY_BASED
+  USAGE_BASED_V2
+  LEAST_BUSY
+  COST_BASED
 }
 
 type ModelGateway {
@@ -5657,7 +5668,7 @@ type ModelGateway {
   endpoint: String!
   status: ModelGatewayStatus!
   backendModelCount: Int!
-  loadBalancingStrategy: LoadBalancingStrategy!
+  loadBalancingStrategy: LoadBalancingStrategy
   latencyMs: Int
   adminUrl: String
   lastSyncAt: Time
@@ -5700,6 +5711,7 @@ type ModelGatewayTestResult {
   message: String!
   testedAt: Time!
   gateway: ModelGateway!
+  loadBalancingStrategy: LoadBalancingStrategy
 }
 
 type DeleteModelGatewayPayload {
@@ -5718,7 +5730,6 @@ input ModelGatewayInput {
   adminUrl: String
   # litellm master key(接入表单填写)→ 后端写 secret store,只存引用,明文不落库。
   masterKey: String
-  loadBalancingStrategy: LoadBalancingStrategy!
 }
 
 extend type Query {
@@ -7027,6 +7038,8 @@ func (ec *executionContext) childFields_ModelGatewayTestResult(ctx context.Conte
 		return ec.fieldContext_ModelGatewayTestResult_testedAt(ctx, field)
 	case "gateway":
 		return ec.fieldContext_ModelGatewayTestResult_gateway(ctx, field)
+	case "loadBalancingStrategy":
+		return ec.fieldContext_ModelGatewayTestResult_loadBalancingStrategy(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type ModelGatewayTestResult", field.Name)
 }
@@ -14109,11 +14122,11 @@ func (ec *executionContext) _ModelGateway_loadBalancingStrategy(ctx context.Cont
 			return obj.LoadBalancingStrategy, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v model.LoadBalancingStrategy) graphql.Marshaler {
-			return ec.marshalNLoadBalancingStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.LoadBalancingStrategy) graphql.Marshaler {
+			return ec.marshalOLoadBalancingStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, selections, v)
 		},
 		true,
-		true,
+		false,
 	)
 }
 func (ec *executionContext) fieldContext_ModelGateway_loadBalancingStrategy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -14596,6 +14609,29 @@ func (ec *executionContext) fieldContext_ModelGatewayTestResult_gateway(_ contex
 		},
 	}
 	return fc, nil
+}
+
+func (ec *executionContext) _ModelGatewayTestResult_loadBalancingStrategy(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayTestResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewayTestResult_loadBalancingStrategy(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.LoadBalancingStrategy, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.LoadBalancingStrategy) graphql.Marshaler {
+			return ec.marshalOLoadBalancingStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewayTestResult_loadBalancingStrategy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGatewayTestResult", field, false, false, errors.New("field of type LoadBalancingStrategy does not have child fields"))
 }
 
 func (ec *executionContext) _ModelRoute_id(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
@@ -27322,7 +27358,7 @@ func (ec *executionContext) unmarshalInputModelGatewayInput(ctx context.Context,
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "provider", "endpoint", "adminUrl", "masterKey", "loadBalancingStrategy"}
+	fieldsInOrder := [...]string{"name", "provider", "endpoint", "adminUrl", "masterKey"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -27364,13 +27400,6 @@ func (ec *executionContext) unmarshalInputModelGatewayInput(ctx context.Context,
 				return it, err
 			}
 			it.MasterKey = data
-		case "loadBalancingStrategy":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("loadBalancingStrategy"))
-			data, err := ec.unmarshalNLoadBalancingStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.LoadBalancingStrategy = data
 		}
 	}
 	return it, nil
@@ -31421,7 +31450,7 @@ func (ec *executionContext) _ModelGateway(ctx context.Context, sel ast.Selection
 			}
 		case "loadBalancingStrategy":
 			out.Values[i] = ec._ModelGateway_loadBalancingStrategy(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
+			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
 		case "latencyMs":
@@ -31624,6 +31653,11 @@ func (ec *executionContext) _ModelGatewayTestResult(ctx context.Context, sel ast
 		case "gateway":
 			out.Values[i] = ec._ModelGatewayTestResult_gateway(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "loadBalancingStrategy":
+			out.Values[i] = ec._ModelGatewayTestResult_loadBalancingStrategy(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
 		default:
@@ -36643,16 +36677,6 @@ func (ec *executionContext) marshalNLoadBalanceStrategy2githubᚗcomᚋVMwareᚑ
 	return v
 }
 
-func (ec *executionContext) unmarshalNLoadBalancingStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx context.Context, v any) (model.LoadBalancingStrategy, error) {
-	var res model.LoadBalancingStrategy
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNLoadBalancingStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx context.Context, sel ast.SelectionSet, v model.LoadBalancingStrategy) graphql.Marshaler {
-	return v
-}
-
 func (ec *executionContext) unmarshalNLoginInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoginInput(ctx context.Context, v any) (model.LoginInput, error) {
 	res, err := ec.unmarshalInputLoginInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -38218,6 +38242,22 @@ func (ec *executionContext) unmarshalOLoadBalanceStrategy2ᚖgithubᚗcomᚋVMwa
 }
 
 func (ec *executionContext) marshalOLoadBalanceStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalanceStrategy(ctx context.Context, sel ast.SelectionSet, v *model.LoadBalanceStrategy) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
+func (ec *executionContext) unmarshalOLoadBalancingStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx context.Context, v any) (*model.LoadBalancingStrategy, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.LoadBalancingStrategy)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOLoadBalancingStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx context.Context, sel ast.SelectionSet, v *model.LoadBalancingStrategy) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}

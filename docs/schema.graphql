@@ -410,6 +410,10 @@ enum LoadBalanceStrategy {
 }
 enum LoadBalancingStrategy {
 	ROUND_ROBIN
+	LATENCY_BASED
+	USAGE_BASED_V2
+	LEAST_BUSY
+	COST_BASED
 }
 input LoginInput {
 	email: String!
@@ -462,7 +466,7 @@ type ModelGateway {
 	endpoint: String!
 	status: ModelGatewayStatus!
 	backendModelCount: Int!
-	loadBalancingStrategy: LoadBalancingStrategy!
+	loadBalancingStrategy: LoadBalancingStrategy
 	latencyMs: Int
 	adminUrl: String
 	lastSyncAt: Time
@@ -485,7 +489,6 @@ input ModelGatewayInput {
 	endpoint: String!
 	adminUrl: String
 	masterKey: String
-	loadBalancingStrategy: LoadBalancingStrategy!
 }
 enum ModelGatewayProvider {
 	LITELLM
@@ -527,6 +530,7 @@ type ModelGatewayTestResult {
 	message: String!
 	testedAt: Time!
 	gateway: ModelGateway!
+	loadBalancingStrategy: LoadBalancingStrategy
 }
 type ModelRoute {
 	id: ID!

@@ -109,7 +109,6 @@ func TestModelGateway_NotFoundEdge(t *testing.T) {
 	// updateOneID on an absent row also errors (no row to update).
 	if _, err := mr.UpdateModelGateway(ctx, nonexistentUUIDEdge, model.ModelGatewayInput{
 		Name: "x", Provider: model.ModelGatewayProviderLitellm, Endpoint: "https://x:4000",
-		LoadBalancingStrategy: model.LoadBalancingStrategyRoundRobin,
 	}); err == nil {
 		t.Fatal("UpdateModelGateway(absent): expected not-found error")
 	}
@@ -151,7 +150,6 @@ func TestModelGateway_InvalidIDEdge(t *testing.T) {
 
 	if _, err := mr.UpdateModelGateway(ctx, "not-a-uuid", model.ModelGatewayInput{
 		Name: "x", Provider: model.ModelGatewayProviderLitellm, Endpoint: "https://x:4000",
-		LoadBalancingStrategy: model.LoadBalancingStrategyRoundRobin,
 	}); err == nil || err.Error() != "input: invalid id" {
 		t.Fatalf("UpdateModelGateway(bad id): err = %v, want \"input: invalid id\"", err)
 	}
