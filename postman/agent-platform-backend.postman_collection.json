@@ -1418,7 +1418,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query ModelGateways($filter: ModelGatewayFilterInput, $page: PageInput!, $sort: ModelGatewaySort) {\\n  modelGateways(filter: $filter, page: $page, sort: $sort) {\\n    nodes { id name provider endpoint status loadBalancingStrategy latencyMs adminUrl lastSyncAt lastSyncStatus lastSyncMessage createdAt updatedAt }\\n    totalCount\\n  }\\n  modelGatewaySyncSummary { state lastSyncedAt successCount failedCount message }\\n}\",\n  \"variables\": {\n    \"page\": {\n      \"limit\": 50,\n      \"offset\": 0\n    },\n    \"sort\": {\n      \"field\": \"CREATED_AT\",\n      \"direction\": \"DESC\"\n    },\n    \"filter\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"query ModelGateways($filter: ModelGatewayFilterInput, $page: PageInput!, $sort: ModelGatewaySort) {\\n  modelGateways(filter: $filter, page: $page, sort: $sort) {\\n    nodes { id name provider endpoint status loadBalancingStrategy adminUrl lastSyncAt lastSyncStatus lastSyncMessage createdAt updatedAt }\\n    totalCount\\n  }\\n  modelGatewaySyncSummary { state lastSyncedAt successCount failedCount message }\\n}\",\n  \"variables\": {\n    \"page\": {\n      \"limit\": 50,\n      \"offset\": 0\n    },\n    \"sort\": {\n      \"field\": \"CREATED_AT\",\n      \"direction\": \"DESC\"\n    },\n    \"filter\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1482,7 +1482,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateModelGateway($input: ModelGatewayInput!) {\\n  createModelGateway(input: $input) {\\n    id name provider endpoint status loadBalancingStrategy latencyMs adminUrl lastSyncAt lastSyncStatus lastSyncMessage createdAt updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"primary-litellm\",\n      \"provider\": \"LITELLM\",\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"adminUrl\": \"http://litellm.local:4000/ui\",\n      \"masterKey\": \"sk-litellm-XXXXXX\"\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation CreateModelGateway($input: ModelGatewayInput!) {\\n  createModelGateway(input: $input) {\\n    id name provider endpoint status loadBalancingStrategy adminUrl lastSyncAt lastSyncStatus lastSyncMessage createdAt updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"primary-litellm\",\n      \"provider\": \"LITELLM\",\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"adminUrl\": \"http://litellm.local:4000/ui\",\n      \"masterKey\": \"sk-litellm-XXXXXX\"\n    }\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1514,7 +1514,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpdateModelGateway($id: ID!, $input: ModelGatewayInput!) {\\n  updateModelGateway(id: $id, input: $input) {\\n    id name provider endpoint status loadBalancingStrategy latencyMs adminUrl lastSyncAt lastSyncStatus lastSyncMessage createdAt updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_GATEWAY_ID\",\n    \"input\": {\n      \"name\": \"primary-litellm\",\n      \"provider\": \"LITELLM\",\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"adminUrl\": \"http://litellm.local:4000/ui\",\n      \"masterKey\": \"sk-litellm-NEWSECRET\"\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation UpdateModelGateway($id: ID!, $input: ModelGatewayInput!) {\\n  updateModelGateway(id: $id, input: $input) {\\n    id name provider endpoint status loadBalancingStrategy adminUrl lastSyncAt lastSyncStatus lastSyncMessage createdAt updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_GATEWAY_ID\",\n    \"input\": {\n      \"name\": \"primary-litellm\",\n      \"provider\": \"LITELLM\",\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"adminUrl\": \"http://litellm.local:4000/ui\",\n      \"masterKey\": \"sk-litellm-NEWSECRET\"\n    }\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1578,7 +1578,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation TestModelGatewayConnection($id: ID!) {\\n  testModelGatewayConnection(id: $id) { success status latencyMs message testedAt loadBalancingStrategy gateway { id name provider endpoint status loadBalancingStrategy } }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_GATEWAY_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation TestModelGatewayConnection($id: ID!) {\\n  testModelGatewayConnection(id: $id) { success status message testedAt gateway { id name provider endpoint status loadBalancingStrategy } }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_GATEWAY_ID\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1610,7 +1610,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation TestNewModelGatewayConnection($input: TestModelGatewayConnectionInput!) {\\n  testNewModelGatewayConnection(input: $input) {\\n    success status latencyMs message testedAt loadBalancingStrategy\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"masterKey\": \"sk-litellm-XXXXXX\"\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation TestNewModelGatewayConnection($input: TestModelGatewayConnectionInput!) {\\n  testNewModelGatewayConnection(input: $input) {\\n    success status message testedAt\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"masterKey\": \"sk-litellm-XXXXXX\"\n    }\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1622,7 +1622,7 @@
                 "query"
               ]
             },
-            "description": "Pre-create dry-run probe. The form-level Test Connection button on the create form uses this \u2014 pings a not-yet-saved config. No row is created; the result's `gateway` field is null. Strategy probe is best-effort."
+            "description": "Pre-create dry-run probe. The form-level Test Connection button on the create form uses this \u2014 pings a not-yet-saved config. No row is created; the result's `gateway` field is null. Only the connectivity probe runs (no routing-strategy probe)."
           },
           "response": []
         }
