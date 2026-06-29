@@ -80,6 +80,7 @@ func builtinRoleUUIDFor(roleKey string) string {
 	const ns = "6e3b1c4a-7d8f-49b2-9a5e-1c2d3e4f5a6b"
 	return uuid.NewSHA1(uuid.MustParse(ns), []byte("builtin-role:"+roleKey)).String()
 }
+
 const usersQuery = `{ users { totalCount nodes { username } } }`
 
 func TestE2E_DirectiveBlocksUnauthenticated(t *testing.T) {

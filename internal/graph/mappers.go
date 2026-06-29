@@ -457,10 +457,10 @@ func toAccountUser(u *ent.User, online bool) *model.AccountUser {
 		cs = model.ConnectionStatusOnline
 	}
 	m := &model.AccountUser{
-		ID:               u.ID.String(),
-		Username:         u.Username,
-		DisplayName:      u.Username,
-		Email:            u.Email,
+		ID:          u.ID.String(),
+		Username:    u.Username,
+		DisplayName: u.Username,
+		Email:       u.Email,
 		Role: &model.AccountRoleRef{
 			ID:   builtinRoleUUID(roleKey),
 			Name: name,
