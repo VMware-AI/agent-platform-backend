@@ -38,7 +38,6 @@ type ModelGateway {
   status: ModelGatewayStatus!
   backendModelCount: Int!
   loadBalancingStrategy: LoadBalancingStrategy
-  latencyMs: Int
   adminUrl: String
   lastSyncAt: Time
   lastSyncStatus: ModelGatewaySyncState!
@@ -76,7 +75,6 @@ type ModelGatewaySyncSummary {
 type ModelGatewayTestResult {
   success: Boolean!
   status: ModelGatewayStatus!
-  latencyMs: Int
   message: String!
   testedAt: Time!
   gateway: ModelGateway

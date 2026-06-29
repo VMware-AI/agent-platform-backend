@@ -458,7 +458,6 @@ type ModelGateway struct {
 	Status                ModelGatewayStatus     `json:"status"`
 	BackendModelCount     int                    `json:"backendModelCount"`
 	LoadBalancingStrategy *LoadBalancingStrategy `json:"loadBalancingStrategy,omitempty"`
-	LatencyMs             *int                   `json:"latencyMs,omitempty"`
 	AdminURL              *string                `json:"adminUrl,omitempty"`
 	LastSyncAt            *time.Time             `json:"lastSyncAt,omitempty"`
 	LastSyncStatus        ModelGatewaySyncState  `json:"lastSyncStatus"`
@@ -501,7 +500,6 @@ type ModelGatewaySyncSummary struct {
 type ModelGatewayTestResult struct {
 	Success               bool                   `json:"success"`
 	Status                ModelGatewayStatus     `json:"status"`
-	LatencyMs             *int                   `json:"latencyMs,omitempty"`
 	Message               string                 `json:"message"`
 	TestedAt              time.Time              `json:"testedAt"`
 	Gateway               *ModelGateway          `json:"gateway,omitempty"`

@@ -122,7 +122,7 @@ func (r *mutationResolver) TestModelGatewayConnection(ctx context.Context, id st
 	// and master key (resolved from the secret store), not a process-wide default —
 	// so the result and persisted status reflect this row even with many gateways.
 	mgr := r.buildGatewayModels(ctx, g)
-	status, latency, strategy := probeGatewayConnection(ctx, mgr)
+	status, strategy := probeGatewayConnection(ctx, mgr)
 
 	// Persist status + (on success) last_synced_at via the shared helper so this
 	// page and the routing page agree on "last synced".
@@ -139,7 +139,6 @@ func (r *mutationResolver) TestModelGatewayConnection(ctx context.Context, id st
 	return &model.ModelGatewayTestResult{
 		Success:               ok,
 		Status:                modelGatewayStatus(status),
-		LatencyMs:             latency,
 		Message:               testResultMessage(ok),
 		TestedAt:              time.Now(),
 		Gateway:               toModelGateway(g, cnt, strategy),
@@ -150,7 +149,9 @@ func (r *mutationResolver) TestModelGatewayConnection(ctx context.Context, id st
 // TestNewModelGatewayConnection is the pre-create dry-run: probe a not-yet-
 // persisted gateway config. The form-level "Test Connection" button on the
 // 接入表单 uses this. No row is created or modified; the result's `gateway`
-// field is null. Strategy probe is best-effort.
+// field is null. Only the connectivity probe runs — the routing-strategy
+// probe is intentionally skipped (dry-run is for "can I reach this box?",
+// not "what's it configured to do?").
 func (r *mutationResolver) TestNewModelGatewayConnection(ctx context.Context, input model.TestModelGatewayConnectionInput) (*model.ModelGatewayTestResult, error) {
 	if input.Endpoint == "" || input.MasterKey == "" {
 		return nil, gqlerror.Errorf("endpoint and masterKey are required")
@@ -163,28 +164,17 @@ func (r *mutationResolver) TestNewModelGatewayConnection(ctx context.Context, in
 	if r.GatewayClientFor != nil {
 		mgr = r.GatewayClientFor(ctx, input.Endpoint, input.MasterKey)
 	}
-	status, latency, strategy := probeGatewayConnection(ctx, mgr)
+	status := probeGatewayConnectionStatus(ctx, mgr)
 	ok := status == gatewayconnection.StatusConnected
 	r.audit(ctx, "model_gateway.test_dry_run", "gateway_connection", input.Endpoint, ok, actorID(auth.FromContext(ctx)))
 	return &model.ModelGatewayTestResult{
 		Success:               ok,
 		Status:                modelGatewayStatus(status),
-		LatencyMs:             latency,
 		Message:               testResultMessage(ok),
 		TestedAt:              time.Now(),
 		Gateway:               nil, // no row → no projected gateway
-		LoadBalancingStrategy: strategy,
+		LoadBalancingStrategy: nil, // dry-run deliberately does not probe strategy
 	}, nil
-}
-
-// testResultMessage maps a success bool to the console-facing message. Both
-// the id-based and the dry-run test resolvers return the same two messages —
-// the raw transport error is logged server-side and never reaches the client.
-func testResultMessage(ok bool) string {
-	if ok {
-		return "connection ok"
-	}
-	return "connection failed"
 }
 
 // ModelGateways is a filtered/paged (limit/offset) list of gateways projected as
@@ -273,4 +263,14 @@ func (r *queryResolver) ModelGatewaySyncSummary(ctx context.Context) (*model.Mod
 		SuccessCount: success,
 		FailedCount:  failed,
 	}, nil
+}
+
+// testResultMessage maps a success bool to the console-facing message. Both
+// the id-based and the dry-run test resolvers return the same two messages —
+// the raw transport error is logged server-side and never reaches the client.
+func testResultMessage(ok bool) string {
+	if ok {
+		return "connection ok"
+	}
+	return "connection failed"
 }

@@ -354,7 +354,6 @@ type ComplexityRoot struct {
 		LastSyncAt            func(childComplexity int) int
 		LastSyncMessage       func(childComplexity int) int
 		LastSyncStatus        func(childComplexity int) int
-		LatencyMs             func(childComplexity int) int
 		LoadBalancingStrategy func(childComplexity int) int
 		Name                  func(childComplexity int) int
 		Provider              func(childComplexity int) int
@@ -377,7 +376,6 @@ type ComplexityRoot struct {
 
 	ModelGatewayTestResult struct {
 		Gateway               func(childComplexity int) int
-		LatencyMs             func(childComplexity int) int
 		LoadBalancingStrategy func(childComplexity int) int
 		Message               func(childComplexity int) int
 		Status                func(childComplexity int) int
@@ -2139,12 +2137,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelGateway.LastSyncStatus(childComplexity), true
-	case "ModelGateway.latencyMs":
-		if e.ComplexityRoot.ModelGateway.LatencyMs == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ModelGateway.LatencyMs(childComplexity), true
 	case "ModelGateway.loadBalancingStrategy":
 		if e.ComplexityRoot.ModelGateway.LoadBalancingStrategy == nil {
 			break
@@ -2226,12 +2218,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelGatewayTestResult.Gateway(childComplexity), true
-	case "ModelGatewayTestResult.latencyMs":
-		if e.ComplexityRoot.ModelGatewayTestResult.LatencyMs == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ModelGatewayTestResult.LatencyMs(childComplexity), true
 	case "ModelGatewayTestResult.loadBalancingStrategy":
 		if e.ComplexityRoot.ModelGatewayTestResult.LoadBalancingStrategy == nil {
 			break
@@ -5683,7 +5669,6 @@ type ModelGateway {
   status: ModelGatewayStatus!
   backendModelCount: Int!
   loadBalancingStrategy: LoadBalancingStrategy
-  latencyMs: Int
   adminUrl: String
   lastSyncAt: Time
   lastSyncStatus: ModelGatewaySyncState!
@@ -5721,7 +5706,6 @@ type ModelGatewaySyncSummary {
 type ModelGatewayTestResult {
   success: Boolean!
   status: ModelGatewayStatus!
-  latencyMs: Int
   message: String!
   testedAt: Time!
   gateway: ModelGateway
@@ -7006,8 +6990,6 @@ func (ec *executionContext) childFields_ModelGateway(ctx context.Context, field 
 		return ec.fieldContext_ModelGateway_backendModelCount(ctx, field)
 	case "loadBalancingStrategy":
 		return ec.fieldContext_ModelGateway_loadBalancingStrategy(ctx, field)
-	case "latencyMs":
-		return ec.fieldContext_ModelGateway_latencyMs(ctx, field)
 	case "adminUrl":
 		return ec.fieldContext_ModelGateway_adminUrl(ctx, field)
 	case "lastSyncAt":
@@ -7056,8 +7038,6 @@ func (ec *executionContext) childFields_ModelGatewayTestResult(ctx context.Conte
 		return ec.fieldContext_ModelGatewayTestResult_success(ctx, field)
 	case "status":
 		return ec.fieldContext_ModelGatewayTestResult_status(ctx, field)
-	case "latencyMs":
-		return ec.fieldContext_ModelGatewayTestResult_latencyMs(ctx, field)
 	case "message":
 		return ec.fieldContext_ModelGatewayTestResult_message(ctx, field)
 	case "testedAt":
@@ -14173,29 +14153,6 @@ func (ec *executionContext) fieldContext_ModelGateway_loadBalancingStrategy(_ co
 	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type LoadBalancingStrategy does not have child fields"))
 }
 
-func (ec *executionContext) _ModelGateway_latencyMs(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ModelGateway_latencyMs(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.LatencyMs, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
-			return ec.marshalOInt2ᚖint(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_ModelGateway_latencyMs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
 func (ec *executionContext) _ModelGateway_adminUrl(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -14548,29 +14505,6 @@ func (ec *executionContext) _ModelGatewayTestResult_status(ctx context.Context, 
 }
 func (ec *executionContext) fieldContext_ModelGatewayTestResult_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ModelGatewayTestResult", field, false, false, errors.New("field of type ModelGatewayStatus does not have child fields"))
-}
-
-func (ec *executionContext) _ModelGatewayTestResult_latencyMs(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayTestResult) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ModelGatewayTestResult_latencyMs(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.LatencyMs, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
-			return ec.marshalOInt2ᚖint(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_ModelGatewayTestResult_latencyMs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ModelGatewayTestResult", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
 func (ec *executionContext) _ModelGatewayTestResult_message(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayTestResult) (ret graphql.Marshaler) {
@@ -31592,11 +31526,6 @@ func (ec *executionContext) _ModelGateway(ctx context.Context, sel ast.Selection
 			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
-		case "latencyMs":
-			out.Values[i] = ec._ModelGateway_latencyMs(ctx, field, obj)
-			if out.Values[i] == graphql.RequiredNull {
-				out.Invalids++
-			}
 		case "adminUrl":
 			out.Values[i] = ec._ModelGateway_adminUrl(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
@@ -31772,11 +31701,6 @@ func (ec *executionContext) _ModelGatewayTestResult(ctx context.Context, sel ast
 		case "status":
 			out.Values[i] = ec._ModelGatewayTestResult_status(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "latencyMs":
-			out.Values[i] = ec._ModelGatewayTestResult_latencyMs(ctx, field, obj)
-			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
 		case "message":

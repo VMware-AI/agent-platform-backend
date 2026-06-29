@@ -47,29 +47,38 @@ func modelGatewayStatus(s gatewayconnection.Status) model.ModelGatewayStatus {
 }
 
 // probeGatewayConnection runs the connectivity test + best-effort strategy
-// probe against a pre-built ModelManager. The id-based TestModelGatewayConnection
-// and the dry-run pre-create testNewModelGatewayConnection both go through
-// here. Returns the projected status, the measured latency, and the probed
-// strategy (nil on probe failure). Probe errors are logged server-side, never
-// returned to the caller; the caller decides how to wrap the result.
-func probeGatewayConnection(ctx context.Context, mgr gateway.ModelManager) (gatewayconnection.Status, *int, *model.LoadBalancingStrategy) {
+// probe against a pre-built ModelManager. Used by the id-based post-create
+// testModelGatewayConnection — the only flow that surfaces the live routing
+// strategy for the user to read off the row. Returns the projected status and
+// the probed strategy (nil on probe failure). Probe errors are logged
+// server-side, never returned to the caller.
+func probeGatewayConnection(ctx context.Context, mgr gateway.ModelManager) (gatewayconnection.Status, *model.LoadBalancingStrategy) {
+	status := probeGatewayConnectionStatus(ctx, mgr)
+	if status != gatewayconnection.StatusConnected {
+		return status, nil
+	}
+	rs, err := mgr.GetRoutingStrategy(ctx)
+	if err != nil {
+		log.Printf("model gateway routing-strategy probe failed: %v", err)
+		return status, nil
+	}
+	mapped := mapRoutingStrategy(rs)
+	return status, &mapped
+}
+
+// probeGatewayConnectionStatus runs the connectivity test only. Used by the
+// pre-create testNewModelGatewayConnection, which deliberately does NOT probe
+// the routing strategy — that field on the result is always null in the
+// dry-run flow. Returns the projected status. The transport error is logged
+// server-side, never returned to the caller.
+func probeGatewayConnectionStatus(ctx context.Context, mgr gateway.ModelManager) gatewayconnection.Status {
 	status := gatewayconnection.StatusConnected
-	start := time.Now()
 	err := mgr.TestConnection(ctx)
-	ms := int(time.Since(start).Milliseconds())
-	latency := &ms
 	if err != nil {
 		status = gatewayconnection.StatusError
 		log.Printf("model gateway probe failed: %v", err)
-		return status, latency, nil
 	}
-	rs, serr := mgr.GetRoutingStrategy(ctx)
-	if serr != nil {
-		log.Printf("model gateway routing-strategy probe failed: %v", serr)
-		return status, latency, nil
-	}
-	mapped := mapRoutingStrategy(rs)
-	return status, latency, &mapped
+	return status
 }
 
 // mapRoutingStrategy converts the wire-level RoutingStrategy (litellm's
