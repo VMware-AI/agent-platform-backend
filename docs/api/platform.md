@@ -370,11 +370,11 @@ updatePlatformSettings(input: UpdatePlatformSettingsInput!): PlatformSettings!
 
 *Object*
 
-The user's role as a lightweight reference (embedded in AccountUser).
+The user's role as a lightweight reference (embedded in AccountUser). id is a standard UUID, derived from the same role key as the corresponding Role entity in the roles query — so AccountUser.role.id === roles(roleId).id for the same role key.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | `ID!` | Role UUID (matches `Role.id`). |
+| `id` | `ID!` | — |
 | `name` | `String!` | — |
 
 ### AccountUser
@@ -487,12 +487,12 @@ The user's role as a lightweight reference (embedded in AccountUser).
 
 *Object*
 
-A built-in assignable role surfaced as an entity.
+A built-in assignable role surfaced as an entity. id is a standard UUID (deterministically derived from roleKey — see roles_builtin.go). roleKey is the stable string key ("admin" | "user" | "read_only") used in @hasRole directives and as a logical identifier.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | `ID!` | Deterministic UUID (stable across deployments — derived from `roleKey`). |
-| `roleKey` | `String!` | Stable string key (`"admin"` / `"user"` / `"read_only"`) used for filtering and routing. |
+| `id` | `ID!` | — |
+| `roleKey` | `String!` | — |
 | `name` | `String!` | — |
 | `description` | `String!` | — |
 | `userCount` | `Int!` | — |
@@ -532,7 +532,7 @@ A built-in assignable role surfaced as an entity.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `roleId` | `ID!` | — |
+| `roleId` | `ID!` | Built-in role UUID (from the roles query). User-id-as-string mapping is now server-driven via Role.roleKey. |
 | `userIds` | `[ID!]!` | — |
 
 ### CreateCustomRoleInput
@@ -597,7 +597,7 @@ A built-in assignable role surfaced as an entity.
 | `roleKeyword` | `String` | — |
 | `emailKeyword` | `String` | — |
 | `statusKeyword` | `ConnectionStatus` | — |
-| `roleId` | `ID` | — |
+| `roleId` | `ID` | Built-in role UUID (from the roles query). |
 
 ### UserSort
 
