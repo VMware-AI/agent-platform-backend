@@ -191,7 +191,7 @@ func (r *mutationResolver) RevokeVirtualKey(ctx context.Context, id string) (boo
 	// Revoke at the gateway FIRST, and only then mark the row revoked. If no
 	// gateway resolves, fail rather than flip the status: marking a still-live key
 	// "revoked" hides it from the reconciler (terminal state) and it keeps billing.
-	gw := r.gatewayKeyClient(ctx, deptIDFromTeam(&vk.TeamID))
+	gw := r.gatewayKeyClientForVK(ctx, vk)
 	if gw == nil {
 		return false, gqlerror.Errorf("model gateway is not configured; key not revoked at gateway")
 	}
@@ -222,7 +222,7 @@ func (r *mutationResolver) RegenerateVirtualKey(ctx context.Context, id string) 
 	if vk.Status == virtualkey.StatusRevoked {
 		return nil, gqlerror.Errorf("key is revoked and cannot be regenerated")
 	}
-	gw := r.gatewayKeyClient(ctx, deptIDFromTeam(&vk.TeamID))
+	gw := r.gatewayKeyClientForVK(ctx, vk)
 	if gw == nil {
 		return nil, gqlerror.Errorf("model gateway is not configured")
 	}
@@ -273,7 +273,7 @@ func (r *mutationResolver) SetVirtualKeyEnabled(ctx context.Context, id string, 
 	// Propagate the toggle to the gateway so a disabled key actually stops working
 	// there — not just in our DB (litellm /key/update `blocked`). Gateway-first:
 	// only flip the row after the gateway confirms; require a gateway, like revoke.
-	gw := r.gatewayKeyClient(ctx, deptIDFromTeam(&vk.TeamID))
+	gw := r.gatewayKeyClientForVK(ctx, vk)
 	if gw == nil {
 		return nil, gqlerror.Errorf("model gateway is not configured")
 	}
