@@ -139,6 +139,9 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		SetUserID(ag.OwnerUserID).
 		SetModels([]string{gateway.DefaultRouterModel}).
 		SetAlias(ag.Name)
+	if t.gwConn != nil {
+		vkCreate.SetGatewayConnectionID(t.gwConn.ID) // LLD-14: pin lifecycle to the issuing gateway
+	}
 	if t.deployTeamID != "" {
 		// Bind the key to its department/team so RecycleAgent revokes on the
 		// department's gateway (deptIDFromTeam(vk.TeamID)), not the default.

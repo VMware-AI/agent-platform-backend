@@ -131,6 +131,20 @@ func (_c *VirtualKeyCreate) SetNillableTeamID(v *string) *VirtualKeyCreate {
 	return _c
 }
 
+// SetGatewayConnectionID sets the "gateway_connection_id" field.
+func (_c *VirtualKeyCreate) SetGatewayConnectionID(v uuid.UUID) *VirtualKeyCreate {
+	_c.mutation.SetGatewayConnectionID(v)
+	return _c
+}
+
+// SetNillableGatewayConnectionID sets the "gateway_connection_id" field if the given value is not nil.
+func (_c *VirtualKeyCreate) SetNillableGatewayConnectionID(v *uuid.UUID) *VirtualKeyCreate {
+	if v != nil {
+		_c.SetGatewayConnectionID(*v)
+	}
+	return _c
+}
+
 // SetModels sets the "models" field.
 func (_c *VirtualKeyCreate) SetModels(v []string) *VirtualKeyCreate {
 	_c.mutation.SetModels(v)
@@ -343,6 +357,10 @@ func (_c *VirtualKeyCreate) createSpec() (*VirtualKey, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.TeamID(); ok {
 		_spec.SetField(virtualkey.FieldTeamID, field.TypeString, value)
 		_node.TeamID = value
+	}
+	if value, ok := _c.mutation.GatewayConnectionID(); ok {
+		_spec.SetField(virtualkey.FieldGatewayConnectionID, field.TypeUUID, value)
+		_node.GatewayConnectionID = &value
 	}
 	if value, ok := _c.mutation.Models(); ok {
 		_spec.SetField(virtualkey.FieldModels, field.TypeJSON, value)

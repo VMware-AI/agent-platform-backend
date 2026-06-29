@@ -776,6 +776,7 @@ var (
 		{Name: "agent_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "rate_limit_policy_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "team_id", Type: field.TypeString, Nullable: true},
+		{Name: "gateway_connection_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "models", Type: field.TypeJSON, Nullable: true},
 		{Name: "max_budget", Type: field.TypeFloat64, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "disabled", "revoked"}, Default: "active"},
