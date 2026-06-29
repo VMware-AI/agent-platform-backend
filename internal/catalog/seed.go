@@ -67,11 +67,15 @@ var builtins = []entry{
 		knowledgePrompt: knowledgePromptFor("小怪", DefaultKnowledgeRoot),
 	},
 	{
-		kind:            "qoder",
-		display:         "Qoder",
-		description:     "在线 agent;curl 安装,需外联(air-gap 不可用)。",
-		installMethod:   agenttemplate.InstallMethodCurl,
-		installCommand:  "curl -fsSL https://qoder.sh/install.sh | sh",
+		kind:          "qoder",
+		display:       "Qoder",
+		description:   "AI agent;curl 安装脚本(内网镜像,air-gap 可用)。",
+		installMethod: agenttemplate.InstallMethodCurl,
+		// Fetch qoder's install script from the offline mirror, not the public
+		// qoder.sh, so air-gap deployments work via the same AGENT_PKG_BASE_URL knob
+		// as goose/xiaoguai (#75). When the mirror is unset the placeholder is left
+		// visible (fail-obvious), matching the other built-ins.
+		installCommand:  "curl -fsSL {{AGENT_PKG_BASE_URL}}/qoder/install.sh | sh",
 		knowledgeRoot:   DefaultKnowledgeRoot,
 		knowledgePrompt: knowledgePromptFor("Qoder", DefaultKnowledgeRoot),
 	},
