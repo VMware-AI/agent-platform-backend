@@ -418,3 +418,75 @@ func TestModelGateway_TestProbeFailureLeavesFieldNull(t *testing.T) {
 		t.Fatalf("gateway.LoadBalancingStrategy must be nil when probe fails, got %v", *res.Gateway.LoadBalancingStrategy)
 	}
 }
+
+// Dry-run: a pre-create test of an unsaved gateway config. Returns a result
+// with the probed strategy attached, gateway nil, success=true.
+func TestModelGateway_DryRunProbe_Success(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	r.GatewayClientFor = func(context.Context, string, string) gateway.ModelManager {
+		return &fakeModelManager{strategy: gateway.RoutingStrategyUsageBasedV2}
+	}
+	ctx := adminCtx()
+	mr := &mutationResolver{r}
+
+	res, err := mr.TestNewModelGatewayConnection(ctx, model.TestModelGatewayConnectionInput{
+		Endpoint:  "https://litellm:4000",
+		MasterKey: "sk-typed",
+	})
+	if err != nil {
+		t.Fatalf("TestNewModelGatewayConnection: %v", err)
+	}
+	if !res.Success || res.Status != model.ModelGatewayStatusConnected {
+		t.Fatalf("dry-run success path: %+v", res)
+	}
+	if res.Gateway != nil {
+		t.Fatalf("dry-run must not project a gateway: %+v", res.Gateway)
+	}
+	if res.LoadBalancingStrategy == nil || *res.LoadBalancingStrategy != model.LoadBalancingStrategyUsageBasedV2 {
+		t.Fatalf("dry-run strategy: %v", res.LoadBalancingStrategy)
+	}
+}
+
+// Dry-run failure: TestConnection errors. Strategy is nil, success=false.
+func TestModelGateway_DryRunProbe_Failure(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	r.GatewayClientFor = func(context.Context, string, string) gateway.ModelManager {
+		return &fakeModelManager{testErr: errors.New("dial tcp: refused")}
+	}
+	ctx := adminCtx()
+	mr := &mutationResolver{r}
+
+	res, err := mr.TestNewModelGatewayConnection(ctx, model.TestModelGatewayConnectionInput{
+		Endpoint:  "https://litellm:4000",
+		MasterKey: "sk-typed",
+	})
+	if err != nil {
+		t.Fatalf("TestNewModelGatewayConnection: %v", err)
+	}
+	if res.Success {
+		t.Fatalf("dry-run failure path should report success=false: %+v", res)
+	}
+	if res.Message != "connection failed" {
+		t.Fatalf("error message should be sanitized, got %q", res.Message)
+	}
+	if res.Gateway != nil {
+		t.Fatalf("dry-run must not project a gateway")
+	}
+	if res.LoadBalancingStrategy != nil {
+		t.Fatalf("dry-run failure must leave strategy nil, got %v", *res.LoadBalancingStrategy)
+	}
+}
+
+// Empty input → gqlerror before any network call.
+func TestModelGateway_DryRunProbe_InputValidation(t *testing.T) {
+	r, cleanup := newTestResolver(t)
+	defer cleanup()
+	ctx := adminCtx()
+	mr := &mutationResolver{r}
+
+	if _, err := mr.TestNewModelGatewayConnection(ctx, model.TestModelGatewayConnectionInput{}); err == nil {
+		t.Fatal("empty input must fail validation")
+	}
+}
