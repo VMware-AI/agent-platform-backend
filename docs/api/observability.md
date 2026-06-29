@@ -29,7 +29,7 @@ rateLimitPolicies: [RateLimitPolicy!]!
 ```
 
 - **Returns:** `[RateLimitPolicy!]!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 ### `requestMetrics`
 

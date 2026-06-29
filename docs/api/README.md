@@ -248,8 +248,7 @@ Platform role enum (用于 @hasRole 鉴权 + User.role). Renamed from `Role` so 
 |-------|-------------|
 | `admin` | — |
 | `user` | — |
-| `observability` | — |
-| `tenant_admin` | — |
+| `read_only` | — |
 
 ### Map
 

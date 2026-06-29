@@ -40,7 +40,7 @@ func TestCustomRolePermissions(t *testing.T) {
 	}
 
 	// assign role to a user
-	u := mkUser(t, mr, ctx, "obs", "o@x.io", model.RoleNameObservability)
+	u := mkUser(t, mr, ctx, "obs", "o@x.io", model.RoleNameReadOnly)
 	if ok, err := mr.AssignUserRole(ctx, u.ID, role.ID); err != nil || !ok {
 		t.Fatalf("AssignUserRole: %v", err)
 	}

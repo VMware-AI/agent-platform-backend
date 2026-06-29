@@ -11,15 +11,29 @@ func TestRolePermissionMatrix(t *testing.T) {
 		perm string
 		want bool
 	}{
+		// admin: all 6 permissions
 		{RoleAdmin, PermUserManage, true},
 		{RoleAdmin, PermAuditView, true},
-		{RoleObservability, PermAuditView, true},
-		{RoleObservability, PermMeteringView, true},
-		{RoleObservability, PermUserManage, false}, // observability cannot manage users
-		{RoleObservability, PermKeyManage, false},
+		{RoleAdmin, PermMeteringView, true},
+		{RoleAdmin, PermAgentManage, true},
+		{RoleAdmin, PermKeyManage, true},
+		{RoleAdmin, PermRouteManage, true},
+		// read_only: NO permissions in the matrix. Read access flows through
+		// @hasRole(any: [admin, read_only]) gates on the read-only fields,
+		// NOT through this matrix (so writes stay admin-only by construction).
+		{RoleReadOnly, PermAuditView, false},
+		{RoleReadOnly, PermMeteringView, false},
+		{RoleReadOnly, PermUserManage, false},
+		{RoleReadOnly, PermKeyManage, false},
+		{RoleReadOnly, PermAgentManage, false},
+		{RoleReadOnly, PermRouteManage, false},
+		// user: same — owner-scoped reads/writes are enforced at the resolver.
 		{RoleUser, PermAuditView, false},
+		{RoleUser, PermMeteringView, false},
 		{RoleUser, PermUserManage, false},
-		{RoleTenantAdmin, PermUserManage, true},
+		{RoleUser, PermKeyManage, false},
+		{RoleUser, PermAgentManage, false},
+		{RoleUser, PermRouteManage, false},
 	}
 	for _, c := range cases {
 		if got := c.role.HasPermission(c.perm); got != c.want {

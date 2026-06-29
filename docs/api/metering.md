@@ -8,7 +8,7 @@
 
 ### `tokenUsage`
 
-metering:view permission (admin + observability).
+metering:view permission (admin + read_only).
 
 ```graphql
 tokenUsage(userId: ID, page: PageInput): [TokenUsage!]!

@@ -13,7 +13,7 @@ users(filter: UserFilter, pagination: Pagination, sort: UserSort): UserConnectio
 ```
 
 - **Returns:** `UserConnection!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -28,7 +28,7 @@ roles(pagination: Pagination): RoleConnection!
 ```
 
 - **Returns:** `RoleConnection!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -41,7 +41,7 @@ role(id: ID!): Role
 ```
 
 - **Returns:** `Role`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -56,7 +56,7 @@ userExists(username: String, email: String): Boolean!
 ```
 
 - **Returns:** `Boolean!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -70,7 +70,7 @@ customRoles: [CustomRole!]!
 ```
 
 - **Returns:** `[CustomRole!]!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 ### `permissions`
 
@@ -101,7 +101,7 @@ departments: [Department!]!
 ```
 
 - **Returns:** `[Department!]!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 ### `departmentMembers`
 
@@ -136,7 +136,7 @@ createUser(input: CreateUserInput!): CreateUserPayload!
 ```
 
 - **Returns:** `CreateUserPayload!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -149,7 +149,7 @@ updateUser(id: ID!, input: UpdateUserInput!): AccountUser!
 ```
 
 - **Returns:** `AccountUser!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -163,7 +163,7 @@ deleteUser(id: ID!): DeleteUserPayload!
 ```
 
 - **Returns:** `DeleteUserPayload!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -176,7 +176,7 @@ resetUserPassword(id: ID!): ResetPasswordPayload!
 ```
 
 - **Returns:** `ResetPasswordPayload!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -189,7 +189,7 @@ toggleUserEnabled(id: ID!): ToggleUserEnabledPayload!
 ```
 
 - **Returns:** `ToggleUserEnabledPayload!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -202,7 +202,7 @@ assignUsersToRole(input: AssignUsersToRoleInput!): AssignUsersToRolePayload!
 ```
 
 - **Returns:** `AssignUsersToRolePayload!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -215,7 +215,7 @@ createCustomRole(input: CreateCustomRoleInput!): CustomRole!
 ```
 
 - **Returns:** `CustomRole!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -228,7 +228,7 @@ deleteCustomRole(id: ID!): Boolean!
 ```
 
 - **Returns:** `Boolean!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -257,7 +257,7 @@ setRolePermissions(roleId: ID!, permissionKeys: [String!]!): CustomRole!
 ```
 
 - **Returns:** `CustomRole!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -271,7 +271,7 @@ assignUserRole(userId: ID!, roleId: ID!): Boolean!
 ```
 
 - **Returns:** `Boolean!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -285,7 +285,7 @@ removeUserRole(userId: ID!, roleId: ID!): Boolean!
 ```
 
 - **Returns:** `Boolean!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -301,7 +301,7 @@ createDepartment(input: CreateDepartmentInput!): Department!
 ```
 
 - **Returns:** `Department!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -314,7 +314,7 @@ deleteDepartment(id: ID!): Boolean!
 ```
 
 - **Returns:** `Boolean!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -374,7 +374,7 @@ The user's role as a lightweight reference (embedded in AccountUser).
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | `ID!` | — |
+| `id` | `ID!` | Role UUID (matches `Role.id`). |
 | `name` | `String!` | — |
 
 ### AccountUser
@@ -487,11 +487,12 @@ The user's role as a lightweight reference (embedded in AccountUser).
 
 *Object*
 
-A built-in assignable role surfaced as an entity (id = the role key).
+A built-in assignable role surfaced as an entity.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | `ID!` | — |
+| `id` | `ID!` | Deterministic UUID (stable across deployments — derived from `roleKey`). |
+| `roleKey` | `String!` | Stable string key (`"admin"` / `"user"` / `"read_only"`) used for filtering and routing. |
 | `name` | `String!` | — |
 | `description` | `String!` | — |
 | `userCount` | `Int!` | — |

@@ -8,14 +8,14 @@
 
 ### `dashboardOverview`
 
-The console overview page. recentLimit/noticeLimit cap the two lists (默认 5). Figures are platform-global (counts/notices are not tenant-scoped yet), so this is restricted to platform roles — exposing it to tenant_admin would leak other tenants' counts/usage/audit. Per-tenant dashboard scoping is future work (C1).
+The console overview page. recentLimit/noticeLimit cap the two lists (默认 5). Figures are platform-global (counts/notices are not tenant-scoped yet), so this is restricted to platform roles — exposing it to read_only would leak other tenants' counts/usage/audit. Per-tenant dashboard scoping is future work (C1).
 
 ```graphql
 dashboardOverview(recentLimit: Int = 5, noticeLimit: Int = 5): DashboardOverview!
 ```
 
 - **Returns:** `DashboardOverview!`
-- **Auth:** `@hasRole(any: [admin, observability])`
+- **Auth:** `@hasRole(any: [admin, read_only])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|

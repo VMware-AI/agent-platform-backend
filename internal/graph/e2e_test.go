@@ -9,6 +9,7 @@ import (
 	"github.com/99designs/gqlgen/client"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
+	"github.com/google/uuid"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
@@ -66,7 +67,19 @@ func (e *e2eEnv) seedUser(t *testing.T, username string, role user.Role) *http.C
 	return &http.Cookie{Name: auth.SessionCookie, Value: sid}
 }
 
-const createUserMut = `mutation { createUser(input:{username:"newbie", displayName:"newbie", email:"nb@x.io", roleId:"user", passwordMode:CUSTOM, customPassword:"NewbiePass12"}){ user{ id username role{ id } } } }`
+// e2e test inlining roleId as the deterministic UUID for the "user" role
+// (same UUID across deployments — derived from the role key via builtinRoleUUID).
+// Hardcoded here so this test file can stay in package graph_test (no access
+// to the unexported builtinRoleUUID function).
+var createUserMut = `mutation { createUser(input:{username:"newbie", displayName:"newbie", email:"nb@x.io", roleId:"` + builtinRoleUUIDFor("user") + `", passwordMode:CUSTOM, customPassword:"NewbiePass12"}){ user{ id username role{ id } } } }`
+
+// builtinRoleUUIDFor exposes a copy of the UUID-derivation logic for the
+// package graph_test e2e tests. The hash namespace MUST match the production
+// builtinRoleNamespace constant in roles_builtin.go — keep them in sync.
+func builtinRoleUUIDFor(roleKey string) string {
+	const ns = "6e3b1c4a-7d8f-49b2-9a5e-1c2d3e4f5a6b"
+	return uuid.NewSHA1(uuid.MustParse(ns), []byte("builtin-role:"+roleKey)).String()
+}
 const usersQuery = `{ users { totalCount nodes { username } } }`
 
 func TestE2E_DirectiveBlocksUnauthenticated(t *testing.T) {
@@ -112,7 +125,7 @@ func TestE2E_AdminAllowed(t *testing.T) {
 		}
 	}
 	e.gql.MustPost(createUserMut, &resp, client.AddCookie(adminCookie))
-	if resp.CreateUser.User.Username != "newbie" || resp.CreateUser.User.Role.ID != "user" {
+	if resp.CreateUser.User.Username != "newbie" || resp.CreateUser.User.Role.ID != builtinRoleUUIDFor("user") {
 		t.Fatalf("unexpected createUser result: %+v", resp.CreateUser)
 	}
 

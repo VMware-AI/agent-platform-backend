@@ -72,3 +72,29 @@ func TestEnvScope_TenantHardBeforeEnvSoft(t *testing.T) {
 	// only tenant A's row — tenant B's stays hidden though it matches the env
 	assertNames(t, names(got, func(a model.Artifact) string { return a.Name }), "a-in-env")
 }
+
+// names and assertNames are shared test helpers (formerly in
+// cross_tenant_read_test.go, removed when the tenant-scope tests were deleted).
+func names[T any](xs []T, f func(T) string) []string {
+	out := make([]string, 0, len(xs))
+	for _, x := range xs {
+		out = append(out, f(x))
+	}
+	return out
+}
+
+func assertNames(t *testing.T, got []string, want ...string) {
+	t.Helper()
+	set := map[string]bool{}
+	for _, g := range got {
+		set[g] = true
+	}
+	for _, w := range want {
+		if !set[w] {
+			t.Errorf("missing %q in %v", w, got)
+		}
+	}
+	if len(got) != len(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}

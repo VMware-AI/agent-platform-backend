@@ -12,20 +12,16 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 )
 
-// gqlRoleToEnt maps the GraphQL enum (tenant_admin) to the storage/auth string
-// (tenant-admin). GraphQL enums cannot contain hyphens.
+// gqlRoleToEnt returns the storage form of a GraphQL RoleName. After dropping
+// the `tenant_admin` role (whose enum value `tenant_admin` mapped to the storage
+// value `tenant-admin` for the hyphen constraint), all remaining enum values
+// (admin, user, read_only) are hyphen-free and the storage form is identity.
 func gqlRoleToEnt(r model.RoleName) string {
-	if r == model.RoleNameTenantAdmin {
-		return "tenant-admin"
-	}
 	return string(r)
 }
 
-// entRoleToGQL is the inverse of gqlRoleToEnt.
+// entRoleToGQL is the inverse of gqlRoleToEnt — also identity now.
 func entRoleToGQL(s string) model.RoleName {
-	if s == "tenant-admin" {
-		return model.RoleNameTenantAdmin
-	}
 	return model.RoleName(s)
 }
 

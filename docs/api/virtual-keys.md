@@ -15,7 +15,7 @@ virtualKeys(userId: ID): [VirtualKey!]!
 ```
 
 - **Returns:** `[VirtualKey!]!`
-- **Auth:** `@hasRole(any: [admin])`
+- **Auth:** `@hasRole(any: [admin, read_only])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|

@@ -5,8 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/VMware-AI/agent-platform-backend/internal/ratelimit"
@@ -31,7 +29,7 @@ func TestLogin_RateLimited(t *testing.T) {
 	ctx := context.Background()
 	mr := &mutationResolver{r}
 
-	if _, err := mr.CreateUser(adminCtx(), model.CreateUserInput{Username: "victim", DisplayName: "victim", Email: "v@x.io", RoleID: string(model.RoleNameUser), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("VictimPass12")}); err != nil {
+	if _, err := mr.CreateUser(adminCtx(), model.CreateUserInput{Username: "victim", DisplayName: "victim", Email: "v@x.io", RoleID: builtinRoleUUID(string(model.RoleNameUser)), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("VictimPass12")}); err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
 	for i := 0; i < 3; i++ {
@@ -47,31 +45,6 @@ func TestLogin_RateLimited(t *testing.T) {
 
 // Tenant isolation (C1): the paginated users query confines a tenant-admin to
 // their own tenant (count AND page), while a platform admin sees everyone.
-func TestUsers_TenantScoped(t *testing.T) {
-	r, cleanup := newTestResolver(t)
-	defer cleanup()
-	qr := &queryResolver{r}
-
-	t1 := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
-	t2 := "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
-	mkTenantUser(t, r, "u1", "u1@x.io", model.RoleNameUser, uuid.MustParse(t1))
-	mkTenantUser(t, r, "u2", "u2@x.io", model.RoleNameUser, uuid.MustParse(t2))
-
-	// platform admin sees both
-	all, err := qr.Users(adminCtx(), nil, nil, nil)
-	if err != nil || all.TotalCount != 2 || len(all.Nodes) != 2 {
-		t.Fatalf("admin should see all users: total=%d nodes=%d err=%v", all.TotalCount, len(all.Nodes), err)
-	}
-
-	// tenant-admin of t1 sees only u1 (both total and nodes scoped)
-	scoped, err := qr.Users(tenantAdminCtx("11111111-1111-1111-1111-111111111111", t1), nil, nil, nil)
-	if err != nil {
-		t.Fatalf("t1 admin users: %v", err)
-	}
-	if scoped.TotalCount != 1 || len(scoped.Nodes) != 1 || scoped.Nodes[0].Username != "u1" {
-		t.Fatalf("tenant-admin must see only their tenant's users: total=%d nodes=%+v", scoped.TotalCount, scoped.Nodes)
-	}
-}
 
 func TestCreateUserAndLogin(t *testing.T) {
 	r, cleanup := newTestResolver(t)
@@ -79,7 +52,7 @@ func TestCreateUserAndLogin(t *testing.T) {
 	ctx := context.Background()
 	mr := &mutationResolver{r}
 
-	u, err := mr.CreateUser(ctx, model.CreateUserInput{Username: "alice", DisplayName: "alice", Email: "alice@x.io", RoleID: string(model.RoleNameUser), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("AlicePass123")})
+	u, err := mr.CreateUser(ctx, model.CreateUserInput{Username: "alice", DisplayName: "alice", Email: "alice@x.io", RoleID: builtinRoleUUID(string(model.RoleNameUser)), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("AlicePass123")})
 	if err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
@@ -114,7 +87,7 @@ func TestDuplicateUsernameRejected(t *testing.T) {
 	defer cleanup()
 	ctx := context.Background()
 	mr := &mutationResolver{r}
-	in := model.CreateUserInput{Username: "dup", DisplayName: "dup", Email: "dup@x.io", RoleID: string(model.RoleNameUser), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("DupPass12345")}
+	in := model.CreateUserInput{Username: "dup", DisplayName: "dup", Email: "dup@x.io", RoleID: builtinRoleUUID(string(model.RoleNameUser)), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("DupPass12345")}
 	if _, err := mr.CreateUser(ctx, in); err != nil {
 		t.Fatalf("first create: %v", err)
 	}
@@ -129,7 +102,7 @@ func TestChangePasswordFlow(t *testing.T) {
 	defer cleanup()
 	ctx := context.Background()
 	mr := &mutationResolver{r}
-	u, err := mr.CreateUser(ctx, model.CreateUserInput{Username: "bob", DisplayName: "bob", Email: "bob@x.io", RoleID: string(model.RoleNameUser), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("BobPass12345")})
+	u, err := mr.CreateUser(ctx, model.CreateUserInput{Username: "bob", DisplayName: "bob", Email: "bob@x.io", RoleID: builtinRoleUUID(string(model.RoleNameUser)), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("BobPass12345")})
 	if err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
@@ -169,8 +142,8 @@ func TestHasRoleDirective(t *testing.T) {
 	}
 
 	// tenant_admin (GraphQL) must map to tenant-admin (storage) and pass.
-	taCtx := auth.WithCurrentUser(context.Background(), &auth.CurrentUser{Role: auth.RoleTenantAdmin})
-	if _, err := HasRole(taCtx, nil, next, []model.RoleName{model.RoleNameTenantAdmin}); err != nil {
+	taCtx := auth.WithCurrentUser(context.Background(), &auth.CurrentUser{Role: auth.RoleReadOnly})
+	if _, err := HasRole(taCtx, nil, next, []model.RoleName{model.RoleNameReadOnly}); err != nil {
 		t.Fatalf("tenant-admin should pass: %v", err)
 	}
 }
@@ -179,14 +152,34 @@ func TestHasPermissionDirective(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()
 	next := func(context.Context) (any, error) { return "ok", nil }
-	obsCtx := auth.WithCurrentUser(context.Background(), &auth.CurrentUser{Role: auth.RoleObservability})
-	// Static fast path grants audit:view to observability (no custom role needed).
-	if _, err := r.HasPermission(obsCtx, nil, next, auth.PermAuditView); err != nil {
-		t.Fatalf("observability should have audit:view: %v", err)
+	adminCtx := auth.WithCurrentUser(context.Background(), &auth.CurrentUser{Role: auth.RoleAdmin})
+	readOnlyCtx := auth.WithCurrentUser(context.Background(), &auth.CurrentUser{Role: auth.RoleReadOnly})
+	userCtx := auth.WithCurrentUser(context.Background(), &auth.CurrentUser{Role: auth.RoleUser})
+
+	// admin holds all 6 static perms.
+	for _, p := range []string{auth.PermAuditView, auth.PermMeteringView,
+		auth.PermUserManage, auth.PermAgentManage, auth.PermKeyManage, auth.PermRouteManage} {
+		if _, err := r.HasPermission(adminCtx, nil, next, p); err != nil {
+			t.Errorf("admin must hold %q: %v", p, err)
+		}
 	}
-	// user:manage is neither in the static matrix nor any custom role → denied.
-	if _, err := r.HasPermission(obsCtx, nil, next, auth.PermUserManage); err == nil {
-		t.Fatal("observability must not have user:manage")
+
+	// After the 3-role refactor read_only has NO entries in rolePermissions —
+	// read access flows through @hasRole(any: [admin, read_only]) gates, NOT
+	// through permissions. So read_only fails every @hasPermission check here.
+	for _, p := range []string{auth.PermAuditView, auth.PermMeteringView,
+		auth.PermUserManage, auth.PermAgentManage, auth.PermKeyManage, auth.PermRouteManage} {
+		if _, err := r.HasPermission(readOnlyCtx, nil, next, p); err == nil {
+			t.Errorf("read_only must NOT hold %q (no perm in matrix)", p)
+		}
+	}
+
+	// user: tenant-scope or owner-scope, never platform-wide perms.
+	for _, p := range []string{auth.PermAuditView, auth.PermUserManage,
+		auth.PermAgentManage, auth.PermKeyManage, auth.PermRouteManage} {
+		if _, err := r.HasPermission(userCtx, nil, next, p); err == nil {
+			t.Errorf("user must NOT hold %q", p)
+		}
 	}
 }
 

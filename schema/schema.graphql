@@ -10,8 +10,7 @@ scalar Map
 enum RoleName {
   admin
   user
-  observability
-  tenant_admin
+  read_only
 }
 
 type User {
