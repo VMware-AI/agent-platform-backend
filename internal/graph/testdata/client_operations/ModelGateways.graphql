@@ -21,7 +21,6 @@ query ModelGateways($filter: ModelGatewayFilterInput, $page: PageInput!, $sort: 
     endpoint
     status
     loadBalancingStrategy
-    latencyMs
     adminUrl
     lastSyncAt
     lastSyncStatus

@@ -87,7 +87,7 @@ func TestModelGateway_TestAndSyncSummary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("TestModelGatewayConnection: %v", err)
 	}
-	if !res.Success || res.Status != model.ModelGatewayStatusConnected || res.LatencyMs == nil {
+	if !res.Success || res.Status != model.ModelGatewayStatusConnected {
 		t.Fatalf("test result wrong: %+v", res)
 	}
 	if res.Gateway.Status != model.ModelGatewayStatusConnected || res.Gateway.LastSyncStatus != model.ModelGatewaySyncStateSynced {
@@ -420,7 +420,10 @@ func TestModelGateway_TestProbeFailureLeavesFieldNull(t *testing.T) {
 }
 
 // Dry-run: a pre-create test of an unsaved gateway config. Returns a result
-// with the probed strategy attached, gateway nil, success=true.
+// with gateway nil, success=true, and loadBalancingStrategy ALWAYS nil —
+// the dry-run deliberately does not call GetRoutingStrategy (it's a
+// "can I reach this box?" probe, not a "what's it configured to do?" probe).
+// The fake's strategy field is irrelevant; we don't read it.
 func TestModelGateway_DryRunProbe_Success(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()
@@ -443,8 +446,8 @@ func TestModelGateway_DryRunProbe_Success(t *testing.T) {
 	if res.Gateway != nil {
 		t.Fatalf("dry-run must not project a gateway: %+v", res.Gateway)
 	}
-	if res.LoadBalancingStrategy == nil || *res.LoadBalancingStrategy != model.LoadBalancingStrategyUsageBasedV2 {
-		t.Fatalf("dry-run strategy: %v", res.LoadBalancingStrategy)
+	if res.LoadBalancingStrategy != nil {
+		t.Fatalf("dry-run must not probe strategy, got %v", *res.LoadBalancingStrategy)
 	}
 }
 

@@ -347,9 +347,6 @@ func TestModelGatewayConnection_ResultShapeEdge(t *testing.T) {
 	if res.Status != model.ModelGatewayStatusConnected {
 		t.Fatalf("status = %v, want CONNECTED", res.Status)
 	}
-	if res.LatencyMs == nil || *res.LatencyMs < 0 {
-		t.Fatalf("latencyMs must be a non-negative int, got %v", res.LatencyMs)
-	}
 	if res.Message != "connection ok" {
 		t.Fatalf("success message = %q, want \"connection ok\"", res.Message)
 	}

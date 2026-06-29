@@ -2,7 +2,6 @@ mutation TestModelGatewayConnection($id: ID!) {
     testModelGatewayConnection(id: $id) {
       success
       status
-      latencyMs
       message
       testedAt
       gateway {
@@ -18,7 +17,6 @@ mutation TestModelGatewayConnection($id: ID!) {
     endpoint
     status
     loadBalancingStrategy
-    latencyMs
     adminUrl
     lastSyncAt
     lastSyncStatus
