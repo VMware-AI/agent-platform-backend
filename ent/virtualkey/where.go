@@ -100,6 +100,11 @@ func TeamID(v string) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldEQ(FieldTeamID, v))
 }
 
+// GatewayConnectionID applies equality check predicate on the "gateway_connection_id" field. It's identical to GatewayConnectionIDEQ.
+func GatewayConnectionID(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldGatewayConnectionID, v))
+}
+
 // MaxBudget applies equality check predicate on the "max_budget" field. It's identical to MaxBudgetEQ.
 func MaxBudget(v float64) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldEQ(FieldMaxBudget, v))
@@ -618,6 +623,56 @@ func TeamIDEqualFold(v string) predicate.VirtualKey {
 // TeamIDContainsFold applies the ContainsFold predicate on the "team_id" field.
 func TeamIDContainsFold(v string) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldContainsFold(FieldTeamID, v))
+}
+
+// GatewayConnectionIDEQ applies the EQ predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDEQ(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldGatewayConnectionID, v))
+}
+
+// GatewayConnectionIDNEQ applies the NEQ predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDNEQ(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldGatewayConnectionID, v))
+}
+
+// GatewayConnectionIDIn applies the In predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDIn(vs ...uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIn(FieldGatewayConnectionID, vs...))
+}
+
+// GatewayConnectionIDNotIn applies the NotIn predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDNotIn(vs ...uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotIn(FieldGatewayConnectionID, vs...))
+}
+
+// GatewayConnectionIDGT applies the GT predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDGT(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGT(FieldGatewayConnectionID, v))
+}
+
+// GatewayConnectionIDGTE applies the GTE predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDGTE(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGTE(FieldGatewayConnectionID, v))
+}
+
+// GatewayConnectionIDLT applies the LT predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDLT(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLT(FieldGatewayConnectionID, v))
+}
+
+// GatewayConnectionIDLTE applies the LTE predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDLTE(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLTE(FieldGatewayConnectionID, v))
+}
+
+// GatewayConnectionIDIsNil applies the IsNil predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDIsNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIsNull(FieldGatewayConnectionID))
+}
+
+// GatewayConnectionIDNotNil applies the NotNil predicate on the "gateway_connection_id" field.
+func GatewayConnectionIDNotNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotNull(FieldGatewayConnectionID))
 }
 
 // ModelsIsNil applies the IsNil predicate on the "models" field.

@@ -33,6 +33,8 @@ const (
 	FieldRateLimitPolicyID = "rate_limit_policy_id"
 	// FieldTeamID holds the string denoting the team_id field in the database.
 	FieldTeamID = "team_id"
+	// FieldGatewayConnectionID holds the string denoting the gateway_connection_id field in the database.
+	FieldGatewayConnectionID = "gateway_connection_id"
 	// FieldModels holds the string denoting the models field in the database.
 	FieldModels = "models"
 	// FieldMaxBudget holds the string denoting the max_budget field in the database.
@@ -57,6 +59,7 @@ var Columns = []string{
 	FieldAgentID,
 	FieldRateLimitPolicyID,
 	FieldTeamID,
+	FieldGatewayConnectionID,
 	FieldModels,
 	FieldMaxBudget,
 	FieldStatus,
@@ -164,6 +167,11 @@ func ByRateLimitPolicyID(opts ...sql.OrderTermOption) OrderOption {
 // ByTeamID orders the results by the team_id field.
 func ByTeamID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTeamID, opts...).ToFunc()
+}
+
+// ByGatewayConnectionID orders the results by the gateway_connection_id field.
+func ByGatewayConnectionID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldGatewayConnectionID, opts...).ToFunc()
 }
 
 // ByMaxBudget orders the results by the max_budget field.

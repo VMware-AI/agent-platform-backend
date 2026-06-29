@@ -124,14 +124,29 @@ func deptIDFromTeam(teamID *string) *uuid.UUID {
 	return nil
 }
 
-// deployGateway resolves the key client AND the public URL a deployed agent's VM
-// should call (LLD-13 §3.3): the department's gateway, else the platform default,
-// else the legacy injected r.Gateway + r.GatewayURL. A nil client = unconfigured.
-func (r *Resolver) deployGateway(ctx context.Context, deptID *uuid.UUID) (gateway.Client, string) {
+// resolveKeyGateway resolves the GatewayConnection that should ISSUE a key for a
+// department (its bound gateway, else the platform default) AND a client bound to
+// it (LLD-14 §3.2). The returned connection — nil when only the legacy injected
+// r.Gateway is available — is persisted on the VirtualKey row so the key's later
+// lifecycle (revoke/recycle/reconcile) routes back to the same gateway, decoupled
+// from the department's *current* binding.
+func (r *Resolver) resolveKeyGateway(ctx context.Context, deptID *uuid.UUID) (*ent.GatewayConnection, gateway.Client) {
 	if g, err := r.resolveDeptGateway(ctx, deptID); err == nil && g != nil {
-		return r.buildGatewayKeyClient(ctx, g), gatewayPublicURL(g)
+		return g, r.buildGatewayKeyClient(ctx, g)
 	}
-	return r.Gateway, r.GatewayURL
+	return nil, r.Gateway
+}
+
+// deployGateway resolves the key client, the public URL a deployed agent's VM
+// should call, AND the issuing GatewayConnection (LLD-13 §3.3 / LLD-14): the
+// department's gateway, else the platform default, else the legacy injected
+// r.Gateway + r.GatewayURL. A nil client = unconfigured; a nil connection = the
+// legacy fallback (no DB row to persist on the key).
+func (r *Resolver) deployGateway(ctx context.Context, deptID *uuid.UUID) (gateway.Client, string, *ent.GatewayConnection) {
+	if conn, gw := r.resolveKeyGateway(ctx, deptID); conn != nil {
+		return gw, gatewayPublicURL(conn), conn
+	}
+	return r.Gateway, r.GatewayURL, nil
 }
 
 // gatewayModelsForConn builds the ModelManager for a SPECIFIC connection (a
