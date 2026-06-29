@@ -330,7 +330,6 @@ setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier!
 | `status` | `ModelGatewayStatus!` | — |
 | `backendModelCount` | `Int!` | — |
 | `loadBalancingStrategy` | `LoadBalancingStrategy` | — |
-| `latencyMs` | `Int` | — |
 | `adminUrl` | `String` | — |
 | `lastSyncAt` | `Time` | — |
 | `lastSyncStatus` | `ModelGatewaySyncState!` | — |
@@ -367,7 +366,6 @@ setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier!
 |-------|------|-------------|
 | `success` | `Boolean!` | — |
 | `status` | `ModelGatewayStatus!` | — |
-| `latencyMs` | `Int` | — |
 | `message` | `String!` | — |
 | `testedAt` | `Time!` | — |
 | `gateway` | `ModelGateway` | — |
