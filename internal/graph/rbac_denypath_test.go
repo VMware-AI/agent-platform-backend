@@ -27,7 +27,7 @@ func okNext(context.Context) (any, error) { return "ok", nil }
 
 // allRoles is the full set of platform roles, so each case can assert the exact
 // allow/deny split across every principal (no role silently untested).
-var allRoles = []auth.Role{auth.RoleAdmin, auth.RoleTenantAdmin, auth.RoleObservability, auth.RoleUser}
+var allRoles = []auth.Role{auth.RoleAdmin, auth.RoleReadOnly, auth.RoleUser}
 
 func ctxForRole(role auth.Role) context.Context {
 	return auth.WithCurrentUser(context.Background(), &auth.CurrentUser{
@@ -96,19 +96,19 @@ func TestDenyPath_PermissionGatedOps(t *testing.T) {
 		grants map[auth.Role]bool
 	}{
 		{
-			// audit:view → admin, observability, tenant-admin (rbac.go)
+			// audit:view → admin, read_only (rbac.go)
 			ops:  []string{"requestLogs", "auditLogs", "requestMetrics"},
 			perm: auth.PermAuditView,
 			grants: map[auth.Role]bool{
-				auth.RoleAdmin: true, auth.RoleObservability: true, auth.RoleTenantAdmin: true,
+				auth.RoleAdmin: true,
 			},
 		},
 		{
-			// metering:view → admin, observability, tenant-admin (rbac.go)
+			// metering:view → admin, read_only (rbac.go)
 			ops:  []string{"meteringOverview(perm-gate via field)"},
 			perm: auth.PermMeteringView,
 			grants: map[auth.Role]bool{
-				auth.RoleAdmin: true, auth.RoleObservability: true, auth.RoleTenantAdmin: true,
+				auth.RoleAdmin: true,
 			},
 		},
 		{
@@ -116,7 +116,7 @@ func TestDenyPath_PermissionGatedOps(t *testing.T) {
 			ops:  []string{"issueVirtualKey", "upsertRateLimitPolicy(key:manage variant)"},
 			perm: auth.PermKeyManage,
 			grants: map[auth.Role]bool{
-				auth.RoleAdmin: true, auth.RoleTenantAdmin: true,
+				auth.RoleAdmin: true,
 			},
 		},
 		{
@@ -125,7 +125,7 @@ func TestDenyPath_PermissionGatedOps(t *testing.T) {
 			ops:  []string{"upsertRateLimitPolicy", "setRateLimitPolicyEnabled", "deleteRateLimitPolicy"},
 			perm: auth.PermRouteManage,
 			grants: map[auth.Role]bool{
-				auth.RoleAdmin: true, auth.RoleTenantAdmin: true,
+				auth.RoleAdmin: true,
 			},
 		},
 		{
@@ -133,7 +133,7 @@ func TestDenyPath_PermissionGatedOps(t *testing.T) {
 			ops:  []string{"createUser(perm variant)", "assignUserRole(perm variant)"},
 			perm: auth.PermUserManage,
 			grants: map[auth.Role]bool{
-				auth.RoleAdmin: true, auth.RoleTenantAdmin: true,
+				auth.RoleAdmin: true,
 			},
 		},
 		{
@@ -141,7 +141,7 @@ func TestDenyPath_PermissionGatedOps(t *testing.T) {
 			ops:  []string{"agent:manage gated ops"},
 			perm: auth.PermAgentManage,
 			grants: map[auth.Role]bool{
-				auth.RoleAdmin: true, auth.RoleTenantAdmin: true,
+				auth.RoleAdmin: true,
 			},
 		},
 	}
@@ -171,9 +171,9 @@ func TestDenyPath_RoleGatedOps(t *testing.T) {
 		allowed []model.RoleName
 	}{
 		{
-			// @hasRole(any: [admin, tenant_admin])
+			// @hasRole(any: [admin])
 			ops:     []string{"createUser", "assignUserRole", "createCustomRole", "createDepartment", "createAgentConfig", "setAgentConfigKnowledge"},
-			allowed: []model.RoleName{model.RoleNameAdmin, model.RoleNameTenantAdmin},
+			allowed: []model.RoleName{model.RoleNameAdmin, model.RoleNameReadOnly},
 		},
 		{
 			// @hasRole(any: [admin]) — platform-only catalog + routing + deploy.

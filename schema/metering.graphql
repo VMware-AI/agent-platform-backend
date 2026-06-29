@@ -111,7 +111,7 @@ type MeteringOverview {
 }
 
 extend type Query {
-  # metering:view permission (admin + observability).
+  # metering:view permission (admin + read_only).
   tokenUsage(userId: ID, page: PageInput): [TokenUsage!]! @hasPermission(perm: "metering:view")
   meteringSummary(userId: ID): MeteringSummary! @hasPermission(perm: "metering:view")
   # Aggregated metering for the console 计量中心 over a time range (默认近7天).

@@ -745,7 +745,7 @@ var (
 		{Name: "username", Type: field.TypeString, Unique: true},
 		{Name: "email", Type: field.TypeString, Unique: true},
 		{Name: "password_hash", Type: field.TypeString},
-		{Name: "role", Type: field.TypeEnum, Enums: []string{"admin", "user", "observability", "tenant-admin"}, Default: "user"},
+		{Name: "role", Type: field.TypeEnum, Enums: []string{"admin", "user", "read_only"}, Default: "user"},
 		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "must_change_password", Type: field.TypeBool, Default: true},
 		{Name: "is_active", Type: field.TypeBool, Default: true},

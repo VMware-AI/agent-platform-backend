@@ -5,8 +5,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/google/uuid"
-
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 )
@@ -117,86 +115,9 @@ func TestDepartmentAndMembership(t *testing.T) {
 
 // Tenant isolation (C1): a tenant-admin's departments query is confined to their
 // own tenant; a platform admin sees every tenant's.
-func TestDepartments_TenantScoped(t *testing.T) {
-	r, cleanup := newTestResolver(t)
-	defer cleanup()
-	r.Gateway = &fakeGateway{}
-	mr := &mutationResolver{r}
-	qr := &queryResolver{r}
-	admin := adminCtx()
-
-	t1 := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
-	t2 := "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
-	if _, err := mr.CreateDepartment(admin, model.CreateDepartmentInput{Name: "t1-dept", TenantID: &t1}); err != nil {
-		t.Fatalf("create t1 dept: %v", err)
-	}
-	if _, err := mr.CreateDepartment(admin, model.CreateDepartmentInput{Name: "t2-dept", TenantID: &t2}); err != nil {
-		t.Fatalf("create t2 dept: %v", err)
-	}
-
-	// platform admin sees both tenants' departments
-	if all, err := qr.Departments(admin); err != nil || len(all) != 2 {
-		t.Fatalf("platform admin should see all departments: n=%d err=%v", len(all), err)
-	}
-
-	// tenant-admin of t1 sees only t1's
-	t1Admin := tenantAdminCtx("11111111-1111-1111-1111-111111111111", t1)
-	scoped, err := qr.Departments(t1Admin)
-	if err != nil {
-		t.Fatalf("t1 admin departments: %v", err)
-	}
-	if len(scoped) != 1 || scoped[0].Name != "t1-dept" {
-		t.Fatalf("tenant-admin must see only their tenant's departments, got %+v", scoped)
-	}
-}
 
 // C1: a tenant-admin may manage departments in their OWN tenant but not another
 // tenant's (canManageDepartment must compare dept.TenantID, not blanket-allow).
-func TestMembership_TenantAdminConfinedToTenant(t *testing.T) {
-	r, cleanup := newTestResolver(t)
-	defer cleanup()
-	r.Gateway = &fakeGateway{}
-	mr := &mutationResolver{r}
-	qr := &queryResolver{r}
-	admin := adminCtx()
-
-	t1 := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
-	t2 := "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
-	d1, err := mr.CreateDepartment(admin, model.CreateDepartmentInput{Name: "t1-dept", TenantID: &t1})
-	if err != nil {
-		t.Fatalf("create d1: %v", err)
-	}
-	d2, err := mr.CreateDepartment(admin, model.CreateDepartmentInput{Name: "t2-dept", TenantID: &t2})
-	if err != nil {
-		t.Fatalf("create d2: %v", err)
-	}
-
-	t1User := mkTenantUser(t, r, "t1u", "t1u@x.io", model.RoleNameUser, uuid.MustParse(t1))
-	t2User := mkTenantUser(t, r, "t2u", "t2u@x.io", model.RoleNameUser, uuid.MustParse(t2))
-	t1Admin := tenantAdminCtx("11111111-1111-1111-1111-111111111111", t1)
-
-	// tenant-admin of t1 manages t1's department with a t1 user
-	if _, err := mr.AddMembership(t1Admin, t1User.ID.String(), d1.ID, nil); err != nil {
-		t.Fatalf("t1 admin should add a t1 user to a t1 dept: %v", err)
-	}
-	// ...but may NOT pull a t2 user into the t1 dept (cross-tenant member)
-	if _, err := mr.AddMembership(t1Admin, t2User.ID.String(), d1.ID, nil); err == nil {
-		t.Fatal("tenant-admin must NOT add a foreign-tenant user")
-	}
-	// ...nor manage t2's department at all
-	if _, err := mr.AddMembership(t1Admin, t1User.ID.String(), d2.ID, nil); err == nil {
-		t.Fatal("tenant-admin must NOT manage another tenant's department")
-	}
-	if _, err := qr.DepartmentMembers(t1Admin, d2.ID); err == nil {
-		t.Fatal("tenant-admin must NOT read another tenant's department members")
-	}
-
-	// a tenant-admin with no tenant set manages nothing (fail closed)
-	noTenant := tenantAdminCtx("33333333-3333-3333-3333-333333333333", "")
-	if _, err := mr.AddMembership(noTenant, t1User.ID.String(), d1.ID, nil); err == nil {
-		t.Fatal("tenant-admin without a tenant must manage nothing")
-	}
-}
 
 // A dept-admin may manage memberships of their OWN department, but not another's;
 // a plain member/non-member may not (LLD-01 §4.1 部门委派).

@@ -21,7 +21,7 @@ func mkUser(t *testing.T, mr *mutationResolver, ctx context.Context, username, e
 		Username:       username,
 		DisplayName:    username,
 		Email:          email,
-		RoleID:         string(role),
+		RoleID:         builtinRoleUUID(string(role)),
 		PasswordMode:   model.PasswordModeCustom,
 		CustomPassword: &pw,
 	})

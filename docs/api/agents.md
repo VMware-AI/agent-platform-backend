@@ -32,14 +32,14 @@ agentConfigs(agentType: String): [AgentConfig!]!
 
 ### `agents`
 
-Admin sees all agents; tenant-admin their tenant; a regular user only their own (owner scope). Paged/filtered/sorted connection (前后端整合契约).
+Admin + read_only see all agents; a regular user only their own (owner scope). Paged/filtered/sorted connection (前后端整合契约).
 
 ```graphql
 agents(filter: AgentFilter, pagination: Pagination, sort: AgentSort): AgentConnection!
 ```
 
 - **Returns:** `AgentConnection!`
-- **Auth:** authenticated (no directive)
+- **Auth:** `@hasRole(any: [admin, read_only, user])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -147,7 +147,7 @@ createAgentConfig(input: CreateAgentConfigInput!): AgentConfig!
 ```
 
 - **Returns:** `AgentConfig!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -160,7 +160,7 @@ updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig!
 ```
 
 - **Returns:** `AgentConfig!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -174,7 +174,7 @@ deleteAgentConfig(id: ID!): Boolean!
 ```
 
 - **Returns:** `Boolean!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -189,7 +189,7 @@ setDefaultAgentConfig(id: ID!): AgentConfig!
 ```
 
 - **Returns:** `AgentConfig!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -204,7 +204,7 @@ setAgentConfigKnowledge(configId: ID!, knowledgeArtifactIds: [ID!]!): AgentConfi
 ```
 
 - **Returns:** `AgentConfig!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|

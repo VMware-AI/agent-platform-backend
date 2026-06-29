@@ -26,8 +26,8 @@ func TestE2E_DenyPath_AdminOnlyMutations(t *testing.T) {
 	defer e.cleanup()
 
 	userCookie := e.seedUser(t, "plain", user.RoleUser)
-	obsCookie := e.seedUser(t, "obs", user.RoleObservability)
-	taCookie := e.seedUser(t, "ta", user.RoleTenantAdmin)
+	obsCookie := e.seedUser(t, "obs", user.RoleReadOnly)
+	taCookie := e.seedUser(t, "ta", user.RoleReadOnly)
 
 	// modelRoutes query is @hasRole(any:[admin]). A plain user, observability, and
 	// tenant-admin are ALL rejected; unauthenticated too.
@@ -60,7 +60,7 @@ func TestE2E_DenyPath_AdminOnlyMutations(t *testing.T) {
 func TestE2E_DenyPath_DeployAgentAdminOnly(t *testing.T) {
 	e := setupE2E(t)
 	defer e.cleanup()
-	taCookie := e.seedUser(t, "ta", user.RoleTenantAdmin)
+	taCookie := e.seedUser(t, "ta", user.RoleReadOnly)
 
 	// deployAgent is @hasRole(any:[admin]). A tenant-admin is rejected at the
 	// directive, before any vCenter/OVA work in the resolver.
@@ -83,9 +83,9 @@ func TestE2E_DenyPath_CreateDepartmentRoleGated(t *testing.T) {
 	e := setupE2E(t)
 	defer e.cleanup()
 	userCookie := e.seedUser(t, "plain", user.RoleUser)
-	obsCookie := e.seedUser(t, "obs", user.RoleObservability)
+	obsCookie := e.seedUser(t, "obs", user.RoleReadOnly)
 
-	// createDepartment is @hasRole(any:[admin, tenant_admin]). A plain user and an
+	// createDepartment is @hasRole(any:[admin]). A plain user and an
 	// observability specialist are both rejected.
 	const deptM = `mutation { createDepartment(input:{name:"d"}){ id name } }`
 	var resp struct {
@@ -109,25 +109,25 @@ func TestE2E_DenyPath_PermissionMismatch(t *testing.T) {
 	e := setupE2E(t)
 	defer e.cleanup()
 
-	// issueVirtualKey requires key:manage — observability holds audit:view +
-	// metering:view but NOT key:manage, so it is rejected even though it has SOME
-	// permissions (proves perm keys don't bleed across each other).
-	obsCookie := e.seedUser(t, "obs", user.RoleObservability)
+	// After the 3-role refactor: read_only has NO entries in rolePermissions. So
+	// issueVirtualKey (gated by `@hasPermission(perm: "key:manage")`) and
+	// requestLogs (gated by `@hasPermission(perm: "audit:view")`) are BOTH
+	// denied — read_only's read access is via @hasRole(any: [admin, read_only])
+	// gates on the schema, NOT via permissions.
+	readOnlyCookie := e.seedUser(t, "ro", user.RoleReadOnly)
 	const issueM = `mutation { issueVirtualKey(input:{userId:"00000000-0000-0000-0000-000000000001"}){ id } }`
 	var ivResp struct {
 		IssueVirtualKey struct{ ID string }
 	}
-	if err := e.gql.Post(issueM, &ivResp, client.AddCookie(obsCookie)); err == nil {
-		t.Fatal("observability must be denied issueVirtualKey (lacks key:manage)")
+	if err := e.gql.Post(issueM, &ivResp, client.AddCookie(readOnlyCookie)); err == nil {
+		t.Fatal("read_only must be denied issueVirtualKey (no key:manage perm)")
 	}
 
-	// Conversely, observability DOES hold audit:view, so requestLogs passes the
-	// directive (resolver returns an empty list on the in-memory store).
 	const logsQ = `{ requestLogs { requestId } }`
 	var lResp struct {
 		RequestLogs []struct{ RequestID string }
 	}
-	if err := e.gql.Post(logsQ, &lResp, client.AddCookie(obsCookie)); err != nil {
-		t.Fatalf("observability holds audit:view, requestLogs should pass: %v", err)
+	if err := e.gql.Post(logsQ, &lResp, client.AddCookie(readOnlyCookie)); err == nil {
+		t.Fatal("read_only must be denied requestLogs (no audit:view perm; uses role gate on dashboardOverview instead)")
 	}
 }

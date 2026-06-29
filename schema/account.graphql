@@ -23,7 +23,10 @@ enum UserSortField {
   UPDATED_AT
 }
 
-# The user's role as a lightweight reference (embedded in AccountUser).
+# The user's role as a lightweight reference (embedded in AccountUser). id is a
+# standard UUID, derived from the same role key as the corresponding Role entity
+# in the roles query — so AccountUser.role.id === roles(roleId).id for the same
+# role key.
 type AccountRoleRef {
   id: ID!
   name: String!
@@ -49,9 +52,13 @@ type UserConnection {
   pageInfo: PageInfo!
 }
 
-# A built-in assignable role surfaced as an entity (id = the role key).
+# A built-in assignable role surfaced as an entity.
+# id is a standard UUID (deterministically derived from roleKey — see roles_builtin.go).
+# roleKey is the stable string key ("admin" | "user" | "read_only") used in @hasRole
+# directives and as a logical identifier.
 type Role {
   id: ID!
+  roleKey: String!
   name: String!
   description: String!
   userCount: Int!
@@ -69,6 +76,7 @@ input UserFilter {
   roleKeyword: String
   emailKeyword: String
   statusKeyword: ConnectionStatus
+  # Built-in role UUID (from the roles query).
   roleId: ID
 }
 
@@ -95,6 +103,8 @@ input UpdateUserInput {
 }
 
 input AssignUsersToRoleInput {
+  # Built-in role UUID (from the roles query). User-id-as-string mapping is now
+  # server-driven via Role.roleKey.
   roleId: ID!
   userIds: [ID!]!
 }
@@ -125,19 +135,19 @@ type AssignUsersToRolePayload {
 
 extend type Query {
   users(filter: UserFilter, pagination: Pagination, sort: UserSort): UserConnection!
-    @hasRole(any: [admin, tenant_admin])
-  roles(pagination: Pagination): RoleConnection! @hasRole(any: [admin, tenant_admin])
-  role(id: ID!): Role @hasRole(any: [admin, tenant_admin])
+    @hasRole(any: [admin])
+  roles(pagination: Pagination): RoleConnection! @hasRole(any: [admin])
+  role(id: ID!): Role @hasRole(any: [admin])
   # Debounced dedupe check for the create-user form.
-  userExists(username: String, email: String): Boolean! @hasRole(any: [admin, tenant_admin])
+  userExists(username: String, email: String): Boolean! @hasRole(any: [admin])
 }
 
 extend type Mutation {
-  createUser(input: CreateUserInput!): CreateUserPayload! @hasRole(any: [admin, tenant_admin])
-  updateUser(id: ID!, input: UpdateUserInput!): AccountUser! @hasRole(any: [admin, tenant_admin])
-  deleteUser(id: ID!): DeleteUserPayload! @hasRole(any: [admin, tenant_admin])
-  resetUserPassword(id: ID!): ResetPasswordPayload! @hasRole(any: [admin, tenant_admin])
-  toggleUserEnabled(id: ID!): ToggleUserEnabledPayload! @hasRole(any: [admin, tenant_admin])
+  createUser(input: CreateUserInput!): CreateUserPayload! @hasRole(any: [admin])
+  updateUser(id: ID!, input: UpdateUserInput!): AccountUser! @hasRole(any: [admin])
+  deleteUser(id: ID!): DeleteUserPayload! @hasRole(any: [admin])
+  resetUserPassword(id: ID!): ResetPasswordPayload! @hasRole(any: [admin])
+  toggleUserEnabled(id: ID!): ToggleUserEnabledPayload! @hasRole(any: [admin])
   assignUsersToRole(input: AssignUsersToRoleInput!): AssignUsersToRolePayload!
-    @hasRole(any: [admin, tenant_admin])
+    @hasRole(any: [admin])
 }

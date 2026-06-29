@@ -87,7 +87,7 @@ input UpsertRateLimitPolicyInput {
 
 extend type Query {
   requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
-  rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin, tenant_admin])
+  rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin])
   requestMetrics(from: Time!, to: Time!, granularity: RequestMetricsBucketGranularity!, filter: RequestMetricsFilter): RequestMetrics! @hasPermission(perm: "audit:view")
 }
 

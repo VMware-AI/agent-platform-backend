@@ -152,66 +152,9 @@ func TestMeteringOverview_RangeStartExcludesOld(t *testing.T) {
 // honours tenant scope: a tenant-admin's overview sums ONLY their own tenant's
 // rows, never another tenant's nor the platform (NULL-tenant) rows. A regression
 // in scopedTokenUsageQuery would leak cross-tenant usage into the totals.
-func TestMeteringOverview_TenantScopingOwnDataOnly(t *testing.T) {
-	r, cleanup := newTestResolver(t)
-	defer cleanup()
-	tA, tB := uuid.New(), uuid.New()
-	recent := time.Now().UTC().AddDate(0, 0, -1)
-
-	seedUsageMeEdge(t, r, "ma", 10, 20, 1.0, recent, &tA, nil)   // tenant A
-	seedUsageMeEdge(t, r, "ma", 5, 5, 0.5, recent, &tA, nil)     // tenant A (second row)
-	seedUsageMeEdge(t, r, "mb", 999, 999, 9.0, recent, &tB, nil) // tenant B
-	seedUsageMeEdge(t, r, "mp", 777, 777, 7.0, recent, nil, nil) // platform NULL
-
-	qr := &queryResolver{r}
-	ov, err := qr.MeteringOverview(tenantAdminCtx(uuid.NewString(), tA.String()), nil, nil)
-	if err != nil {
-		t.Fatalf("MeteringOverview (tenant A): %v", err)
-	}
-	// only tenant A's two rows: in = 10+5, out = 20+5, reqs = 2.
-	if ov.TotalInputTokens != 15 || ov.TotalOutputTokens != 25 || ov.TotalRequests != 2 {
-		t.Fatalf("tenant A overview leaked other rows: in=%d out=%d reqs=%d", ov.TotalInputTokens, ov.TotalOutputTokens, ov.TotalRequests)
-	}
-	if len(ov.ByModel) != 1 || ov.ByModel[0].Model != "ma" {
-		t.Fatalf("tenant A should only see model 'ma', got %+v", ov.ByModel)
-	}
-	if ov.Cost.TotalCost != 1.5 {
-		t.Fatalf("tenant A cost should be 1.5 (own rows only), got %v", ov.Cost.TotalCost)
-	}
-
-	// platform admin (no tenant scope) sees ALL four rows across A, B, NULL.
-	all, err := qr.MeteringOverview(adminCtx(), nil, nil)
-	if err != nil {
-		t.Fatalf("MeteringOverview (admin): %v", err)
-	}
-	if all.TotalRequests != 4 {
-		t.Fatalf("admin should see all 4 rows, got reqs=%d", all.TotalRequests)
-	}
-}
 
 // TestMeteringSummary_TenantScopingOwnDataOnly guards the same tenant scoping
 // for the summary resolver's totals + byModel slice.
-func TestMeteringSummary_TenantScopingOwnDataOnly(t *testing.T) {
-	r, cleanup := newTestResolver(t)
-	defer cleanup()
-	tA, tB := uuid.New(), uuid.New()
-	now := time.Now().UTC()
-
-	seedUsageMeEdge(t, r, "ma", 10, 20, 1.0, now, &tA, nil)
-	seedUsageMeEdge(t, r, "mb", 999, 999, 9.0, now, &tB, nil)
-	seedUsageMeEdge(t, r, "mp", 777, 777, 7.0, now, nil, nil) // platform NULL
-
-	sum, err := (&queryResolver{r}).MeteringSummary(tenantAdminCtx(uuid.NewString(), tA.String()), nil)
-	if err != nil {
-		t.Fatalf("MeteringSummary (tenant A): %v", err)
-	}
-	if sum.TotalInputTokens != 10 || sum.TotalOutputTokens != 20 || sum.TotalCost != 1.0 {
-		t.Fatalf("tenant A summary leaked other rows: %+v", sum)
-	}
-	if len(sum.ByModel) != 1 || sum.ByModel[0].Model != "ma" {
-		t.Fatalf("tenant A summary should only see model 'ma', got %+v", sum.ByModel)
-	}
-}
 
 // TestMeteringOverview_ByModelGroupingShape guards the byModel grouping shape:
 // rows are grouped per model, each row's TotalTokens = in + out, its Requests is
