@@ -23,8 +23,8 @@ import (
 func (r *Resolver) agentVisibilityPredicates(ctx context.Context, cu *auth.CurrentUser) []predicate.Agent {
 	var preds []predicate.Agent
 	// Two-track visibility (LLD-10 §1.3): admin + read_only → all; regular user →
-// only their own agents (owner track). tenant-admin branch removed in the
-// 3-role refactor.
+	// only their own agents (owner track). tenant-admin branch removed in the
+	// 3-role refactor.
 	switch cu.Role {
 	case auth.RoleAdmin, auth.RoleReadOnly:
 		// no filter — sees all
