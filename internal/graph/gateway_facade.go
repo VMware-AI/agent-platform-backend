@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"log"
 	"strings"
 	"time"
 
@@ -43,6 +44,32 @@ func modelGatewayStatus(s gatewayconnection.Status) model.ModelGatewayStatus {
 	default:
 		return model.ModelGatewayStatusDisconnected
 	}
+}
+
+// probeGatewayConnection runs the connectivity test + best-effort strategy
+// probe against a pre-built ModelManager. The id-based TestModelGatewayConnection
+// and the dry-run pre-create testNewModelGatewayConnection both go through
+// here. Returns the projected status, the measured latency, and the probed
+// strategy (nil on probe failure). Probe errors are logged server-side, never
+// returned to the caller; the caller decides how to wrap the result.
+func probeGatewayConnection(ctx context.Context, mgr gateway.ModelManager) (gatewayconnection.Status, *int, *model.LoadBalancingStrategy) {
+	status := gatewayconnection.StatusConnected
+	start := time.Now()
+	err := mgr.TestConnection(ctx)
+	ms := int(time.Since(start).Milliseconds())
+	latency := &ms
+	if err != nil {
+		status = gatewayconnection.StatusError
+		log.Printf("model gateway probe failed: %v", err)
+		return status, latency, nil
+	}
+	rs, serr := mgr.GetRoutingStrategy(ctx)
+	if serr != nil {
+		log.Printf("model gateway routing-strategy probe failed: %v", serr)
+		return status, latency, nil
+	}
+	mapped := mapRoutingStrategy(rs)
+	return status, latency, &mapped
 }
 
 // mapRoutingStrategy converts the wire-level RoutingStrategy (litellm's
