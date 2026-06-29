@@ -922,6 +922,7 @@ input RevertAgentSnapshotInput {
 }
 type Role {
 	id: ID!
+	roleKey: String!
 	name: String!
 	description: String!
 	userCount: Int!
