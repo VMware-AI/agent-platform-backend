@@ -1593,6 +1593,38 @@
             "description": "Test the live litellm connection. On success, the response includes the gateway's current global routing strategy (loadBalancingStrategy) as reported by the gateway's /config/router endpoint. The field is null when the gateway version doesn't expose that endpoint \u2014 connectivity success is the sole determinant of test success."
           },
           "response": []
+        },
+        {
+          "name": "TestNewModelGatewayConnection (dry-run, pre-create)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "http://localhost:8080"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation TestNewModelGatewayConnection($input: TestModelGatewayConnectionInput!) {\\n  testNewModelGatewayConnection(input: $input) {\\n    success status latencyMs message testedAt loadBalancingStrategy\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"masterKey\": \"sk-litellm-XXXXXX\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "query"
+              ]
+            },
+            "description": "Pre-create dry-run probe. The form-level Test Connection button on the create form uses this \u2014 pings a not-yet-saved config. No row is created; the result's `gateway` field is null. Strategy probe is best-effort."
+          },
+          "response": []
         }
       ]
     },
