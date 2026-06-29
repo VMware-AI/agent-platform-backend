@@ -529,7 +529,7 @@ type ModelGatewayTestResult {
 	latencyMs: Int
 	message: String!
 	testedAt: Time!
-	gateway: ModelGateway!
+	gateway: ModelGateway
 	loadBalancingStrategy: LoadBalancingStrategy
 }
 type ModelRoute {
@@ -615,6 +615,7 @@ type Mutation {
 	updateModelGateway(id: ID!, input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
 	deleteModelGateway(id: ID!): DeleteModelGatewayPayload! @hasRole(any: [admin])
 	testModelGatewayConnection(id: ID!): ModelGatewayTestResult! @hasRole(any: [admin])
+	testNewModelGatewayConnection(input: TestModelGatewayConnectionInput!): ModelGatewayTestResult! @hasRole(any: [admin])
 	recordRequestLog(input: RecordRequestLogInput!): RequestLog! @hasRole(any: [admin])
 	upsertRateLimitPolicy(input: UpsertRateLimitPolicyInput!): RateLimitPolicy! @hasPermission(perm: "route:manage")
 	setRateLimitPolicyEnabled(id: ID!, enabled: Boolean!): RateLimitPolicy! @hasPermission(perm: "route:manage")
@@ -977,6 +978,10 @@ enum SortDirection {
 type SyncResourcePoolPayload {
 	pool: ResourcePool!
 	syncedAt: Time!
+}
+input TestModelGatewayConnectionInput {
+	endpoint: String!
+	masterKey: String!
 }
 input TestResourcePoolConnectionInput {
 	name: String!

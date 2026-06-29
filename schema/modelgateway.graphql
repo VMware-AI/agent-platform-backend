@@ -79,7 +79,7 @@ type ModelGatewayTestResult {
   latencyMs: Int
   message: String!
   testedAt: Time!
-  gateway: ModelGateway!
+  gateway: ModelGateway
   loadBalancingStrategy: LoadBalancingStrategy
 }
 
@@ -101,6 +101,15 @@ input ModelGatewayInput {
   masterKey: String
 }
 
+# Pre-create test input — the form-level "Test Connection" button on the 接入表单
+# uses this to ping a not-yet-persisted gateway config. Carries the minimal
+# fields the probe needs: endpoint + masterKey. (adminUrl, name, provider are
+# either fixed or irrelevant to the live test.)
+input TestModelGatewayConnectionInput {
+  endpoint: String!
+  masterKey: String!
+}
+
 extend type Query {
   # page is the shared PageInput (limit/offset) defined alongside audit/observability.
   modelGateways(filter: ModelGatewayFilterInput, page: PageInput!, sort: ModelGatewaySort): ModelGatewayConnection! @hasRole(any: [admin])
@@ -112,4 +121,7 @@ extend type Mutation {
   updateModelGateway(id: ID!, input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
   deleteModelGateway(id: ID!): DeleteModelGatewayPayload! @hasRole(any: [admin])
   testModelGatewayConnection(id: ID!): ModelGatewayTestResult! @hasRole(any: [admin])
+  # Pre-create dry-run probe. No row is created or modified; the result's
+  # `gateway` field is null. Strategy probe is best-effort.
+  testNewModelGatewayConnection(input: TestModelGatewayConnectionInput!): ModelGatewayTestResult! @hasRole(any: [admin])
 }

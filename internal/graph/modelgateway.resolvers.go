@@ -7,6 +7,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -170,6 +171,11 @@ func (r *mutationResolver) TestModelGatewayConnection(ctx context.Context, id st
 		Gateway:               toModelGateway(g, cnt, strategy),
 		LoadBalancingStrategy: strategy,
 	}, nil
+}
+
+// TestNewModelGatewayConnection is the resolver for the testNewModelGatewayConnection field.
+func (r *mutationResolver) TestNewModelGatewayConnection(ctx context.Context, input model.TestModelGatewayConnectionInput) (*model.ModelGatewayTestResult, error) {
+	panic(fmt.Errorf("not implemented: TestNewModelGatewayConnection - testNewModelGatewayConnection"))
 }
 
 // ModelGateways is a filtered/paged (limit/offset) list of gateways projected as

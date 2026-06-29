@@ -125,6 +125,21 @@ testModelGatewayConnection(id: ID!): ModelGatewayTestResult!
 |----------|------|----------|---------|
 | `id` | `ID!` | yes | — |
 
+### `testNewModelGatewayConnection`
+
+Pre-create dry-run probe. No row is created or modified; the result's `gateway` field is null. Strategy probe is best-effort.
+
+```graphql
+testNewModelGatewayConnection(input: TestModelGatewayConnectionInput!): ModelGatewayTestResult!
+```
+
+- **Returns:** `ModelGatewayTestResult!`
+- **Auth:** `@hasRole(any: [admin])`
+
+| Argument | Type | Required | Default |
+|----------|------|----------|---------|
+| `input` | `TestModelGatewayConnectionInput!` | yes | — |
+
 ### `registerGatewayConnection`
 
 ```graphql
@@ -355,7 +370,7 @@ setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier!
 | `latencyMs` | `Int` | — |
 | `message` | `String!` | — |
 | `testedAt` | `Time!` | — |
-| `gateway` | `ModelGateway!` | — |
+| `gateway` | `ModelGateway` | — |
 | `loadBalancingStrategy` | `LoadBalancingStrategy` | — |
 
 ### ModelRoute
@@ -459,6 +474,17 @@ Console 模型路由 create form (创建路由). modelAlias defaults to name whe
 | `loadBalanceStrategy` | `LoadBalanceStrategy` | — |
 | `publicUrl` | `String` | The URL provisioned VMs call (LLD-13 §3.3); omitted → falls back to endpoint. |
 | `isDefault` | `Boolean` | Mark this the platform default gateway; setting true clears the flag on any other. |
+
+### TestModelGatewayConnectionInput
+
+*Input*
+
+Pre-create test input — the form-level "Test Connection" button on the 接入表单 uses this to ping a not-yet-persisted gateway config. Carries the minimal fields the probe needs: endpoint + masterKey. (adminUrl, name, provider are either fixed or irrelevant to the live test.)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `endpoint` | `String!` | — |
+| `masterKey` | `String!` | — |
 
 ### UpdateModelRouteInput
 

@@ -504,7 +504,7 @@ type ModelGatewayTestResult struct {
 	LatencyMs             *int                   `json:"latencyMs,omitempty"`
 	Message               string                 `json:"message"`
 	TestedAt              time.Time              `json:"testedAt"`
-	Gateway               *ModelGateway          `json:"gateway"`
+	Gateway               *ModelGateway          `json:"gateway,omitempty"`
 	LoadBalancingStrategy *LoadBalancingStrategy `json:"loadBalancingStrategy,omitempty"`
 }
 
@@ -812,6 +812,11 @@ type SnapshotAgentInput struct {
 type SyncResourcePoolPayload struct {
 	Pool     *ResourcePool `json:"pool"`
 	SyncedAt time.Time     `json:"syncedAt"`
+}
+
+type TestModelGatewayConnectionInput struct {
+	Endpoint  string `json:"endpoint"`
+	MasterKey string `json:"masterKey"`
 }
 
 type TestResourcePoolConnectionInput struct {

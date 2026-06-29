@@ -417,77 +417,78 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddMembership              func(childComplexity int, userID string, departmentID string, role *model.MembershipRole) int
-		AddOvaTemplateVersion      func(childComplexity int, input model.AddOvaTemplateVersionInput) int
-		AssignUserRole             func(childComplexity int, userID string, roleID string) int
-		AssignUsersToRole          func(childComplexity int, input model.AssignUsersToRoleInput) int
-		ChangePassword             func(childComplexity int, oldPassword string, newPassword string) int
-		CreateAgent                func(childComplexity int, input model.CreateAgentInput) int
-		CreateAgentConfig          func(childComplexity int, input model.CreateAgentConfigInput) int
-		CreateCustomRole           func(childComplexity int, input model.CreateCustomRoleInput) int
-		CreateDepartment           func(childComplexity int, input model.CreateDepartmentInput) int
-		CreateModelGateway         func(childComplexity int, input model.ModelGatewayInput) int
-		CreateModelRoute           func(childComplexity int, input model.CreateModelRouteInput) int
-		CreateOvaTemplateFamily    func(childComplexity int, input model.CreateOvaTemplateFamilyInput) int
-		CreateResourcePool         func(childComplexity int, input model.CreateResourcePoolInput) int
-		CreateUser                 func(childComplexity int, input model.CreateUserInput) int
-		DeleteAgentConfig          func(childComplexity int, id string) int
-		DeleteArtifact             func(childComplexity int, id string) int
-		DeleteCustomRole           func(childComplexity int, id string) int
-		DeleteDepartment           func(childComplexity int, id string) int
-		DeleteGatewayConnection    func(childComplexity int, id string) int
-		DeleteImage                func(childComplexity int, id string) int
-		DeleteModelGateway         func(childComplexity int, id string) int
-		DeleteModelRoute           func(childComplexity int, id string) int
-		DeleteRateLimitPolicy      func(childComplexity int, id string) int
-		DeleteResourcePool         func(childComplexity int, id string) int
-		DeleteSkill                func(childComplexity int, id string) int
-		DeleteUpstream             func(childComplexity int, id string) int
-		DeleteUser                 func(childComplexity int, id string) int
-		DeployAgent                func(childComplexity int, input model.DeployAgentInput) int
-		IssueVirtualKey            func(childComplexity int, input model.IssueVirtualKeyInput) int
-		Login                      func(childComplexity int, input model.LoginInput) int
-		Logout                     func(childComplexity int) int
-		RecordRequestLog           func(childComplexity int, input model.RecordRequestLogInput) int
-		RecordTokenUsage           func(childComplexity int, input model.RecordTokenUsageInput) int
-		RecycleAgent               func(childComplexity int, input model.RecycleAgentInput) int
-		RegenerateVirtualKey       func(childComplexity int, id string) int
-		RegisterGatewayConnection  func(childComplexity int, input model.RegisterGatewayConnectionInput) int
-		RemoveMembership           func(childComplexity int, userID string, departmentID string) int
-		RemoveUserRole             func(childComplexity int, userID string, roleID string) int
-		RequestRotation            func(childComplexity int, agentID string, kind model.RotationKind) int
-		ResetUserPassword          func(childComplexity int, id string) int
-		RevertAgentSnapshot        func(childComplexity int, input model.RevertAgentSnapshotInput) int
-		RevokeAgentEnrollment      func(childComplexity int, agentID string) int
-		RevokeVirtualKey           func(childComplexity int, id string) int
-		SetAgentConfigKnowledge    func(childComplexity int, configID string, knowledgeArtifactIds []string) int
-		SetAgentStatus             func(childComplexity int, id string, status model.AgentStatus) int
-		SetDefaultAgentConfig      func(childComplexity int, id string) int
-		SetModelRouteEnabled       func(childComplexity int, id string, enabled bool) int
-		SetRateLimitPolicyEnabled  func(childComplexity int, id string, enabled bool) int
-		SetRolePermissions         func(childComplexity int, roleID string, permissionKeys []string) int
-		SetRouterTier              func(childComplexity int, tier model.RouterTierLevel, modelAlias string) int
-		SetVirtualKeyEnabled       func(childComplexity int, id string, enabled bool) int
-		SnapshotAgent              func(childComplexity int, input model.SnapshotAgentInput) int
-		SyncResourcePool           func(childComplexity int, id string) int
-		TestGatewayConnection      func(childComplexity int, id string) int
-		TestModelGatewayConnection func(childComplexity int, id string) int
-		TestResourcePoolConnection func(childComplexity int, input model.TestResourcePoolConnectionInput) int
-		ToggleUserEnabled          func(childComplexity int, id string) int
-		UpdateAgentConfig          func(childComplexity int, id string, input model.UpdateAgentConfigInput) int
-		UpdateModelGateway         func(childComplexity int, id string, input model.ModelGatewayInput) int
-		UpdateModelRoute           func(childComplexity int, id string, input model.UpdateModelRouteInput) int
-		UpdatePlatformSettings     func(childComplexity int, input model.UpdatePlatformSettingsInput) int
-		UpdateResourcePool         func(childComplexity int, id string, input model.UpdateResourcePoolInput) int
-		UpdateUser                 func(childComplexity int, id string, input model.UpdateUserInput) int
-		UpsertAgentTemplate        func(childComplexity int, input model.UpsertAgentTemplateInput) int
-		UpsertArtifact             func(childComplexity int, input model.UpsertArtifactInput) int
-		UpsertImage                func(childComplexity int, input model.UpsertImageInput) int
-		UpsertModelRoute           func(childComplexity int, input model.UpsertModelRouteInput) int
-		UpsertPermission           func(childComplexity int, key string, description *string) int
-		UpsertRateLimitPolicy      func(childComplexity int, input model.UpsertRateLimitPolicyInput) int
-		UpsertSkill                func(childComplexity int, input model.UpsertSkillInput) int
-		UpsertUpstream             func(childComplexity int, input model.UpsertUpstreamInput) int
+		AddMembership                 func(childComplexity int, userID string, departmentID string, role *model.MembershipRole) int
+		AddOvaTemplateVersion         func(childComplexity int, input model.AddOvaTemplateVersionInput) int
+		AssignUserRole                func(childComplexity int, userID string, roleID string) int
+		AssignUsersToRole             func(childComplexity int, input model.AssignUsersToRoleInput) int
+		ChangePassword                func(childComplexity int, oldPassword string, newPassword string) int
+		CreateAgent                   func(childComplexity int, input model.CreateAgentInput) int
+		CreateAgentConfig             func(childComplexity int, input model.CreateAgentConfigInput) int
+		CreateCustomRole              func(childComplexity int, input model.CreateCustomRoleInput) int
+		CreateDepartment              func(childComplexity int, input model.CreateDepartmentInput) int
+		CreateModelGateway            func(childComplexity int, input model.ModelGatewayInput) int
+		CreateModelRoute              func(childComplexity int, input model.CreateModelRouteInput) int
+		CreateOvaTemplateFamily       func(childComplexity int, input model.CreateOvaTemplateFamilyInput) int
+		CreateResourcePool            func(childComplexity int, input model.CreateResourcePoolInput) int
+		CreateUser                    func(childComplexity int, input model.CreateUserInput) int
+		DeleteAgentConfig             func(childComplexity int, id string) int
+		DeleteArtifact                func(childComplexity int, id string) int
+		DeleteCustomRole              func(childComplexity int, id string) int
+		DeleteDepartment              func(childComplexity int, id string) int
+		DeleteGatewayConnection       func(childComplexity int, id string) int
+		DeleteImage                   func(childComplexity int, id string) int
+		DeleteModelGateway            func(childComplexity int, id string) int
+		DeleteModelRoute              func(childComplexity int, id string) int
+		DeleteRateLimitPolicy         func(childComplexity int, id string) int
+		DeleteResourcePool            func(childComplexity int, id string) int
+		DeleteSkill                   func(childComplexity int, id string) int
+		DeleteUpstream                func(childComplexity int, id string) int
+		DeleteUser                    func(childComplexity int, id string) int
+		DeployAgent                   func(childComplexity int, input model.DeployAgentInput) int
+		IssueVirtualKey               func(childComplexity int, input model.IssueVirtualKeyInput) int
+		Login                         func(childComplexity int, input model.LoginInput) int
+		Logout                        func(childComplexity int) int
+		RecordRequestLog              func(childComplexity int, input model.RecordRequestLogInput) int
+		RecordTokenUsage              func(childComplexity int, input model.RecordTokenUsageInput) int
+		RecycleAgent                  func(childComplexity int, input model.RecycleAgentInput) int
+		RegenerateVirtualKey          func(childComplexity int, id string) int
+		RegisterGatewayConnection     func(childComplexity int, input model.RegisterGatewayConnectionInput) int
+		RemoveMembership              func(childComplexity int, userID string, departmentID string) int
+		RemoveUserRole                func(childComplexity int, userID string, roleID string) int
+		RequestRotation               func(childComplexity int, agentID string, kind model.RotationKind) int
+		ResetUserPassword             func(childComplexity int, id string) int
+		RevertAgentSnapshot           func(childComplexity int, input model.RevertAgentSnapshotInput) int
+		RevokeAgentEnrollment         func(childComplexity int, agentID string) int
+		RevokeVirtualKey              func(childComplexity int, id string) int
+		SetAgentConfigKnowledge       func(childComplexity int, configID string, knowledgeArtifactIds []string) int
+		SetAgentStatus                func(childComplexity int, id string, status model.AgentStatus) int
+		SetDefaultAgentConfig         func(childComplexity int, id string) int
+		SetModelRouteEnabled          func(childComplexity int, id string, enabled bool) int
+		SetRateLimitPolicyEnabled     func(childComplexity int, id string, enabled bool) int
+		SetRolePermissions            func(childComplexity int, roleID string, permissionKeys []string) int
+		SetRouterTier                 func(childComplexity int, tier model.RouterTierLevel, modelAlias string) int
+		SetVirtualKeyEnabled          func(childComplexity int, id string, enabled bool) int
+		SnapshotAgent                 func(childComplexity int, input model.SnapshotAgentInput) int
+		SyncResourcePool              func(childComplexity int, id string) int
+		TestGatewayConnection         func(childComplexity int, id string) int
+		TestModelGatewayConnection    func(childComplexity int, id string) int
+		TestNewModelGatewayConnection func(childComplexity int, input model.TestModelGatewayConnectionInput) int
+		TestResourcePoolConnection    func(childComplexity int, input model.TestResourcePoolConnectionInput) int
+		ToggleUserEnabled             func(childComplexity int, id string) int
+		UpdateAgentConfig             func(childComplexity int, id string, input model.UpdateAgentConfigInput) int
+		UpdateModelGateway            func(childComplexity int, id string, input model.ModelGatewayInput) int
+		UpdateModelRoute              func(childComplexity int, id string, input model.UpdateModelRouteInput) int
+		UpdatePlatformSettings        func(childComplexity int, input model.UpdatePlatformSettingsInput) int
+		UpdateResourcePool            func(childComplexity int, id string, input model.UpdateResourcePoolInput) int
+		UpdateUser                    func(childComplexity int, id string, input model.UpdateUserInput) int
+		UpsertAgentTemplate           func(childComplexity int, input model.UpsertAgentTemplateInput) int
+		UpsertArtifact                func(childComplexity int, input model.UpsertArtifactInput) int
+		UpsertImage                   func(childComplexity int, input model.UpsertImageInput) int
+		UpsertModelRoute              func(childComplexity int, input model.UpsertModelRouteInput) int
+		UpsertPermission              func(childComplexity int, key string, description *string) int
+		UpsertRateLimitPolicy         func(childComplexity int, input model.UpsertRateLimitPolicyInput) int
+		UpsertSkill                   func(childComplexity int, input model.UpsertSkillInput) int
+		UpsertUpstream                func(childComplexity int, input model.UpsertUpstreamInput) int
 	}
 
 	OvaTemplateFamily struct {
@@ -849,6 +850,7 @@ type MutationResolver interface {
 	UpdateModelGateway(ctx context.Context, id string, input model.ModelGatewayInput) (*model.ModelGateway, error)
 	DeleteModelGateway(ctx context.Context, id string) (*model.DeleteModelGatewayPayload, error)
 	TestModelGatewayConnection(ctx context.Context, id string) (*model.ModelGatewayTestResult, error)
+	TestNewModelGatewayConnection(ctx context.Context, input model.TestModelGatewayConnectionInput) (*model.ModelGatewayTestResult, error)
 	RecordRequestLog(ctx context.Context, input model.RecordRequestLogInput) (*model.RequestLog, error)
 	UpsertRateLimitPolicy(ctx context.Context, input model.UpsertRateLimitPolicyInput) (*model.RateLimitPolicy, error)
 	SetRateLimitPolicyEnabled(ctx context.Context, id string, enabled bool) (*model.RateLimitPolicy, error)
@@ -2996,6 +2998,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.TestModelGatewayConnection(childComplexity, args["id"].(string)), true
+	case "Mutation.testNewModelGatewayConnection":
+		if e.ComplexityRoot.Mutation.TestNewModelGatewayConnection == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_testNewModelGatewayConnection_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.TestNewModelGatewayConnection(childComplexity, args["input"].(model.TestModelGatewayConnectionInput)), true
 	case "Mutation.testResourcePoolConnection":
 		if e.ComplexityRoot.Mutation.TestResourcePoolConnection == nil {
 			break
@@ -4560,6 +4573,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputResourcePoolSort,
 		ec.unmarshalInputRevertAgentSnapshotInput,
 		ec.unmarshalInputSnapshotAgentInput,
+		ec.unmarshalInputTestModelGatewayConnectionInput,
 		ec.unmarshalInputTestResourcePoolConnectionInput,
 		ec.unmarshalInputUpdateAgentConfigInput,
 		ec.unmarshalInputUpdateModelRouteInput,
@@ -5710,7 +5724,7 @@ type ModelGatewayTestResult {
   latencyMs: Int
   message: String!
   testedAt: Time!
-  gateway: ModelGateway!
+  gateway: ModelGateway
   loadBalancingStrategy: LoadBalancingStrategy
 }
 
@@ -5732,6 +5746,15 @@ input ModelGatewayInput {
   masterKey: String
 }
 
+# Pre-create test input — the form-level "Test Connection" button on the 接入表单
+# uses this to ping a not-yet-persisted gateway config. Carries the minimal
+# fields the probe needs: endpoint + masterKey. (adminUrl, name, provider are
+# either fixed or irrelevant to the live test.)
+input TestModelGatewayConnectionInput {
+  endpoint: String!
+  masterKey: String!
+}
+
 extend type Query {
   # page is the shared PageInput (limit/offset) defined alongside audit/observability.
   modelGateways(filter: ModelGatewayFilterInput, page: PageInput!, sort: ModelGatewaySort): ModelGatewayConnection! @hasRole(any: [admin])
@@ -5743,6 +5766,9 @@ extend type Mutation {
   updateModelGateway(id: ID!, input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
   deleteModelGateway(id: ID!): DeleteModelGatewayPayload! @hasRole(any: [admin])
   testModelGatewayConnection(id: ID!): ModelGatewayTestResult! @hasRole(any: [admin])
+  # Pre-create dry-run probe. No row is created or modified; the result's
+  # ` + "`" + `gateway` + "`" + ` field is null. Strategy probe is best-effort.
+  testNewModelGatewayConnection(input: TestModelGatewayConnectionInput!): ModelGatewayTestResult! @hasRole(any: [admin])
 }
 `, BuiltIn: false},
 	{Name: "../../schema/observability.graphql", Input: `# Request logs (请求日志) + rate-limit policies (限流策略). 0619.
@@ -8615,6 +8641,20 @@ func (ec *executionContext) field_Mutation_testModelGatewayConnection_args(ctx c
 		return nil, err
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_testNewModelGatewayConnection_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.TestModelGatewayConnectionInput, error) {
+			return ec.unmarshalNTestModelGatewayConnectionInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTestModelGatewayConnectionInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -14592,10 +14632,10 @@ func (ec *executionContext) _ModelGatewayTestResult_gateway(ctx context.Context,
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *model.ModelGateway) graphql.Marshaler {
-			return ec.marshalNModelGateway2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGateway(ctx, selections, v)
+			return ec.marshalOModelGateway2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGateway(ctx, selections, v)
 		},
 		true,
-		true,
+		false,
 	)
 }
 func (ec *executionContext) fieldContext_ModelGatewayTestResult_gateway(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -17935,6 +17975,68 @@ func (ec *executionContext) fieldContext_Mutation_testModelGatewayConnection(ctx
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_testModelGatewayConnection_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_testNewModelGatewayConnection(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_testNewModelGatewayConnection(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().TestNewModelGatewayConnection(ctx, fc.Args["input"].(model.TestModelGatewayConnectionInput))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.ModelGatewayTestResult
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.ModelGatewayTestResult
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ModelGatewayTestResult) graphql.Marshaler {
+			return ec.marshalNModelGatewayTestResult2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayTestResult(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_testNewModelGatewayConnection(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ModelGatewayTestResult(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_testNewModelGatewayConnection_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -28128,6 +28230,43 @@ func (ec *executionContext) unmarshalInputSnapshotAgentInput(ctx context.Context
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputTestModelGatewayConnectionInput(ctx context.Context, obj any) (model.TestModelGatewayConnectionInput, error) {
+	var it model.TestModelGatewayConnectionInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"endpoint", "masterKey"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "endpoint":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("endpoint"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Endpoint = data
+		case "masterKey":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("masterKey"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.MasterKey = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputTestResourcePoolConnectionInput(ctx context.Context, obj any) (model.TestResourcePoolConnectionInput, error) {
 	var it model.TestResourcePoolConnectionInput
 	if obj == nil {
@@ -31652,7 +31791,7 @@ func (ec *executionContext) _ModelGatewayTestResult(ctx context.Context, sel ast
 			}
 		case "gateway":
 			out.Values[i] = ec._ModelGatewayTestResult_gateway(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
+			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
 		case "loadBalancingStrategy":
@@ -32253,6 +32392,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "testModelGatewayConnection":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_testModelGatewayConnection(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "testNewModelGatewayConnection":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_testNewModelGatewayConnection(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -37625,6 +37771,11 @@ func (ec *executionContext) marshalNSyncResourcePoolPayload2ᚖgithubᚗcomᚋVM
 	return ec._SyncResourcePoolPayload(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNTestModelGatewayConnectionInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTestModelGatewayConnectionInput(ctx context.Context, v any) (model.TestModelGatewayConnectionInput, error) {
+	res, err := ec.unmarshalInputTestModelGatewayConnectionInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNTestResourcePoolConnectionInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTestResourcePoolConnectionInput(ctx context.Context, v any) (model.TestResourcePoolConnectionInput, error) {
 	res, err := ec.unmarshalInputTestResourcePoolConnectionInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -38312,6 +38463,13 @@ func (ec *executionContext) marshalOMeteringTimeRange2ᚖgithubᚗcomᚋVMware�
 		return graphql.Null
 	}
 	return v
+}
+
+func (ec *executionContext) marshalOModelGateway2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGateway(ctx context.Context, sel ast.SelectionSet, v *model.ModelGateway) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._ModelGateway(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOModelGatewayFilterInput2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayFilterInput(ctx context.Context, v any) (*model.ModelGatewayFilterInput, error) {
