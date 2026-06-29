@@ -8,6 +8,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/department"
 	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
+	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/google/uuid"
@@ -166,6 +167,16 @@ func (r *Resolver) assertGatewayDeletable(ctx context.Context, g *ent.GatewayCon
 		return err
 	} else if n > 0 {
 		return gqlerror.Errorf("gateway is used by %d department(s); reassign them before deleting", n)
+	}
+	// Don't orphan active billable keys: a non-revoked key minted on this gateway
+	// (gateway_connection_id) can only be revoked on it (LLD-14), so deleting the
+	// gateway would strand it. Revoke/recycle those agents first.
+	if n, err := r.Ent.VirtualKey.Query().
+		Where(virtualkey.GatewayConnectionID(g.ID), virtualkey.StatusNEQ(virtualkey.StatusRevoked)).
+		Count(ctx); err != nil {
+		return err
+	} else if n > 0 {
+		return gqlerror.Errorf("gateway has %d active virtual key(s); revoke or recycle those agents before deleting", n)
 	}
 	if g.IsDefault {
 		return gqlerror.Errorf("cannot delete the default gateway; set another default first")

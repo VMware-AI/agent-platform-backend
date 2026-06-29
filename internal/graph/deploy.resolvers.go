@@ -229,7 +229,7 @@ func (r *mutationResolver) RecycleAgent(ctx context.Context, input model.Recycle
 		cctx := context.WithoutCancel(ctx)
 		if vk, err := r.Ent.VirtualKey.Get(cctx, *ag.VirtualKeyID); err == nil {
 			// Route the revoke to the gateway hosting the key's team (LLD-13 §3.3).
-			if gw := r.gatewayKeyClient(cctx, deptIDFromTeam(&vk.TeamID)); gw == nil {
+			if gw := r.gatewayKeyClientForVK(cctx, vk); gw == nil {
 				log.Printf("recycle agent %s: no gateway to revoke key %s", ag.ID, vk.ID)
 			} else if delErr := gw.DeleteKey(cctx, vk.LitellmKey); delErr != nil {
 				log.Printf("recycle agent %s: orphan gateway key %s, revoke failed: %v", ag.ID, vk.ID, delErr)

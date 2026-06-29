@@ -89,6 +89,19 @@ func (r *Resolver) gatewayKeyClientForConn(ctx context.Context, connID *uuid.UUI
 	return r.Gateway
 }
 
+// gatewayKeyClientForVK routes key ops to the gateway that ISSUED the key (LLD-14
+// §3.3): its persisted gateway_connection_id, else — for legacy rows minted before
+// T1 (NULL) — the team_id→department→gateway derivation. This decouples a key's
+// lifecycle (revoke/regenerate/recycle/disable) from the department's *current*
+// gateway binding, so a department re-bind can't strand the key on its original
+// gateway as an active billable orphan (bug #5).
+func (r *Resolver) gatewayKeyClientForVK(ctx context.Context, vk *ent.VirtualKey) gateway.Client {
+	if vk.GatewayConnectionID != nil {
+		return r.gatewayKeyClientForConn(ctx, vk.GatewayConnectionID)
+	}
+	return r.gatewayKeyClient(ctx, deptIDFromTeam(&vk.TeamID))
+}
+
 // gatewayModels resolves the gateway.ModelManager (upstream/router sync) — the
 // platform default gateway — falling back to the legacy injected r.GatewayModels.
 // nil = no gateway configured.

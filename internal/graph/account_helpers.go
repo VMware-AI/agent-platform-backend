@@ -30,7 +30,7 @@ func (r *mutationResolver) revokeUserKeys(ctx context.Context, uid uuid.UUID) {
 	}
 	actor := actorID(auth.FromContext(ctx))
 	for _, vk := range keys {
-		gw := r.gatewayKeyClient(ctx, deptIDFromTeam(&vk.TeamID))
+		gw := r.gatewayKeyClientForVK(ctx, vk)
 		if gw == nil {
 			log.Printf("delete user %s: no gateway to revoke key %s (orphan)", uid, vk.ID)
 			r.audit(ctx, "key.revoke", "virtual_key", vk.ID.String(), false, actor)
