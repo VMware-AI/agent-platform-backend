@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "agent-platform-backend-v1",
     "name": "Agent Platform Backend API",
-    "description": "GraphQL API collection for the VMware AI Agent Platform backend.\n\n**Endpoint:** `POST http://localhost:8080/query`\n\n**Auth options:**\n1. Bearer token in `Authorization: Bearer <token>` header (returned from the `login` mutation — simplest in Postman).\n2. Session cookie `ap_session` (set automatically by browser when posting from same origin).\n\n**Required headers (every POST to /query):**\n- `Content-Type: application/json`\n- `Origin: http://localhost:8080` — required by the CSRF middleware (Origin or Referer must be present, and must be same-origin or allowlisted).\n\n**CORS allowlist headers (also valid):**\n- `Authorization` (Bearer)\n- `X-Environment`\n\n**Source of truth:** GraphQL schema at `/schema/*.graphql`. Generated from `internal/graph/testdata/client_operations/*.graphql` (these are the operations the front-end actually runs).\n\n**Authorization model:**\n- `admin` — full access\n- `tenant_admin` — tenant-scoped admin\n- `observability` — read-only dashboards/metering\n- `user` — owner-scoped access (their own agents/keys)\n\n**Default admin (dev):** username `admin@platform.local`, password `ChangeMe123!` (forces password change on first login unless `ADMIN_BOOTSTRAP_PASSWORD` env var is set).",
+    "description": "GraphQL API collection for the VMware AI Agent Platform backend.\n\n**Endpoint:** `POST http://localhost:8080/query`\n\n**Auth options:**\n1. Bearer token in `Authorization: Bearer <token>` header (returned from the `login` mutation \u2014 simplest in Postman).\n2. Session cookie `ap_session` (set automatically by browser when posting from same origin).\n\n**Required headers (every POST to /query):**\n- `Content-Type: application/json`\n- `Origin: http://localhost:8080` \u2014 required by the CSRF middleware (Origin or Referer must be present, and must be same-origin or allowlisted).\n\n**CORS allowlist headers (also valid):**\n- `Authorization` (Bearer)\n- `X-Environment`\n\n**Source of truth:** GraphQL schema at `/schema/*.graphql`. Generated from `internal/graph/testdata/client_operations/*.graphql` (these are the operations the front-end actually runs).\n\n**Authorization model:**\n- `admin` \u2014 full access\n- `read_only` \u2014 read-only dashboards/metering\n- `user` \u2014 owner-scoped access (their own agents/keys)\n\n**Default admin (dev):** username `admin@platform.local`, password `ChangeMe123!` (forces password change on first login unless `ADMIN_BOOTSTRAP_PASSWORD` env var is set).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -216,7 +216,7 @@
                 "query"
               ]
             },
-            "description": "Console overview page — stat cards, recent agents, system notices. Restricted to `admin` / `observability`."
+            "description": "Console overview page \u2014 stat cards, recent agents, system notices. Restricted to `admin` / `read_only`."
           },
           "response": []
         }
@@ -253,7 +253,7 @@
                 "query"
               ]
             },
-            "description": "Paginated/filtered/sorted user list. Restricted to `admin` / `tenant_admin`."
+            "description": "Paginated/filtered/sorted user list. Restricted to `admin`."
           },
           "response": []
         },
@@ -285,7 +285,7 @@
                 "query"
               ]
             },
-            "description": "Debounced dedupe check for the create-user form. Returns `Boolean!`. Restricted to `admin` / `tenant_admin`."
+            "description": "Debounced dedupe check for the create-user form. Returns `Boolean!`. Restricted to `admin`."
           },
           "response": []
         },
@@ -317,7 +317,7 @@
                 "query"
               ]
             },
-            "description": "List all users assigned to a given role id. Restricted to `admin` / `tenant_admin`."
+            "description": "List all users assigned to a given role id. Restricted to `admin`."
           },
           "response": []
         },
@@ -445,7 +445,7 @@
                 "query"
               ]
             },
-            "description": "Reset a user's password — backend generates a new 16-char temp password, sets `mustChangePassword=true`, revokes all sessions. The new password is returned **once** in `generatedPassword`."
+            "description": "Reset a user's password \u2014 backend generates a new 16-char temp password, sets `mustChangePassword=true`, revokes all sessions. The new password is returned **once** in `generatedPassword`."
           },
           "response": []
         },
@@ -541,7 +541,7 @@
                 "query"
               ]
             },
-            "description": "List built-in and custom roles. Restricted to `admin` / `tenant_admin`."
+            "description": "List built-in and custom roles. Restricted to `admin`."
           },
           "response": []
         },
@@ -610,7 +610,7 @@
                 "query"
               ]
             },
-            "description": "List custom (non-built-in) roles. Restricted to `admin` / `tenant_admin`."
+            "description": "List custom (non-built-in) roles. Restricted to `admin`."
           },
           "response": []
         },
@@ -674,7 +674,7 @@
                 "query"
               ]
             },
-            "description": "Create a custom role (initially with no permissions). Restricted to `admin` / `tenant_admin`."
+            "description": "Create a custom role (initially with no permissions). Restricted to `admin`."
           },
           "response": []
         },
@@ -834,7 +834,7 @@
                 "query"
               ]
             },
-            "description": "Assign a single custom role to a user. Restricted to `admin` / `tenant_admin`."
+            "description": "Assign a single custom role to a user. Restricted to `admin`."
           },
           "response": []
         },
@@ -903,7 +903,7 @@
                 "query"
               ]
             },
-            "description": "List departments. Restricted to `admin` / `tenant_admin`."
+            "description": "List departments. Restricted to `admin`."
           },
           "response": []
         },
@@ -1100,7 +1100,7 @@
                 "query"
               ]
             },
-            "description": "Get platform-wide settings (currently just `agentUser` — the OS account installed agents run as). Admin-only."
+            "description": "Get platform-wide settings (currently just `agentUser` \u2014 the OS account installed agents run as). Admin-only."
           },
           "response": []
         },
@@ -1233,7 +1233,7 @@
                 "query"
               ]
             },
-            "description": "Create a resource pool. Credentials are written to secret store — only the ref is persisted; the plaintext never reaches the DB. Set `insecure: true` to skip vCenter TLS verification (self-signed/internal CA)."
+            "description": "Create a resource pool. Credentials are written to secret store \u2014 only the ref is persisted; the plaintext never reaches the DB. Set `insecure: true` to skip vCenter TLS verification (self-signed/internal CA)."
           },
           "response": []
         },
@@ -1329,7 +1329,7 @@
                 "query"
               ]
             },
-            "description": "Connect → count datacenters/clusters/hosts/VMs → persist. Long-running — may take seconds."
+            "description": "Connect \u2192 count datacenters/clusters/hosts/VMs \u2192 persist. Long-running \u2014 may take seconds."
           },
           "response": []
         },
@@ -1361,7 +1361,7 @@
                 "query"
               ]
             },
-            "description": "Pre-save reachability probe (no credentials) — used by the 接入表单 to validate the endpoint before committing."
+            "description": "Pre-save reachability probe (no credentials) \u2014 used by the \u63a5\u5165\u8868\u5355 to validate the endpoint before committing."
           },
           "response": []
         },
@@ -1482,7 +1482,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateModelGateway($input: ModelGatewayInput!) {\\n  createModelGateway(input: $input) {\\n    id name provider endpoint status loadBalancingStrategy latencyMs adminUrl lastSyncAt lastSyncStatus lastSyncMessage createdAt updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"primary-litellm\",\n      \"provider\": \"LITELLM\",\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"adminUrl\": \"http://litellm.local:4000/ui\",\n      \"masterKey\": \"sk-litellm-XXXXXX\",\n      \"loadBalancingStrategy\": \"ROUND_ROBIN\"\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation CreateModelGateway($input: ModelGatewayInput!) {\\n  createModelGateway(input: $input) {\\n    id name provider endpoint status loadBalancingStrategy latencyMs adminUrl lastSyncAt lastSyncStatus lastSyncMessage createdAt updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"primary-litellm\",\n      \"provider\": \"LITELLM\",\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"adminUrl\": \"http://litellm.local:4000/ui\",\n      \"masterKey\": \"sk-litellm-XXXXXX\"\n    }\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1494,7 +1494,7 @@
                 "query"
               ]
             },
-            "description": "Create a model gateway. The litellm master key is written to secret store — only the ref is stored."
+            "description": "Create a model gateway. The litellm master key is written to secret store \u2014 only the ref is stored. loadBalancingStrategy is NOT an input \u2014 it's a read-only field populated by the live probe in TestModelGatewayConnection."
           },
           "response": []
         },
@@ -1514,7 +1514,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpdateModelGateway($id: ID!, $input: ModelGatewayInput!) {\\n  updateModelGateway(id: $id, input: $input) {\\n    id name provider endpoint status loadBalancingStrategy latencyMs adminUrl lastSyncAt lastSyncStatus lastSyncMessage createdAt updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_GATEWAY_ID\",\n    \"input\": {\n      \"name\": \"primary-litellm\",\n      \"provider\": \"LITELLM\",\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"adminUrl\": \"http://litellm.local:4000/ui\",\n      \"masterKey\": \"sk-litellm-NEWSECRET\",\n      \"loadBalancingStrategy\": \"ROUND_ROBIN\"\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation UpdateModelGateway($id: ID!, $input: ModelGatewayInput!) {\\n  updateModelGateway(id: $id, input: $input) {\\n    id name provider endpoint status loadBalancingStrategy latencyMs adminUrl lastSyncAt lastSyncStatus lastSyncMessage createdAt updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_GATEWAY_ID\",\n    \"input\": {\n      \"name\": \"primary-litellm\",\n      \"provider\": \"LITELLM\",\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"adminUrl\": \"http://litellm.local:4000/ui\",\n      \"masterKey\": \"sk-litellm-NEWSECRET\"\n    }\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1526,7 +1526,7 @@
                 "query"
               ]
             },
-            "description": "Update a model gateway (full replace)."
+            "description": "Update a model's name/endpoint/adminUrl and (on re-submit) rotate the master key. loadBalancingStrategy is NOT an input \u2014 it's read-only, populated by the live probe."
           },
           "response": []
         },
@@ -1578,7 +1578,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation TestModelGatewayConnection($id: ID!) {\\n  testModelGatewayConnection(id: $id) { success status latencyMs message testedAt gateway { id name provider endpoint status } }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_GATEWAY_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation TestModelGatewayConnection($id: ID!) {\\n  testModelGatewayConnection(id: $id) { success status latencyMs message testedAt loadBalancingStrategy gateway { id name provider endpoint status loadBalancingStrategy } }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_GATEWAY_ID\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1590,7 +1590,7 @@
                 "query"
               ]
             },
-            "description": "Live ping to the gateway (latency + status). Returns `ModelGatewayTestResult`."
+            "description": "Test the live litellm connection. On success, the response includes the gateway's current global routing strategy (loadBalancingStrategy) as reported by the gateway's /config/router endpoint. The field is null when the gateway version doesn't expose that endpoint \u2014 connectivity success is the sole determinant of test success."
           },
           "response": []
         }
@@ -1659,7 +1659,7 @@
                 "query"
               ]
             },
-            "description": "Register a raw gateway connection. `masterKey` is written to secret store — only the ref is persisted. Setting `isDefault=true` clears the flag on any other."
+            "description": "Register a raw gateway connection. `masterKey` is written to secret store \u2014 only the ref is persisted. Setting `isDefault=true` clears the flag on any other."
           },
           "response": []
         },
@@ -1792,7 +1792,7 @@
                 "query"
               ]
             },
-            "description": "Create a model route (console 创建路由 page). `modelAlias` defaults to `name` when omitted."
+            "description": "Create a model route (console \u521b\u5efa\u8def\u7531 page). `modelAlias` defaults to `name` when omitted."
           },
           "response": []
         },
@@ -1824,7 +1824,7 @@
                 "query"
               ]
             },
-            "description": "Edit a model route (console 编辑路由 page). All fields optional."
+            "description": "Edit a model route (console \u7f16\u8f91\u8def\u7531 page). All fields optional."
           },
           "response": []
         },
@@ -1920,7 +1920,7 @@
                 "query"
               ]
             },
-            "description": "Legacy name-keyed upsert of a model route (the console 创建路由 page uses `createModelRoute` instead). Admin-only."
+            "description": "Legacy name-keyed upsert of a model route (the console \u521b\u5efa\u8def\u7531 page uses `createModelRoute` instead). Admin-only."
           },
           "response": []
         }
@@ -1989,7 +1989,7 @@
                 "query"
               ]
             },
-            "description": "Upsert an upstream (provider / model / API key). `apiKey` is written to secret store — only the ref is persisted. Requires `route:manage` permission."
+            "description": "Upsert an upstream (provider / model / API key). `apiKey` is written to secret store \u2014 only the ref is persisted. Requires `route:manage` permission."
           },
           "response": []
         },
@@ -2053,7 +2053,7 @@
                 "query"
               ]
             },
-            "description": "List the difficulty-router tiers (SIMPLE/MEDIUM/COMPLEX/REASONING → modelAlias). Requires `route:manage` permission."
+            "description": "List the difficulty-router tiers (SIMPLE/MEDIUM/COMPLEX/REASONING \u2192 modelAlias). Requires `route:manage` permission."
           },
           "response": []
         },
@@ -2085,7 +2085,7 @@
                 "query"
               ]
             },
-            "description": "Map a router tier to a model alias → syncs litellm Complexity Router. Requires `route:manage` permission."
+            "description": "Map a router tier to a model alias \u2192 syncs litellm Complexity Router. Requires `route:manage` permission."
           },
           "response": []
         }
@@ -2154,7 +2154,7 @@
                 "query"
               ]
             },
-            "description": "Issue a new litellm virtual key. The `secret` is returned **once** — never queryable again. Requires `key:manage` permission."
+            "description": "Issue a new litellm virtual key. The `secret` is returned **once** \u2014 never queryable again. Requires `key:manage` permission."
           },
           "response": []
         },
@@ -2287,7 +2287,7 @@
                 "query"
               ]
             },
-            "description": "List rate-limit policies. Restricted to `admin` / `tenant_admin`."
+            "description": "List rate-limit policies. Restricted to `admin`."
           },
           "response": []
         },
@@ -2420,7 +2420,7 @@
                 "query"
               ]
             },
-            "description": "Paginated agent list. Admin sees all, tenant_admin sees their tenant, user sees their own."
+            "description": "Paginated agent list. Admin sees all,sees their tenant, user sees their own."
           },
           "response": []
         },
@@ -2516,7 +2516,7 @@
                 "query"
               ]
             },
-            "description": "Snapshot the agent's VM (LLD-03 §4). Owner or admin."
+            "description": "Snapshot the agent's VM (LLD-03 \u00a74). Owner or admin."
           },
           "response": []
         },
@@ -2612,7 +2612,7 @@
                 "query"
               ]
             },
-            "description": "List agent configs (智能体配置 page), optionally filtered by `agentType`."
+            "description": "List agent configs (\u667a\u80fd\u4f53\u914d\u7f6e page), optionally filtered by `agentType`."
           },
           "response": []
         },
@@ -2644,7 +2644,7 @@
                 "query"
               ]
             },
-            "description": "Replace the config's mounted OKF knowledge packs (LLD-11 K2). Set replaced wholesale. Restricted to `admin` / `tenant_admin`."
+            "description": "Replace the config's mounted OKF knowledge packs (LLD-11 K2). Set replaced wholesale. Restricted to `admin`."
           },
           "response": []
         },
@@ -2676,7 +2676,7 @@
                 "query"
               ]
             },
-            "description": "Browse the agent template catalog (智能体中心). Any authenticated user can read."
+            "description": "Browse the agent template catalog (\u667a\u80fd\u4f53\u4e2d\u5fc3). Any authenticated user can read."
           },
           "response": []
         },
@@ -2772,7 +2772,7 @@
                 "query"
               ]
             },
-            "description": "Create an agent config (智能体配置). Restricted to `admin` / `tenant_admin`."
+            "description": "Create an agent config (\u667a\u80fd\u4f53\u914d\u7f6e). Restricted to `admin`."
           },
           "response": []
         },
@@ -2932,7 +2932,7 @@
                 "query"
               ]
             },
-            "description": "Revoke the agent VM's bearer credential — its next heartbeat is rejected (LLD-08 §4.4). Idempotent."
+            "description": "Revoke the agent VM's bearer credential \u2014 its next heartbeat is rejected (LLD-08 \u00a74.4). Idempotent."
           },
           "response": []
         }
@@ -2969,7 +2969,7 @@
                 "query"
               ]
             },
-            "description": "Marketplace OVA template families (智能体市场). Admin-only."
+            "description": "Marketplace OVA template families (\u667a\u80fd\u4f53\u5e02\u573a). Admin-only."
           },
           "response": []
         },
@@ -3262,7 +3262,7 @@
                 "query"
               ]
             },
-            "description": "Upsert an artifact. `content` (≤64K) is embedded for config/script/knowledge kinds; rejected for `kind=package`. sha256 is recomputed from content."
+            "description": "Upsert an artifact. `content` (\u226464K) is embedded for config/script/knowledge kinds; rejected for `kind=package`. sha256 is recomputed from content."
           },
           "response": []
         },
@@ -3619,7 +3619,7 @@
                 "query"
               ]
             },
-            "description": "Aggregated metering for the 计量中心 over a time range. Requires `metering:view`."
+            "description": "Aggregated metering for the \u8ba1\u91cf\u4e2d\u5fc3 over a time range. Requires `metering:view`."
           },
           "response": []
         },
@@ -3651,7 +3651,7 @@
                 "query"
               ]
             },
-            "description": "Token usage aggregation grouped by model/agent/date (older 计量 summary shape; for the console 计量中心 prefer `MeteringOverview`). Requires `metering:view`."
+            "description": "Token usage aggregation grouped by model/agent/date (older \u8ba1\u91cf summary shape; for the console \u8ba1\u91cf\u4e2d\u5fc3 prefer `MeteringOverview`). Requires `metering:view`."
           },
           "response": []
         },
