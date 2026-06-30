@@ -113,6 +113,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		// no resource pool; specify resourcePool"). Empty = inherit the source's
 		// pool (only valid when the source is a regular VM, e.g. vcsim).
 		ResourcePool:     derefString(input.TargetResourcePool),
+		Network:          derefString(input.TargetNetwork),
 		Hostname:         derefString(input.Hostname),
 		MaxBudget:        input.MaxBudget,
 		DefaultConfig:    defaultConfig,
@@ -432,6 +433,42 @@ func (r *queryResolver) VsphereResourcePools(ctx context.Context, resourcePoolID
 	out := make([]model.VsphereResourcePool, 0, len(pools))
 	for _, p := range pools {
 		out = append(out, model.VsphereResourcePool{Name: p.Name, Path: p.Path})
+	}
+	return out, nil
+}
+
+// VsphereNetworks lists all networks/portgroups in a platform resource pool's
+// vCenter, powering the deploy form's NIC/portgroup picker. Admin-only.
+func (r *queryResolver) VsphereNetworks(ctx context.Context, resourcePoolID string) ([]model.VsphereNetwork, error) {
+	cu := auth.FromContext(ctx)
+	if cu == nil || cu.Role != auth.RoleAdmin {
+		return nil, gqlerror.Errorf("forbidden: admin only")
+	}
+	poolID, err := uuid.Parse(resourcePoolID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid resourcePoolId")
+	}
+	pool, err := r.Ent.ResourcePool.Get(ctx, poolID)
+	if err != nil {
+		return nil, err
+	}
+	conn, err := r.connectPool(ctx, pool)
+	if err != nil {
+		return nil, fmt.Errorf("connect vcenter: %w", err)
+	}
+	defer func() { _ = conn.Logout(ctx) }()
+	nets, err := conn.ListNetworks(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list networks: %w", err)
+	}
+	out := make([]model.VsphereNetwork, 0, len(nets))
+	for _, n := range nets {
+		out = append(out, model.VsphereNetwork{
+			Name:    n.Name,
+			Path:    n.Path,
+			Type:    n.Type,
+			DvsName: n.DVSName,
+		})
 	}
 	return out, nil
 }

@@ -411,6 +411,29 @@ var (
 		Columns:    PermissionsColumns,
 		PrimaryKey: []*schema.Column{PermissionsColumns[0]},
 	}
+	// PlatformSecretsColumns holds the columns for the "platform_secrets" table.
+	PlatformSecretsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "ref", Type: field.TypeString, Unique: true},
+		{Name: "username", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "password", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "api_key", Type: field.TypeString, Nullable: true, Default: ""},
+	}
+	// PlatformSecretsTable holds the schema information for the "platform_secrets" table.
+	PlatformSecretsTable = &schema.Table{
+		Name:       "platform_secrets",
+		Columns:    PlatformSecretsColumns,
+		PrimaryKey: []*schema.Column{PlatformSecretsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "platformsecret_ref",
+				Unique:  false,
+				Columns: []*schema.Column{PlatformSecretsColumns[3]},
+			},
+		},
+	}
 	// RateLimitPoliciesColumns holds the columns for the "rate_limit_policies" table.
 	RateLimitPoliciesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -895,6 +918,7 @@ var (
 		OvaTemplateFamiliesTable,
 		OvaTemplateVersionsTable,
 		PermissionsTable,
+		PlatformSecretsTable,
 		RateLimitPoliciesTable,
 		RequestLogsTable,
 		ResourcePoolsTable,

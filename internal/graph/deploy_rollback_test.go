@@ -56,6 +56,12 @@ func (f *fakeVCenter) ListSnapshots(_ context.Context, vmName string) ([]vcenter
 func (f *fakeVCenter) ListContentLibraries(context.Context) ([]string, error) {
 	return []string{"tkg", "iso"}, nil
 }
+func (f *fakeVCenter) ListContentLibraryItems(_ context.Context, _ string) ([]vcenter.LibraryItem, error) {
+	return nil, nil
+}
+func (f *fakeVCenter) ListNetworks(context.Context) ([]vcenter.NetworkInfo, error) {
+	return nil, nil
+}
 func (f *fakeVCenter) About() vcenter.AboutInfo {
 	return vcenter.AboutInfo{Version: "8.0.0", Build: "0", FullName: "VMware vCenter Server (fake)"}
 }

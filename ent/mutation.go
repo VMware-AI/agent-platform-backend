@@ -27,6 +27,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplatefamily"
 	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplateversion"
 	"github.com/VMware-AI/agent-platform-backend/ent/permission"
+	"github.com/VMware-AI/agent-platform-backend/ent/platformsecret"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
 	"github.com/VMware-AI/agent-platform-backend/ent/ratelimitpolicy"
 	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
@@ -69,6 +70,7 @@ const (
 	TypeOvaTemplateFamily  = "OvaTemplateFamily"
 	TypeOvaTemplateVersion = "OvaTemplateVersion"
 	TypePermission         = "Permission"
+	TypePlatformSecret     = "PlatformSecret"
 	TypeRateLimitPolicy    = "RateLimitPolicy"
 	TypeRequestLog         = "RequestLog"
 	TypeResourcePool       = "ResourcePool"
@@ -13185,6 +13187,662 @@ func (m *PermissionMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown Permission edge %s", name)
+}
+
+// PlatformSecretMutation represents an operation that mutates the PlatformSecret nodes in the graph.
+type PlatformSecretMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *int
+	created_at    *time.Time
+	updated_at    *time.Time
+	ref           *string
+	username      *string
+	password      *string
+	api_key       *string
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*PlatformSecret, error)
+	predicates    []predicate.PlatformSecret
+}
+
+var _ ent.Mutation = (*PlatformSecretMutation)(nil)
+
+// platformsecretOption allows management of the mutation configuration using functional options.
+type platformsecretOption func(*PlatformSecretMutation)
+
+// newPlatformSecretMutation creates new mutation for the PlatformSecret entity.
+func newPlatformSecretMutation(c config, op Op, opts ...platformsecretOption) *PlatformSecretMutation {
+	m := &PlatformSecretMutation{
+		config:        c,
+		op:            op,
+		typ:           TypePlatformSecret,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withPlatformSecretID sets the ID field of the mutation.
+func withPlatformSecretID(id int) platformsecretOption {
+	return func(m *PlatformSecretMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *PlatformSecret
+		)
+		m.oldValue = func(ctx context.Context) (*PlatformSecret, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().PlatformSecret.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withPlatformSecret sets the old PlatformSecret of the mutation.
+func withPlatformSecret(node *PlatformSecret) platformsecretOption {
+	return func(m *PlatformSecretMutation) {
+		m.oldValue = func(context.Context) (*PlatformSecret, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m PlatformSecretMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m PlatformSecretMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *PlatformSecretMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *PlatformSecretMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().PlatformSecret.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *PlatformSecretMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *PlatformSecretMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the PlatformSecret entity.
+// If the PlatformSecret object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PlatformSecretMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *PlatformSecretMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *PlatformSecretMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *PlatformSecretMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the PlatformSecret entity.
+// If the PlatformSecret object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PlatformSecretMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *PlatformSecretMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetRef sets the "ref" field.
+func (m *PlatformSecretMutation) SetRef(s string) {
+	m.ref = &s
+}
+
+// Ref returns the value of the "ref" field in the mutation.
+func (m *PlatformSecretMutation) Ref() (r string, exists bool) {
+	v := m.ref
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRef returns the old "ref" field's value of the PlatformSecret entity.
+// If the PlatformSecret object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PlatformSecretMutation) OldRef(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRef is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRef requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRef: %w", err)
+	}
+	return oldValue.Ref, nil
+}
+
+// ResetRef resets all changes to the "ref" field.
+func (m *PlatformSecretMutation) ResetRef() {
+	m.ref = nil
+}
+
+// SetUsername sets the "username" field.
+func (m *PlatformSecretMutation) SetUsername(s string) {
+	m.username = &s
+}
+
+// Username returns the value of the "username" field in the mutation.
+func (m *PlatformSecretMutation) Username() (r string, exists bool) {
+	v := m.username
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUsername returns the old "username" field's value of the PlatformSecret entity.
+// If the PlatformSecret object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PlatformSecretMutation) OldUsername(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUsername is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUsername requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUsername: %w", err)
+	}
+	return oldValue.Username, nil
+}
+
+// ClearUsername clears the value of the "username" field.
+func (m *PlatformSecretMutation) ClearUsername() {
+	m.username = nil
+	m.clearedFields[platformsecret.FieldUsername] = struct{}{}
+}
+
+// UsernameCleared returns if the "username" field was cleared in this mutation.
+func (m *PlatformSecretMutation) UsernameCleared() bool {
+	_, ok := m.clearedFields[platformsecret.FieldUsername]
+	return ok
+}
+
+// ResetUsername resets all changes to the "username" field.
+func (m *PlatformSecretMutation) ResetUsername() {
+	m.username = nil
+	delete(m.clearedFields, platformsecret.FieldUsername)
+}
+
+// SetPassword sets the "password" field.
+func (m *PlatformSecretMutation) SetPassword(s string) {
+	m.password = &s
+}
+
+// Password returns the value of the "password" field in the mutation.
+func (m *PlatformSecretMutation) Password() (r string, exists bool) {
+	v := m.password
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPassword returns the old "password" field's value of the PlatformSecret entity.
+// If the PlatformSecret object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PlatformSecretMutation) OldPassword(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPassword is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPassword requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPassword: %w", err)
+	}
+	return oldValue.Password, nil
+}
+
+// ClearPassword clears the value of the "password" field.
+func (m *PlatformSecretMutation) ClearPassword() {
+	m.password = nil
+	m.clearedFields[platformsecret.FieldPassword] = struct{}{}
+}
+
+// PasswordCleared returns if the "password" field was cleared in this mutation.
+func (m *PlatformSecretMutation) PasswordCleared() bool {
+	_, ok := m.clearedFields[platformsecret.FieldPassword]
+	return ok
+}
+
+// ResetPassword resets all changes to the "password" field.
+func (m *PlatformSecretMutation) ResetPassword() {
+	m.password = nil
+	delete(m.clearedFields, platformsecret.FieldPassword)
+}
+
+// SetAPIKey sets the "api_key" field.
+func (m *PlatformSecretMutation) SetAPIKey(s string) {
+	m.api_key = &s
+}
+
+// APIKey returns the value of the "api_key" field in the mutation.
+func (m *PlatformSecretMutation) APIKey() (r string, exists bool) {
+	v := m.api_key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAPIKey returns the old "api_key" field's value of the PlatformSecret entity.
+// If the PlatformSecret object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PlatformSecretMutation) OldAPIKey(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAPIKey is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAPIKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAPIKey: %w", err)
+	}
+	return oldValue.APIKey, nil
+}
+
+// ClearAPIKey clears the value of the "api_key" field.
+func (m *PlatformSecretMutation) ClearAPIKey() {
+	m.api_key = nil
+	m.clearedFields[platformsecret.FieldAPIKey] = struct{}{}
+}
+
+// APIKeyCleared returns if the "api_key" field was cleared in this mutation.
+func (m *PlatformSecretMutation) APIKeyCleared() bool {
+	_, ok := m.clearedFields[platformsecret.FieldAPIKey]
+	return ok
+}
+
+// ResetAPIKey resets all changes to the "api_key" field.
+func (m *PlatformSecretMutation) ResetAPIKey() {
+	m.api_key = nil
+	delete(m.clearedFields, platformsecret.FieldAPIKey)
+}
+
+// Where appends a list predicates to the PlatformSecretMutation builder.
+func (m *PlatformSecretMutation) Where(ps ...predicate.PlatformSecret) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the PlatformSecretMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *PlatformSecretMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.PlatformSecret, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *PlatformSecretMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *PlatformSecretMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (PlatformSecret).
+func (m *PlatformSecretMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *PlatformSecretMutation) Fields() []string {
+	fields := make([]string, 0, 6)
+	if m.created_at != nil {
+		fields = append(fields, platformsecret.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, platformsecret.FieldUpdatedAt)
+	}
+	if m.ref != nil {
+		fields = append(fields, platformsecret.FieldRef)
+	}
+	if m.username != nil {
+		fields = append(fields, platformsecret.FieldUsername)
+	}
+	if m.password != nil {
+		fields = append(fields, platformsecret.FieldPassword)
+	}
+	if m.api_key != nil {
+		fields = append(fields, platformsecret.FieldAPIKey)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *PlatformSecretMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case platformsecret.FieldCreatedAt:
+		return m.CreatedAt()
+	case platformsecret.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case platformsecret.FieldRef:
+		return m.Ref()
+	case platformsecret.FieldUsername:
+		return m.Username()
+	case platformsecret.FieldPassword:
+		return m.Password()
+	case platformsecret.FieldAPIKey:
+		return m.APIKey()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *PlatformSecretMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case platformsecret.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case platformsecret.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case platformsecret.FieldRef:
+		return m.OldRef(ctx)
+	case platformsecret.FieldUsername:
+		return m.OldUsername(ctx)
+	case platformsecret.FieldPassword:
+		return m.OldPassword(ctx)
+	case platformsecret.FieldAPIKey:
+		return m.OldAPIKey(ctx)
+	}
+	return nil, fmt.Errorf("unknown PlatformSecret field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PlatformSecretMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case platformsecret.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case platformsecret.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case platformsecret.FieldRef:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRef(v)
+		return nil
+	case platformsecret.FieldUsername:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUsername(v)
+		return nil
+	case platformsecret.FieldPassword:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPassword(v)
+		return nil
+	case platformsecret.FieldAPIKey:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAPIKey(v)
+		return nil
+	}
+	return fmt.Errorf("unknown PlatformSecret field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *PlatformSecretMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *PlatformSecretMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PlatformSecretMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown PlatformSecret numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *PlatformSecretMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(platformsecret.FieldUsername) {
+		fields = append(fields, platformsecret.FieldUsername)
+	}
+	if m.FieldCleared(platformsecret.FieldPassword) {
+		fields = append(fields, platformsecret.FieldPassword)
+	}
+	if m.FieldCleared(platformsecret.FieldAPIKey) {
+		fields = append(fields, platformsecret.FieldAPIKey)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *PlatformSecretMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *PlatformSecretMutation) ClearField(name string) error {
+	switch name {
+	case platformsecret.FieldUsername:
+		m.ClearUsername()
+		return nil
+	case platformsecret.FieldPassword:
+		m.ClearPassword()
+		return nil
+	case platformsecret.FieldAPIKey:
+		m.ClearAPIKey()
+		return nil
+	}
+	return fmt.Errorf("unknown PlatformSecret nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *PlatformSecretMutation) ResetField(name string) error {
+	switch name {
+	case platformsecret.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case platformsecret.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case platformsecret.FieldRef:
+		m.ResetRef()
+		return nil
+	case platformsecret.FieldUsername:
+		m.ResetUsername()
+		return nil
+	case platformsecret.FieldPassword:
+		m.ResetPassword()
+		return nil
+	case platformsecret.FieldAPIKey:
+		m.ResetAPIKey()
+		return nil
+	}
+	return fmt.Errorf("unknown PlatformSecret field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *PlatformSecretMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *PlatformSecretMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *PlatformSecretMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *PlatformSecretMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *PlatformSecretMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *PlatformSecretMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *PlatformSecretMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown PlatformSecret unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *PlatformSecretMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown PlatformSecret edge %s", name)
 }
 
 // RateLimitPolicyMutation represents an operation that mutates the RateLimitPolicy nodes in the graph.

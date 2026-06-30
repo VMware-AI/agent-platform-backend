@@ -146,6 +146,13 @@ type ResourcePoolConnectionDetail {
   contentLibraries: [String!]!
 }
 
+# A single item (OVF/OVA package) inside a vCenter content library.
+# Name is used directly as ovaIdentifier when creating an OvaTemplateVersion.
+type ContentLibraryItem {
+  name: String!
+  type: String!
+}
+
 extend type Query {
   resourcePools(
     filter: ResourcePoolFilter
@@ -153,6 +160,12 @@ extend type Query {
     sort: ResourcePoolSort
   ): ResourcePoolConnection! @hasRole(any: [admin])
   resourcePool(id: ID!): ResourcePool @hasRole(any: [admin])
+  # List all content libraries available on the given resource pool's vCenter.
+  # Used by the Add OVA Template dialog to populate the library picker.
+  contentLibraries(resourcePoolId: ID!): [String!]! @hasRole(any: [admin])
+  # List OVA items in the named content library of the given resource pool.
+  # Used by the Add OVA Template dialog to populate the template picker.
+  contentLibraryItems(resourcePoolId: ID!, libraryName: String!): [ContentLibraryItem!]! @hasRole(any: [admin])
 }
 
 extend type Mutation {
