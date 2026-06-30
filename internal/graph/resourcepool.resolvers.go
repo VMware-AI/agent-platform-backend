@@ -308,6 +308,13 @@ func (r *queryResolver) ResourcePool(ctx context.Context, id string) (*model.Res
 // ContentLibraries lists all content library names available on the vCenter
 // for the given resource pool. Used by the Add OVA Template dialog library picker.
 func (r *queryResolver) ContentLibraries(ctx context.Context, resourcePoolID string) ([]string, error) {
+	// Belt-and-suspenders alongside the @hasRole(any:[admin]) directive (mirrors
+	// VsphereNetworks/VMTemplates): enumerating vCenter inventory uses privileged
+	// pool credentials, so a dropped directive must not fail open.
+	cu := auth.FromContext(ctx)
+	if cu == nil || cu.Role != auth.RoleAdmin {
+		return nil, gqlerror.Errorf("forbidden: admin only")
+	}
 	pid, err := uuid.Parse(resourcePoolID)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid resourcePoolId")
@@ -336,6 +343,13 @@ func (r *queryResolver) ContentLibraries(ctx context.Context, resourcePoolID str
 // given resource pool. Used by the Add OVA Template dialog to populate the
 // template picker so admins don't have to type the ovaIdentifier manually.
 func (r *queryResolver) ContentLibraryItems(ctx context.Context, resourcePoolID string, libraryName string) ([]model.ContentLibraryItem, error) {
+	// Belt-and-suspenders alongside the @hasRole(any:[admin]) directive (mirrors
+	// VsphereNetworks/VMTemplates): privileged pool credentials, so a dropped
+	// directive must not fail open.
+	cu := auth.FromContext(ctx)
+	if cu == nil || cu.Role != auth.RoleAdmin {
+		return nil, gqlerror.Errorf("forbidden: admin only")
+	}
 	pid, err := uuid.Parse(resourcePoolID)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid resourcePoolId")

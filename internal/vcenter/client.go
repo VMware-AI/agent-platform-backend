@@ -174,7 +174,7 @@ func (c *Client) CloneFromTemplate(ctx context.Context, spec CloneSpec) (*VMInfo
 	}
 	// Remap the first NIC to the requested network/portgroup (optional).
 	if spec.Network != "" {
-		netDev, err := c.buildNetworkDevice(ctx, finder, src, spec.Network)
+		netDev, err := c.buildNetworkDevice(ctx, src, spec.Network)
 		if err != nil {
 			return nil, err
 		}
@@ -560,6 +560,13 @@ func containsCI(s, needle string) bool {
 // NetworkInfo describes a network/portgroup available to the deploy form.
 // Type is "standard" for standard vSwitch portgroups, "distributed" for dvPort
 // groups. DVSName is the parent distributed switch name (empty for standard).
+//
+// Path is the managed-object reference string (e.g. "Network:network-12"), NOT a
+// human path: it is the opaque identifier the deploy form sends back as
+// targetNetwork and the ONLY value that resolves a network unambiguously.
+// Same-named standard portgroups on different hosts are distinct Network MOs, so a
+// name/inventory-path would be ambiguous (find.MultipleFoundError); the moref is
+// unique. Name/Type/DVSName are for display.
 type NetworkInfo struct {
 	Name    string
 	Path    string
@@ -579,11 +586,11 @@ func (c *Client) ListNetworks(ctx context.Context) ([]NetworkInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("vcenter: create network container view: %w", err)
 	}
-	defer cv.Destroy(ctx)
+	defer func() { _ = cv.Destroy(ctx) }()
 
 	// Retrieve standard Network objects.
 	var stdNets []mo.Network
-	if err := cv.Retrieve(ctx, []string{"Network"}, []string{"name", "summary"}, &stdNets); err != nil {
+	if err := cv.Retrieve(ctx, []string{"Network"}, []string{"name"}, &stdNets); err != nil {
 		return nil, fmt.Errorf("vcenter: retrieve networks: %w", err)
 	}
 
@@ -598,7 +605,7 @@ func (c *Client) ListNetworks(ctx context.Context) ([]NetworkInfo, error) {
 	for _, n := range stdNets {
 		out = append(out, NetworkInfo{
 			Name: n.Name,
-			Path: n.Name,
+			Path: n.Self.String(), // moref — the unambiguous, resolvable identifier
 			Type: "standard",
 		})
 	}
@@ -609,7 +616,7 @@ func (c *Client) ListNetworks(ctx context.Context) ([]NetworkInfo, error) {
 		}
 		out = append(out, NetworkInfo{
 			Name:    pg.Name,
-			Path:    pg.Name,
+			Path:    pg.Self.String(), // moref — see standard case
 			Type:    "distributed",
 			DVSName: dvsName,
 		})
@@ -620,7 +627,7 @@ func (c *Client) ListNetworks(ctx context.Context) ([]NetworkInfo, error) {
 // buildNetworkDevice constructs a VirtualDeviceConfigSpec that replaces the
 // source template's first NIC with the requested network (standard portgroup or
 // dvPortgroup). Returns nil when the source VM has no NIC (no-op).
-func (c *Client) buildNetworkDevice(ctx context.Context, finder *find.Finder, src *object.VirtualMachine, networkPath string) (*types.VirtualDeviceConfigSpec, error) {
+func (c *Client) buildNetworkDevice(ctx context.Context, src *object.VirtualMachine, networkID string) (*types.VirtualDeviceConfigSpec, error) {
 	var mvm mo.VirtualMachine
 	if err := src.Properties(ctx, src.Reference(), []string{"config.hardware.device"}, &mvm); err != nil {
 		return nil, fmt.Errorf("vcenter: read source devices: %w", err)
@@ -638,14 +645,21 @@ func (c *Client) buildNetworkDevice(ctx context.Context, finder *find.Finder, sr
 		return nil, nil // no NIC to remap
 	}
 
-	// Resolve the target network object (standard portgroup or dvPortgroup).
-	net, err := finder.Network(ctx, networkPath)
-	if err != nil {
-		return nil, fmt.Errorf("vcenter: network %q: %w", networkPath, err)
+	// Resolve the target network by its managed-object reference (networkID is the
+	// moref string from ListNetworks). Resolving by moref is unambiguous; resolving
+	// by bare name would hit find.MultipleFoundError when same-named standard
+	// portgroups exist on multiple hosts, failing the clone mid-flight.
+	var ref types.ManagedObjectReference
+	if !ref.FromString(networkID) {
+		return nil, fmt.Errorf("vcenter: invalid network reference %q", networkID)
+	}
+	net, ok := object.NewReference(c.vc.Client, ref).(object.NetworkReference)
+	if !ok {
+		return nil, fmt.Errorf("vcenter: %q is not a network", networkID)
 	}
 	backing, err := net.EthernetCardBackingInfo(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("vcenter: network backing %q: %w", networkPath, err)
+		return nil, fmt.Errorf("vcenter: network backing %q: %w", networkID, err)
 	}
 
 	// Clone the source NIC and swap its backing.
