@@ -1,9 +1,13 @@
 // Package secrets resolves a secret reference (stored on e.g. ResourcePool.secret_ref)
-// to a credential, WITHOUT ever persisting the plaintext in the platform DB.
+// to a credential.
 //
-// Production backend (chosen 2026-06-19): Vaultwarden (C18). The reference is a
-// pointer like "vault://<item-id>"; the backend resolves it at connect time and
-// holds the credential only in memory. Dev/test use StaticResolver / EnvResolver.
+// The single backend, used in EVERY environment (no dev/prod split), is DBStore:
+// credentials live in the platform_secrets table, ENCRYPTED at rest (AES-256-GCM)
+// under one symmetric key (SECRETS_ENCRYPTION_KEY). They survive backend restarts
+// and there is one code path to reason about. StaticResolver is an in-memory double
+// for tests only; EnvResolver reads credentials from the process environment for
+// niche air-gapped setups. The plaintext credential is held only in memory after a
+// Resolve; only the opaque ref is stored on owning rows.
 package secrets
 
 import (
@@ -42,13 +46,12 @@ type Store interface {
 	Delete(ctx context.Context, ref string) error
 }
 
-// StaticResolver resolves refs from an in-memory map (dev/test). It also
-// implements Store so tests can exercise the rotation write path. A single
-// instance is shared across request + agent-manager-heartbeat goroutines (it is
-// the default secret store when VAULTWARDEN_URL is unset — dev/CI and supported
-// air-gapped installs), so mu guards m/seq: an unguarded concurrent map
-// read+write would raise Go's unrecoverable "concurrent map" fatal error and
-// abort the whole control plane.
+// StaticResolver resolves refs from an in-memory map. It is a TEST-ONLY double
+// (the production backend is the encrypted DBStore); it implements Store so tests
+// can exercise the rotation write path without a database. A single instance may
+// be shared across goroutines in a test, so mu guards m/seq: an unguarded
+// concurrent map read+write would raise Go's unrecoverable "concurrent map" fatal
+// error.
 type StaticResolver struct {
 	mu  sync.RWMutex
 	m   map[string]Credential
@@ -97,8 +100,9 @@ func (s *StaticResolver) Delete(_ context.Context, ref string) error {
 }
 
 // EnvResolver resolves refs of the form "env://USER_VAR,PASS_VAR" (or
-// "env://USER_VAR,PASS_VAR,APIKEY_VAR") from the process environment. Useful for
-// single-customer / air-gapped deployments before Vaultwarden is wired.
+// "env://USER_VAR,PASS_VAR,APIKEY_VAR") from the process environment. A niche
+// escape hatch for air-gapped setups that inject creds via env (resolved at read
+// time, never stored); the primary store is the encrypted DBStore.
 type EnvResolver struct{}
 
 func (EnvResolver) Resolve(_ context.Context, ref string) (Credential, error) {

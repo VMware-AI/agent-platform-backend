@@ -6,11 +6,12 @@ import (
 	"entgo.io/ent/schema/index"
 )
 
-// PlatformSecret is a persistent key-value credential store for dev / air-gapped
-// deployments where Vaultwarden is not available. It replaces the in-memory
-// StaticResolver so credentials survive backend restarts.
-//
-// Production deployments with Vaultwarden configured bypass this table entirely.
+// PlatformSecret is the platform's single persistent credential store, used in
+// every environment. The password and api_key columns hold AES-256-GCM ciphertext
+// (sealed by internal/secrets.DBStore under SECRETS_ENCRYPTION_KEY), never
+// plaintext; username is stored in clear for operability. Credentials survive
+// backend restarts (this replaced the in-memory StaticResolver and the external
+// Vaultwarden dependency).
 type PlatformSecret struct {
 	ent.Schema
 }

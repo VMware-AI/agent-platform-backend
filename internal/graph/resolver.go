@@ -64,7 +64,7 @@ type Resolver struct {
 	// gateway row, for per-department routing (LLD-13 §3.3). Injectable for tests;
 	// nil → a real HTTP client (see Resolver.buildGatewayKeyClient).
 	GatewayKeyClientFor func(ctx context.Context, g *ent.GatewayConnection) gateway.Client
-	// Secrets resolves resource-pool credentials (Vaultwarden); nil disables deploy.
+	// Secrets resolves resource-pool credentials (encrypted DBStore); nil disables deploy.
 	Secrets secrets.Resolver
 	// GatewayURL is the LLM gateway base URL injected into provisioned VMs.
 	GatewayURL string

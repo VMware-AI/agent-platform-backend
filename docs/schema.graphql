@@ -186,6 +186,10 @@ enum ConnectionStatus {
 	ONLINE
 	OFFLINE
 }
+type ContentLibraryItem {
+	name: String!
+	type: String!
+}
 input CreateAgentConfigInput {
 	name: String!
 	agentType: String!
@@ -350,6 +354,7 @@ input DeployAgentInput {
 	targetResourcePool: String
 	hostname: String
 	maxBudget: Float
+	targetNetwork: String
 }
 type DeployedAgent {
 	agent: Agent!
@@ -737,6 +742,7 @@ type Query {
 	departmentMembers(departmentId: ID!): [Membership!]!
 	vmTemplates(resourcePoolId: ID!): [VMTemplate!]!
 	vsphereResourcePools(resourcePoolId: ID!): [VsphereResourcePool!]! @hasRole(any: [admin])
+	vsphereNetworks(resourcePoolId: ID!): [VsphereNetwork!]! @hasRole(any: [admin])
 	agentSnapshots(agentId: ID!): [AgentSnapshot!]!
 	gatewayConnections: [GatewayConnection!]! @hasRole(any: [admin])
 	upstreams: [Upstream!]! @hasRole(any: [admin])
@@ -757,6 +763,8 @@ type Query {
 	userRoles(userId: ID!): [CustomRole!]! @hasRole(any: [admin])
 	resourcePools(filter: ResourcePoolFilter, pagination: Pagination, sort: ResourcePoolSort): ResourcePoolConnection! @hasRole(any: [admin])
 	resourcePool(id: ID!): ResourcePool @hasRole(any: [admin])
+	contentLibraries(resourcePoolId: ID!): [String!]! @hasRole(any: [admin])
+	contentLibraryItems(resourcePoolId: ID!, libraryName: String!): [ContentLibraryItem!]! @hasRole(any: [admin])
 	platformSettings: PlatformSettings! @hasRole(any: [admin])
 	virtualKeys(userId: ID): [VirtualKey!]! @hasRole(any: [admin])
 }
@@ -1159,6 +1167,12 @@ enum VirtualKeyStatus {
 	active
 	disabled
 	revoked
+}
+type VsphereNetwork {
+	name: String!
+	path: String!
+	type: String!
+	dvsName: String!
 }
 type VsphereResourcePool {
 	name: String!

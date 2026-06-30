@@ -32,6 +32,37 @@ resourcePool(id: ID!): ResourcePool
 |----------|------|----------|---------|
 | `id` | `ID!` | yes | — |
 
+### `contentLibraries`
+
+List all content libraries available on the given resource pool's vCenter. Used by the Add OVA Template dialog to populate the library picker.
+
+```graphql
+contentLibraries(resourcePoolId: ID!): [String!]!
+```
+
+- **Returns:** `[String!]!`
+- **Auth:** `@hasRole(any: [admin])`
+
+| Argument | Type | Required | Default |
+|----------|------|----------|---------|
+| `resourcePoolId` | `ID!` | yes | — |
+
+### `contentLibraryItems`
+
+List OVA items in the named content library of the given resource pool. Used by the Add OVA Template dialog to populate the template picker.
+
+```graphql
+contentLibraryItems(resourcePoolId: ID!, libraryName: String!): [ContentLibraryItem!]!
+```
+
+- **Returns:** `[ContentLibraryItem!]!`
+- **Auth:** `@hasRole(any: [admin])`
+
+| Argument | Type | Required | Default |
+|----------|------|----------|---------|
+| `resourcePoolId` | `ID!` | yes | — |
+| `libraryName` | `String!` | yes | — |
+
 ## Mutations
 
 ### `createResourcePool`
@@ -105,6 +136,17 @@ syncResourcePool(id: ID!): SyncResourcePoolPayload!
 | `id` | `ID!` | yes | — |
 
 ## Types
+
+### ContentLibraryItem
+
+*Object*
+
+A single item (OVF/OVA package) inside a vCenter content library. Name is used directly as ovaIdentifier when creating an OvaTemplateVersion.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `String!` | — |
+| `type` | `String!` | — |
 
 ### CreateResourcePoolPayload
 

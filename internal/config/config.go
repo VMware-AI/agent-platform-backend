@@ -59,6 +59,12 @@ type Config struct {
 	// re-syncs every resource pool that has stored credentials.
 	// 0 (default) disables it.
 	PoolSyncIntervalSeconds int
+	// SecretsEncryptionKey is the single symmetric key (any high-entropy string;
+	// SHA-256-derived to 32 bytes) used to encrypt credential fields at rest in the
+	// platform_secrets table. The same key is used in every environment — there is
+	// no dev/prod secrets split. Required: the server refuses to start without it
+	// (an empty key would mean credentials cannot be sealed/opened).
+	SecretsEncryptionKey string
 }
 
 // Load reads config from the environment and validates it. Fails fast on a
@@ -122,6 +128,7 @@ func Load() (*Config, error) {
 	if c.PoolSyncIntervalSeconds, err = getenvInt("POOL_SYNC_INTERVAL_SECONDS", 0); err != nil {
 		return nil, err
 	}
+	c.SecretsEncryptionKey = os.Getenv("SECRETS_ENCRYPTION_KEY")
 	return c, nil
 }
 
