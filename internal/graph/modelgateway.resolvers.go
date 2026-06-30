@@ -155,7 +155,11 @@ func (r *mutationResolver) TestNewModelGatewayConnection(ctx context.Context, in
 	// bypass the ent row / secret-store round-trip because the user has not
 	// saved anything yet — the master key in the input is the plaintext
 	// they typed, not a ref. The connection never leaves the request scope.
-	var mgr gateway.ModelManager = gateway.NewHTTPClient(input.Endpoint, input.MasterKey)
+	c, err := gateway.NewHTTPClient(input.Endpoint, input.MasterKey)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid endpoint or master key: %v", err)
+	}
+	var mgr gateway.ModelManager = c
 	if r.GatewayClientFor != nil {
 		mgr = r.GatewayClientFor(ctx, input.Endpoint, input.MasterKey)
 	}

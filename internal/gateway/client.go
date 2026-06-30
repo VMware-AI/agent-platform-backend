@@ -7,18 +7,126 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 )
 
 const (
 	gatewayHTTPTimeout  = 15 * time.Second
 	gatewayRetryBackoff = 200 * time.Millisecond
+	defaultMaxAttempts  = 3
 )
+
+// RetryPolicy controls per-method retry behaviour. Zero value = the default
+// policy (GET retries 3× on 5xx/transport, POST never retries). Configure via
+// NewHTTPClient options (WithRetryBackoff, WithMaxAttempts, WithPOSTRetryOn5xx).
+type RetryPolicy struct {
+	GETMaxAttempts  int           // total attempts including the first; 0 → 3
+	POSTMaxAttempts int           // total attempts including the first; 0 → 1
+	POSTRetryOn5xx  bool          // if true, POST retries 5xx (NOT 4xx); default false
+	RetryBackoff    time.Duration // linear backoff per attempt; 0 → 200ms
+}
+
+// AuthFunc attaches credentials to a request. The default is Bearer; pass a
+// custom AuthFunc (via WithAuthFunc) to use litellm's x-litellm-api-key header
+// (or any other scheme) instead.
+type AuthFunc func(*http.Request)
+
+// Option configures a client at construction. The zero value of every option
+// is a no-op, so unconfigured clients use the package defaults (Bearer auth,
+// 3 GET attempts, 1 POST attempt, 200ms backoff).
+type Option func(*HTTPClient)
+
+// WithRetryBackoff sets the linear backoff between retry attempts (default
+// 200ms). Test code uses this to keep the retry path near-instant.
+func WithRetryBackoff(d time.Duration) Option {
+	return func(c *HTTPClient) { c.policy.RetryBackoff = d }
+}
+
+// WithGETMaxAttempts overrides the GET retry count (default 3).
+func WithGETMaxAttempts(n int) Option {
+	return func(c *HTTPClient) { c.policy.GETMaxAttempts = n }
+}
+
+// WithPOSTMaxAttempts overrides the POST retry count (default 1, i.e. no retry).
+// Use WithPOSTRetryOn5xx to opt into 5xx retries specifically.
+func WithPOSTMaxAttempts(n int) Option {
+	return func(c *HTTPClient) { c.policy.POSTMaxAttempts = n }
+}
+
+// WithPOSTRetryOn5xx enables 5xx retries for POST. Default off — mutations are
+// exactly-once (LLD-04 §2). Enable only for safe idempotent endpoints.
+func WithPOSTRetryOn5xx(enabled bool) Option {
+	return func(c *HTTPClient) { c.policy.POSTRetryOn5xx = enabled }
+}
+
+// WithAuthFunc replaces the default Bearer Authorization header. Useful for
+// litellm deployments that authenticate via x-litellm-api-key (e.g. behind a
+// reverse proxy that strips Authorization).
+func WithAuthFunc(auth AuthFunc) Option {
+	return func(c *HTTPClient) { c.auth = auth }
+}
+
+// NewHTTPClient returns a gateway client with the default Bearer auth, 3 GET
+// retry attempts, 1 POST attempt (no retry), 200ms backoff. baseURL is the
+// proxy base (e.g. http://litellm:4000); masterKey authenticates admin calls.
+// Both inputs are required — an empty key would emit "Authorization: Bearer "
+// and 401 every request.
+//
+// Use the WithXxx options to override defaults; see Option.
+func NewHTTPClient(baseURL, masterKey string, opts ...Option) (*HTTPClient, error) {
+	if baseURL == "" {
+		return nil, errors.New("gateway: baseURL required")
+	}
+	if masterKey == "" {
+		return nil, errors.New("gateway: masterKey required")
+	}
+	c := &HTTPClient{
+		baseURL: strings.TrimRight(baseURL, "/"),
+		masterKey:    masterKey,
+		http:         &http.Client{Timeout: gatewayHTTPTimeout},
+		policy:       defaultRetryPolicy(),
+		auth:         defaultAuthFunc(masterKey),
+		breaker:      newCircuitBreaker(3, 30*time.Second),
+	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c, nil
+}
+
+func defaultRetryPolicy() RetryPolicy {
+	return RetryPolicy{
+		GETMaxAttempts:  defaultMaxAttempts,
+		POSTMaxAttempts: 1,
+		RetryBackoff:    gatewayRetryBackoff,
+	}
+}
+
+func defaultAuthFunc(masterKey string) AuthFunc {
+	return func(r *http.Request) {
+		r.Header.Set("Authorization", "Bearer "+masterKey)
+	}
+}
+
+// HTTPClient talks to a LiteLLM proxy over HTTP. Safe for concurrent use.
+type HTTPClient struct {
+	baseURL   string
+	masterKey string
+	http      *http.Client
+	policy    RetryPolicy
+	auth      AuthFunc
+	breaker   *circuitBreaker
+}
+
+// --- Client (key/team governance) ---
 
 // Client governs the LiteLLM proxy via its admin API.
 type Client interface {
@@ -108,29 +216,6 @@ type TeamResponse struct {
 	TeamID string `json:"team_id"`
 }
 
-// HTTPClient talks to a LiteLLM proxy over HTTP with the master key.
-type HTTPClient struct {
-	baseURL   string
-	masterKey string
-	http      *http.Client
-	// Lightweight retry for IDEMPOTENT reads only (LLD-04 §2). Mutations (post)
-	// are exactly-once and never retried.
-	maxAttempts  int
-	retryBackoff time.Duration
-}
-
-// NewHTTPClient returns a gateway client. baseURL is the proxy base (e.g.
-// http://litellm:4000); masterKey authenticates admin calls.
-func NewHTTPClient(baseURL, masterKey string) *HTTPClient {
-	return &HTTPClient{
-		baseURL:      strings.TrimRight(baseURL, "/"),
-		masterKey:    masterKey,
-		http:         &http.Client{Timeout: gatewayHTTPTimeout},
-		maxAttempts:  3,
-		retryBackoff: gatewayRetryBackoff,
-	}
-}
-
 func (c *HTTPClient) GenerateKey(ctx context.Context, req GenerateKeyRequest) (*KeyResponse, error) {
 	var out KeyResponse
 	if err := c.post(ctx, "/key/generate", req, &out); err != nil {
@@ -158,7 +243,7 @@ func (c *HTTPClient) RegenerateKey(ctx context.Context, key string) (*KeyRespons
 		return nil, fmt.Errorf("RegenerateKey: key is required")
 	}
 	var out KeyResponse
-	if err := c.post(ctx, "/key/"+url.PathEscape(key)+"/regenerate", map[string]any{}, &out); err != nil {
+	if err := c.post(ctx, "/"+url.PathEscape("key/"+key+"/regenerate"), map[string]any{}, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
@@ -228,18 +313,20 @@ func (c *HTTPClient) ListTeams(ctx context.Context) ([]TeamInfo, error) {
 	return teams, nil
 }
 
-// get sends an admin GET with Bearer auth and decodes the JSON response. Because
-// GET is idempotent it retries transient failures (transport errors + 5xx) up to
-// maxAttempts with a linear backoff; 4xx (client errors) are returned immediately.
+// --- Low-level HTTP ---
+
+// get sends an admin GET with the configured AuthFunc and decodes the JSON
+// response. Retries transient failures (transport errors + 5xx) per the
+// configured policy. 4xx and decode errors are terminal — returned once.
 func (c *HTTPClient) get(ctx context.Context, path string, out any) error {
-	attempts := c.maxAttempts
+	attempts := c.policy.GETMaxAttempts
 	if attempts < 1 {
 		attempts = 1
 	}
 	var lastErr error
 	for attempt := 1; attempt <= attempts; attempt++ {
 		if attempt > 1 {
-			if err := sleepCtx(ctx, c.retryBackoff*time.Duration(attempt-1)); err != nil {
+			if err := sleepCtx(ctx, c.policy.RetryBackoff*time.Duration(attempt-1)); err != nil {
 				return err
 			}
 		}
@@ -256,33 +343,57 @@ func (c *HTTPClient) get(ctx context.Context, path string, out any) error {
 }
 
 // getOnce performs a single GET. retryable reports whether a failure is worth
-// re-trying (transport error or 5xx) vs terminal (4xx, decode error).
+// re-trying (transport error or 5xx) vs terminal (4xx, decode error, breaker
+// open).
 func (c *HTTPClient) getOnce(ctx context.Context, path string, out any) (retryable bool, err error) {
+	if !c.breaker.allow() {
+		return false, fmt.Errorf("%w: %s", ErrUnavailable, path)
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
 	if err != nil {
-		return false, err
+		return false, &Error{Method: http.MethodGet, Path: path, Cause: err}
 	}
-	req.Header.Set("Authorization", "Bearer "+c.masterKey)
+	c.auth(req)
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return true, fmt.Errorf("gateway %s: %w", path, err) // transport error: never reached/completed
+		c.breaker.record(ErrTransport)
+		slog.WarnContext(ctx, "gateway transport error",
+			"base_url", c.baseURL, "path", path, "err", err)
+		return true, &Error{Method: http.MethodGet, Path: path, Cause: fmt.Errorf("%w: %v", ErrTransport, err)}
 	}
 	defer resp.Body.Close()
 
 	data, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return resp.StatusCode >= 500, fmt.Errorf("gateway %s: status %d: %s", path, resp.StatusCode, string(data))
+		body := redactSecrets(string(data))
+		slog.WarnContext(ctx, "gateway request failed",
+			"base_url", c.baseURL, "path", path, "status", resp.StatusCode, "body", body)
+		gwErr := &Error{Method: http.MethodGet, Path: path, Status: resp.StatusCode, Body: body}
+		if sentinel := sentinelFromStatus(resp.StatusCode); sentinel != nil {
+			if resp.StatusCode >= 500 {
+				c.breaker.record(sentinel)
+				return true, fmt.Errorf("%w: %w", gwErr, sentinel)
+			}
+			return false, fmt.Errorf("%w: %w", gwErr, sentinel)
+		}
+		return false, gwErr
 	}
+	c.breaker.record(nil) // success closes the breaker
 	if out != nil {
 		if err := json.Unmarshal(data, out); err != nil {
-			return false, fmt.Errorf("decode %s response: %w", path, err)
+			slog.WarnContext(ctx, "gateway decode error",
+				"base_url", c.baseURL, "path", path, "err", err)
+			return false, &Error{
+				Method: http.MethodGet, Path: path,
+				Cause: fmt.Errorf("%w: %v", ErrMalformedResponse, err),
+			}
 		}
 	}
 	return false, nil
 }
 
-// sleepCtx waits for d or until ctx is canceled, whichever comes first.
+// sleepCtx waits d or until ctx is canceled, whichever comes first.
 func sleepCtx(ctx context.Context, d time.Duration) error {
 	if d <= 0 {
 		return ctx.Err()
@@ -297,33 +408,209 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 	}
 }
 
-// post sends an admin POST with Bearer auth and decodes the JSON response.
+// post sends an admin POST with the configured AuthFunc and decodes the JSON
+// response. Default policy: exactly-once, no retry (LLD-04 §2 — mutations
+// can't be safely retried without server-side idempotency). Enable via
+// RetryPolicy.POSTRetryOn5xx for retryable 5xx paths (the caller is
+// responsible for the upstream key/PUT semantics being safe).
 func (c *HTTPClient) post(ctx context.Context, path string, body, out any) error {
+	attempts := c.policy.POSTMaxAttempts
+	if attempts < 1 {
+		attempts = 1
+	}
+	var lastErr error
+	for attempt := 1; attempt <= attempts; attempt++ {
+		if attempt > 1 {
+			if err := sleepCtx(ctx, c.policy.RetryBackoff*time.Duration(attempt-1)); err != nil {
+				return err
+			}
+		}
+		retryable, err := c.postOnce(ctx, path, body, out)
+		if err == nil {
+			return nil
+		}
+		lastErr = err
+		if !retryable {
+			return err
+		}
+	}
+	return lastErr
+}
+
+func (c *HTTPClient) postOnce(ctx context.Context, path string, body, out any) (retryable bool, err error) {
+	if !c.breaker.allow() {
+		return false, fmt.Errorf("%w: %s", ErrUnavailable, path)
+	}
 	buf, err := json.Marshal(body)
 	if err != nil {
-		return fmt.Errorf("marshal %s: %w", path, err)
+		return false, &Error{Method: http.MethodPost, Path: path, Cause: fmt.Errorf("marshal: %w", err)}
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, bytes.NewReader(buf))
 	if err != nil {
-		return err
+		return false, &Error{Method: http.MethodPost, Path: path, Cause: err}
 	}
-	req.Header.Set("Authorization", "Bearer "+c.masterKey)
+	c.auth(req)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return fmt.Errorf("gateway %s: %w", path, err)
+		c.breaker.record(ErrTransport)
+		slog.WarnContext(ctx, "gateway transport error",
+			"base_url", c.baseURL, "path", path, "err", err)
+		return true, &Error{Method: http.MethodPost, Path: path, Cause: fmt.Errorf("%w: %v", ErrTransport, err)}
 	}
 	defer resp.Body.Close()
 
 	data, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("gateway %s: status %d: %s", path, resp.StatusCode, string(data))
+		body := redactSecrets(string(data))
+		slog.WarnContext(ctx, "gateway request failed",
+			"base_url", c.baseURL, "path", path, "status", resp.StatusCode, "body", body)
+		gwErr := &Error{Method: http.MethodPost, Path: path, Status: resp.StatusCode, Body: body}
+		if sentinel := sentinelFromStatus(resp.StatusCode); sentinel != nil {
+			// 5xx is retryable only when the caller opted in via
+			// RetryPolicy.POSTRetryOn5xx. 4xx (incl. 401/403/404) is always
+			// terminal — re-POSTing won't change a malformed request.
+			if resp.StatusCode >= 500 && c.policy.POSTRetryOn5xx {
+				c.breaker.record(sentinel)
+				return true, fmt.Errorf("%w: %w", gwErr, sentinel)
+			}
+			return false, fmt.Errorf("%w: %w", gwErr, sentinel)
+		}
+		return false, gwErr
 	}
+	c.breaker.record(nil)
 	if out != nil {
 		if err := json.Unmarshal(data, out); err != nil {
-			return fmt.Errorf("decode %s response: %w", path, err)
+			return false, &Error{
+				Method: http.MethodPost, Path: path,
+				Cause: fmt.Errorf("%w: %v", ErrMalformedResponse, err),
+			}
 		}
 	}
-	return nil
+	return false, nil
+}
+
+// redactSecrets strips bearer / api-key content from response bodies so a
+// leaked 4xx body never propagates a master key to logs. Uses strings.ReplaceAll
+// with sentinel placeholders so the redacted output round-trips cleanly through
+// repeated calls.
+func redactSecrets(body string) string {
+	if body == "" {
+		return body
+	}
+	// Order matters: longer prefixes first so "sk-live-" wins over "sk-".
+	// We replace `prefix + token` with `prefix + [REDACTED]` (prefix itself
+	// is kept, the variable-length token portion is what leaks the secret).
+	type pattern struct{ prefix, stop string }
+	patterns := []pattern{
+		{"sk-live-", " \"}`,\n\t"},
+		{"sk-test-", " \"}`,\n\t"},
+		{"sk-local-", " \"}`,\n\t"},
+		{"Bearer ", " \"}`,\n\t"},
+	}
+	for _, p := range patterns {
+		body = replaceTokens(body, p.prefix, p.stop)
+	}
+	return body
+}
+
+// replaceTokens replaces every occurrence of `prefix + run-of-non-stop-runes`
+// with `prefix + [REDACTED]`. Stops at any rune in stop (single-byte ascii).
+func replaceTokens(s, prefix, stop string) string {
+	if !strings.Contains(s, prefix) {
+		return s
+	}
+	var out strings.Builder
+	out.Grow(len(s))
+	i := 0
+	for {
+		j := strings.Index(s[i:], prefix)
+		if j < 0 {
+			out.WriteString(s[i:])
+			return out.String()
+		}
+		j += i
+		// Copy everything up to and INCLUDING the prefix.
+		out.WriteString(s[i : j+len(prefix)])
+		// Skip the token (prefix+1 onwards), emit [REDACTED].
+		k := j + len(prefix)
+		for k < len(s) && !strings.ContainsRune(stop, rune(s[k])) {
+			k++
+		}
+		out.WriteString("[REDACTED]")
+		i = k
+	}
+}
+
+// --- circuit breaker ---
+
+// circuitBreaker opens after N consecutive 5xx/transport failures and stays
+// open for a cooldown; a single success closes it. 4xx does not trip the
+// breaker (caller errors are not the server's fault).
+type circuitBreaker struct {
+	mu            sync.Mutex
+	consecutive   int
+	openUntil     time.Time
+	threshold     int
+	cooldown      time.Duration
+	now           func() time.Time // injectable for tests
+}
+
+func newCircuitBreaker(threshold int, cooldown time.Duration) *circuitBreaker {
+	return &circuitBreaker{
+		threshold: threshold,
+		cooldown:  cooldown,
+		now:       time.Now,
+	}
+}
+
+// allow reports whether the next request should be sent. While the breaker is
+// open (openUntil is in the future) every call returns false until the cooldown
+// elapses, at which point the next call returns true and the breaker
+// half-opens (success closes, failure re-opens).
+func (b *circuitBreaker) allow() bool {
+	if b == nil {
+		return true
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.openUntil.IsZero() {
+		return true
+	}
+	if b.now().After(b.openUntil) {
+		// half-open: allow one request to test recovery. Reset counter so a
+		// single failure re-opens cleanly.
+		b.consecutive = 0
+		b.openUntil = time.Time{}
+		return true
+	}
+	return false
+}
+
+// record updates the breaker after a request. nil = success; non-nil = the
+// sentinel (caller passes ErrUnavailable, ErrTransport — anything else is
+// treated as a 4xx-class failure that doesn't trip the breaker).
+func (b *circuitBreaker) record(failureSentinel error) {
+	if b == nil {
+		return
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if failureSentinel == nil {
+		// success closes the breaker
+		b.consecutive = 0
+		b.openUntil = time.Time{}
+		return
+	}
+	// Only 5xx / transport failures count. 4xx sentinels (Unauthorized /
+	// Forbidden / NotFound) are caller errors — they should not affect the
+	// breaker's view of gateway health.
+	if failureSentinel != ErrUnavailable && failureSentinel != ErrTransport {
+		return
+	}
+	b.consecutive++
+	if b.consecutive >= b.threshold {
+		b.openUntil = b.now().Add(b.cooldown)
+	}
 }
