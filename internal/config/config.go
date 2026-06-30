@@ -61,7 +61,7 @@ type Config struct {
 	PoolSyncIntervalSeconds int
 	// ModelGatewaySyncIntervalSeconds is how often (seconds) the background
 	// goroutine syncs every litellm GatewayConnection row (status, routing
-	// strategy, backend-model count). Default 600 (10m). 0 disables the
+	// strategy, backend-model count). Default 1800 (30m). 0 disables the
 	// periodic sync — operators can still trigger a sync manually via the
 	// syncModelGatewayConnection mutation, and a sync is also fired-and-
 	// forgotten at create time.
@@ -129,7 +129,7 @@ func Load() (*Config, error) {
 	if c.PoolSyncIntervalSeconds, err = getenvInt("POOL_SYNC_INTERVAL_SECONDS", 0); err != nil {
 		return nil, err
 	}
-	if c.ModelGatewaySyncIntervalSeconds, err = getenvInt("MODEL_GATEWAY_SYNC_INTERVAL_SECONDS", 600); err != nil {
+	if c.ModelGatewaySyncIntervalSeconds, err = getenvInt("MODEL_GATEWAY_SYNC_INTERVAL_SECONDS", 1800); err != nil {
 		return nil, err
 	}
 	return c, nil

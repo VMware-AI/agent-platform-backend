@@ -23,7 +23,7 @@ func TestGenerateKey(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewHTTPClient(srv.URL, "sk-master")
+	c, _ := NewHTTPClient(srv.URL, "sk-master")
 	budget := 50.0
 	rpm := 60
 	resp, err := c.GenerateKey(context.Background(), GenerateKeyRequest{
@@ -52,7 +52,7 @@ func TestGenerateKey(t *testing.T) {
 }
 
 func TestDeleteKey_RequiresKey(t *testing.T) {
-	c := NewHTTPClient("http://unused", "sk-master")
+	c, _ := NewHTTPClient("http://unused", "sk-master")
 	if err := c.DeleteKey(context.Background(), ""); err == nil {
 		t.Fatal("DeleteKey with empty key should error")
 	}
@@ -64,7 +64,7 @@ func TestPost_ErrorStatus(t *testing.T) {
 		_, _ = w.Write([]byte(`{"error":"bad key"}`))
 	}))
 	defer srv.Close()
-	c := NewHTTPClient(srv.URL, "sk-bad")
+	c, _ := NewHTTPClient(srv.URL, "sk-bad")
 	if _, err := c.GenerateKey(context.Background(), GenerateKeyRequest{UserID: "u1"}); err == nil {
 		t.Fatal("expected error on 401 status")
 	}
@@ -80,7 +80,7 @@ func TestDeleteTeam(t *testing.T) {
 		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
-	c := NewHTTPClient(srv.URL, "sk-master")
+	c, _ := NewHTTPClient(srv.URL, "sk-master")
 	if err := c.DeleteTeam(context.Background(), "t-research"); err != nil {
 		t.Fatalf("DeleteTeam: %v", err)
 	}
@@ -93,7 +93,7 @@ func TestDeleteTeam(t *testing.T) {
 }
 
 func TestDeleteTeam_RequiresTeamID(t *testing.T) {
-	c := NewHTTPClient("http://unused", "sk-master")
+	c, _ := NewHTTPClient("http://unused", "sk-master")
 	if err := c.DeleteTeam(context.Background(), ""); err == nil {
 		t.Fatal("DeleteTeam with empty id should error")
 	}
@@ -109,7 +109,7 @@ func TestUpdateKey_Blocked(t *testing.T) {
 		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
-	c := NewHTTPClient(srv.URL, "sk-master")
+	c, _ := NewHTTPClient(srv.URL, "sk-master")
 	blocked := true
 	if err := c.UpdateKey(context.Background(), UpdateKeyRequest{Key: "sk-x", Blocked: &blocked}); err != nil {
 		t.Fatalf("UpdateKey: %v", err)
@@ -126,7 +126,7 @@ func TestUpdateKey_Blocked(t *testing.T) {
 }
 
 func TestUpdateKey_RequiresKey(t *testing.T) {
-	c := NewHTTPClient("http://unused", "sk-master")
+	c, _ := NewHTTPClient("http://unused", "sk-master")
 	if err := c.UpdateKey(context.Background(), UpdateKeyRequest{}); err == nil {
 		t.Fatal("UpdateKey with empty key should error")
 	}
@@ -143,8 +143,7 @@ func TestGet_RetriesOnServerError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewHTTPClient(srv.URL, "sk-master")
-	c.retryBackoff = 0 // keep the test fast
+	c, _ := NewHTTPClient(srv.URL, "sk-master", WithRetryBackoff(0))
 	if _, err := c.ListTeams(context.Background()); err != nil {
 		t.Fatalf("ListTeams should succeed after retries: %v", err)
 	}
@@ -161,8 +160,7 @@ func TestGet_NoRetryOn4xx(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewHTTPClient(srv.URL, "sk-master")
-	c.retryBackoff = 0
+	c, _ := NewHTTPClient(srv.URL, "sk-master", WithRetryBackoff(0))
 	if _, err := c.ListTeams(context.Background()); err == nil {
 		t.Fatal("expected error on 400")
 	}
@@ -181,8 +179,7 @@ func TestPost_NoRetry(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewHTTPClient(srv.URL, "sk-master")
-	c.retryBackoff = 0
+	c, _ := NewHTTPClient(srv.URL, "sk-master", WithRetryBackoff(0))
 	if _, err := c.GenerateKey(context.Background(), GenerateKeyRequest{UserID: "u1"}); err == nil {
 		t.Fatal("expected error")
 	}
@@ -200,7 +197,7 @@ func TestRegenerateKey(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewHTTPClient(srv.URL, "sk-master")
+	c, _ := NewHTTPClient(srv.URL, "sk-master")
 	resp, err := c.RegenerateKey(context.Background(), "sk-old")
 	if err != nil {
 		t.Fatalf("RegenerateKey: %v", err)
@@ -217,7 +214,7 @@ func TestRegenerateKey(t *testing.T) {
 }
 
 func TestRegenerateKey_RequiresKey(t *testing.T) {
-	c := NewHTTPClient("http://unused", "sk-master")
+	c, _ := NewHTTPClient("http://unused", "sk-master")
 	if _, err := c.RegenerateKey(context.Background(), ""); err == nil {
 		t.Fatal("RegenerateKey with empty key should error")
 	}
@@ -236,7 +233,7 @@ func TestListTeams(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewHTTPClient(srv.URL, "sk-master")
+	c, _ := NewHTTPClient(srv.URL, "sk-master")
 	teams, err := c.ListTeams(context.Background())
 	if err != nil {
 		t.Fatalf("ListTeams: %v", err)
@@ -267,7 +264,7 @@ func TestListKeys(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewHTTPClient(srv.URL, "sk-master")
+	c, _ := NewHTTPClient(srv.URL, "sk-master")
 	keys, err := c.ListKeys(context.Background())
 	if err != nil {
 		t.Fatalf("ListKeys: %v", err)
@@ -298,7 +295,7 @@ func TestCreateTeam(t *testing.T) {
 		_, _ = w.Write([]byte(`{"team_id":"t-research"}`))
 	}))
 	defer srv.Close()
-	c := NewHTTPClient(srv.URL, "sk-master")
+	c, _ := NewHTTPClient(srv.URL, "sk-master")
 	budget := 500.0
 	resp, err := c.CreateTeam(context.Background(), TeamRequest{TeamAlias: "research", MaxBudget: &budget})
 	if err != nil {

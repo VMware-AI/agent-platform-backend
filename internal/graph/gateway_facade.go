@@ -251,12 +251,41 @@ func applyModelGatewaySort(q *ent.GatewayConnectionQuery, sort *model.ModelGatew
 // row — its own endpoint and master key (resolved from the secret store) — so a
 // model/connection op hits the right gateway, not a process-wide default. The
 // builder is injectable (GatewayClientFor) so tests can supply a fake.
+//
+// If client construction fails (vault master key empty, bad endpoint) we
+// return a stub whose every method returns a typed error rather than nil. This
+// keeps the call sites panic-free: probe / list / op paths read a normal
+// error and surface it (or log it server-side for best-effort probes), instead
+// of a nil-pointer panic in a goroutine.
 func (r *Resolver) buildGatewayModels(ctx context.Context, g *ent.GatewayConnection) gateway.ModelManager {
 	masterKey := r.gatewayMasterKey(ctx, g)
 	if r.GatewayClientFor != nil {
 		return r.GatewayClientFor(ctx, g.Endpoint, masterKey)
 	}
-	return gateway.NewHTTPClient(g.Endpoint, masterKey)
+	c, err := gateway.NewHTTPClient(g.Endpoint, masterKey)
+	if err != nil {
+		log.Printf("model gateway client build failed for %s: %v", g.ID, err)
+		return &errModelManager{err: err}
+	}
+	return c
+}
+
+// errModelManager satisfies gateway.ModelManager by returning a fixed error
+// from every method. Used as a sentinel when buildGatewayModels can't build a
+// real client — probes / ops see a normal error instead of nil.
+type errModelManager struct{ err error }
+
+func (e *errModelManager) TestConnection(context.Context) error    { return e.err }
+func (e *errModelManager) GetRoutingStrategy(context.Context) (gateway.RoutingStrategy, error) {
+	return "", e.err
+}
+func (e *errModelManager) ListModels(context.Context) ([]gateway.ModelInfo, error) {
+	return nil, e.err
+}
+func (e *errModelManager) NewModel(context.Context, gateway.ModelSpec) error   { return e.err }
+func (e *errModelManager) DeleteModel(context.Context, string) error            { return e.err }
+func (e *errModelManager) UpsertComplexityRouter(context.Context, gateway.RouterSpec) error {
+	return e.err
 }
 
 // applyGatewayTestResult persists a connection-test outcome on a gateway row.

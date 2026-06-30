@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"log"
 
 	"github.com/google/uuid"
 
@@ -24,11 +25,18 @@ func (r *Resolver) gatewayMasterKey(ctx context.Context, g *ent.GatewayConnectio
 
 // buildGatewayKeyClient builds a litellm key/team client bound to a SPECIFIC
 // gateway row. Injectable (GatewayKeyClientFor) for tests; nil → a real client.
+// Returns nil on construction failure (empty master key / bad endpoint) so the
+// caller treats it as "no client configured" rather than panicking.
 func (r *Resolver) buildGatewayKeyClient(ctx context.Context, g *ent.GatewayConnection) gateway.Client {
 	if r.GatewayKeyClientFor != nil {
 		return r.GatewayKeyClientFor(ctx, g)
 	}
-	return gateway.NewHTTPClient(g.Endpoint, r.gatewayMasterKey(ctx, g))
+	c, err := gateway.NewHTTPClient(g.Endpoint, r.gatewayMasterKey(ctx, g))
+	if err != nil {
+		log.Printf("gateway key client build failed for %s: %v", g.ID, err)
+		return nil
+	}
+	return c
 }
 
 // defaultGateway returns the platform default GatewayConnection (is_default), or

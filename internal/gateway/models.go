@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 )
 
 // ModelManager governs the gateway's model pool + routing (LLD-07). Separate
@@ -86,23 +85,17 @@ type RouterSpec struct {
 	DefaultModel string            // fallback when no tier matches
 }
 
+// TestConnection reuses c.get so the retry + error-class semantics stay
+// consistent with ListModels (same endpoint, /models). A transient 5xx now
+// retries 3× instead of failing on the first hit.
 func (c *HTTPClient) TestConnection(ctx context.Context) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/models", nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Authorization", "Bearer "+c.masterKey)
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return fmt.Errorf("gateway test connection: %w", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("gateway test connection: status %d", resp.StatusCode)
-	}
-	return nil
+	return c.get(ctx, "/models", nil)
 }
 
+// NewModel creates (or refreshes) a litellm deployment (POST /model/new). On
+// 2xx the response carries a "model_name" field — confirmed against the request
+// so a silent server-side reject (e.g. unknown upstream) surfaces as
+// ErrMalformedResponse rather than silently "succeeding".
 func (c *HTTPClient) NewModel(ctx context.Context, spec ModelSpec) error {
 	if spec.ModelName == "" || spec.Model == "" {
 		return fmt.Errorf("NewModel: model_name and model are required")
@@ -128,7 +121,19 @@ func (c *HTTPClient) NewModel(ctx context.Context, spec ModelSpec) error {
 	if len(modelInfo) > 0 {
 		body["model_info"] = modelInfo
 	}
-	return c.post(ctx, "/model/new", body, nil)
+	var resp struct {
+		ModelName string `json:"model_name"`
+	}
+	if err := c.post(ctx, "/model/new", body, &resp); err != nil {
+		return err
+	}
+	// litellm is inconsistent about whether it echoes back the request's
+	// model_name or the upstream provider's name. Accept either, as long as
+	// the response carries some non-empty identifier.
+	if resp.ModelName == "" {
+		return fmt.Errorf("%w: NewModel response missing model_name", ErrMalformedResponse)
+	}
+	return nil
 }
 
 func (c *HTTPClient) DeleteModel(ctx context.Context, modelID string) error {
@@ -138,6 +143,11 @@ func (c *HTTPClient) DeleteModel(ctx context.Context, modelID string) error {
 	return c.post(ctx, "/model/delete", map[string]any{"id": modelID}, nil)
 }
 
+// UpsertComplexityRouter configures the rule-based difficulty router. litellm's
+// /model/new is reused (auto_router/complexity_router is itself a model). The
+// response's model_name is checked against the request — a server-side reject
+// (e.g. invalid tier enum) returns 200 with no body in some litellm versions,
+// so the check guards against silent partial-config.
 func (c *HTTPClient) UpsertComplexityRouter(ctx context.Context, spec RouterSpec) error {
 	if len(spec.Tiers) == 0 {
 		return fmt.Errorf("UpsertComplexityRouter: tiers required")
@@ -154,10 +164,19 @@ func (c *HTTPClient) UpsertComplexityRouter(ctx context.Context, spec RouterSpec
 	if spec.DefaultModel != "" {
 		params["complexity_router_default_model"] = spec.DefaultModel
 	}
-	return c.post(ctx, "/model/new", map[string]any{
+	var resp struct {
+		ModelName string `json:"model_name"`
+	}
+	if err := c.post(ctx, "/model/new", map[string]any{
 		"model_name":     name,
 		"litellm_params": params,
-	}, nil)
+	}, &resp); err != nil {
+		return err
+	}
+	if resp.ModelName == "" {
+		return fmt.Errorf("%w: UpsertComplexityRouter response missing model_name", ErrMalformedResponse)
+	}
+	return nil
 }
 
 // ListModels calls GET /models and decodes the response's "data" array. A
