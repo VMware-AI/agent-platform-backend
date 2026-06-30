@@ -304,3 +304,65 @@ func (r *queryResolver) ResourcePool(ctx context.Context, id string) (*model.Res
 	}
 	return toModelResourcePool(p), nil
 }
+
+// ContentLibraries lists all content library names available on the vCenter
+// for the given resource pool. Used by the Add OVA Template dialog library picker.
+func (r *queryResolver) ContentLibraries(ctx context.Context, resourcePoolID string) ([]string, error) {
+	pid, err := uuid.Parse(resourcePoolID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid resourcePoolId")
+	}
+	pool, err := r.Ent.ResourcePool.Get(ctx, pid)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, gqlerror.Errorf("resource pool not found")
+		}
+		return nil, err
+	}
+	conn, err := r.connectPool(ctx, pool)
+	if err != nil {
+		return nil, fmt.Errorf("connect vcenter: %w", err)
+	}
+	defer func() { _ = conn.Logout(ctx) }()
+
+	libs, err := conn.ListContentLibraries(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list content libraries: %w", err)
+	}
+	return libs, nil
+}
+
+// ContentLibraryItems lists OVF/OVA items in the named content library of the
+// given resource pool. Used by the Add OVA Template dialog to populate the
+// template picker so admins don't have to type the ovaIdentifier manually.
+func (r *queryResolver) ContentLibraryItems(ctx context.Context, resourcePoolID string, libraryName string) ([]model.ContentLibraryItem, error) {
+	pid, err := uuid.Parse(resourcePoolID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid resourcePoolId")
+	}
+	pool, err := r.Ent.ResourcePool.Get(ctx, pid)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, gqlerror.Errorf("resource pool not found")
+		}
+		return nil, err
+	}
+	if libraryName == "" {
+		return []model.ContentLibraryItem{}, nil
+	}
+	conn, err := r.connectPool(ctx, pool)
+	if err != nil {
+		return nil, fmt.Errorf("connect vcenter: %w", err)
+	}
+	defer func() { _ = conn.Logout(ctx) }()
+
+	items, err := conn.ListContentLibraryItems(ctx, libraryName)
+	if err != nil {
+		return nil, fmt.Errorf("list library items: %w", err)
+	}
+	out := make([]model.ContentLibraryItem, 0, len(items))
+	for _, item := range items {
+		out = append(out, model.ContentLibraryItem{Name: item.Name, Type: item.Type})
+	}
+	return out, nil
+}

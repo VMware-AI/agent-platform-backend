@@ -40,6 +40,9 @@ input DeployAgentInput {
   hostname: String
   # Optional per-key spend cap handed to the gateway when issuing the agent's key.
   maxBudget: Float
+  # Optional target network/portgroup path for the agent VM's NIC.
+  # Matches VsphereNetwork.path. "" = keep the source template's NIC mapping.
+  targetNetwork: String
 }
 
 # An OVA template VM available to clone agents from.
@@ -58,6 +61,16 @@ type VsphereResourcePool {
   # (e.g. "/DC0/host/DC0_C0/Resources"). Full path so it stays unambiguous across
   # multiple datacenters. This is the value to send as targetResourcePool.
   path: String!
+}
+
+# A network/portgroup available to the deploy form's NIC picker.
+# type is "standard" (vSwitch portgroup) or "distributed" (dvPortgroup).
+# dvsName is the parent distributed switch name; empty for standard portgroups.
+type VsphereNetwork {
+  name: String!
+  path: String!
+  type: String!
+  dvsName: String!
 }
 
 input RecycleAgentInput {
@@ -96,6 +109,10 @@ extend type Query {
   # pool, so the deploy must pick one of these for targetResourcePool. Admin-only:
   # it dials the pool's vCenter with privileged credentials, like vmTemplates.
   vsphereResourcePools(resourcePoolId: ID!): [VsphereResourcePool!]!
+    @hasRole(any: [admin])
+  # List all networks/portgroups in a platform resource pool's vCenter.
+  # Powers the deploy form's NIC/portgroup picker. Admin-only.
+  vsphereNetworks(resourcePoolId: ID!): [VsphereNetwork!]!
     @hasRole(any: [admin])
   # List the agent VM's snapshots. Owner/admin (checked in resolver).
   agentSnapshots(agentId: ID!): [AgentSnapshot!]!

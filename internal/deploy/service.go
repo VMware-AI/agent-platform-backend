@@ -40,6 +40,7 @@ type Request struct {
 	Template     string // source OVA template to clone from
 	VMName       string // new VM name to create
 	ResourcePool string // target resource pool ("" = inherit template's pool)
+	Network      string // target portgroup path ("" = keep source template's NIC)
 	Hostname     string
 	Models       []string
 	MaxBudget    *float64
@@ -107,6 +108,7 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 		Template:     req.Template,
 		Name:         req.VMName,
 		ResourcePool: req.ResourcePool,
+		Network:      req.Network,
 		PowerOn:      false,
 	}); err != nil {
 		s.revokeKey(ctx, key.Key) // no VM to clean up yet
