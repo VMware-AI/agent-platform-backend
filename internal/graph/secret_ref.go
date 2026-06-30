@@ -70,7 +70,7 @@ func (r *Resolver) resolveKeySecretRef(ctx context.Context, label string, rawKey
 // cleanupMintedSecretOnErr retires a freshly-minted secret ref when the DB Save
 // that was supposed to reference it failed, so a failed create/rotate doesn't
 // orphan plaintext in the store (no row points at it, and the reconciler never
-// GCs vault items). It is the create/update counterpart of the DELETE-side
+// GCs secret-store items). It is the create/update counterpart of the DELETE-side
 // deleteSecretRef calls.
 //
 // No-op unless a NEW secret was minted by this request (minted, i.e. the raw-key

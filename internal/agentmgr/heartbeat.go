@@ -196,7 +196,7 @@ func (s *Service) completeCommand(ctx context.Context, cmd *ent.RotationCommand,
 		ref, err := s.Secrets.Put(ctx, "agent-ui/"+cmd.AgentID.String(),
 			secrets.Credential{Username: "agent", Password: ack.NewUIPassword})
 		if err != nil {
-			log.Printf("agentmgr: vault put failed for %s, leaving acked: %v", cmd.ID, err)
+			log.Printf("agentmgr: secret-store put failed for %s, leaving acked: %v", cmd.ID, err)
 			return // publish-then-commit: do NOT complete
 		}
 		upd.SetSecretRef(ref)

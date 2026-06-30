@@ -7,7 +7,7 @@ import (
 )
 
 // Upstream is a model-provider deployment behind the gateway (多上游接入).
-// One of these maps to a litellm model_list entry. api_key is a Vaultwarden ref.
+// One of these maps to a litellm model_list entry. api_key is a secret-store ref.
 type Upstream struct {
 	ent.Schema
 }

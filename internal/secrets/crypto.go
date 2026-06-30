@@ -30,7 +30,11 @@ func newAEAD(key string) (cipher.AEAD, error) {
 	return aead, nil
 }
 
-// encrypt returns base64(nonce || ciphertext+tag) for storage. An empty plaintext
+// encrypt returns base64(nonce || ciphertext+tag) for storage. NOTE: the stored
+// format carries no key-version/algorithm prefix — it assumes a single
+// SECRETS_ENCRYPTION_KEY. Rotating the key would strand existing rows (they fail
+// the GCM tag under the new key); supporting rotation later means adding a version
+// byte so old and new ciphertexts can coexist during re-encryption. An empty plaintext
 // encrypts to empty so an unset field stays unset (and "is it set?" is answerable
 // without decrypting); a fresh random nonce per call makes equal plaintexts differ.
 func encrypt(aead cipher.AEAD, plaintext string) (string, error) {
