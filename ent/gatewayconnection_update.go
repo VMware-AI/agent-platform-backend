@@ -83,26 +83,6 @@ func (_u *GatewayConnectionUpdate) ClearMasterKeyRef() *GatewayConnectionUpdate 
 	return _u
 }
 
-// SetAdminURL sets the "admin_url" field.
-func (_u *GatewayConnectionUpdate) SetAdminURL(v string) *GatewayConnectionUpdate {
-	_u.mutation.SetAdminURL(v)
-	return _u
-}
-
-// SetNillableAdminURL sets the "admin_url" field if the given value is not nil.
-func (_u *GatewayConnectionUpdate) SetNillableAdminURL(v *string) *GatewayConnectionUpdate {
-	if v != nil {
-		_u.SetAdminURL(*v)
-	}
-	return _u
-}
-
-// ClearAdminURL clears the value of the "admin_url" field.
-func (_u *GatewayConnectionUpdate) ClearAdminURL() *GatewayConnectionUpdate {
-	_u.mutation.ClearAdminURL()
-	return _u
-}
-
 // SetPublicURL sets the "public_url" field.
 func (_u *GatewayConnectionUpdate) SetPublicURL(v string) *GatewayConnectionUpdate {
 	_u.mutation.SetPublicURL(v)
@@ -154,6 +134,33 @@ func (_u *GatewayConnectionUpdate) SetNillableLastSyncedAt(v *time.Time) *Gatewa
 // ClearLastSyncedAt clears the value of the "last_synced_at" field.
 func (_u *GatewayConnectionUpdate) ClearLastSyncedAt() *GatewayConnectionUpdate {
 	_u.mutation.ClearLastSyncedAt()
+	return _u
+}
+
+// SetBackendModelCount sets the "backend_model_count" field.
+func (_u *GatewayConnectionUpdate) SetBackendModelCount(v int) *GatewayConnectionUpdate {
+	_u.mutation.ResetBackendModelCount()
+	_u.mutation.SetBackendModelCount(v)
+	return _u
+}
+
+// SetNillableBackendModelCount sets the "backend_model_count" field if the given value is not nil.
+func (_u *GatewayConnectionUpdate) SetNillableBackendModelCount(v *int) *GatewayConnectionUpdate {
+	if v != nil {
+		_u.SetBackendModelCount(*v)
+	}
+	return _u
+}
+
+// AddBackendModelCount adds value to the "backend_model_count" field.
+func (_u *GatewayConnectionUpdate) AddBackendModelCount(v int) *GatewayConnectionUpdate {
+	_u.mutation.AddBackendModelCount(v)
+	return _u
+}
+
+// ClearBackendModelCount clears the value of the "backend_model_count" field.
+func (_u *GatewayConnectionUpdate) ClearBackendModelCount() *GatewayConnectionUpdate {
+	_u.mutation.ClearBackendModelCount()
 	return _u
 }
 
@@ -284,12 +291,6 @@ func (_u *GatewayConnectionUpdate) sqlSave(ctx context.Context) (_node int, err 
 	if _u.mutation.MasterKeyRefCleared() {
 		_spec.ClearField(gatewayconnection.FieldMasterKeyRef, field.TypeString)
 	}
-	if value, ok := _u.mutation.AdminURL(); ok {
-		_spec.SetField(gatewayconnection.FieldAdminURL, field.TypeString, value)
-	}
-	if _u.mutation.AdminURLCleared() {
-		_spec.ClearField(gatewayconnection.FieldAdminURL, field.TypeString)
-	}
 	if value, ok := _u.mutation.PublicURL(); ok {
 		_spec.SetField(gatewayconnection.FieldPublicURL, field.TypeString, value)
 	}
@@ -304,6 +305,15 @@ func (_u *GatewayConnectionUpdate) sqlSave(ctx context.Context) (_node int, err 
 	}
 	if _u.mutation.LastSyncedAtCleared() {
 		_spec.ClearField(gatewayconnection.FieldLastSyncedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.BackendModelCount(); ok {
+		_spec.SetField(gatewayconnection.FieldBackendModelCount, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedBackendModelCount(); ok {
+		_spec.AddField(gatewayconnection.FieldBackendModelCount, field.TypeInt, value)
+	}
+	if _u.mutation.BackendModelCountCleared() {
+		_spec.ClearField(gatewayconnection.FieldBackendModelCount, field.TypeInt)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(gatewayconnection.FieldStatus, field.TypeEnum, value)
@@ -387,26 +397,6 @@ func (_u *GatewayConnectionUpdateOne) ClearMasterKeyRef() *GatewayConnectionUpda
 	return _u
 }
 
-// SetAdminURL sets the "admin_url" field.
-func (_u *GatewayConnectionUpdateOne) SetAdminURL(v string) *GatewayConnectionUpdateOne {
-	_u.mutation.SetAdminURL(v)
-	return _u
-}
-
-// SetNillableAdminURL sets the "admin_url" field if the given value is not nil.
-func (_u *GatewayConnectionUpdateOne) SetNillableAdminURL(v *string) *GatewayConnectionUpdateOne {
-	if v != nil {
-		_u.SetAdminURL(*v)
-	}
-	return _u
-}
-
-// ClearAdminURL clears the value of the "admin_url" field.
-func (_u *GatewayConnectionUpdateOne) ClearAdminURL() *GatewayConnectionUpdateOne {
-	_u.mutation.ClearAdminURL()
-	return _u
-}
-
 // SetPublicURL sets the "public_url" field.
 func (_u *GatewayConnectionUpdateOne) SetPublicURL(v string) *GatewayConnectionUpdateOne {
 	_u.mutation.SetPublicURL(v)
@@ -458,6 +448,33 @@ func (_u *GatewayConnectionUpdateOne) SetNillableLastSyncedAt(v *time.Time) *Gat
 // ClearLastSyncedAt clears the value of the "last_synced_at" field.
 func (_u *GatewayConnectionUpdateOne) ClearLastSyncedAt() *GatewayConnectionUpdateOne {
 	_u.mutation.ClearLastSyncedAt()
+	return _u
+}
+
+// SetBackendModelCount sets the "backend_model_count" field.
+func (_u *GatewayConnectionUpdateOne) SetBackendModelCount(v int) *GatewayConnectionUpdateOne {
+	_u.mutation.ResetBackendModelCount()
+	_u.mutation.SetBackendModelCount(v)
+	return _u
+}
+
+// SetNillableBackendModelCount sets the "backend_model_count" field if the given value is not nil.
+func (_u *GatewayConnectionUpdateOne) SetNillableBackendModelCount(v *int) *GatewayConnectionUpdateOne {
+	if v != nil {
+		_u.SetBackendModelCount(*v)
+	}
+	return _u
+}
+
+// AddBackendModelCount adds value to the "backend_model_count" field.
+func (_u *GatewayConnectionUpdateOne) AddBackendModelCount(v int) *GatewayConnectionUpdateOne {
+	_u.mutation.AddBackendModelCount(v)
+	return _u
+}
+
+// ClearBackendModelCount clears the value of the "backend_model_count" field.
+func (_u *GatewayConnectionUpdateOne) ClearBackendModelCount() *GatewayConnectionUpdateOne {
+	_u.mutation.ClearBackendModelCount()
 	return _u
 }
 
@@ -618,12 +635,6 @@ func (_u *GatewayConnectionUpdateOne) sqlSave(ctx context.Context) (_node *Gatew
 	if _u.mutation.MasterKeyRefCleared() {
 		_spec.ClearField(gatewayconnection.FieldMasterKeyRef, field.TypeString)
 	}
-	if value, ok := _u.mutation.AdminURL(); ok {
-		_spec.SetField(gatewayconnection.FieldAdminURL, field.TypeString, value)
-	}
-	if _u.mutation.AdminURLCleared() {
-		_spec.ClearField(gatewayconnection.FieldAdminURL, field.TypeString)
-	}
 	if value, ok := _u.mutation.PublicURL(); ok {
 		_spec.SetField(gatewayconnection.FieldPublicURL, field.TypeString, value)
 	}
@@ -638,6 +649,15 @@ func (_u *GatewayConnectionUpdateOne) sqlSave(ctx context.Context) (_node *Gatew
 	}
 	if _u.mutation.LastSyncedAtCleared() {
 		_spec.ClearField(gatewayconnection.FieldLastSyncedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.BackendModelCount(); ok {
+		_spec.SetField(gatewayconnection.FieldBackendModelCount, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedBackendModelCount(); ok {
+		_spec.AddField(gatewayconnection.FieldBackendModelCount, field.TypeInt, value)
+	}
+	if _u.mutation.BackendModelCountCleared() {
+		_spec.ClearField(gatewayconnection.FieldBackendModelCount, field.TypeInt)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(gatewayconnection.FieldStatus, field.TypeEnum, value)

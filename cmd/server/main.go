@@ -189,6 +189,15 @@ func main() {
 		go resolver.StartAutoSync(poolSyncCtx, time.Duration(cfg.PoolSyncIntervalSeconds)*time.Second)
 	}
 
+	// Periodically re-sync every model gateway (status, loadBalancingStrategy,
+	// backendModelCount). Default 10m; disable with MODEL_GATEWAY_SYNC_INTERVAL_SECONDS=0.
+	if cfg.ModelGatewaySyncIntervalSeconds > 0 {
+		mgSyncCtx, stopMGSync := context.WithCancel(context.Background())
+		defer stopMGSync()
+		log.Printf("model-gateway auto-sync: every %s", time.Duration(cfg.ModelGatewaySyncIntervalSeconds)*time.Second)
+		go resolver.StartModelGatewayAutoSync(mgSyncCtx, time.Duration(cfg.ModelGatewaySyncIntervalSeconds)*time.Second)
+	}
+
 	es := graph.NewExecutableSchema(graph.Config{
 		Resolvers: resolver,
 		Directives: graph.DirectiveRoot{

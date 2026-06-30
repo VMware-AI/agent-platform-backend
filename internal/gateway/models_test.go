@@ -92,34 +92,28 @@ func TestTestConnection(t *testing.T) {
 }
 
 func TestHTTPClient_GetRoutingStrategy_AllKnownValues(t *testing.T) {
-	cases := []struct {
-		wire string
-		want RoutingStrategy
-	}{
-		{"simple_shuffle", RoutingStrategyRoundRobin},
-		{"latency", RoutingStrategyLatencyBased},
-		{"usage_v2", RoutingStrategyUsageBasedV2},
-		{"least_busy", RoutingStrategyLeastBusy},
-		{"cost", RoutingStrategyCostBased},
+	cases := []string{
+		"simple-shuffle", "least-busy", "latency-based-routing",
+		"usage-based-routing", "usage-based-routing-v2", "cost-based-routing",
 	}
-	for _, tc := range cases {
-		t.Run(tc.wire, func(t *testing.T) {
+	for _, wire := range cases {
+		t.Run(wire, func(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path != "/config/router" {
-					t.Errorf("path = %q, want /config/router", r.URL.Path)
+				if r.URL.Path != "/router/settings" {
+					t.Errorf("path = %q, want /router/settings", r.URL.Path)
 				}
 				if r.Header.Get("Authorization") != "Bearer sk-master" {
 					t.Errorf("auth header = %q", r.Header.Get("Authorization"))
 				}
-				_, _ = w.Write([]byte(`{"routing_strategy":"` + tc.wire + `"}`))
+				_, _ = w.Write([]byte(`{"current_values":{"routing_strategy":"` + wire + `"}}`))
 			}))
 			defer srv.Close()
 			got, err := NewHTTPClient(srv.URL, "sk-master").GetRoutingStrategy(context.Background())
 			if err != nil {
 				t.Fatalf("GetRoutingStrategy: %v", err)
 			}
-			if got != tc.want {
-				t.Fatalf("got %q, want %q", got, tc.want)
+			if string(got) != wire {
+				t.Fatalf("got %q, want %q", got, wire)
 			}
 		})
 	}
@@ -127,7 +121,21 @@ func TestHTTPClient_GetRoutingStrategy_AllKnownValues(t *testing.T) {
 
 func TestHTTPClient_GetRoutingStrategy_UnknownValue(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte(`{"routing_strategy":"vendor_custom"}`))
+		_, _ = w.Write([]byte(`{"current_values":{"routing_strategy":"vendor_custom"}}`))
+	}))
+	defer srv.Close()
+	_, err := NewHTTPClient(srv.URL, "sk-master").GetRoutingStrategy(context.Background())
+	if !errors.Is(err, ErrUnknownRoutingStrategy) {
+		t.Fatalf("err = %v, want ErrUnknownRoutingStrategy", err)
+	}
+}
+
+func TestHTTPClient_GetRoutingStrategy_EntryAbsent(t *testing.T) {
+	// Older litellm versions don't expose routing_strategy in
+	// current_values. Must return ErrUnknownRoutingStrategy so the probe is
+	// treated as best-effort, not a hard failure.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"current_values":{"some_other_setting":"x"}}`))
 	}))
 	defer srv.Close()
 	_, err := NewHTTPClient(srv.URL, "sk-master").GetRoutingStrategy(context.Background())

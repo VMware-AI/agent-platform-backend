@@ -3,7 +3,6 @@ package graph
 import (
 	"context"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
@@ -27,28 +26,16 @@ func toModelGatewayConnection(g *ent.GatewayConnection) *model.GatewayConnection
 		PublicURL:           publicURL,
 		IsDefault:           g.IsDefault,
 		Status:              model.GatewayStatus(string(g.Status)),
-		LoadBalanceStrategy: model.LoadBalanceStrategy(string(g.LoadBalanceStrategy)),
+		LoadBalanceStrategy: model.LoadBalancingStrategy(string(g.LoadBalanceStrategy)),
 		CreatedAt:           g.CreatedAt,
 	}
 }
 
 // ---- 模型网关页 (P4): GatewayConnection façade helpers ----
 
-// modelGatewayStatus maps the ent connection status to the console status enum.
-func modelGatewayStatus(s gatewayconnection.Status) model.ModelGatewayStatus {
-	switch s {
-	case gatewayconnection.StatusConnected:
-		return model.ModelGatewayStatusConnected
-	case gatewayconnection.StatusError:
-		return model.ModelGatewayStatusError
-	default:
-		return model.ModelGatewayStatusDisconnected
-	}
-}
-
 // probeGatewayConnection runs the connectivity test + best-effort strategy
 // probe against a pre-built ModelManager. Used by the id-based post-create
-// testModelGatewayConnection — the only flow that surfaces the live routing
+// syncModelGatewayConnection — the only flow that surfaces the live routing
 // strategy for the user to read off the row. Returns the projected status and
 // the probed strategy (nil on probe failure). Probe errors are logged
 // server-side, never returned to the caller.
@@ -81,41 +68,44 @@ func probeGatewayConnectionStatus(ctx context.Context, mgr gateway.ModelManager)
 	return status
 }
 
-// mapRoutingStrategy converts the wire-level RoutingStrategy (litellm's
-// internal names) to the console's GraphQL LoadBalancingStrategy enum. Both
-// sets have 5 values; the mapping is the literal identity in this codebase —
-// a wire value of "latency" maps to the console value LATENCY_BASED, etc.
-// We do the mapping explicitly (rather than via a string lookup table) so the
-// relationship is auditable in one place.
+// probeGatewayBackendModelCount reads the gateway's current model count via
+// GET /models and returns (count, true) on success. On any failure it logs
+// the error and returns (0, false) so the caller can preserve the previously-
+// stored count instead of clobbering it with a transient zero.
+func probeGatewayBackendModelCount(ctx context.Context, mgr gateway.ModelManager) (int, bool) {
+	models, err := mgr.ListModels(ctx)
+	if err != nil {
+		log.Printf("model gateway backend-model-count probe failed: %v", err)
+		return 0, false
+	}
+	return len(models), true
+}
+
+// mapRoutingStrategy is the SOLE inbound adapter for the litellm routing
+// strategy: it translates the wire-level RoutingStrategy (litellm returns
+// kebab-case values: `simple-shuffle`, `least-busy`, ...) into the console's
+// GraphQL LoadBalancingStrategy enum (UPPER_SNAKE_CASE, shared verbatim with
+// the ent column). Both the wire and the GraphQL/DB side hold the same 5
+// strategies; this is the only place the spelling differs. The deprecated
+// `usage-based-routing` (pre-v2) wire value is normalised to
+// USAGE_BASED_ROUTING_V2 — same strategy, just the older name.
 func mapRoutingStrategy(rs gateway.RoutingStrategy) model.LoadBalancingStrategy {
 	switch rs {
-	case gateway.RoutingStrategyRoundRobin:
-		return model.LoadBalancingStrategyRoundRobin
-	case gateway.RoutingStrategyLatencyBased:
-		return model.LoadBalancingStrategyLatencyBased
-	case gateway.RoutingStrategyUsageBasedV2:
-		return model.LoadBalancingStrategyUsageBasedV2
-	case gateway.RoutingStrategyLeastBusy:
+	case "simple-shuffle":
+		return model.LoadBalancingStrategySimpleShuffle
+	case "least-busy":
 		return model.LoadBalancingStrategyLeastBusy
-	case gateway.RoutingStrategyCostBased:
-		return model.LoadBalancingStrategyCostBased
+	case "latency-based-routing":
+		return model.LoadBalancingStrategyLatencyBasedRouting
+	case "usage-based-routing", "usage-based-routing-v2":
+		return model.LoadBalancingStrategyUsageBasedRoutingV2
+	case "cost-based-routing":
+		return model.LoadBalancingStrategyCostBasedRouting
 	default:
 		// Unreachable from HTTPClient.GetRoutingStrategy (it returns
 		// ErrUnknownRoutingStrategy for unmapped wire values), but defend
 		// against a future caller that bypasses that path.
-		return model.LoadBalancingStrategyRoundRobin
-	}
-}
-
-// entGatewayStatus maps the console status enum back to the ent column (filter).
-func entGatewayStatus(s model.ModelGatewayStatus) gatewayconnection.Status {
-	switch s {
-	case model.ModelGatewayStatusConnected:
-		return gatewayconnection.StatusConnected
-	case model.ModelGatewayStatusError:
-		return gatewayconnection.StatusError
-	default:
-		return gatewayconnection.StatusDisconnected
+		return model.LoadBalancingStrategySimpleShuffle
 	}
 }
 
@@ -133,33 +123,103 @@ func modelGatewaySyncState(s gatewayconnection.Status) model.ModelGatewaySyncSta
 	}
 }
 
-// toModelGateway projects a GatewayConnection (+ the live backend-model count) into
-// the console's ModelGateway aggregate. provider is the console's single
-// supported value; loadBalancingStrategy is nullable — populated only by a live
-// probe in TestModelGatewayConnection, left nil for query paths. adminUrl is the
-// operator-set admin_url, falling back to the derived <endpoint>/ui; latencyMs is
-// transient (only a live test sets it); lastSyncAt is the real last_synced_at
-// column (nil until the gateway has ever successfully connected), and never
-// moves on an unrelated edit.
-func toModelGateway(g *ent.GatewayConnection, backendModelCount int, strategy *model.LoadBalancingStrategy) *model.ModelGateway {
-	adminURL := g.AdminURL
-	if adminURL == "" {
-		adminURL = strings.TrimRight(g.Endpoint, "/") + "/ui"
+// r_isSyncing reports whether a gateway id is currently being synced on this
+// process. Used by toModelGateway to overlay SYNCING on the lastSyncStatus
+// projection. nil-safe: a nil inflight map (older tests don't construct one)
+// returns false.
+//
+// Kept on *Resolver (rather than as a free function) so tests can swap in a
+// resolver with their own inflight map; the SYNCING overlay applies only
+// when a resolver is configured with a non-nil inflightSyncs.
+
+// modelGatewaySyncStateForRead extends modelGatewaySyncState with the
+// "currently syncing" overlay: a gateway whose ID is in the resolver's
+// in-flight sync map is reported as SYNCING regardless of its stored status,
+// so a manual sync button or auto-sync tick surfaces the in-progress state
+// to the UI without a separate persisted column.
+func modelGatewaySyncStateForRead(s gatewayconnection.Status, inSync bool) model.ModelGatewaySyncState {
+	if inSync {
+		return model.ModelGatewaySyncStateSyncing
+	}
+	return modelGatewaySyncState(s)
+}
+
+// toModelGateway projects a GatewayConnection into the console's ModelGateway
+// aggregate. Pure column projection — backendModelCount / loadBalancingStrategy
+// are read directly from the ent columns updated by sync, so this projection
+// is consistent between list reads and post-sync responses. lastSyncStatus is
+// derived from the connection status, overridden to SYNCING when the gateway
+// id is currently in the resolver's in-flight sync map.
+func (r *Resolver) toModelGateway(g *ent.GatewayConnection) *model.ModelGateway {
+	var strategy *model.LoadBalancingStrategy
+	if g.LoadBalanceStrategy != "" {
+		s := model.LoadBalancingStrategy(string(g.LoadBalanceStrategy))
+		strategy = &s
+	}
+	var backendModelCount int
+	if g.BackendModelCount != nil {
+		backendModelCount = *g.BackendModelCount
 	}
 	return &model.ModelGateway{
 		ID:                    g.ID.String(),
 		Name:                  g.Name,
 		Provider:              model.ModelGatewayProviderLitellm,
 		Endpoint:              g.Endpoint,
-		Status:                modelGatewayStatus(g.Status),
 		BackendModelCount:     backendModelCount,
 		LoadBalancingStrategy: strategy,
-		AdminURL:              &adminURL,
 		LastSyncAt:            g.LastSyncedAt,
-		LastSyncStatus:        modelGatewaySyncState(g.Status),
+		LastSyncStatus:        modelGatewaySyncStateForRead(g.Status, r.isSyncing(g.ID)),
 		CreatedAt:             g.CreatedAt,
 		UpdatedAt:             g.UpdatedAt,
 	}
+}
+
+// isSyncing reports whether a gateway id is currently being synced on this
+// process. nil-safe: a nil inflight map (older tests don't construct one)
+// returns false.
+func (r *Resolver) isSyncing(id uuid.UUID) bool {
+	if r == nil || r.inflightSyncs == nil {
+		return false
+	}
+	r.inflightSyncsMu.Lock()
+	defer r.inflightSyncsMu.Unlock()
+	_, ok := r.inflightSyncs[id]
+	return ok
+}
+
+// beginSync marks a gateway id as in-flight; the caller MUST defer endSync.
+// Used to drive the SYNCING overlay on lastSyncStatus.
+func (r *Resolver) beginSync(id uuid.UUID) {
+	if r == nil {
+		return
+	}
+	r.inflightSyncsMu.Lock()
+	defer r.inflightSyncsMu.Unlock()
+	if r.inflightSyncs == nil {
+		r.inflightSyncs = map[uuid.UUID]struct{}{}
+	}
+	r.inflightSyncs[id] = struct{}{}
+}
+
+// endSync clears a gateway id from the in-flight set. Safe to call without
+// a prior beginSync.
+func (r *Resolver) endSync(id uuid.UUID) {
+	if r == nil {
+		return
+	}
+	r.inflightSyncsMu.Lock()
+	defer r.inflightSyncsMu.Unlock()
+	delete(r.inflightSyncs, id)
+}
+
+// testResultMessage maps a success bool to the console-facing message. Both
+// the id-based and the dry-run test resolvers return the same two messages —
+// the raw transport error is logged server-side and never reaches the client.
+func testResultMessage(ok bool) string {
+	if ok {
+		return "connection ok"
+	}
+	return "connection failed"
 }
 
 // applyModelGatewaySort orders a gateway query by the console's sort field with a
@@ -175,8 +235,6 @@ func applyModelGatewaySort(q *ent.GatewayConnectionQuery, sort *model.ModelGatew
 		col = gatewayconnection.FieldName
 	case model.ModelGatewaySortFieldEndpoint:
 		col = gatewayconnection.FieldEndpoint
-	case model.ModelGatewaySortFieldStatus:
-		col = gatewayconnection.FieldStatus
 	case model.ModelGatewaySortFieldUpdatedAt:
 		col = gatewayconnection.FieldUpdatedAt
 	default: // CREATED_AT
@@ -186,12 +244,6 @@ func applyModelGatewaySort(q *ent.GatewayConnectionQuery, sort *model.ModelGatew
 		return q.Order(ent.Desc(col), ent.Desc(gatewayconnection.FieldID))
 	}
 	return q.Order(ent.Asc(col), ent.Asc(gatewayconnection.FieldID))
-}
-
-// backendModelCount is the number of registered upstreams the litellm gateway
-// fronts (real DB count, surfaced as ModelGateway.backendModelCount).
-func (r *Resolver) backendModelCount(ctx context.Context) (int, error) {
-	return r.Ent.Upstream.Query().Count(ctx)
 }
 
 // buildGatewayModels builds a litellm model-manager bound to a SPECIFIC gateway
@@ -206,15 +258,29 @@ func (r *Resolver) buildGatewayModels(ctx context.Context, g *ent.GatewayConnect
 	return gateway.NewHTTPClient(g.Endpoint, masterKey)
 }
 
-// applyGatewayTestResult persists a connection-test outcome on a gateway row: it
-// sets the status and, on a successful connect, stamps last_synced_at = now.
-// Both gateway façades (ModelGateway + the legacy routing GatewayConnection) go
-// through here so they agree on "last synced" — a successful test from either the
-// 模型网关接入 page or the 模型路由 page advances the same timestamp.
-func (r *Resolver) applyGatewayTestResult(ctx context.Context, g *ent.GatewayConnection, status gatewayconnection.Status) (*ent.GatewayConnection, error) {
+// applyGatewayTestResult persists a connection-test outcome on a gateway row.
+// It sets status, last_synced_at, and — when the caller supplies a non-nil
+// backendModelCount / strategy — also writes those. Nil pointers mean "the
+// probe failed, preserve the stored value": a transient outage must not
+// zero the displayed count or reset the strategy. Shared by the ModelGateway
+// sync façade AND the legacy GatewayConnection test façade (which always
+// passes nil, nil — legacy test does not probe count / strategy).
+func (r *Resolver) applyGatewayTestResult(
+	ctx context.Context,
+	g *ent.GatewayConnection,
+	status gatewayconnection.Status,
+	backendModelCount *int,
+	strategy *model.LoadBalancingStrategy,
+) (*ent.GatewayConnection, error) {
 	upd := r.Ent.GatewayConnection.UpdateOne(g).SetStatus(status)
 	if status == gatewayconnection.StatusConnected {
 		upd.SetLastSyncedAt(time.Now())
+	}
+	if backendModelCount != nil {
+		upd.SetBackendModelCount(*backendModelCount)
+	}
+	if strategy != nil {
+		upd.SetLoadBalanceStrategy(gatewayconnection.LoadBalanceStrategy(*strategy))
 	}
 	return upd.Save(ctx)
 }

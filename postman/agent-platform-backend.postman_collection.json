@@ -1418,7 +1418,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query ModelGateways($filter: ModelGatewayFilterInput, $page: PageInput!, $sort: ModelGatewaySort) {\\n  modelGateways(filter: $filter, page: $page, sort: $sort) {\\n    nodes { id name provider endpoint status loadBalancingStrategy adminUrl lastSyncAt lastSyncStatus lastSyncMessage createdAt updatedAt }\\n    totalCount\\n  }\\n  modelGatewaySyncSummary { state lastSyncedAt successCount failedCount message }\\n}\",\n  \"variables\": {\n    \"page\": {\n      \"limit\": 50,\n      \"offset\": 0\n    },\n    \"sort\": {\n      \"field\": \"CREATED_AT\",\n      \"direction\": \"DESC\"\n    },\n    \"filter\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"query ModelGateways($filter: ModelGatewayFilterInput, $page: PageInput!, $sort: ModelGatewaySort) {\\n  modelGateways(filter: $filter, page: $page, sort: $sort) {\\n    nodes { id name provider endpoint backendModelCount loadBalancingStrategy lastSyncAt lastSyncStatus lastSyncMessage createdAt updatedAt }\\n    totalCount\\n  }\\n  modelGatewaySyncSummary { state lastSyncedAt successCount failedCount message }\\n}\",\n  \"variables\": {\n    \"page\": {\n      \"limit\": 50,\n      \"offset\": 0\n    },\n    \"sort\": {\n      \"field\": \"CREATED_AT\",\n      \"direction\": \"DESC\"\n    },\n    \"filter\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1482,7 +1482,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateModelGateway($input: ModelGatewayInput!) {\\n  createModelGateway(input: $input) {\\n    id name provider endpoint status loadBalancingStrategy adminUrl lastSyncAt lastSyncStatus lastSyncMessage createdAt updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"primary-litellm\",\n      \"provider\": \"LITELLM\",\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"adminUrl\": \"http://litellm.local:4000/ui\",\n      \"masterKey\": \"sk-litellm-XXXXXX\"\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation CreateModelGateway($input: ModelGatewayInput!) {\\n  createModelGateway(input: $input) {\\n    id name provider endpoint backendModelCount loadBalancingStrategy lastSyncAt lastSyncStatus lastSyncMessage createdAt updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"primary-litellm\",\n      \"provider\": \"LITELLM\",\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"masterKey\": \"sk-litellm-XXXXXX\"\n    }\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1494,7 +1494,7 @@
                 "query"
               ]
             },
-            "description": "Create a model gateway. The litellm master key is written to secret store \u2014 only the ref is stored. loadBalancingStrategy is NOT an input \u2014 it's a read-only field populated by the live probe in TestModelGatewayConnection."
+            "description": "Create a model gateway. The litellm master key is written to secret store \u2014 only the ref is stored. loadBalancingStrategy, backendModelCount, and lastSyncStatus are read-only, populated by the post-create background sync (and subsequent periodic sync). A row in just-created state will show lastSyncStatus=SYNCED within a few seconds."
           },
           "response": []
         },
@@ -1514,7 +1514,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpdateModelGateway($id: ID!, $input: ModelGatewayInput!) {\\n  updateModelGateway(id: $id, input: $input) {\\n    id name provider endpoint status loadBalancingStrategy adminUrl lastSyncAt lastSyncStatus lastSyncMessage createdAt updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_GATEWAY_ID\",\n    \"input\": {\n      \"name\": \"primary-litellm\",\n      \"provider\": \"LITELLM\",\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"adminUrl\": \"http://litellm.local:4000/ui\",\n      \"masterKey\": \"sk-litellm-NEWSECRET\"\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation UpdateModelGateway($id: ID!, $input: ModelGatewayInput!) {\\n  updateModelGateway(id: $id, input: $input) {\\n    id name provider endpoint backendModelCount loadBalancingStrategy lastSyncAt lastSyncStatus lastSyncMessage createdAt updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_GATEWAY_ID\",\n    \"input\": {\n      \"name\": \"primary-litellm\",\n      \"provider\": \"LITELLM\",\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"masterKey\": \"sk-litellm-NEWSECRET\"\n    }\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1526,7 +1526,7 @@
                 "query"
               ]
             },
-            "description": "Update a model's name/endpoint/adminUrl and (on re-submit) rotate the master key. loadBalancingStrategy is NOT an input \u2014 it's read-only, populated by the live probe."
+            "description": "Update a model's name/endpoint and (on re-submit) rotate the master key. backendModelCount and loadBalancingStrategy are NOT inputs \u2014 they're read-only, populated by sync."
           },
           "response": []
         },
@@ -1563,7 +1563,7 @@
           "response": []
         },
         {
-          "name": "TestModelGatewayConnection",
+          "name": "SyncModelGatewayConnection",
           "request": {
             "method": "POST",
             "header": [
@@ -1578,7 +1578,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation TestModelGatewayConnection($id: ID!) {\\n  testModelGatewayConnection(id: $id) { success status message testedAt gateway { id name provider endpoint status loadBalancingStrategy } }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_GATEWAY_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation SyncModelGatewayConnection($id: ID!) {\\n  syncModelGatewayConnection(id: $id) { success message gateway { id name provider endpoint backendModelCount loadBalancingStrategy lastSyncAt lastSyncStatus lastSyncMessage } }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_GATEWAY_ID\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1590,7 +1590,7 @@
                 "query"
               ]
             },
-            "description": "Test the live litellm connection. On success, the response includes the gateway's current global routing strategy (loadBalancingStrategy) as reported by the gateway's /config/router endpoint. The field is null when the gateway version doesn't expose that endpoint \u2014 connectivity success is the sole determinant of test success."
+            "description": "Sync the live litellm gateway now: pings /models for connectivity, fetches the global routing strategy from /config/router, and counts the gateway's deployed models from /models. On success, gateway.loadBalancingStrategy and gateway.backendModelCount are persisted; on failure the stored values are preserved (transient outage \u2260 reset)."
           },
           "response": []
         },
@@ -1610,7 +1610,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation TestNewModelGatewayConnection($input: TestModelGatewayConnectionInput!) {\\n  testNewModelGatewayConnection(input: $input) {\\n    success status message testedAt\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"masterKey\": \"sk-litellm-XXXXXX\"\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation TestNewModelGatewayConnection($input: TestModelGatewayConnectionInput!) {\\n  testNewModelGatewayConnection(input: $input) {\\n    success message testedAt\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"masterKey\": \"sk-litellm-XXXXXX\"\n    }\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1679,7 +1679,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation RegisterGatewayConnectionEntry($input: RegisterGatewayConnectionInput!) {\\n  registerGatewayConnection(input: $input) { id name endpoint status loadBalanceStrategy createdAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"primary\",\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"masterKey\": \"sk-litellm-XXXXXX\",\n      \"loadBalanceStrategy\": \"simple_shuffle\",\n      \"publicUrl\": \"https://gw.example.com\",\n      \"isDefault\": true\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation RegisterGatewayConnectionEntry($input: RegisterGatewayConnectionInput!) {\\n  registerGatewayConnection(input: $input) { id name endpoint status loadBalanceStrategy createdAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"primary\",\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"masterKey\": \"sk-litellm-XXXXXX\",\n      \"loadBalanceStrategy\": \"SIMPLE_SHUFFLE\",\n      \"publicUrl\": \"https://gw.example.com\",\n      \"isDefault\": true\n    }\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1940,7 +1940,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpsertModelRoute($input: UpsertModelRouteInput!) {\\n  upsertModelRoute(input: $input) { id name backendGatewayId upstreams strategy enabled createdAt updatedAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"chat-default\",\n      \"modelAlias\": \"chat-default\",\n      \"backendGatewayId\": \"REPLACE_WITH_GATEWAY_ID\",\n      \"upstreams\": [\n        \"gpt-4o-mini\"\n      ],\n      \"strategy\": \"simple_shuffle\",\n      \"enabled\": true\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation UpsertModelRoute($input: UpsertModelRouteInput!) {\\n  upsertModelRoute(input: $input) { id name backendGatewayId upstreams strategy enabled createdAt updatedAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"chat-default\",\n      \"modelAlias\": \"chat-default\",\n      \"backendGatewayId\": \"REPLACE_WITH_GATEWAY_ID\",\n      \"upstreams\": [\n        \"gpt-4o-mini\"\n      ],\n      \"strategy\": \"SIMPLE_SHUFFLE\",\n      \"enabled\": true\n    }\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",

@@ -26,11 +26,13 @@ func (ModelRoute) Fields() []ent.Field {
 		field.String("gateway_name").Optional().Default(""),
 		field.Strings("upstreams").Optional(), // upstream names in the group
 		field.Enum("strategy").
-			Values("simple_shuffle", "latency", "usage_v2", "least_busy", "cost").
-			Default("simple_shuffle"),
-		// Console-facing load-balancing strategy (模型路由 page): a friendly, gateway
-		// -agnostic enum distinct from the litellm `strategy` above. Persisted so the
-		// console round-trips exactly what the operator picked.
+			Values("SIMPLE_SHUFFLE", "LEAST_BUSY", "LATENCY_BASED_ROUTING", "USAGE_BASED_ROUTING_V2", "COST_BASED_ROUTING").
+			Default("SIMPLE_SHUFFLE"),
+		// Console-facing load-balancing strategy (模型路由 page): a friendly,
+		// gateway-agnostic enum distinct from `strategy` above (the console
+		// exposes it as a small choice list separate from the litellm routing
+		// strategies). Persisted so the console round-trips exactly what the
+		// operator picked.
 		field.Enum("ui_strategy").
 			Values("ROUND_ROBIN", "WEIGHTED_ROUND_ROBIN", "RANDOM").
 			Default("ROUND_ROBIN"),

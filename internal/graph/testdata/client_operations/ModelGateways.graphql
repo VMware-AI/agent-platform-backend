@@ -13,15 +13,13 @@ query ModelGateways($filter: ModelGatewayFilterInput, $page: PageInput!, $sort: 
       message
     }
   }
-  
+
   fragment ModelGatewayFields on ModelGateway {
     id
     name
     provider
     endpoint
-    status
     loadBalancingStrategy
-    adminUrl
     lastSyncAt
     lastSyncStatus
     lastSyncMessage

@@ -1,23 +1,19 @@
-mutation TestModelGatewayConnection($id: ID!) {
-    testModelGatewayConnection(id: $id) {
+mutation SyncModelGatewayConnection($id: ID!) {
+    syncModelGatewayConnection(id: $id) {
       success
-      status
       message
-      testedAt
       gateway {
         ...ModelGatewayFields
       }
     }
   }
-  
+
   fragment ModelGatewayFields on ModelGateway {
     id
     name
     provider
     endpoint
-    status
     loadBalancingStrategy
-    adminUrl
     lastSyncAt
     lastSyncStatus
     lastSyncMessage

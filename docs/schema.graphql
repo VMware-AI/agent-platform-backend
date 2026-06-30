@@ -364,7 +364,7 @@ type GatewayConnection {
 	publicUrl: String
 	isDefault: Boolean!
 	status: GatewayStatus!
-	loadBalanceStrategy: LoadBalanceStrategy!
+	loadBalanceStrategy: LoadBalancingStrategy!
 	createdAt: Time!
 }
 enum GatewayStatus {
@@ -401,19 +401,12 @@ type IssuedVirtualKey {
 	virtualKey: VirtualKey!
 	secret: String!
 }
-enum LoadBalanceStrategy {
-	simple_shuffle
-	latency
-	usage_v2
-	least_busy
-	cost
-}
 enum LoadBalancingStrategy {
-	ROUND_ROBIN
-	LATENCY_BASED
-	USAGE_BASED_V2
+	SIMPLE_SHUFFLE
 	LEAST_BUSY
-	COST_BASED
+	LATENCY_BASED_ROUTING
+	USAGE_BASED_ROUTING_V2
+	COST_BASED_ROUTING
 }
 input LoginInput {
 	email: String!
@@ -464,10 +457,8 @@ type ModelGateway {
 	name: String!
 	provider: ModelGatewayProvider!
 	endpoint: String!
-	status: ModelGatewayStatus!
 	backendModelCount: Int!
 	loadBalancingStrategy: LoadBalancingStrategy
-	adminUrl: String
 	lastSyncAt: Time
 	lastSyncStatus: ModelGatewaySyncState!
 	lastSyncMessage: String
@@ -480,13 +471,11 @@ type ModelGatewayConnection {
 }
 input ModelGatewayFilterInput {
 	search: String
-	status: ModelGatewayStatus
 }
 input ModelGatewayInput {
 	name: String!
 	provider: ModelGatewayProvider!
 	endpoint: String!
-	adminUrl: String
 	masterKey: String
 }
 enum ModelGatewayProvider {
@@ -499,14 +488,13 @@ input ModelGatewaySort {
 enum ModelGatewaySortField {
 	NAME
 	ENDPOINT
-	STATUS
 	CREATED_AT
 	UPDATED_AT
 }
-enum ModelGatewayStatus {
-	CONNECTED
-	DISCONNECTED
-	ERROR
+type ModelGatewaySyncResult {
+	success: Boolean!
+	message: String!
+	gateway: ModelGateway!
 }
 enum ModelGatewaySyncState {
 	SYNCED
@@ -524,11 +512,8 @@ type ModelGatewaySyncSummary {
 }
 type ModelGatewayTestResult {
 	success: Boolean!
-	status: ModelGatewayStatus!
 	message: String!
 	testedAt: Time!
-	gateway: ModelGateway
-	loadBalancingStrategy: LoadBalancingStrategy
 }
 type ModelRoute {
 	id: ID!
@@ -538,7 +523,7 @@ type ModelRoute {
 	gatewayName: String!
 	upstreams: [String!]!
 	supportedModels: [String!]!
-	strategy: LoadBalanceStrategy!
+	strategy: LoadBalancingStrategy!
 	uiStrategy: ModelRouteStrategy!
 	enabled: Boolean!
 	createdAt: Time!
@@ -612,7 +597,7 @@ type Mutation {
 	createModelGateway(input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
 	updateModelGateway(id: ID!, input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
 	deleteModelGateway(id: ID!): DeleteModelGatewayPayload! @hasRole(any: [admin])
-	testModelGatewayConnection(id: ID!): ModelGatewayTestResult! @hasRole(any: [admin])
+	syncModelGatewayConnection(id: ID!): ModelGatewaySyncResult! @hasRole(any: [admin])
 	testNewModelGatewayConnection(input: TestModelGatewayConnectionInput!): ModelGatewayTestResult! @hasRole(any: [admin])
 	recordRequestLog(input: RecordRequestLogInput!): RequestLog! @hasRole(any: [admin])
 	upsertRateLimitPolicy(input: UpsertRateLimitPolicyInput!): RateLimitPolicy! @hasPermission(perm: "route:manage")
@@ -799,7 +784,7 @@ input RegisterGatewayConnectionInput {
 	endpoint: String!
 	masterKey: String
 	masterKeyRef: String
-	loadBalanceStrategy: LoadBalanceStrategy
+	loadBalanceStrategy: LoadBalancingStrategy
 	publicUrl: String
 	isDefault: Boolean
 }
@@ -1068,7 +1053,7 @@ input UpsertModelRouteInput {
 	modelAlias: String!
 	backendGatewayId: ID
 	upstreams: [String!]
-	strategy: LoadBalanceStrategy
+	strategy: LoadBalancingStrategy
 	enabled: Boolean
 }
 input UpsertRateLimitPolicyInput {

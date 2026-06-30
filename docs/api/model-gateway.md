@@ -112,13 +112,15 @@ deleteModelGateway(id: ID!): DeleteModelGatewayPayload!
 |----------|------|----------|---------|
 | `id` | `ID!` | yes | — |
 
-### `testModelGatewayConnection`
+### `syncModelGatewayConnection`
+
+同步一个已存在的 gateway: 探测连通性 + 路由策略 + 后端模型数, 写回 ent 列. gateway 字段返回同步后的最新状态, 业务信息从 gateway 内部读取.
 
 ```graphql
-testModelGatewayConnection(id: ID!): ModelGatewayTestResult!
+syncModelGatewayConnection(id: ID!): ModelGatewaySyncResult!
 ```
 
-- **Returns:** `ModelGatewayTestResult!`
+- **Returns:** `ModelGatewaySyncResult!`
 - **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
@@ -127,7 +129,7 @@ testModelGatewayConnection(id: ID!): ModelGatewayTestResult!
 
 ### `testNewModelGatewayConnection`
 
-Pre-create dry-run probe. No row is created or modified; the result's `gateway` field is null. Strategy probe is best-effort.
+Pre-create dry-run probe. No row is created or modified; the result's `gateway` field is null. Strategy probe is intentionally skipped (dry-run 只测连通性, 不拉 /config/router 也不解析 /models 的 data 数组).
 
 ```graphql
 testNewModelGatewayConnection(input: TestModelGatewayConnectionInput!): ModelGatewayTestResult!
@@ -314,7 +316,7 @@ setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier!
 | `publicUrl` | `String` | The URL provisioned VMs/agents call (LLD-13 §3.3). Falls back to endpoint when unset. |
 | `isDefault` | `Boolean!` | The platform default gateway — used for ops with no department context. At most one. |
 | `status` | `GatewayStatus!` | — |
-| `loadBalanceStrategy` | `LoadBalanceStrategy!` | — |
+| `loadBalanceStrategy` | `LoadBalancingStrategy!` | — |
 | `createdAt` | `Time!` | — |
 
 ### ModelGateway
@@ -327,10 +329,8 @@ setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier!
 | `name` | `String!` | — |
 | `provider` | `ModelGatewayProvider!` | — |
 | `endpoint` | `String!` | — |
-| `status` | `ModelGatewayStatus!` | — |
 | `backendModelCount` | `Int!` | — |
 | `loadBalancingStrategy` | `LoadBalancingStrategy` | — |
-| `adminUrl` | `String` | — |
 | `lastSyncAt` | `Time` | — |
 | `lastSyncStatus` | `ModelGatewaySyncState!` | — |
 | `lastSyncMessage` | `String` | — |
@@ -345,6 +345,18 @@ setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier!
 |-------|------|-------------|
 | `nodes` | `[ModelGateway!]!` | — |
 | `totalCount` | `Int!` | — |
+
+### ModelGatewaySyncResult
+
+*Object*
+
+syncModelGatewayConnection 的返回值：gateway 必返（非 null），所有策略/状态/ lastSyncAt/backendModelCount 等信息都从 gateway 内部字段读取。
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | `Boolean!` | — |
+| `message` | `String!` | — |
+| `gateway` | `ModelGateway!` | — |
 
 ### ModelGatewaySyncSummary
 
@@ -362,14 +374,13 @@ setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier!
 
 *Object*
 
+testNewModelGatewayConnection (dry-run, pre-create) 的返回值：仅三字段，不带 gateway。
+
 | Field | Type | Description |
 |-------|------|-------------|
 | `success` | `Boolean!` | — |
-| `status` | `ModelGatewayStatus!` | — |
 | `message` | `String!` | — |
 | `testedAt` | `Time!` | — |
-| `gateway` | `ModelGateway` | — |
-| `loadBalancingStrategy` | `LoadBalancingStrategy` | — |
 
 ### ModelRoute
 
@@ -384,7 +395,7 @@ setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier!
 | `gatewayName` | `String!` | Display name of the serving gateway (console 模型路由 list). |
 | `upstreams` | `[String!]!` | — |
 | `supportedModels` | `[String!]!` | Console alias for `upstreams` — the models this route can serve (模型路由 page). |
-| `strategy` | `LoadBalanceStrategy!` | — |
+| `strategy` | `LoadBalancingStrategy!` | — |
 | `uiStrategy` | `ModelRouteStrategy!` | Console-facing load-balancing strategy (模型路由 page). |
 | `enabled` | `Boolean!` | — |
 | `createdAt` | `Time!` | — |
@@ -436,7 +447,6 @@ Console 模型路由 create form (创建路由). modelAlias defaults to name whe
 | Field | Type | Description |
 |-------|------|-------------|
 | `search` | `String` | — |
-| `status` | `ModelGatewayStatus` | — |
 
 ### ModelGatewayInput
 
@@ -447,7 +457,6 @@ Console 模型路由 create form (创建路由). modelAlias defaults to name whe
 | `name` | `String!` | — |
 | `provider` | `ModelGatewayProvider!` | — |
 | `endpoint` | `String!` | — |
-| `adminUrl` | `String` | — |
 | `masterKey` | `String` | litellm master key(接入表单填写)→ 后端写 secret store,只存引用,明文不落库。 |
 
 ### ModelGatewaySort
@@ -469,7 +478,7 @@ Console 模型路由 create form (创建路由). modelAlias defaults to name whe
 | `endpoint` | `String!` | — |
 | `masterKey` | `String` | litellm master key(接入表单填写)→ 后端写 secret store,只存引用,明文不落库; 优先于 masterKeyRef。 |
 | `masterKeyRef` | `String` | — |
-| `loadBalanceStrategy` | `LoadBalanceStrategy` | — |
+| `loadBalanceStrategy` | `LoadBalancingStrategy` | — |
 | `publicUrl` | `String` | The URL provisioned VMs call (LLD-13 §3.3); omitted → falls back to endpoint. |
 | `isDefault` | `Boolean` | Mark this the platform default gateway; setting true clears the flag on any other. |
 
@@ -477,7 +486,7 @@ Console 模型路由 create form (创建路由). modelAlias defaults to name whe
 
 *Input*
 
-Pre-create test input — the form-level "Test Connection" button on the 接入表单 uses this to ping a not-yet-persisted gateway config. Carries the minimal fields the probe needs: endpoint + masterKey. (adminUrl, name, provider are either fixed or irrelevant to the live test.)
+Pre-create test input — the form-level "Test Connection" button on the 接入表单 uses this to ping a not-yet-persisted gateway config. Carries the minimal fields the probe needs: endpoint + masterKey. (name, provider are either fixed or irrelevant to the live test.)
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -509,7 +518,7 @@ Console 模型路由 edit form (编辑路由). All fields optional — only set 
 | `modelAlias` | `String!` | — |
 | `backendGatewayId` | `ID` | — |
 | `upstreams` | `[String!]` | — |
-| `strategy` | `LoadBalanceStrategy` | — |
+| `strategy` | `LoadBalancingStrategy` | — |
 | `enabled` | `Boolean` | — |
 
 ### UpsertUpstreamInput
@@ -536,29 +545,17 @@ Console 模型路由 edit form (编辑路由). All fields optional — only set 
 | `disconnected` | — |
 | `error` | — |
 
-### LoadBalanceStrategy
-
-*Enum*
-
-| Value | Description |
-|-------|-------------|
-| `simple_shuffle` | — |
-| `latency` | — |
-| `usage_v2` | — |
-| `least_busy` | — |
-| `cost` | — |
-
 ### LoadBalancingStrategy
 
 *Enum*
 
 | Value | Description |
 |-------|-------------|
-| `ROUND_ROBIN` | — |
-| `LATENCY_BASED` | — |
-| `USAGE_BASED_V2` | — |
+| `SIMPLE_SHUFFLE` | — |
 | `LEAST_BUSY` | — |
-| `COST_BASED` | — |
+| `LATENCY_BASED_ROUTING` | — |
+| `USAGE_BASED_ROUTING_V2` | — |
+| `COST_BASED_ROUTING` | — |
 
 ### ModelGatewayProvider
 
@@ -576,19 +573,8 @@ Console 模型路由 edit form (编辑路由). All fields optional — only set 
 |-------|-------------|
 | `NAME` | — |
 | `ENDPOINT` | — |
-| `STATUS` | — |
 | `CREATED_AT` | — |
 | `UPDATED_AT` | — |
-
-### ModelGatewayStatus
-
-*Enum*
-
-| Value | Description |
-|-------|-------------|
-| `CONNECTED` | — |
-| `DISCONNECTED` | — |
-| `ERROR` | — |
 
 ### ModelGatewaySyncState
 

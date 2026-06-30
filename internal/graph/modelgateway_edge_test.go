@@ -13,7 +13,7 @@ import (
 // Edge-case coverage for the model-gateway and model-route resolvers. These
 // complement modelgateway_test.go / gateway_routing_test.go by exercising the
 // empty-state, not-found, and invalid-id paths plus the setModelRouteEnabled
-// toggle and the testModelGatewayConnection result shape. Helper/var names carry
+// toggle and the syncModelGatewayConnection result shape. Helper/var names carry
 // a unique `_edge` suffix to avoid collisions with sibling test files in this
 // package.
 
@@ -97,13 +97,13 @@ func TestModelGateway_NotFoundEdge(t *testing.T) {
 	ctx := adminCtx()
 	mr := &mutationResolver{r}
 
-	// testModelGatewayConnection Get()s the row → not-found error, never a panic.
-	res, err := mr.TestModelGatewayConnection(ctx, nonexistentUUIDEdge)
+	// syncModelGatewayConnection Get()s the row → not-found error, never a panic.
+	res, err := mr.SyncModelGatewayConnection(ctx, nonexistentUUIDEdge)
 	if err == nil {
-		t.Fatalf("TestModelGatewayConnection(absent): expected error, got result %+v", res)
+		t.Fatalf("SyncModelGatewayConnection(absent): expected error, got result %+v", res)
 	}
 	if res != nil {
-		t.Fatalf("TestModelGatewayConnection(absent): result must be nil on error, got %+v", res)
+		t.Fatalf("SyncModelGatewayConnection(absent): result must be nil on error, got %+v", res)
 	}
 
 	// updateOneID on an absent row also errors (no row to update).
@@ -156,8 +156,8 @@ func TestModelGateway_InvalidIDEdge(t *testing.T) {
 	if _, err := mr.DeleteModelGateway(ctx, "not-a-uuid"); err == nil || err.Error() != "input: invalid id" {
 		t.Fatalf("DeleteModelGateway(bad id): err = %v", err)
 	}
-	if res, err := mr.TestModelGatewayConnection(ctx, "not-a-uuid"); err == nil || res != nil {
-		t.Fatalf("TestModelGatewayConnection(bad id): res=%v err=%v, want nil/err", res, err)
+	if res, err := mr.SyncModelGatewayConnection(ctx, "not-a-uuid"); err == nil || res != nil {
+		t.Fatalf("SyncModelGatewayConnection(bad id): res=%v err=%v, want nil/err", res, err)
 	}
 }
 
@@ -322,12 +322,12 @@ func TestSetModelRouteEnabled_TogglesEdge(t *testing.T) {
 	}
 }
 
-// ---- testModelGatewayConnection result shape ----
+// ---- syncModelGatewayConnection result shape ----
 
-// A successful connection test returns a fully-populated result: success=true,
-// CONNECTED status, a non-nil latency, the sanitized "connection ok" message, a
-// set TestedAt timestamp, and the embedded gateway flipped to connected.
-func TestModelGatewayConnection_ResultShapeEdge(t *testing.T) {
+// A successful sync returns a fully-populated result: success=true, a
+// sanitized "connection ok" message, and the embedded gateway flipped to
+// SYNCED.
+func TestModelGatewaySync_ResultShapeEdge(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()
 	r.GatewayClientFor = func(context.Context, string, string) gateway.ModelManager {
@@ -337,34 +337,27 @@ func TestModelGatewayConnection_ResultShapeEdge(t *testing.T) {
 	mr := &mutationResolver{r}
 
 	g := mkGateway(t, mr, ctx, "shape-gw", "https://gw:4000")
-	res, err := mr.TestModelGatewayConnection(ctx, g.ID)
+	res, err := mr.SyncModelGatewayConnection(ctx, g.ID)
 	if err != nil {
-		t.Fatalf("TestModelGatewayConnection: %v", err)
+		t.Fatalf("SyncModelGatewayConnection: %v", err)
 	}
 	if !res.Success {
 		t.Fatalf("success = false, want true: %+v", res)
 	}
-	if res.Status != model.ModelGatewayStatusConnected {
-		t.Fatalf("status = %v, want CONNECTED", res.Status)
-	}
 	if res.Message != "connection ok" {
 		t.Fatalf("success message = %q, want \"connection ok\"", res.Message)
 	}
-	if res.TestedAt.IsZero() {
-		t.Fatal("testedAt must be set")
-	}
 	if res.Gateway == nil || res.Gateway.ID != g.ID {
-		t.Fatalf("embedded gateway must echo the tested row: %+v", res.Gateway)
+		t.Fatalf("embedded gateway must echo the synced row: %+v", res.Gateway)
 	}
-	if res.Gateway.Status != model.ModelGatewayStatusConnected {
-		t.Fatalf("embedded gateway status = %v, want CONNECTED", res.Gateway.Status)
+	if res.Gateway.LastSyncStatus != model.ModelGatewaySyncStateSynced {
+		t.Fatalf("embedded gateway lastSyncStatus = %v, want SYNCED", res.Gateway.LastSyncStatus)
 	}
 }
 
-// On a failed test the result shape stays well-formed: success=false, ERROR
-// status, and a sanitized message that does NOT leak the raw transport error
-// (which here embeds an endpoint-looking string).
-func TestModelGatewayConnection_FailedShapeEdge(t *testing.T) {
+// On a failed sync the result shape stays well-formed: success=false, a
+// sanitized message that does NOT leak the raw transport error.
+func TestModelGatewaySync_FailedShapeEdge(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()
 	r.GatewayClientFor = func(context.Context, string, string) gateway.ModelManager {
@@ -374,26 +367,23 @@ func TestModelGatewayConnection_FailedShapeEdge(t *testing.T) {
 	mr := &mutationResolver{r}
 
 	g := mkGateway(t, mr, ctx, "fail-gw", "https://secret-host:4000")
-	res, err := mr.TestModelGatewayConnection(ctx, g.ID)
+	res, err := mr.SyncModelGatewayConnection(ctx, g.ID)
 	if err != nil {
-		t.Fatalf("TestModelGatewayConnection (fail path): %v", err)
+		t.Fatalf("SyncModelGatewayConnection (fail path): %v", err)
 	}
 	if res.Success {
-		t.Fatal("success must be false on a failed test")
-	}
-	if res.Status != model.ModelGatewayStatusError {
-		t.Fatalf("status = %v, want ERROR", res.Status)
+		t.Fatal("success must be false on a failed sync")
 	}
 	if res.Message != "connection failed" {
 		t.Fatalf("error message must be sanitized to \"connection failed\", got %q", res.Message)
 	}
-	if res.Gateway == nil || res.Gateway.Status != model.ModelGatewayStatusError {
-		t.Fatalf("embedded gateway must reflect ERROR: %+v", res.Gateway)
+	if res.Gateway == nil || res.Gateway.LastSyncStatus != model.ModelGatewaySyncStateFailed {
+		t.Fatalf("embedded gateway must reflect FAILED: %+v", res.Gateway)
 	}
 }
 
 // errEdgeConnRefused is a transport error whose text resembles an endpoint, used
-// to prove the failed-test message never echoes the raw error.
+// to prove the failed-sync message never echoes the raw error.
 var errEdgeConnRefused = &edgeErr{"dial tcp secret-host:4000: connect: connection refused"}
 
 type edgeErr struct{ s string }
