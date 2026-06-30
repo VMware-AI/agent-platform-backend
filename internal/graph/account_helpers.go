@@ -11,7 +11,8 @@ import (
 )
 
 // revokeUserKeys best-effort revokes all of a user's non-revoked virtual keys at
-// their (per-department) gateways and marks the rows revoked. A missing gateway or
+// the gateway that issued each key (LLD-14; legacy NULL rows fall back to the
+// per-department gateway) and marks the rows revoked. A missing gateway or
 // a gateway failure is logged + audited as an orphan rather than aborting — the
 // caller (DeleteUser) must still proceed. Mirrors RecycleAgent's non-silent
 // compensation so a leaked billable key is at least observable.
@@ -30,7 +31,7 @@ func (r *mutationResolver) revokeUserKeys(ctx context.Context, uid uuid.UUID) {
 	}
 	actor := actorID(auth.FromContext(ctx))
 	for _, vk := range keys {
-		gw := r.gatewayKeyClient(ctx, deptIDFromTeam(&vk.TeamID))
+		gw := r.gatewayKeyClientForVK(ctx, vk)
 		if gw == nil {
 			log.Printf("delete user %s: no gateway to revoke key %s (orphan)", uid, vk.ID)
 			r.audit(ctx, "key.revoke", "virtual_key", vk.ID.String(), false, actor)

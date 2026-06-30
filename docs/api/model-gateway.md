@@ -8,7 +8,7 @@
 
 ### `modelGateways`
 
-page is the shared PageInput (limit/offset) defined alongside audit/observability.
+page is the shared PageInput (limit/offset) defined alongside audit/read_only.
 
 ```graphql
 modelGateways(filter: ModelGatewayFilterInput, page: PageInput!, sort: ModelGatewaySort): ModelGatewayConnection!

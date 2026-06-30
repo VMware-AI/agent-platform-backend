@@ -26,8 +26,8 @@ func TestRoles_Entities(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Roles: %v", err)
 	}
-	if rc.TotalCount != 4 || len(rc.Nodes) != 4 {
-		t.Fatalf("want 4 built-in roles, got %d", rc.TotalCount)
+	if rc.TotalCount != 3 || len(rc.Nodes) != 3 {
+		t.Fatalf("want 3 built-in roles, got %d", rc.TotalCount)
 	}
 	var userRole *model.Role
 	for i := range rc.Nodes {
@@ -35,16 +35,16 @@ func TestRoles_Entities(t *testing.T) {
 		if ri.Name == "" || ri.Description == "" || !ri.BuiltIn {
 			t.Errorf("role %s malformed: %+v", ri.ID, ri)
 		}
-		if ri.ID == "user" {
+		if ri.RoleKey == "user" {
 			userRole = ri
 		}
 	}
 	if userRole == nil || userRole.UserCount != 2 {
 		t.Fatalf("user role userCount = %v, want 2", userRole)
 	}
-	// single-role query
-	if one, err := qr.Role(ctx, "admin"); err != nil || one == nil || one.ID != "admin" {
-		t.Fatalf("Role(admin): %+v / %v", one, err)
+	// single-role query by UUID
+	if one, err := qr.Role(ctx, builtinRoleUUID("admin")); err != nil || one == nil || one.RoleKey != "admin" {
+		t.Fatalf("Role(admin UUID): %+v / %v", one, err)
 	}
 	if unknown, _ := qr.Role(ctx, "nope"); unknown != nil {
 		t.Fatal("unknown role id should return nil")
@@ -73,13 +73,13 @@ func TestUsers_Connection(t *testing.T) {
 	if c.TotalCount != 2 {
 		t.Fatalf("emailKeyword corp.com: %d, want 2", c.TotalCount)
 	}
-	// roleId filter
-	admins := mustConn(t, qr, ctx, &model.UserFilter{RoleID: ptr("admin")}, nil)
+	// roleId filter (UUID, looked up from roles query)
+	admins := mustConn(t, qr, ctx, &model.UserFilter{RoleID: ptr(builtinRoleUUID("admin"))}, nil)
 	if admins.TotalCount != 1 || admins.Nodes[0].Username != "carol" {
 		t.Fatalf("roleId filter: %+v", admins.Nodes)
 	}
-	// role on a node is the entity ref
-	if admins.Nodes[0].Role == nil || admins.Nodes[0].Role.ID != "admin" {
+	// role on a node is the entity ref (id = UUID, matches AccountRoleRef)
+	if admins.Nodes[0].Role == nil || admins.Nodes[0].Role.ID != builtinRoleUUID("admin") {
 		t.Fatalf("AccountUser.role ref wrong: %+v", admins.Nodes[0].Role)
 	}
 	// sort by USERNAME asc + connection shape
@@ -102,7 +102,7 @@ func TestCreateUser_Modes(t *testing.T) {
 
 	auto, err := mr.CreateUser(ctx, model.CreateUserInput{
 		Username: "auto", DisplayName: "Auto", Email: "auto@x.io",
-		RoleID: "user", PasswordMode: model.PasswordModeAuto,
+		RoleID: builtinRoleUUID(string(model.RoleNameUser)), PasswordMode: model.PasswordModeAuto,
 	})
 	if err != nil {
 		t.Fatalf("AUTO create: %v", err)
@@ -112,7 +112,7 @@ func TestCreateUser_Modes(t *testing.T) {
 	}
 	// CUSTOM with no password → rejected
 	if _, err := mr.CreateUser(ctx, model.CreateUserInput{
-		Username: "c", DisplayName: "c", Email: "c@x.io", RoleID: "user", PasswordMode: model.PasswordModeCustom,
+		Username: "c", DisplayName: "c", Email: "c@x.io", RoleID: builtinRoleUUID(string(model.RoleNameUser)), PasswordMode: model.PasswordModeCustom,
 	}); err == nil {
 		t.Fatal("CUSTOM without customPassword should be rejected")
 	}
@@ -129,7 +129,7 @@ func TestUpdateUser_RoleChangeRevokesSessions(t *testing.T) {
 	u := mkUser(t, mr, ctx, "victim", "v@x.io", model.RoleNameAdmin)
 	sid, _ := r.Sessions.Create(session.Data{UserID: u.ID, Role: "admin", ExpiresAt: time.Now().Add(time.Hour)})
 
-	demote := "user"
+	demote := builtinRoleUUID(string(model.RoleNameUser))
 	if _, err := mr.UpdateUser(ctx, u.ID, model.UpdateUserInput{RoleID: &demote}); err != nil {
 		t.Fatalf("UpdateUser role: %v", err)
 	}
@@ -169,9 +169,9 @@ func TestToggleAssignExists(t *testing.T) {
 		t.Fatal("disable must revoke sessions")
 	}
 
-	// assign both to observability
-	res, err := mr.AssignUsersToRole(ctx, model.AssignUsersToRoleInput{RoleID: "observability", UserIds: []string{a.ID, b.ID}})
-	if err != nil || res.AssignedCount != 2 || res.Role.ID != "observability" {
+	// assign both to read_only
+	res, err := mr.AssignUsersToRole(ctx, model.AssignUsersToRoleInput{RoleID: builtinRoleUUID(string(model.RoleNameReadOnly)), UserIds: []string{a.ID, b.ID}})
+	if err != nil || res.AssignedCount != 2 || res.Role.RoleKey != string(model.RoleNameReadOnly) {
 		t.Fatalf("assign: %+v / %v", res, err)
 	}
 	if res.Role.UserCount != 2 {

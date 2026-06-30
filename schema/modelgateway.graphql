@@ -105,7 +105,7 @@ input TestModelGatewayConnectionInput {
 }
 
 extend type Query {
-  # page is the shared PageInput (limit/offset) defined alongside audit/observability.
+  # page is the shared PageInput (limit/offset) defined alongside audit/read_only.
   modelGateways(filter: ModelGatewayFilterInput, page: PageInput!, sort: ModelGatewaySort): ModelGatewayConnection! @hasRole(any: [admin])
   modelGatewaySyncSummary: ModelGatewaySyncSummary! @hasRole(any: [admin])
 }

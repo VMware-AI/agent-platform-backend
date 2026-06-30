@@ -165,6 +165,26 @@ func (_u *VirtualKeyUpdate) ClearTeamID() *VirtualKeyUpdate {
 	return _u
 }
 
+// SetGatewayConnectionID sets the "gateway_connection_id" field.
+func (_u *VirtualKeyUpdate) SetGatewayConnectionID(v uuid.UUID) *VirtualKeyUpdate {
+	_u.mutation.SetGatewayConnectionID(v)
+	return _u
+}
+
+// SetNillableGatewayConnectionID sets the "gateway_connection_id" field if the given value is not nil.
+func (_u *VirtualKeyUpdate) SetNillableGatewayConnectionID(v *uuid.UUID) *VirtualKeyUpdate {
+	if v != nil {
+		_u.SetGatewayConnectionID(*v)
+	}
+	return _u
+}
+
+// ClearGatewayConnectionID clears the value of the "gateway_connection_id" field.
+func (_u *VirtualKeyUpdate) ClearGatewayConnectionID() *VirtualKeyUpdate {
+	_u.mutation.ClearGatewayConnectionID()
+	return _u
+}
+
 // SetModels sets the "models" field.
 func (_u *VirtualKeyUpdate) SetModels(v []string) *VirtualKeyUpdate {
 	_u.mutation.SetModels(v)
@@ -357,6 +377,12 @@ func (_u *VirtualKeyUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if _u.mutation.TeamIDCleared() {
 		_spec.ClearField(virtualkey.FieldTeamID, field.TypeString)
 	}
+	if value, ok := _u.mutation.GatewayConnectionID(); ok {
+		_spec.SetField(virtualkey.FieldGatewayConnectionID, field.TypeUUID, value)
+	}
+	if _u.mutation.GatewayConnectionIDCleared() {
+		_spec.ClearField(virtualkey.FieldGatewayConnectionID, field.TypeUUID)
+	}
 	if value, ok := _u.mutation.Models(); ok {
 		_spec.SetField(virtualkey.FieldModels, field.TypeJSON, value)
 	}
@@ -539,6 +565,26 @@ func (_u *VirtualKeyUpdateOne) SetNillableTeamID(v *string) *VirtualKeyUpdateOne
 // ClearTeamID clears the value of the "team_id" field.
 func (_u *VirtualKeyUpdateOne) ClearTeamID() *VirtualKeyUpdateOne {
 	_u.mutation.ClearTeamID()
+	return _u
+}
+
+// SetGatewayConnectionID sets the "gateway_connection_id" field.
+func (_u *VirtualKeyUpdateOne) SetGatewayConnectionID(v uuid.UUID) *VirtualKeyUpdateOne {
+	_u.mutation.SetGatewayConnectionID(v)
+	return _u
+}
+
+// SetNillableGatewayConnectionID sets the "gateway_connection_id" field if the given value is not nil.
+func (_u *VirtualKeyUpdateOne) SetNillableGatewayConnectionID(v *uuid.UUID) *VirtualKeyUpdateOne {
+	if v != nil {
+		_u.SetGatewayConnectionID(*v)
+	}
+	return _u
+}
+
+// ClearGatewayConnectionID clears the value of the "gateway_connection_id" field.
+func (_u *VirtualKeyUpdateOne) ClearGatewayConnectionID() *VirtualKeyUpdateOne {
+	_u.mutation.ClearGatewayConnectionID()
 	return _u
 }
 
@@ -763,6 +809,12 @@ func (_u *VirtualKeyUpdateOne) sqlSave(ctx context.Context) (_node *VirtualKey, 
 	}
 	if _u.mutation.TeamIDCleared() {
 		_spec.ClearField(virtualkey.FieldTeamID, field.TypeString)
+	}
+	if value, ok := _u.mutation.GatewayConnectionID(); ok {
+		_spec.SetField(virtualkey.FieldGatewayConnectionID, field.TypeUUID, value)
+	}
+	if _u.mutation.GatewayConnectionIDCleared() {
+		_spec.ClearField(virtualkey.FieldGatewayConnectionID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.Models(); ok {
 		_spec.SetField(virtualkey.FieldModels, field.TypeJSON, value)

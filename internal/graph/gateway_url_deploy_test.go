@@ -32,7 +32,7 @@ func TestDeployGateway_LegacyFallback(t *testing.T) {
 	r.Gateway = fg
 	r.GatewayURL = "https://legacy:4000"
 
-	gw, url := r.deployGateway(context.Background(), nil)
+	gw, url, _ := r.deployGateway(context.Background(), nil)
 	if _, ok := gw.(*fakeGateway); !ok {
 		t.Errorf("expected the legacy injected gateway, got %T", gw)
 	}
@@ -53,7 +53,7 @@ func TestDeployGateway_DefaultGatewayPublicURL(t *testing.T) {
 		SetPublicURL("https://pub:4000").SetIsDefault(true).Save(ctx); err != nil {
 		t.Fatalf("seed gateway: %v", err)
 	}
-	gw, url := r.deployGateway(ctx, nil)
+	gw, url, _ := r.deployGateway(ctx, nil)
 	if _, ok := gw.(*fakeGateway); !ok {
 		t.Errorf("expected the per-connection client, got %T", gw)
 	}

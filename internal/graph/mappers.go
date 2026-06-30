@@ -450,18 +450,21 @@ func toModelPermission(p *ent.Permission) *model.Permission {
 // toAccountUser maps an ent.User to the frontend AccountUser shape. online drives
 // the connection-status badge. displayName has no column yet → mirrors username.
 func toAccountUser(u *ent.User, online bool) *model.AccountUser {
-	roleID := string(entRoleToGQL(string(u.Role)))
-	name, _, _ := builtinRole(roleID)
+	roleKey := string(u.Role)
+	name, _, _ := builtinRole(roleKey)
 	cs := model.ConnectionStatusOffline
 	if online {
 		cs = model.ConnectionStatusOnline
 	}
 	m := &model.AccountUser{
-		ID:               u.ID.String(),
-		Username:         u.Username,
-		DisplayName:      u.Username,
-		Email:            u.Email,
-		Role:             &model.AccountRoleRef{ID: roleID, Name: name},
+		ID:          u.ID.String(),
+		Username:    u.Username,
+		DisplayName: u.Username,
+		Email:       u.Email,
+		Role: &model.AccountRoleRef{
+			ID:   builtinRoleUUID(roleKey),
+			Name: name,
+		},
 		ConnectionStatus: cs,
 		Enabled:          u.IsActive,
 		CreatedAt:        u.CreatedAt,

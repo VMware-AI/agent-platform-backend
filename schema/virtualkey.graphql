@@ -42,7 +42,7 @@ input IssueVirtualKeyInput {
 }
 
 extend type Query {
-  virtualKeys(userId: ID): [VirtualKey!]! @hasRole(any: [admin])
+  virtualKeys(userId: ID): [VirtualKey!]! @hasRole(any: [admin, read_only])
 }
 
 extend type Mutation {

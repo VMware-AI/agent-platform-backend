@@ -23298,28 +23298,29 @@ func (m *UserMutation) ResetEdge(name string) error {
 // VirtualKeyMutation represents an operation that mutates the VirtualKey nodes in the graph.
 type VirtualKeyMutation struct {
 	config
-	op                   Op
-	typ                  string
-	id                   *uuid.UUID
-	created_at           *time.Time
-	updated_at           *time.Time
-	litellm_key          *string
-	litellm_token        *string
-	alias                *string
-	user_id              *uuid.UUID
-	agent_id             *uuid.UUID
-	rate_limit_policy_id *uuid.UUID
-	team_id              *string
-	models               *[]string
-	appendmodels         []string
-	max_budget           *float64
-	addmax_budget        *float64
-	status               *virtualkey.Status
-	expires_at           *time.Time
-	clearedFields        map[string]struct{}
-	done                 bool
-	oldValue             func(context.Context) (*VirtualKey, error)
-	predicates           []predicate.VirtualKey
+	op                    Op
+	typ                   string
+	id                    *uuid.UUID
+	created_at            *time.Time
+	updated_at            *time.Time
+	litellm_key           *string
+	litellm_token         *string
+	alias                 *string
+	user_id               *uuid.UUID
+	agent_id              *uuid.UUID
+	rate_limit_policy_id  *uuid.UUID
+	team_id               *string
+	gateway_connection_id *uuid.UUID
+	models                *[]string
+	appendmodels          []string
+	max_budget            *float64
+	addmax_budget         *float64
+	status                *virtualkey.Status
+	expires_at            *time.Time
+	clearedFields         map[string]struct{}
+	done                  bool
+	oldValue              func(context.Context) (*VirtualKey, error)
+	predicates            []predicate.VirtualKey
 }
 
 var _ ent.Mutation = (*VirtualKeyMutation)(nil)
@@ -23815,6 +23816,55 @@ func (m *VirtualKeyMutation) ResetTeamID() {
 	delete(m.clearedFields, virtualkey.FieldTeamID)
 }
 
+// SetGatewayConnectionID sets the "gateway_connection_id" field.
+func (m *VirtualKeyMutation) SetGatewayConnectionID(u uuid.UUID) {
+	m.gateway_connection_id = &u
+}
+
+// GatewayConnectionID returns the value of the "gateway_connection_id" field in the mutation.
+func (m *VirtualKeyMutation) GatewayConnectionID() (r uuid.UUID, exists bool) {
+	v := m.gateway_connection_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldGatewayConnectionID returns the old "gateway_connection_id" field's value of the VirtualKey entity.
+// If the VirtualKey object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VirtualKeyMutation) OldGatewayConnectionID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldGatewayConnectionID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldGatewayConnectionID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGatewayConnectionID: %w", err)
+	}
+	return oldValue.GatewayConnectionID, nil
+}
+
+// ClearGatewayConnectionID clears the value of the "gateway_connection_id" field.
+func (m *VirtualKeyMutation) ClearGatewayConnectionID() {
+	m.gateway_connection_id = nil
+	m.clearedFields[virtualkey.FieldGatewayConnectionID] = struct{}{}
+}
+
+// GatewayConnectionIDCleared returns if the "gateway_connection_id" field was cleared in this mutation.
+func (m *VirtualKeyMutation) GatewayConnectionIDCleared() bool {
+	_, ok := m.clearedFields[virtualkey.FieldGatewayConnectionID]
+	return ok
+}
+
+// ResetGatewayConnectionID resets all changes to the "gateway_connection_id" field.
+func (m *VirtualKeyMutation) ResetGatewayConnectionID() {
+	m.gateway_connection_id = nil
+	delete(m.clearedFields, virtualkey.FieldGatewayConnectionID)
+}
+
 // SetModels sets the "models" field.
 func (m *VirtualKeyMutation) SetModels(s []string) {
 	m.models = &s
@@ -24069,7 +24119,7 @@ func (m *VirtualKeyMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *VirtualKeyMutation) Fields() []string {
-	fields := make([]string, 0, 13)
+	fields := make([]string, 0, 14)
 	if m.created_at != nil {
 		fields = append(fields, virtualkey.FieldCreatedAt)
 	}
@@ -24096,6 +24146,9 @@ func (m *VirtualKeyMutation) Fields() []string {
 	}
 	if m.team_id != nil {
 		fields = append(fields, virtualkey.FieldTeamID)
+	}
+	if m.gateway_connection_id != nil {
+		fields = append(fields, virtualkey.FieldGatewayConnectionID)
 	}
 	if m.models != nil {
 		fields = append(fields, virtualkey.FieldModels)
@@ -24135,6 +24188,8 @@ func (m *VirtualKeyMutation) Field(name string) (ent.Value, bool) {
 		return m.RateLimitPolicyID()
 	case virtualkey.FieldTeamID:
 		return m.TeamID()
+	case virtualkey.FieldGatewayConnectionID:
+		return m.GatewayConnectionID()
 	case virtualkey.FieldModels:
 		return m.Models()
 	case virtualkey.FieldMaxBudget:
@@ -24170,6 +24225,8 @@ func (m *VirtualKeyMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldRateLimitPolicyID(ctx)
 	case virtualkey.FieldTeamID:
 		return m.OldTeamID(ctx)
+	case virtualkey.FieldGatewayConnectionID:
+		return m.OldGatewayConnectionID(ctx)
 	case virtualkey.FieldModels:
 		return m.OldModels(ctx)
 	case virtualkey.FieldMaxBudget:
@@ -24249,6 +24306,13 @@ func (m *VirtualKeyMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTeamID(v)
+		return nil
+	case virtualkey.FieldGatewayConnectionID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetGatewayConnectionID(v)
 		return nil
 	case virtualkey.FieldModels:
 		v, ok := value.([]string)
@@ -24338,6 +24402,9 @@ func (m *VirtualKeyMutation) ClearedFields() []string {
 	if m.FieldCleared(virtualkey.FieldTeamID) {
 		fields = append(fields, virtualkey.FieldTeamID)
 	}
+	if m.FieldCleared(virtualkey.FieldGatewayConnectionID) {
+		fields = append(fields, virtualkey.FieldGatewayConnectionID)
+	}
 	if m.FieldCleared(virtualkey.FieldModels) {
 		fields = append(fields, virtualkey.FieldModels)
 	}
@@ -24375,6 +24442,9 @@ func (m *VirtualKeyMutation) ClearField(name string) error {
 		return nil
 	case virtualkey.FieldTeamID:
 		m.ClearTeamID()
+		return nil
+	case virtualkey.FieldGatewayConnectionID:
+		m.ClearGatewayConnectionID()
 		return nil
 	case virtualkey.FieldModels:
 		m.ClearModels()
@@ -24419,6 +24489,9 @@ func (m *VirtualKeyMutation) ResetField(name string) error {
 		return nil
 	case virtualkey.FieldTeamID:
 		m.ResetTeamID()
+		return nil
+	case virtualkey.FieldGatewayConnectionID:
+		m.ResetGatewayConnectionID()
 		return nil
 	case virtualkey.FieldModels:
 		m.ResetModels()

@@ -13,7 +13,7 @@ users(filter: UserFilter, pagination: Pagination, sort: UserSort): UserConnectio
 ```
 
 - **Returns:** `UserConnection!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -28,7 +28,7 @@ roles(pagination: Pagination): RoleConnection!
 ```
 
 - **Returns:** `RoleConnection!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -41,7 +41,7 @@ role(id: ID!): Role
 ```
 
 - **Returns:** `Role`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -56,7 +56,7 @@ userExists(username: String, email: String): Boolean!
 ```
 
 - **Returns:** `Boolean!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -70,7 +70,7 @@ customRoles: [CustomRole!]!
 ```
 
 - **Returns:** `[CustomRole!]!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 ### `permissions`
 
@@ -101,7 +101,7 @@ departments: [Department!]!
 ```
 
 - **Returns:** `[Department!]!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 ### `departmentMembers`
 
@@ -136,7 +136,7 @@ createUser(input: CreateUserInput!): CreateUserPayload!
 ```
 
 - **Returns:** `CreateUserPayload!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -149,7 +149,7 @@ updateUser(id: ID!, input: UpdateUserInput!): AccountUser!
 ```
 
 - **Returns:** `AccountUser!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -163,7 +163,7 @@ deleteUser(id: ID!): DeleteUserPayload!
 ```
 
 - **Returns:** `DeleteUserPayload!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -176,7 +176,7 @@ resetUserPassword(id: ID!): ResetPasswordPayload!
 ```
 
 - **Returns:** `ResetPasswordPayload!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -189,7 +189,7 @@ toggleUserEnabled(id: ID!): ToggleUserEnabledPayload!
 ```
 
 - **Returns:** `ToggleUserEnabledPayload!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -202,7 +202,7 @@ assignUsersToRole(input: AssignUsersToRoleInput!): AssignUsersToRolePayload!
 ```
 
 - **Returns:** `AssignUsersToRolePayload!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -215,7 +215,7 @@ createCustomRole(input: CreateCustomRoleInput!): CustomRole!
 ```
 
 - **Returns:** `CustomRole!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -228,7 +228,7 @@ deleteCustomRole(id: ID!): Boolean!
 ```
 
 - **Returns:** `Boolean!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -257,7 +257,7 @@ setRolePermissions(roleId: ID!, permissionKeys: [String!]!): CustomRole!
 ```
 
 - **Returns:** `CustomRole!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -271,7 +271,7 @@ assignUserRole(userId: ID!, roleId: ID!): Boolean!
 ```
 
 - **Returns:** `Boolean!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -285,7 +285,7 @@ removeUserRole(userId: ID!, roleId: ID!): Boolean!
 ```
 
 - **Returns:** `Boolean!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -301,7 +301,7 @@ createDepartment(input: CreateDepartmentInput!): Department!
 ```
 
 - **Returns:** `Department!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -314,7 +314,7 @@ deleteDepartment(id: ID!): Boolean!
 ```
 
 - **Returns:** `Boolean!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -370,7 +370,7 @@ updatePlatformSettings(input: UpdatePlatformSettingsInput!): PlatformSettings!
 
 *Object*
 
-The user's role as a lightweight reference (embedded in AccountUser).
+The user's role as a lightweight reference (embedded in AccountUser). id is a standard UUID, derived from the same role key as the corresponding Role entity in the roles query — so AccountUser.role.id === roles(roleId).id for the same role key.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -487,11 +487,12 @@ The user's role as a lightweight reference (embedded in AccountUser).
 
 *Object*
 
-A built-in assignable role surfaced as an entity (id = the role key).
+A built-in assignable role surfaced as an entity. id is a standard UUID (deterministically derived from roleKey — see roles_builtin.go). roleKey is the stable string key ("admin" | "user" | "read_only") used in @hasRole directives and as a logical identifier.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | `ID!` | — |
+| `roleKey` | `String!` | — |
 | `name` | `String!` | — |
 | `description` | `String!` | — |
 | `userCount` | `Int!` | — |
@@ -531,7 +532,7 @@ A built-in assignable role surfaced as an entity (id = the role key).
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `roleId` | `ID!` | — |
+| `roleId` | `ID!` | Built-in role UUID (from the roles query). User-id-as-string mapping is now server-driven via Role.roleKey. |
 | `userIds` | `[ID!]!` | — |
 
 ### CreateCustomRoleInput
@@ -596,7 +597,7 @@ A built-in assignable role surfaced as an entity (id = the role key).
 | `roleKeyword` | `String` | — |
 | `emailKeyword` | `String` | — |
 | `statusKeyword` | `ConnectionStatus` | — |
-| `roleId` | `ID` | — |
+| `roleId` | `ID` | Built-in role UUID (from the roles query). |
 
 ### UserSort
 

@@ -1,5 +1,6 @@
 fragment RoleFields on Role {
     id
+    roleKey
     name
     description
     userCount

@@ -53,7 +53,7 @@ func TestDenyPath_AdminOps_RoleGated(t *testing.T) {
 		allowed []model.RoleName
 	}{
 		{
-			// @hasRole(any: [admin, tenant_admin])
+			// @hasRole(any: [admin])
 			//   content.graphql:77-78  upsertArtifact / deleteArtifact
 			//   department.graphql:40  deleteDepartment
 			//   rbac.graphql:31,34     deleteCustomRole / setRolePermissions
@@ -62,7 +62,7 @@ func TestDenyPath_AdminOps_RoleGated(t *testing.T) {
 				"deleteDepartment",
 				"deleteCustomRole", "setRolePermissions",
 			},
-			allowed: []model.RoleName{model.RoleNameAdmin, model.RoleNameTenantAdmin},
+			allowed: []model.RoleName{model.RoleNameAdmin, model.RoleNameReadOnly},
 		},
 		{
 			// @hasRole(any: [admin]) — platform-only catalog + gateway + permission registry.
@@ -106,7 +106,7 @@ func TestDenyPath_AdminOps_PermissionGated(t *testing.T) {
 	// gateway-routing.graphql:146-147,160 — upsertUpstream / deleteUpstream / setRouterTier
 	ops := []string{"upsertUpstream", "deleteUpstream", "setRouterTier"}
 	grants := map[auth.Role]bool{
-		auth.RoleAdmin: true, auth.RoleTenantAdmin: true,
+		auth.RoleAdmin: true,
 	}
 
 	for _, op := range ops {

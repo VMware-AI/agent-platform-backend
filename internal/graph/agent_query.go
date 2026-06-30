@@ -22,19 +22,12 @@ import (
 //     env_id == env OR env_id IS NULL.
 func (r *Resolver) agentVisibilityPredicates(ctx context.Context, cu *auth.CurrentUser) []predicate.Agent {
 	var preds []predicate.Agent
-	// Three-track visibility (LLD-10 §1.3): admin → all; tenant-admin → their
-	// whole tenant; regular user → only their own agents (owner track).
-	switch {
-	case cu.Role == auth.RoleAdmin:
-		// no filter
-	case cu.Role == auth.RoleTenantAdmin:
-		if d := tenantScopeFor(ctx); d.apply {
-			if d.denyAll {
-				preds = append(preds, agent.IDEQ(uuid.Nil))
-			} else {
-				preds = append(preds, agent.TenantID(d.tenant))
-			}
-		}
+	// Two-track visibility (LLD-10 §1.3): admin + read_only → all; regular user →
+	// only their own agents (owner track). tenant-admin branch removed in the
+	// 3-role refactor.
+	switch cu.Role {
+	case auth.RoleAdmin, auth.RoleReadOnly:
+		// no filter — sees all
 	default:
 		// Regular user: only their own agents (owner track). Fail CLOSED — a
 		// session id that isn't a valid UUID must scope to zero rows, never fall

@@ -74,8 +74,8 @@ extend type Query {
 }
 
 extend type Mutation {
-  upsertArtifact(input: UpsertArtifactInput!): Artifact! @hasRole(any: [admin, tenant_admin])
-  deleteArtifact(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
+  upsertArtifact(input: UpsertArtifactInput!): Artifact! @hasRole(any: [admin])
+  deleteArtifact(id: ID!): Boolean! @hasRole(any: [admin])
   upsertSkill(input: UpsertSkillInput!): Skill! @hasRole(any: [admin])
   deleteSkill(id: ID!): Boolean! @hasRole(any: [admin])
   upsertImage(input: UpsertImageInput!): Image! @hasRole(any: [admin])

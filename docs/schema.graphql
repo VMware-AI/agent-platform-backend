@@ -552,28 +552,28 @@ type Mutation {
 	login(input: LoginInput!): AuthPayload!
 	logout: Boolean!
 	changePassword(oldPassword: String!, newPassword: String!): Boolean!
-	createUser(input: CreateUserInput!): CreateUserPayload! @hasRole(any: [admin,tenant_admin])
-	updateUser(id: ID!, input: UpdateUserInput!): AccountUser! @hasRole(any: [admin,tenant_admin])
-	deleteUser(id: ID!): DeleteUserPayload! @hasRole(any: [admin,tenant_admin])
-	resetUserPassword(id: ID!): ResetPasswordPayload! @hasRole(any: [admin,tenant_admin])
-	toggleUserEnabled(id: ID!): ToggleUserEnabledPayload! @hasRole(any: [admin,tenant_admin])
-	assignUsersToRole(input: AssignUsersToRoleInput!): AssignUsersToRolePayload! @hasRole(any: [admin,tenant_admin])
+	createUser(input: CreateUserInput!): CreateUserPayload! @hasRole(any: [admin])
+	updateUser(id: ID!, input: UpdateUserInput!): AccountUser! @hasRole(any: [admin])
+	deleteUser(id: ID!): DeleteUserPayload! @hasRole(any: [admin])
+	resetUserPassword(id: ID!): ResetPasswordPayload! @hasRole(any: [admin])
+	toggleUserEnabled(id: ID!): ToggleUserEnabledPayload! @hasRole(any: [admin])
+	assignUsersToRole(input: AssignUsersToRoleInput!): AssignUsersToRolePayload! @hasRole(any: [admin])
 	upsertAgentTemplate(input: UpsertAgentTemplateInput!): AgentTemplate! @hasRole(any: [admin])
 	createAgent(input: CreateAgentInput!): Agent!
 	setAgentStatus(id: ID!, status: AgentStatus!): Agent!
-	createAgentConfig(input: CreateAgentConfigInput!): AgentConfig! @hasRole(any: [admin,tenant_admin])
-	updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig! @hasRole(any: [admin,tenant_admin])
-	deleteAgentConfig(id: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
-	setDefaultAgentConfig(id: ID!): AgentConfig! @hasRole(any: [admin,tenant_admin])
-	setAgentConfigKnowledge(configId: ID!, knowledgeArtifactIds: [ID!]!): AgentConfig! @hasRole(any: [admin,tenant_admin])
-	upsertArtifact(input: UpsertArtifactInput!): Artifact! @hasRole(any: [admin,tenant_admin])
-	deleteArtifact(id: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
+	createAgentConfig(input: CreateAgentConfigInput!): AgentConfig! @hasRole(any: [admin])
+	updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig! @hasRole(any: [admin])
+	deleteAgentConfig(id: ID!): Boolean! @hasRole(any: [admin])
+	setDefaultAgentConfig(id: ID!): AgentConfig! @hasRole(any: [admin])
+	setAgentConfigKnowledge(configId: ID!, knowledgeArtifactIds: [ID!]!): AgentConfig! @hasRole(any: [admin])
+	upsertArtifact(input: UpsertArtifactInput!): Artifact! @hasRole(any: [admin])
+	deleteArtifact(id: ID!): Boolean! @hasRole(any: [admin])
 	upsertSkill(input: UpsertSkillInput!): Skill! @hasRole(any: [admin])
 	deleteSkill(id: ID!): Boolean! @hasRole(any: [admin])
 	upsertImage(input: UpsertImageInput!): Image! @hasRole(any: [admin])
 	deleteImage(id: ID!): Boolean! @hasRole(any: [admin])
-	createDepartment(input: CreateDepartmentInput!): Department! @hasRole(any: [admin,tenant_admin])
-	deleteDepartment(id: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
+	createDepartment(input: CreateDepartmentInput!): Department! @hasRole(any: [admin])
+	deleteDepartment(id: ID!): Boolean! @hasRole(any: [admin])
 	addMembership(userId: ID!, departmentId: ID!, role: MembershipRole): Membership!
 	removeMembership(userId: ID!, departmentId: ID!): Boolean!
 	deployAgent(input: DeployAgentInput!): DeployedAgent! @hasRole(any: [admin])
@@ -605,12 +605,12 @@ type Mutation {
 	deleteRateLimitPolicy(id: ID!): Boolean! @hasPermission(perm: "route:manage")
 	createOvaTemplateFamily(input: CreateOvaTemplateFamilyInput!): CreateOvaTemplateFamilyPayload! @hasRole(any: [admin])
 	addOvaTemplateVersion(input: AddOvaTemplateVersionInput!): AddOvaTemplateVersionPayload! @hasRole(any: [admin])
-	createCustomRole(input: CreateCustomRoleInput!): CustomRole! @hasRole(any: [admin,tenant_admin])
-	deleteCustomRole(id: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
+	createCustomRole(input: CreateCustomRoleInput!): CustomRole! @hasRole(any: [admin])
+	deleteCustomRole(id: ID!): Boolean! @hasRole(any: [admin])
 	upsertPermission(key: String!, description: String): Permission! @hasRole(any: [admin])
-	setRolePermissions(roleId: ID!, permissionKeys: [String!]!): CustomRole! @hasRole(any: [admin,tenant_admin])
-	assignUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
-	removeUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
+	setRolePermissions(roleId: ID!, permissionKeys: [String!]!): CustomRole! @hasRole(any: [admin])
+	assignUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin])
+	removeUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin])
 	createResourcePool(input: CreateResourcePoolInput!): CreateResourcePoolPayload! @hasRole(any: [admin])
 	updateResourcePool(id: ID!, input: UpdateResourcePoolInput!): UpdateResourcePoolPayload! @hasRole(any: [admin])
 	deleteResourcePool(id: ID!): DeleteResourcePoolPayload! @hasRole(any: [admin])
@@ -709,19 +709,19 @@ enum PoolConnectionStatus {
 type Query {
 	me: User!
 	auditLogs(filter: AuditFilter, page: PageInput): AuditConnection! @hasPermission(perm: "audit:view")
-	users(filter: UserFilter, pagination: Pagination, sort: UserSort): UserConnection! @hasRole(any: [admin,tenant_admin])
-	roles(pagination: Pagination): RoleConnection! @hasRole(any: [admin,tenant_admin])
-	role(id: ID!): Role @hasRole(any: [admin,tenant_admin])
-	userExists(username: String, email: String): Boolean! @hasRole(any: [admin,tenant_admin])
+	users(filter: UserFilter, pagination: Pagination, sort: UserSort): UserConnection! @hasRole(any: [admin])
+	roles(pagination: Pagination): RoleConnection! @hasRole(any: [admin])
+	role(id: ID!): Role @hasRole(any: [admin])
+	userExists(username: String, email: String): Boolean! @hasRole(any: [admin])
 	agentTemplates: [AgentTemplate!]!
 	agentConfigs(agentType: String): [AgentConfig!]!
-	agents(filter: AgentFilter, pagination: Pagination, sort: AgentSort): AgentConnection!
+	agents(filter: AgentFilter, pagination: Pagination, sort: AgentSort): AgentConnection! @hasRole(any: [admin,read_only,user])
 	artifacts(kind: ArtifactKind): [Artifact!]!
 	artifactVersions(name: String!): [Artifact!]!
 	skills: [Skill!]!
 	images: [Image!]!
-	dashboardOverview(recentLimit: Int = 5, noticeLimit: Int = 5): DashboardOverview! @hasRole(any: [admin,observability])
-	departments: [Department!]! @hasRole(any: [admin,tenant_admin])
+	dashboardOverview(recentLimit: Int = 5, noticeLimit: Int = 5): DashboardOverview! @hasRole(any: [admin,read_only])
+	departments: [Department!]! @hasRole(any: [admin])
 	departmentMembers(departmentId: ID!): [Membership!]!
 	vmTemplates(resourcePoolId: ID!): [VMTemplate!]!
 	vsphereResourcePools(resourcePoolId: ID!): [VsphereResourcePool!]! @hasRole(any: [admin])
@@ -736,17 +736,17 @@ type Query {
 	modelGateways(filter: ModelGatewayFilterInput, page: PageInput!, sort: ModelGatewaySort): ModelGatewayConnection! @hasRole(any: [admin])
 	modelGatewaySyncSummary: ModelGatewaySyncSummary! @hasRole(any: [admin])
 	requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
-	rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin,tenant_admin])
+	rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin])
 	requestMetrics(from: Time!, to: Time!, granularity: RequestMetricsBucketGranularity!, filter: RequestMetricsFilter): RequestMetrics! @hasPermission(perm: "audit:view")
 	ovaTemplateFamilies(filter: OvaTemplateFamilyFilter, pagination: Pagination, sort: OvaTemplateFamilySort): OvaTemplateFamilyConnection! @hasRole(any: [admin])
 	ovaTemplateVersions(familyId: ID, pagination: Pagination): OvaTemplateVersionConnection! @hasRole(any: [admin])
-	customRoles: [CustomRole!]! @hasRole(any: [admin,tenant_admin])
+	customRoles: [CustomRole!]! @hasRole(any: [admin])
 	permissions: [Permission!]! @hasRole(any: [admin])
 	userRoles(userId: ID!): [CustomRole!]! @hasRole(any: [admin])
 	resourcePools(filter: ResourcePoolFilter, pagination: Pagination, sort: ResourcePoolSort): ResourcePoolConnection! @hasRole(any: [admin])
 	resourcePool(id: ID!): ResourcePool @hasRole(any: [admin])
 	platformSettings: PlatformSettings! @hasRole(any: [admin])
-	virtualKeys(userId: ID): [VirtualKey!]! @hasRole(any: [admin])
+	virtualKeys(userId: ID): [VirtualKey!]! @hasRole(any: [admin,read_only])
 }
 type RateLimitPolicy {
 	id: ID!
@@ -910,6 +910,7 @@ input RevertAgentSnapshotInput {
 }
 type Role {
 	id: ID!
+	roleKey: String!
 	name: String!
 	description: String!
 	userCount: Int!
@@ -923,8 +924,7 @@ type RoleConnection {
 enum RoleName {
 	admin
 	user
-	observability
-	tenant_admin
+	read_only
 }
 enum RotationKind {
 	rotate_ui_password
