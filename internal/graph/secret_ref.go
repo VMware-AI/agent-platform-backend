@@ -11,7 +11,7 @@ import (
 
 // resolvePoolSecretRef turns a resource-pool credential submission into a stored
 // secret reference (模块② 接入). The 接入表单 sends a vCenter username/password;
-// the backend writes them to the secret store (Vaultwarden) and persists ONLY the
+// the backend writes them to the encrypted secret store and persists ONLY the
 // returned ref — plaintext never lands in the DB. An explicit secretRef (pre-existing
 // item) is accepted as an alternative. Returns set=false when no credential was given
 // (leave secret_ref untouched). label seeds the secret-store item name.
@@ -70,7 +70,7 @@ func (r *Resolver) resolveKeySecretRef(ctx context.Context, label string, rawKey
 // cleanupMintedSecretOnErr retires a freshly-minted secret ref when the DB Save
 // that was supposed to reference it failed, so a failed create/rotate doesn't
 // orphan plaintext in the store (no row points at it, and the reconciler never
-// GCs vault items). It is the create/update counterpart of the DELETE-side
+// GCs orphaned secrets). It is the create/update counterpart of the DELETE-side
 // deleteSecretRef calls.
 //
 // No-op unless a NEW secret was minted by this request (minted, i.e. the raw-key

@@ -7,8 +7,8 @@ import (
 )
 
 // ResourcePool is a compute resource pool (vCenter) the platform connects to
-// (LLD-06). Credentials are NEVER stored in plaintext — only a secret_ref to
-// Vaultwarden (C18); the backend resolves it at connect time (LLD-03).
+// (LLD-06). Credentials are NEVER stored in plaintext — only a secret_ref to the
+// encrypted secret store; the backend resolves it at connect time (LLD-03).
 type ResourcePool struct {
 	ent.Schema
 }

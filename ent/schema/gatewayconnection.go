@@ -9,7 +9,7 @@ import (
 )
 
 // GatewayConnection registers a LiteLLM proxy the backend governs (0619 模型网关接入).
-// master_key is a Vaultwarden reference, never stored in plaintext.
+// master_key is a secret-store reference, never stored in plaintext.
 type GatewayConnection struct {
 	ent.Schema
 }

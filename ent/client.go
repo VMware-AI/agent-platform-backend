@@ -32,6 +32,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplatefamily"
 	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplateversion"
 	"github.com/VMware-AI/agent-platform-backend/ent/permission"
+	"github.com/VMware-AI/agent-platform-backend/ent/platformsecret"
 	"github.com/VMware-AI/agent-platform-backend/ent/ratelimitpolicy"
 	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
@@ -84,6 +85,8 @@ type Client struct {
 	OvaTemplateVersion *OvaTemplateVersionClient
 	// Permission is the client for interacting with the Permission builders.
 	Permission *PermissionClient
+	// PlatformSecret is the client for interacting with the PlatformSecret builders.
+	PlatformSecret *PlatformSecretClient
 	// RateLimitPolicy is the client for interacting with the RateLimitPolicy builders.
 	RateLimitPolicy *RateLimitPolicyClient
 	// RequestLog is the client for interacting with the RequestLog builders.
@@ -137,6 +140,7 @@ func (c *Client) init() {
 	c.OvaTemplateFamily = NewOvaTemplateFamilyClient(c.config)
 	c.OvaTemplateVersion = NewOvaTemplateVersionClient(c.config)
 	c.Permission = NewPermissionClient(c.config)
+	c.PlatformSecret = NewPlatformSecretClient(c.config)
 	c.RateLimitPolicy = NewRateLimitPolicyClient(c.config)
 	c.RequestLog = NewRequestLogClient(c.config)
 	c.ResourcePool = NewResourcePoolClient(c.config)
@@ -258,6 +262,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		OvaTemplateFamily:  NewOvaTemplateFamilyClient(cfg),
 		OvaTemplateVersion: NewOvaTemplateVersionClient(cfg),
 		Permission:         NewPermissionClient(cfg),
+		PlatformSecret:     NewPlatformSecretClient(cfg),
 		RateLimitPolicy:    NewRateLimitPolicyClient(cfg),
 		RequestLog:         NewRequestLogClient(cfg),
 		ResourcePool:       NewResourcePoolClient(cfg),
@@ -306,6 +311,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		OvaTemplateFamily:  NewOvaTemplateFamilyClient(cfg),
 		OvaTemplateVersion: NewOvaTemplateVersionClient(cfg),
 		Permission:         NewPermissionClient(cfg),
+		PlatformSecret:     NewPlatformSecretClient(cfg),
 		RateLimitPolicy:    NewRateLimitPolicyClient(cfg),
 		RequestLog:         NewRequestLogClient(cfg),
 		ResourcePool:       NewResourcePoolClient(cfg),
@@ -351,9 +357,9 @@ func (c *Client) Use(hooks ...Hook) {
 		c.Agent, c.AgentConfig, c.AgentEnrollment, c.AgentHeartbeat, c.AgentTemplate,
 		c.Artifact, c.AuditLog, c.Department, c.Environment, c.GatewayConnection,
 		c.Image, c.Membership, c.ModelRoute, c.OvaTemplateFamily, c.OvaTemplateVersion,
-		c.Permission, c.RateLimitPolicy, c.RequestLog, c.ResourcePool, c.Role,
-		c.RotationCommand, c.RouterTier, c.Setting, c.Skill, c.Tenant, c.TokenUsage,
-		c.Upstream, c.User, c.VirtualKey,
+		c.Permission, c.PlatformSecret, c.RateLimitPolicy, c.RequestLog,
+		c.ResourcePool, c.Role, c.RotationCommand, c.RouterTier, c.Setting, c.Skill,
+		c.Tenant, c.TokenUsage, c.Upstream, c.User, c.VirtualKey,
 	} {
 		n.Use(hooks...)
 	}
@@ -366,9 +372,9 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.Agent, c.AgentConfig, c.AgentEnrollment, c.AgentHeartbeat, c.AgentTemplate,
 		c.Artifact, c.AuditLog, c.Department, c.Environment, c.GatewayConnection,
 		c.Image, c.Membership, c.ModelRoute, c.OvaTemplateFamily, c.OvaTemplateVersion,
-		c.Permission, c.RateLimitPolicy, c.RequestLog, c.ResourcePool, c.Role,
-		c.RotationCommand, c.RouterTier, c.Setting, c.Skill, c.Tenant, c.TokenUsage,
-		c.Upstream, c.User, c.VirtualKey,
+		c.Permission, c.PlatformSecret, c.RateLimitPolicy, c.RequestLog,
+		c.ResourcePool, c.Role, c.RotationCommand, c.RouterTier, c.Setting, c.Skill,
+		c.Tenant, c.TokenUsage, c.Upstream, c.User, c.VirtualKey,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -409,6 +415,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.OvaTemplateVersion.mutate(ctx, m)
 	case *PermissionMutation:
 		return c.Permission.mutate(ctx, m)
+	case *PlatformSecretMutation:
+		return c.PlatformSecret.mutate(ctx, m)
 	case *RateLimitPolicyMutation:
 		return c.RateLimitPolicy.mutate(ctx, m)
 	case *RequestLogMutation:
@@ -2648,6 +2656,139 @@ func (c *PermissionClient) mutate(ctx context.Context, m *PermissionMutation) (V
 	}
 }
 
+// PlatformSecretClient is a client for the PlatformSecret schema.
+type PlatformSecretClient struct {
+	config
+}
+
+// NewPlatformSecretClient returns a client for the PlatformSecret from the given config.
+func NewPlatformSecretClient(c config) *PlatformSecretClient {
+	return &PlatformSecretClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `platformsecret.Hooks(f(g(h())))`.
+func (c *PlatformSecretClient) Use(hooks ...Hook) {
+	c.hooks.PlatformSecret = append(c.hooks.PlatformSecret, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `platformsecret.Intercept(f(g(h())))`.
+func (c *PlatformSecretClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PlatformSecret = append(c.inters.PlatformSecret, interceptors...)
+}
+
+// Create returns a builder for creating a PlatformSecret entity.
+func (c *PlatformSecretClient) Create() *PlatformSecretCreate {
+	mutation := newPlatformSecretMutation(c.config, OpCreate)
+	return &PlatformSecretCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PlatformSecret entities.
+func (c *PlatformSecretClient) CreateBulk(builders ...*PlatformSecretCreate) *PlatformSecretCreateBulk {
+	return &PlatformSecretCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PlatformSecretClient) MapCreateBulk(slice any, setFunc func(*PlatformSecretCreate, int)) *PlatformSecretCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PlatformSecretCreateBulk{err: fmt.Errorf("calling to PlatformSecretClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PlatformSecretCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PlatformSecretCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PlatformSecret.
+func (c *PlatformSecretClient) Update() *PlatformSecretUpdate {
+	mutation := newPlatformSecretMutation(c.config, OpUpdate)
+	return &PlatformSecretUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PlatformSecretClient) UpdateOne(_m *PlatformSecret) *PlatformSecretUpdateOne {
+	mutation := newPlatformSecretMutation(c.config, OpUpdateOne, withPlatformSecret(_m))
+	return &PlatformSecretUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PlatformSecretClient) UpdateOneID(id int) *PlatformSecretUpdateOne {
+	mutation := newPlatformSecretMutation(c.config, OpUpdateOne, withPlatformSecretID(id))
+	return &PlatformSecretUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PlatformSecret.
+func (c *PlatformSecretClient) Delete() *PlatformSecretDelete {
+	mutation := newPlatformSecretMutation(c.config, OpDelete)
+	return &PlatformSecretDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PlatformSecretClient) DeleteOne(_m *PlatformSecret) *PlatformSecretDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PlatformSecretClient) DeleteOneID(id int) *PlatformSecretDeleteOne {
+	builder := c.Delete().Where(platformsecret.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PlatformSecretDeleteOne{builder}
+}
+
+// Query returns a query builder for PlatformSecret.
+func (c *PlatformSecretClient) Query() *PlatformSecretQuery {
+	return &PlatformSecretQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePlatformSecret},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a PlatformSecret entity by its id.
+func (c *PlatformSecretClient) Get(ctx context.Context, id int) (*PlatformSecret, error) {
+	return c.Query().Where(platformsecret.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PlatformSecretClient) GetX(ctx context.Context, id int) *PlatformSecret {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *PlatformSecretClient) Hooks() []Hook {
+	return c.hooks.PlatformSecret
+}
+
+// Interceptors returns the client interceptors.
+func (c *PlatformSecretClient) Interceptors() []Interceptor {
+	return c.inters.PlatformSecret
+}
+
+func (c *PlatformSecretClient) mutate(ctx context.Context, m *PlatformSecretMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PlatformSecretCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PlatformSecretUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PlatformSecretUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PlatformSecretDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PlatformSecret mutation op: %q", m.Op())
+	}
+}
+
 // RateLimitPolicyClient is a client for the RateLimitPolicy schema.
 type RateLimitPolicyClient struct {
 	config
@@ -4430,15 +4571,16 @@ type (
 	hooks struct {
 		Agent, AgentConfig, AgentEnrollment, AgentHeartbeat, AgentTemplate, Artifact,
 		AuditLog, Department, Environment, GatewayConnection, Image, Membership,
-		ModelRoute, OvaTemplateFamily, OvaTemplateVersion, Permission, RateLimitPolicy,
-		RequestLog, ResourcePool, Role, RotationCommand, RouterTier, Setting, Skill,
-		Tenant, TokenUsage, Upstream, User, VirtualKey []ent.Hook
+		ModelRoute, OvaTemplateFamily, OvaTemplateVersion, Permission, PlatformSecret,
+		RateLimitPolicy, RequestLog, ResourcePool, Role, RotationCommand, RouterTier,
+		Setting, Skill, Tenant, TokenUsage, Upstream, User, VirtualKey []ent.Hook
 	}
 	inters struct {
 		Agent, AgentConfig, AgentEnrollment, AgentHeartbeat, AgentTemplate, Artifact,
 		AuditLog, Department, Environment, GatewayConnection, Image, Membership,
-		ModelRoute, OvaTemplateFamily, OvaTemplateVersion, Permission, RateLimitPolicy,
-		RequestLog, ResourcePool, Role, RotationCommand, RouterTier, Setting, Skill,
-		Tenant, TokenUsage, Upstream, User, VirtualKey []ent.Interceptor
+		ModelRoute, OvaTemplateFamily, OvaTemplateVersion, Permission, PlatformSecret,
+		RateLimitPolicy, RequestLog, ResourcePool, Role, RotationCommand, RouterTier,
+		Setting, Skill, Tenant, TokenUsage, Upstream, User,
+		VirtualKey []ent.Interceptor
 	}
 )

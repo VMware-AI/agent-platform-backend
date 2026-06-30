@@ -101,18 +101,17 @@ func main() {
 	// at request time (LLD-13 §3.3). No process-wide gateway env anymore.
 	log.Printf("model gateway: resolved per-department from DB (console 模型网关接入)")
 
-	var sec secrets.Resolver
-	if vw := os.Getenv("VAULTWARDEN_URL"); vw != "" {
-		sec = secrets.NewVaultwardenResolver(vw)
-		log.Printf("secrets: vaultwarden (%s)", vw)
-	} else {
-		// Dev: an in-memory store that supports BOTH resolve and write (Put), so the
-		// credential-intake flows (resource-pool / upstream / gateway 接入表单填账号密码)
-		// work locally without Vaultwarden. Plaintext lives only in process memory and
-		// is lost on restart. Prod must set VAULTWARDEN_URL.
-		sec = secrets.NewStaticResolver(nil)
-		log.Printf("secrets: in-memory static store (dev; supports credential write)")
+	// Single secrets backend for ALL environments (no dev/prod split): credentials
+	// are stored in the platform_secrets table, encrypted at rest under one
+	// symmetric key (SECRETS_ENCRYPTION_KEY). This persists across restarts (the old
+	// dev path used an in-memory store that lost secrets on restart) and gives one
+	// code path. The key is required — fail fast rather than start a server that
+	// cannot read or write any credential.
+	sec, err := secrets.NewDBStore(client, cfg.SecretsEncryptionKey)
+	if err != nil {
+		log.Fatalf("secrets: %v", err)
 	}
+	log.Printf("secrets: encrypted db-backed store (platform_secrets, AES-GCM)")
 	vcConnect := func(ctx context.Context, endpoint, user, pass string, insecure bool) (graph.VCenterClient, error) {
 		return vcenter.Connect(ctx, endpoint, user, pass, insecure)
 	}
@@ -127,13 +126,9 @@ func main() {
 	}
 
 	// agent-manager backend (LLD-08): VM enrollment + heartbeat + rotation. Its
-	// secret store needs write access; both Vaultwarden (prod) and the dev in-memory
-	// StaticResolver implement secrets.Store, so rotation completions persist
-	// (in-process only for dev, lost on restart).
-	agentMgr := &agentmgr.Service{Ent: client}
-	if st, ok := sec.(secrets.Store); ok {
-		agentMgr.Secrets = st
-	}
+	// secret store needs write access; the encrypted DBStore is a secrets.Store, so
+	// rotation completions persist (encrypted) across restarts.
+	agentMgr := &agentmgr.Service{Ent: client, Secrets: sec}
 
 	resolver := &graph.Resolver{
 		Ent:             client,

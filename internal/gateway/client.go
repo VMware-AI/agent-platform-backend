@@ -89,12 +89,12 @@ func NewHTTPClient(baseURL, masterKey string, opts ...Option) (*HTTPClient, erro
 		return nil, errors.New("gateway: masterKey required")
 	}
 	c := &HTTPClient{
-		baseURL: strings.TrimRight(baseURL, "/"),
-		masterKey:    masterKey,
-		http:         &http.Client{Timeout: gatewayHTTPTimeout},
-		policy:       defaultRetryPolicy(),
-		auth:         defaultAuthFunc(masterKey),
-		breaker:      newCircuitBreaker(3, 30*time.Second),
+		baseURL:   strings.TrimRight(baseURL, "/"),
+		masterKey: masterKey,
+		http:      &http.Client{Timeout: gatewayHTTPTimeout},
+		policy:    defaultRetryPolicy(),
+		auth:      defaultAuthFunc(masterKey),
+		breaker:   newCircuitBreaker(3, 30*time.Second),
 	}
 	for _, opt := range opts {
 		opt(c)
@@ -549,12 +549,12 @@ func replaceTokens(s, prefix, stop string) string {
 // open for a cooldown; a single success closes it. 4xx does not trip the
 // breaker (caller errors are not the server's fault).
 type circuitBreaker struct {
-	mu            sync.Mutex
-	consecutive   int
-	openUntil     time.Time
-	threshold     int
-	cooldown      time.Duration
-	now           func() time.Time // injectable for tests
+	mu          sync.Mutex
+	consecutive int
+	openUntil   time.Time
+	threshold   int
+	cooldown    time.Duration
+	now         func() time.Time // injectable for tests
 }
 
 func newCircuitBreaker(threshold int, cooldown time.Duration) *circuitBreaker {
