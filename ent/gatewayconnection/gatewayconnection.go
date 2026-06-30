@@ -25,14 +25,14 @@ const (
 	FieldEndpoint = "endpoint"
 	// FieldMasterKeyRef holds the string denoting the master_key_ref field in the database.
 	FieldMasterKeyRef = "master_key_ref"
-	// FieldAdminURL holds the string denoting the admin_url field in the database.
-	FieldAdminURL = "admin_url"
 	// FieldPublicURL holds the string denoting the public_url field in the database.
 	FieldPublicURL = "public_url"
 	// FieldIsDefault holds the string denoting the is_default field in the database.
 	FieldIsDefault = "is_default"
 	// FieldLastSyncedAt holds the string denoting the last_synced_at field in the database.
 	FieldLastSyncedAt = "last_synced_at"
+	// FieldBackendModelCount holds the string denoting the backend_model_count field in the database.
+	FieldBackendModelCount = "backend_model_count"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
 	// FieldLoadBalanceStrategy holds the string denoting the load_balance_strategy field in the database.
@@ -49,10 +49,10 @@ var Columns = []string{
 	FieldName,
 	FieldEndpoint,
 	FieldMasterKeyRef,
-	FieldAdminURL,
 	FieldPublicURL,
 	FieldIsDefault,
 	FieldLastSyncedAt,
+	FieldBackendModelCount,
 	FieldStatus,
 	FieldLoadBalanceStrategy,
 }
@@ -114,16 +114,16 @@ func StatusValidator(s Status) error {
 // LoadBalanceStrategy defines the type for the "load_balance_strategy" enum field.
 type LoadBalanceStrategy string
 
-// LoadBalanceStrategySimpleShuffle is the default value of the LoadBalanceStrategy enum.
-const DefaultLoadBalanceStrategy = LoadBalanceStrategySimpleShuffle
+// LoadBalanceStrategySIMPLE_SHUFFLE is the default value of the LoadBalanceStrategy enum.
+const DefaultLoadBalanceStrategy = LoadBalanceStrategySIMPLE_SHUFFLE
 
 // LoadBalanceStrategy values.
 const (
-	LoadBalanceStrategySimpleShuffle LoadBalanceStrategy = "simple_shuffle"
-	LoadBalanceStrategyLatency       LoadBalanceStrategy = "latency"
-	LoadBalanceStrategyUsageV2       LoadBalanceStrategy = "usage_v2"
-	LoadBalanceStrategyLeastBusy     LoadBalanceStrategy = "least_busy"
-	LoadBalanceStrategyCost          LoadBalanceStrategy = "cost"
+	LoadBalanceStrategySIMPLE_SHUFFLE         LoadBalanceStrategy = "SIMPLE_SHUFFLE"
+	LoadBalanceStrategyLEAST_BUSY             LoadBalanceStrategy = "LEAST_BUSY"
+	LoadBalanceStrategyLATENCY_BASED_ROUTING  LoadBalanceStrategy = "LATENCY_BASED_ROUTING"
+	LoadBalanceStrategyUSAGE_BASED_ROUTING_V2 LoadBalanceStrategy = "USAGE_BASED_ROUTING_V2"
+	LoadBalanceStrategyCOST_BASED_ROUTING     LoadBalanceStrategy = "COST_BASED_ROUTING"
 )
 
 func (lbs LoadBalanceStrategy) String() string {
@@ -133,7 +133,7 @@ func (lbs LoadBalanceStrategy) String() string {
 // LoadBalanceStrategyValidator is a validator for the "load_balance_strategy" field enum values. It is called by the builders before save.
 func LoadBalanceStrategyValidator(lbs LoadBalanceStrategy) error {
 	switch lbs {
-	case LoadBalanceStrategySimpleShuffle, LoadBalanceStrategyLatency, LoadBalanceStrategyUsageV2, LoadBalanceStrategyLeastBusy, LoadBalanceStrategyCost:
+	case LoadBalanceStrategySIMPLE_SHUFFLE, LoadBalanceStrategyLEAST_BUSY, LoadBalanceStrategyLATENCY_BASED_ROUTING, LoadBalanceStrategyUSAGE_BASED_ROUTING_V2, LoadBalanceStrategyCOST_BASED_ROUTING:
 		return nil
 	default:
 		return fmt.Errorf("gatewayconnection: invalid enum value for load_balance_strategy field: %q", lbs)
@@ -173,11 +173,6 @@ func ByMasterKeyRef(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMasterKeyRef, opts...).ToFunc()
 }
 
-// ByAdminURL orders the results by the admin_url field.
-func ByAdminURL(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldAdminURL, opts...).ToFunc()
-}
-
 // ByPublicURL orders the results by the public_url field.
 func ByPublicURL(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPublicURL, opts...).ToFunc()
@@ -191,6 +186,11 @@ func ByIsDefault(opts ...sql.OrderTermOption) OrderOption {
 // ByLastSyncedAt orders the results by the last_synced_at field.
 func ByLastSyncedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLastSyncedAt, opts...).ToFunc()
+}
+
+// ByBackendModelCount orders the results by the backend_model_count field.
+func ByBackendModelCount(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBackendModelCount, opts...).ToFunc()
 }
 
 // ByStatus orders the results by the status field.

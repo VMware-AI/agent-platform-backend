@@ -4,7 +4,7 @@ Postman v2.1 collection for the GraphQL API at `agent-platform-backend`.
 
 ## Files
 
-- `agent-platform-backend.postman_collection.json` — 17 grouped folders, 113 requests covering every GraphQL query/mutation in the schema.
+- `agent-platform-backend.postman_collection.json` — 17 grouped folders, 114 requests covering every GraphQL query/mutation in the schema.
 
 ## Quick start
 
@@ -39,13 +39,13 @@ Either one works; the collection uses the Bearer path.
 | Group | Count | Notes |
 |---|---:|---|
 | Auth | 4 | Login (auto-captures token), Me, ChangePassword, Logout |
-| Dashboard | 1 | DashboardOverview (admin / observability) |
+| Dashboard | 1 | DashboardOverview (admin / read_only) |
 | Users & Roles | 11 | Users list, CreateUser (AUTO/CUSTOM), ResetPassword, Toggle, … |
 | RBAC | 9 | Custom roles, permission catalog, role-permission matrix |
 | Departments & Memberships | 6 | Add/RemoveMembership delegated to dept-admins |
 | Platform Settings | 2 | `agentUser` (LLD-13) |
 | Resource Pools | 8 | vCenter pools, sync, pre-save probe, vsphere placement |
-| Model Gateways (LITELLM) | 6 | Page + sync summary + test connection |
+| Model Gateways (LITELLM) | 7 | Page + sync summary + test connection (id-based + dry-run pre-create) |
 | Gateway Connections (raw) | 4 | Lower-level connection ops |
 | Model Routes | 6 | Create/Update/Delete + legacy upsertModelRoute |
 | Upstreams & Router Tiers | 5 | Provider/model routing + difficulty router |

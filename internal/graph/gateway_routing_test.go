@@ -12,13 +12,32 @@ import (
 )
 
 type fakeModelManager struct {
-	models  []gateway.ModelSpec
-	routers []gateway.RouterSpec
-	deleted []string
-	testErr error
+	models      []gateway.ModelSpec
+	routers     []gateway.RouterSpec
+	deleted     []string
+	testErr     error
+	strategy    gateway.RoutingStrategy
+	strategyErr error
+	// listModels + listErr drive the GET /models stub used by sync to populate
+	// backendModelCount. Nil list returns an empty slice (= zero models); the
+	// caller can preset listModels to verify the sync writes the right count.
+	listModels []gateway.ModelInfo
+	listErr    error
 }
 
 func (f *fakeModelManager) TestConnection(context.Context) error { return f.testErr }
+func (f *fakeModelManager) GetRoutingStrategy(context.Context) (gateway.RoutingStrategy, error) {
+	if f.strategy == "" {
+		return gateway.RoutingStrategy("simple-shuffle"), f.strategyErr
+	}
+	return f.strategy, f.strategyErr
+}
+func (f *fakeModelManager) ListModels(context.Context) ([]gateway.ModelInfo, error) {
+	if f.listErr != nil {
+		return nil, f.listErr
+	}
+	return f.listModels, nil
+}
 func (f *fakeModelManager) NewModel(_ context.Context, s gateway.ModelSpec) error {
 	f.models = append(f.models, s)
 	return nil

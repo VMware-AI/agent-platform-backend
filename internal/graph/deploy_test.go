@@ -24,8 +24,16 @@ func adminCtx() context.Context {
 }
 
 func tenantAdminCtx(id, tenantID string) context.Context {
+	// tenant-admin role was removed in the 3-role refactor — this helper now
+	// constructs a read_only context for callers that still pass a tenant id.
+	// New code should use readOnlyCtx() instead.
 	return auth.WithCurrentUser(context.Background(),
-		&auth.CurrentUser{ID: id, Role: auth.RoleTenantAdmin, TenantID: tenantID})
+		&auth.CurrentUser{ID: id, Role: auth.RoleReadOnly, TenantID: tenantID})
+}
+
+func readOnlyCtx() context.Context {
+	return auth.WithCurrentUser(context.Background(),
+		&auth.CurrentUser{ID: "00000000-0000-0000-0000-00000000000a", Role: auth.RoleReadOnly})
 }
 
 // seedOvaFamilyVersion creates an OVA template family + one version whose

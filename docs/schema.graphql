@@ -369,7 +369,7 @@ type GatewayConnection {
 	publicUrl: String
 	isDefault: Boolean!
 	status: GatewayStatus!
-	loadBalanceStrategy: LoadBalanceStrategy!
+	loadBalanceStrategy: LoadBalancingStrategy!
 	createdAt: Time!
 }
 enum GatewayStatus {
@@ -406,15 +406,12 @@ type IssuedVirtualKey {
 	virtualKey: VirtualKey!
 	secret: String!
 }
-enum LoadBalanceStrategy {
-	simple_shuffle
-	latency
-	usage_v2
-	least_busy
-	cost
-}
 enum LoadBalancingStrategy {
-	ROUND_ROBIN
+	SIMPLE_SHUFFLE
+	LEAST_BUSY
+	LATENCY_BASED_ROUTING
+	USAGE_BASED_ROUTING_V2
+	COST_BASED_ROUTING
 }
 input LoginInput {
 	email: String!
@@ -465,11 +462,8 @@ type ModelGateway {
 	name: String!
 	provider: ModelGatewayProvider!
 	endpoint: String!
-	status: ModelGatewayStatus!
 	backendModelCount: Int!
-	loadBalancingStrategy: LoadBalancingStrategy!
-	latencyMs: Int
-	adminUrl: String
+	loadBalancingStrategy: LoadBalancingStrategy
 	lastSyncAt: Time
 	lastSyncStatus: ModelGatewaySyncState!
 	lastSyncMessage: String
@@ -482,15 +476,12 @@ type ModelGatewayConnection {
 }
 input ModelGatewayFilterInput {
 	search: String
-	status: ModelGatewayStatus
 }
 input ModelGatewayInput {
 	name: String!
 	provider: ModelGatewayProvider!
 	endpoint: String!
-	adminUrl: String
 	masterKey: String
-	loadBalancingStrategy: LoadBalancingStrategy!
 }
 enum ModelGatewayProvider {
 	LITELLM
@@ -502,14 +493,13 @@ input ModelGatewaySort {
 enum ModelGatewaySortField {
 	NAME
 	ENDPOINT
-	STATUS
 	CREATED_AT
 	UPDATED_AT
 }
-enum ModelGatewayStatus {
-	CONNECTED
-	DISCONNECTED
-	ERROR
+type ModelGatewaySyncResult {
+	success: Boolean!
+	message: String!
+	gateway: ModelGateway!
 }
 enum ModelGatewaySyncState {
 	SYNCED
@@ -527,11 +517,8 @@ type ModelGatewaySyncSummary {
 }
 type ModelGatewayTestResult {
 	success: Boolean!
-	status: ModelGatewayStatus!
-	latencyMs: Int
 	message: String!
 	testedAt: Time!
-	gateway: ModelGateway!
 }
 type ModelRoute {
 	id: ID!
@@ -541,7 +528,7 @@ type ModelRoute {
 	gatewayName: String!
 	upstreams: [String!]!
 	supportedModels: [String!]!
-	strategy: LoadBalanceStrategy!
+	strategy: LoadBalancingStrategy!
 	uiStrategy: ModelRouteStrategy!
 	enabled: Boolean!
 	createdAt: Time!
@@ -570,28 +557,28 @@ type Mutation {
 	login(input: LoginInput!): AuthPayload!
 	logout: Boolean!
 	changePassword(oldPassword: String!, newPassword: String!): Boolean!
-	createUser(input: CreateUserInput!): CreateUserPayload! @hasRole(any: [admin,tenant_admin])
-	updateUser(id: ID!, input: UpdateUserInput!): AccountUser! @hasRole(any: [admin,tenant_admin])
-	deleteUser(id: ID!): DeleteUserPayload! @hasRole(any: [admin,tenant_admin])
-	resetUserPassword(id: ID!): ResetPasswordPayload! @hasRole(any: [admin,tenant_admin])
-	toggleUserEnabled(id: ID!): ToggleUserEnabledPayload! @hasRole(any: [admin,tenant_admin])
-	assignUsersToRole(input: AssignUsersToRoleInput!): AssignUsersToRolePayload! @hasRole(any: [admin,tenant_admin])
+	createUser(input: CreateUserInput!): CreateUserPayload! @hasRole(any: [admin])
+	updateUser(id: ID!, input: UpdateUserInput!): AccountUser! @hasRole(any: [admin])
+	deleteUser(id: ID!): DeleteUserPayload! @hasRole(any: [admin])
+	resetUserPassword(id: ID!): ResetPasswordPayload! @hasRole(any: [admin])
+	toggleUserEnabled(id: ID!): ToggleUserEnabledPayload! @hasRole(any: [admin])
+	assignUsersToRole(input: AssignUsersToRoleInput!): AssignUsersToRolePayload! @hasRole(any: [admin])
 	upsertAgentTemplate(input: UpsertAgentTemplateInput!): AgentTemplate! @hasRole(any: [admin])
 	createAgent(input: CreateAgentInput!): Agent!
 	setAgentStatus(id: ID!, status: AgentStatus!): Agent!
-	createAgentConfig(input: CreateAgentConfigInput!): AgentConfig! @hasRole(any: [admin,tenant_admin])
-	updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig! @hasRole(any: [admin,tenant_admin])
-	deleteAgentConfig(id: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
-	setDefaultAgentConfig(id: ID!): AgentConfig! @hasRole(any: [admin,tenant_admin])
-	setAgentConfigKnowledge(configId: ID!, knowledgeArtifactIds: [ID!]!): AgentConfig! @hasRole(any: [admin,tenant_admin])
-	upsertArtifact(input: UpsertArtifactInput!): Artifact! @hasRole(any: [admin,tenant_admin])
-	deleteArtifact(id: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
+	createAgentConfig(input: CreateAgentConfigInput!): AgentConfig! @hasRole(any: [admin])
+	updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig! @hasRole(any: [admin])
+	deleteAgentConfig(id: ID!): Boolean! @hasRole(any: [admin])
+	setDefaultAgentConfig(id: ID!): AgentConfig! @hasRole(any: [admin])
+	setAgentConfigKnowledge(configId: ID!, knowledgeArtifactIds: [ID!]!): AgentConfig! @hasRole(any: [admin])
+	upsertArtifact(input: UpsertArtifactInput!): Artifact! @hasRole(any: [admin])
+	deleteArtifact(id: ID!): Boolean! @hasRole(any: [admin])
 	upsertSkill(input: UpsertSkillInput!): Skill! @hasRole(any: [admin])
 	deleteSkill(id: ID!): Boolean! @hasRole(any: [admin])
 	upsertImage(input: UpsertImageInput!): Image! @hasRole(any: [admin])
 	deleteImage(id: ID!): Boolean! @hasRole(any: [admin])
-	createDepartment(input: CreateDepartmentInput!): Department! @hasRole(any: [admin,tenant_admin])
-	deleteDepartment(id: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
+	createDepartment(input: CreateDepartmentInput!): Department! @hasRole(any: [admin])
+	deleteDepartment(id: ID!): Boolean! @hasRole(any: [admin])
 	addMembership(userId: ID!, departmentId: ID!, role: MembershipRole): Membership!
 	removeMembership(userId: ID!, departmentId: ID!): Boolean!
 	deployAgent(input: DeployAgentInput!): DeployedAgent! @hasRole(any: [admin])
@@ -615,19 +602,20 @@ type Mutation {
 	createModelGateway(input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
 	updateModelGateway(id: ID!, input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
 	deleteModelGateway(id: ID!): DeleteModelGatewayPayload! @hasRole(any: [admin])
-	testModelGatewayConnection(id: ID!): ModelGatewayTestResult! @hasRole(any: [admin])
+	syncModelGatewayConnection(id: ID!): ModelGatewaySyncResult! @hasRole(any: [admin])
+	testNewModelGatewayConnection(input: TestModelGatewayConnectionInput!): ModelGatewayTestResult! @hasRole(any: [admin])
 	recordRequestLog(input: RecordRequestLogInput!): RequestLog! @hasRole(any: [admin])
 	upsertRateLimitPolicy(input: UpsertRateLimitPolicyInput!): RateLimitPolicy! @hasPermission(perm: "route:manage")
 	setRateLimitPolicyEnabled(id: ID!, enabled: Boolean!): RateLimitPolicy! @hasPermission(perm: "route:manage")
 	deleteRateLimitPolicy(id: ID!): Boolean! @hasPermission(perm: "route:manage")
 	createOvaTemplateFamily(input: CreateOvaTemplateFamilyInput!): CreateOvaTemplateFamilyPayload! @hasRole(any: [admin])
 	addOvaTemplateVersion(input: AddOvaTemplateVersionInput!): AddOvaTemplateVersionPayload! @hasRole(any: [admin])
-	createCustomRole(input: CreateCustomRoleInput!): CustomRole! @hasRole(any: [admin,tenant_admin])
-	deleteCustomRole(id: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
+	createCustomRole(input: CreateCustomRoleInput!): CustomRole! @hasRole(any: [admin])
+	deleteCustomRole(id: ID!): Boolean! @hasRole(any: [admin])
 	upsertPermission(key: String!, description: String): Permission! @hasRole(any: [admin])
-	setRolePermissions(roleId: ID!, permissionKeys: [String!]!): CustomRole! @hasRole(any: [admin,tenant_admin])
-	assignUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
-	removeUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
+	setRolePermissions(roleId: ID!, permissionKeys: [String!]!): CustomRole! @hasRole(any: [admin])
+	assignUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin])
+	removeUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin])
 	createResourcePool(input: CreateResourcePoolInput!): CreateResourcePoolPayload! @hasRole(any: [admin])
 	updateResourcePool(id: ID!, input: UpdateResourcePoolInput!): UpdateResourcePoolPayload! @hasRole(any: [admin])
 	deleteResourcePool(id: ID!): DeleteResourcePoolPayload! @hasRole(any: [admin])
@@ -726,19 +714,19 @@ enum PoolConnectionStatus {
 type Query {
 	me: User!
 	auditLogs(filter: AuditFilter, page: PageInput): AuditConnection! @hasPermission(perm: "audit:view")
-	users(filter: UserFilter, pagination: Pagination, sort: UserSort): UserConnection! @hasRole(any: [admin,tenant_admin])
-	roles(pagination: Pagination): RoleConnection! @hasRole(any: [admin,tenant_admin])
-	role(id: ID!): Role @hasRole(any: [admin,tenant_admin])
-	userExists(username: String, email: String): Boolean! @hasRole(any: [admin,tenant_admin])
+	users(filter: UserFilter, pagination: Pagination, sort: UserSort): UserConnection! @hasRole(any: [admin])
+	roles(pagination: Pagination): RoleConnection! @hasRole(any: [admin])
+	role(id: ID!): Role @hasRole(any: [admin])
+	userExists(username: String, email: String): Boolean! @hasRole(any: [admin])
 	agentTemplates: [AgentTemplate!]!
 	agentConfigs(agentType: String): [AgentConfig!]!
-	agents(filter: AgentFilter, pagination: Pagination, sort: AgentSort): AgentConnection!
+	agents(filter: AgentFilter, pagination: Pagination, sort: AgentSort): AgentConnection! @hasRole(any: [admin,read_only,user])
 	artifacts(kind: ArtifactKind): [Artifact!]!
 	artifactVersions(name: String!): [Artifact!]!
 	skills: [Skill!]!
 	images: [Image!]!
-	dashboardOverview(recentLimit: Int = 5, noticeLimit: Int = 5): DashboardOverview! @hasRole(any: [admin,observability])
-	departments: [Department!]! @hasRole(any: [admin,tenant_admin])
+	dashboardOverview(recentLimit: Int = 5, noticeLimit: Int = 5): DashboardOverview! @hasRole(any: [admin,read_only])
+	departments: [Department!]! @hasRole(any: [admin])
 	departmentMembers(departmentId: ID!): [Membership!]!
 	vmTemplates(resourcePoolId: ID!): [VMTemplate!]!
 	vsphereResourcePools(resourcePoolId: ID!): [VsphereResourcePool!]! @hasRole(any: [admin])
@@ -754,11 +742,11 @@ type Query {
 	modelGateways(filter: ModelGatewayFilterInput, page: PageInput!, sort: ModelGatewaySort): ModelGatewayConnection! @hasRole(any: [admin])
 	modelGatewaySyncSummary: ModelGatewaySyncSummary! @hasRole(any: [admin])
 	requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
-	rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin,tenant_admin])
+	rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin])
 	requestMetrics(from: Time!, to: Time!, granularity: RequestMetricsBucketGranularity!, filter: RequestMetricsFilter): RequestMetrics! @hasPermission(perm: "audit:view")
 	ovaTemplateFamilies(filter: OvaTemplateFamilyFilter, pagination: Pagination, sort: OvaTemplateFamilySort): OvaTemplateFamilyConnection! @hasRole(any: [admin])
 	ovaTemplateVersions(familyId: ID, pagination: Pagination): OvaTemplateVersionConnection! @hasRole(any: [admin])
-	customRoles: [CustomRole!]! @hasRole(any: [admin,tenant_admin])
+	customRoles: [CustomRole!]! @hasRole(any: [admin])
 	permissions: [Permission!]! @hasRole(any: [admin])
 	userRoles(userId: ID!): [CustomRole!]! @hasRole(any: [admin])
 	resourcePools(filter: ResourcePoolFilter, pagination: Pagination, sort: ResourcePoolSort): ResourcePoolConnection! @hasRole(any: [admin])
@@ -766,7 +754,7 @@ type Query {
 	contentLibraries(resourcePoolId: ID!): [String!]! @hasRole(any: [admin])
 	contentLibraryItems(resourcePoolId: ID!, libraryName: String!): [ContentLibraryItem!]! @hasRole(any: [admin])
 	platformSettings: PlatformSettings! @hasRole(any: [admin])
-	virtualKeys(userId: ID): [VirtualKey!]! @hasRole(any: [admin])
+	virtualKeys(userId: ID): [VirtualKey!]! @hasRole(any: [admin,read_only])
 }
 type RateLimitPolicy {
 	id: ID!
@@ -804,7 +792,7 @@ input RegisterGatewayConnectionInput {
 	endpoint: String!
 	masterKey: String
 	masterKeyRef: String
-	loadBalanceStrategy: LoadBalanceStrategy
+	loadBalanceStrategy: LoadBalancingStrategy
 	publicUrl: String
 	isDefault: Boolean
 }
@@ -930,6 +918,7 @@ input RevertAgentSnapshotInput {
 }
 type Role {
 	id: ID!
+	roleKey: String!
 	name: String!
 	description: String!
 	userCount: Int!
@@ -943,8 +932,7 @@ type RoleConnection {
 enum RoleName {
 	admin
 	user
-	observability
-	tenant_admin
+	read_only
 }
 enum RotationKind {
 	rotate_ui_password
@@ -981,6 +969,10 @@ enum SortDirection {
 type SyncResourcePoolPayload {
 	pool: ResourcePool!
 	syncedAt: Time!
+}
+input TestModelGatewayConnectionInput {
+	endpoint: String!
+	masterKey: String!
 }
 input TestResourcePoolConnectionInput {
 	name: String!
@@ -1069,7 +1061,7 @@ input UpsertModelRouteInput {
 	modelAlias: String!
 	backendGatewayId: ID
 	upstreams: [String!]
-	strategy: LoadBalanceStrategy
+	strategy: LoadBalancingStrategy
 	enabled: Boolean
 }
 input UpsertRateLimitPolicyInput {
@@ -1117,7 +1109,8 @@ type User {
 	role: RoleName!
 	tenantId: ID
 	mustChangePassword: Boolean!
-	isActive: Boolean!
+	enabled: Boolean!
+	connectionStatus: ConnectionStatus! @goField(forceResolver: true)
 	lastLoginAt: Time
 	createdAt: Time!
 }

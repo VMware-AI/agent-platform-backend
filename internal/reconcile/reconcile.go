@@ -33,15 +33,31 @@ type Gateway interface {
 	DeleteTeam(ctx context.Context, teamID string) error
 }
 
+// GatewayTarget is one gateway to reconcile, paired with the governance rows the
+// resolver determined belong to it (LLD-14 §3.4 / OQ-5): the virtual keys it
+// issued and the departments it backs. Partitioning rows per gateway is what makes
+// multi-gateway reconciliation correct — a key issued on gateway B is reconciled
+// only against gateway B's listing, never flagged stale (and wrongly revoked under
+// Prune) while a different gateway is being scanned, and an orphan on a non-default
+// gateway becomes visible instead of being skipped entirely.
+type GatewayTarget struct {
+	Gateway Gateway
+	Keys    []*ent.VirtualKey
+	Depts   []*ent.Department
+}
+
 // Reconciler compares gateway keys/teams against governance rows.
 type Reconciler struct {
 	Ent     *ent.Client
 	Gateway Gateway
-	// GatewayFunc, when set, resolves the gateway to reconcile at the start of each
-	// Run cycle (the platform default GatewayConnection, LLD-13 §3.3) — there is no
-	// process-wide gateway anymore. A nil result skips that cycle. (Reconciling each
-	// of several gateways is OQ-5, a follow-up.)
-	GatewayFunc func(context.Context) Gateway
+	// GatewaysFunc, when set, resolves EVERY gateway to reconcile this cycle, each
+	// paired with the rows it owns (LLD-14 §3.4 / OQ-5). It replaces the old
+	// single-gateway resolver: instead of scanning one default gateway against all
+	// rows, the reconciler scans each gateway against only its own keys/teams. A
+	// nil/empty result skips the cycle. When set, it takes precedence over the
+	// legacy r.Gateway path (which remains for the single-gateway / injected-fake
+	// case).
+	GatewaysFunc func(context.Context) ([]GatewayTarget, error)
 	// Prune enables healing: delete gateway orphans + revoke stale DB rows. When
 	// false (default) the reconciler only reports.
 	Prune bool
@@ -64,16 +80,28 @@ type Report struct {
 	Revoked        int      // stale rows marked revoked (Prune only)
 }
 
-// ReconcileKeys runs one pass. It returns an error only when it cannot read both
+// ReconcileKeys runs one pass over ALL governance rows against r.Gateway. It is
+// the single-gateway/legacy entry point (also used by tests); the multi-gateway
+// path (runCycle + GatewaysFunc) calls reconcileKeysFor per gateway with a
+// pre-scoped row subset instead. Returns an error only when it cannot read both
 // sides; per-item heal failures are logged and counted, not fatal.
 func (r *Reconciler) ReconcileKeys(ctx context.Context) (*Report, error) {
-	gwKeys, err := r.Gateway.ListKeys(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list gateway keys: %w", err)
-	}
 	rows, err := r.Ent.VirtualKey.Query().All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list governance rows: %w", err)
+	}
+	return r.reconcileKeysFor(ctx, r.Gateway, rows)
+}
+
+// reconcileKeysFor diffs ONE gateway's listed keys against the GIVEN governance
+// rows — the subset the resolver assigned to that gateway. Keeping the row set
+// scoped to the gateway is what makes the diff correct under multiple gateways:
+// the stale/orphan guards (see heal) then reason only about keys that should live
+// on this gateway. Returns an error only when it cannot read the gateway side.
+func (r *Reconciler) reconcileKeysFor(ctx context.Context, gw Gateway, rows []*ent.VirtualKey) (*Report, error) {
+	gwKeys, err := gw.ListKeys(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list gateway keys: %w", err)
 	}
 
 	// A row is identified at the gateway by EITHER its raw key or its hashed token
@@ -110,7 +138,7 @@ func (r *Reconciler) ReconcileKeys(ctx context.Context) (*Report, error) {
 	}
 
 	if r.Prune {
-		r.heal(ctx, rep)
+		r.heal(ctx, gw, rep)
 	}
 
 	// Log counts only — never the key identifiers themselves.
@@ -129,18 +157,26 @@ type TeamReport struct {
 	Pruned        int      // orphan teams deleted at the gateway (Prune only)
 }
 
-// ReconcileTeams compares gateway teams against department rows. Mirrors
-// ReconcileKeys. Gateway team orphans (no backing department) are pruned under
-// Prune; dangling department references are only reported — re-creating vs
-// clearing the link is a policy decision left to an operator.
+// ReconcileTeams compares r.Gateway's teams against ALL department rows. Mirrors
+// ReconcileKeys: the single-gateway/legacy entry point; the multi-gateway path
+// calls reconcileTeamsFor per gateway with a pre-scoped department subset.
 func (r *Reconciler) ReconcileTeams(ctx context.Context) (*TeamReport, error) {
-	gwTeams, err := r.Gateway.ListTeams(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list gateway teams: %w", err)
-	}
 	depts, err := r.Ent.Department.Query().All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list departments: %w", err)
+	}
+	return r.reconcileTeamsFor(ctx, r.Gateway, depts)
+}
+
+// reconcileTeamsFor diffs ONE gateway's teams against the GIVEN department subset
+// (the departments the resolver assigned to that gateway). Gateway team orphans
+// (no backing department) are pruned under Prune; dangling department references
+// are only reported — re-creating vs clearing the link is an operator policy
+// decision. Returns an error only when it cannot read the gateway side.
+func (r *Reconciler) reconcileTeamsFor(ctx context.Context, gw Gateway, depts []*ent.Department) (*TeamReport, error) {
+	gwTeams, err := gw.ListTeams(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list gateway teams: %w", err)
 	}
 
 	dbTeams := make(map[string]struct{})
@@ -179,7 +215,7 @@ func (r *Reconciler) ReconcileTeams(ctx context.Context) (*TeamReport, error) {
 				rep.GatewayTeams, rep.DBDepartments)
 		} else {
 			for _, teamID := range rep.TeamOrphans {
-				if err := r.Gateway.DeleteTeam(ctx, teamID); err != nil {
+				if err := gw.DeleteTeam(ctx, teamID); err != nil {
 					log.Printf("reconcile: prune gateway team orphan failed: %v", err)
 					continue
 				}
@@ -208,14 +244,14 @@ func allUnmatched(orphans, gatewayTotal, dbTotal int) bool {
 // when every gateway key is unmatched (identifier mismatch); (2) never revoke
 // stale rows when the gateway returned no keys at all (a failed/empty listing
 // must not nuke every governance row).
-func (r *Reconciler) heal(ctx context.Context, rep *Report) {
+func (r *Reconciler) heal(ctx context.Context, gw Gateway, rep *Report) {
 	if allUnmatched(len(rep.GatewayOrphans), rep.GatewayKeys, rep.DBKeys) {
 		log.Printf("reconcile: SKIP key heal — all %d gateway keys unmatched against %d DB rows; likely identifier mismatch or partial list, refusing to prune/revoke",
 			rep.GatewayKeys, rep.DBKeys)
 		return
 	}
 	for _, key := range rep.GatewayOrphans {
-		if err := r.Gateway.DeleteKey(ctx, key); err != nil {
+		if err := gw.DeleteKey(ctx, key); err != nil {
 			log.Printf("reconcile: prune gateway orphan failed: %v", err)
 			continue
 		}
@@ -273,12 +309,30 @@ func (r *Reconciler) runCycle(ctx context.Context) {
 	if r.IsLeader != nil && !r.IsLeader(ctx) {
 		return
 	}
-	// Resolve the gateway to reconcile this cycle (default GatewayConnection).
-	// runCycle is called sequentially from Run's loop, so mutating r.Gateway here
-	// is race-free.
-	if r.GatewayFunc != nil {
-		r.Gateway = r.GatewayFunc(ctx)
+	// Multi-gateway path (production): reconcile EVERY configured gateway against
+	// only the rows the resolver assigned to it (LLD-14 §3.4 / OQ-5). Per-gateway
+	// failures are logged, not fatal — one bad gateway never blocks the others.
+	if r.GatewaysFunc != nil {
+		targets, err := r.GatewaysFunc(ctx)
+		if err != nil {
+			log.Printf("reconcile: resolve gateway targets failed, skipping cycle: %v", err)
+			return
+		}
+		for _, t := range targets {
+			if t.Gateway == nil {
+				continue
+			}
+			if _, err := r.reconcileKeysFor(ctx, t.Gateway, t.Keys); err != nil {
+				log.Printf("reconcile keys cycle error: %v", err)
+			}
+			if _, err := r.reconcileTeamsFor(ctx, t.Gateway, t.Depts); err != nil {
+				log.Printf("reconcile teams cycle error: %v", err)
+			}
+		}
+		return
 	}
+	// Legacy single-gateway path: an injected r.Gateway reconciled against all rows
+	// (tests / a not-yet-migrated install with no GatewayConnection rows).
 	if r.Gateway == nil {
 		return
 	}

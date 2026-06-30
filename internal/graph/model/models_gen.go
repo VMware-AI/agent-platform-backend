@@ -380,14 +380,14 @@ type DeployedAgent struct {
 }
 
 type GatewayConnection struct {
-	ID                  string              `json:"id"`
-	Name                string              `json:"name"`
-	Endpoint            string              `json:"endpoint"`
-	PublicURL           *string             `json:"publicUrl,omitempty"`
-	IsDefault           bool                `json:"isDefault"`
-	Status              GatewayStatus       `json:"status"`
-	LoadBalanceStrategy LoadBalanceStrategy `json:"loadBalanceStrategy"`
-	CreatedAt           time.Time           `json:"createdAt"`
+	ID                  string                `json:"id"`
+	Name                string                `json:"name"`
+	Endpoint            string                `json:"endpoint"`
+	PublicURL           *string               `json:"publicUrl,omitempty"`
+	IsDefault           bool                  `json:"isDefault"`
+	Status              GatewayStatus         `json:"status"`
+	LoadBalanceStrategy LoadBalancingStrategy `json:"loadBalanceStrategy"`
+	CreatedAt           time.Time             `json:"createdAt"`
 }
 
 type Image struct {
@@ -457,20 +457,17 @@ type MeteringSummary struct {
 }
 
 type ModelGateway struct {
-	ID                    string                `json:"id"`
-	Name                  string                `json:"name"`
-	Provider              ModelGatewayProvider  `json:"provider"`
-	Endpoint              string                `json:"endpoint"`
-	Status                ModelGatewayStatus    `json:"status"`
-	BackendModelCount     int                   `json:"backendModelCount"`
-	LoadBalancingStrategy LoadBalancingStrategy `json:"loadBalancingStrategy"`
-	LatencyMs             *int                  `json:"latencyMs,omitempty"`
-	AdminURL              *string               `json:"adminUrl,omitempty"`
-	LastSyncAt            *time.Time            `json:"lastSyncAt,omitempty"`
-	LastSyncStatus        ModelGatewaySyncState `json:"lastSyncStatus"`
-	LastSyncMessage       *string               `json:"lastSyncMessage,omitempty"`
-	CreatedAt             time.Time             `json:"createdAt"`
-	UpdatedAt             time.Time             `json:"updatedAt"`
+	ID                    string                 `json:"id"`
+	Name                  string                 `json:"name"`
+	Provider              ModelGatewayProvider   `json:"provider"`
+	Endpoint              string                 `json:"endpoint"`
+	BackendModelCount     int                    `json:"backendModelCount"`
+	LoadBalancingStrategy *LoadBalancingStrategy `json:"loadBalancingStrategy,omitempty"`
+	LastSyncAt            *time.Time             `json:"lastSyncAt,omitempty"`
+	LastSyncStatus        ModelGatewaySyncState  `json:"lastSyncStatus"`
+	LastSyncMessage       *string                `json:"lastSyncMessage,omitempty"`
+	CreatedAt             time.Time              `json:"createdAt"`
+	UpdatedAt             time.Time              `json:"updatedAt"`
 }
 
 type ModelGatewayConnection struct {
@@ -479,22 +476,25 @@ type ModelGatewayConnection struct {
 }
 
 type ModelGatewayFilterInput struct {
-	Search *string             `json:"search,omitempty"`
-	Status *ModelGatewayStatus `json:"status,omitempty"`
+	Search *string `json:"search,omitempty"`
 }
 
 type ModelGatewayInput struct {
-	Name                  string                `json:"name"`
-	Provider              ModelGatewayProvider  `json:"provider"`
-	Endpoint              string                `json:"endpoint"`
-	AdminURL              *string               `json:"adminUrl,omitempty"`
-	MasterKey             *string               `json:"masterKey,omitempty"`
-	LoadBalancingStrategy LoadBalancingStrategy `json:"loadBalancingStrategy"`
+	Name      string               `json:"name"`
+	Provider  ModelGatewayProvider `json:"provider"`
+	Endpoint  string               `json:"endpoint"`
+	MasterKey *string              `json:"masterKey,omitempty"`
 }
 
 type ModelGatewaySort struct {
 	Field     ModelGatewaySortField `json:"field"`
 	Direction SortDirection         `json:"direction"`
+}
+
+type ModelGatewaySyncResult struct {
+	Success bool          `json:"success"`
+	Message string        `json:"message"`
+	Gateway *ModelGateway `json:"gateway"`
 }
 
 type ModelGatewaySyncSummary struct {
@@ -506,27 +506,24 @@ type ModelGatewaySyncSummary struct {
 }
 
 type ModelGatewayTestResult struct {
-	Success   bool               `json:"success"`
-	Status    ModelGatewayStatus `json:"status"`
-	LatencyMs *int               `json:"latencyMs,omitempty"`
-	Message   string             `json:"message"`
-	TestedAt  time.Time          `json:"testedAt"`
-	Gateway   *ModelGateway      `json:"gateway"`
+	Success  bool      `json:"success"`
+	Message  string    `json:"message"`
+	TestedAt time.Time `json:"testedAt"`
 }
 
 type ModelRoute struct {
-	ID               string              `json:"id"`
-	Name             string              `json:"name"`
-	ModelAlias       string              `json:"modelAlias"`
-	BackendGatewayID *string             `json:"backendGatewayId,omitempty"`
-	GatewayName      string              `json:"gatewayName"`
-	Upstreams        []string            `json:"upstreams"`
-	SupportedModels  []string            `json:"supportedModels"`
-	Strategy         LoadBalanceStrategy `json:"strategy"`
-	UIStrategy       ModelRouteStrategy  `json:"uiStrategy"`
-	Enabled          bool                `json:"enabled"`
-	CreatedAt        time.Time           `json:"createdAt"`
-	UpdatedAt        time.Time           `json:"updatedAt"`
+	ID               string                `json:"id"`
+	Name             string                `json:"name"`
+	ModelAlias       string                `json:"modelAlias"`
+	BackendGatewayID *string               `json:"backendGatewayId,omitempty"`
+	GatewayName      string                `json:"gatewayName"`
+	Upstreams        []string              `json:"upstreams"`
+	SupportedModels  []string              `json:"supportedModels"`
+	Strategy         LoadBalancingStrategy `json:"strategy"`
+	UIStrategy       ModelRouteStrategy    `json:"uiStrategy"`
+	Enabled          bool                  `json:"enabled"`
+	CreatedAt        time.Time             `json:"createdAt"`
+	UpdatedAt        time.Time             `json:"updatedAt"`
 }
 
 type ModelUsage struct {
@@ -660,13 +657,13 @@ type RecycleAgentInput struct {
 }
 
 type RegisterGatewayConnectionInput struct {
-	Name                string               `json:"name"`
-	Endpoint            string               `json:"endpoint"`
-	MasterKey           *string              `json:"masterKey,omitempty"`
-	MasterKeyRef        *string              `json:"masterKeyRef,omitempty"`
-	LoadBalanceStrategy *LoadBalanceStrategy `json:"loadBalanceStrategy,omitempty"`
-	PublicURL           *string              `json:"publicUrl,omitempty"`
-	IsDefault           *bool                `json:"isDefault,omitempty"`
+	Name                string                 `json:"name"`
+	Endpoint            string                 `json:"endpoint"`
+	MasterKey           *string                `json:"masterKey,omitempty"`
+	MasterKeyRef        *string                `json:"masterKeyRef,omitempty"`
+	LoadBalanceStrategy *LoadBalancingStrategy `json:"loadBalanceStrategy,omitempty"`
+	PublicURL           *string                `json:"publicUrl,omitempty"`
+	IsDefault           *bool                  `json:"isDefault,omitempty"`
 }
 
 type RequestLog struct {
@@ -782,6 +779,7 @@ type RevertAgentSnapshotInput struct {
 
 type Role struct {
 	ID          string `json:"id"`
+	RoleKey     string `json:"roleKey"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	UserCount   int    `json:"userCount"`
@@ -818,6 +816,11 @@ type SnapshotAgentInput struct {
 type SyncResourcePoolPayload struct {
 	Pool     *ResourcePool `json:"pool"`
 	SyncedAt time.Time     `json:"syncedAt"`
+}
+
+type TestModelGatewayConnectionInput struct {
+	Endpoint  string `json:"endpoint"`
+	MasterKey string `json:"masterKey"`
 }
 
 type TestResourcePoolConnectionInput struct {
@@ -914,12 +917,12 @@ type UpsertImageInput struct {
 }
 
 type UpsertModelRouteInput struct {
-	Name             string               `json:"name"`
-	ModelAlias       string               `json:"modelAlias"`
-	BackendGatewayID *string              `json:"backendGatewayId,omitempty"`
-	Upstreams        []string             `json:"upstreams,omitempty"`
-	Strategy         *LoadBalanceStrategy `json:"strategy,omitempty"`
-	Enabled          *bool                `json:"enabled,omitempty"`
+	Name             string                 `json:"name"`
+	ModelAlias       string                 `json:"modelAlias"`
+	BackendGatewayID *string                `json:"backendGatewayId,omitempty"`
+	Upstreams        []string               `json:"upstreams,omitempty"`
+	Strategy         *LoadBalancingStrategy `json:"strategy,omitempty"`
+	Enabled          *bool                  `json:"enabled,omitempty"`
 }
 
 type UpsertRateLimitPolicyInput struct {
@@ -957,16 +960,17 @@ type Upstream struct {
 }
 
 type User struct {
-	ID                 string     `json:"id"`
-	Username           string     `json:"username"`
-	DisplayName        string     `json:"displayName"`
-	Email              string     `json:"email"`
-	Role               RoleName   `json:"role"`
-	TenantID           *string    `json:"tenantId,omitempty"`
-	MustChangePassword bool       `json:"mustChangePassword"`
-	IsActive           bool       `json:"isActive"`
-	LastLoginAt        *time.Time `json:"lastLoginAt,omitempty"`
-	CreatedAt          time.Time  `json:"createdAt"`
+	ID                 string           `json:"id"`
+	Username           string           `json:"username"`
+	DisplayName        string           `json:"displayName"`
+	Email              string           `json:"email"`
+	Role               RoleName         `json:"role"`
+	TenantID           *string          `json:"tenantId,omitempty"`
+	MustChangePassword bool             `json:"mustChangePassword"`
+	Enabled            bool             `json:"enabled"`
+	ConnectionStatus   ConnectionStatus `json:"connectionStatus"`
+	LastLoginAt        *time.Time       `json:"lastLoginAt,omitempty"`
+	CreatedAt          time.Time        `json:"createdAt"`
 }
 
 type UserConnection struct {
@@ -1540,80 +1544,27 @@ func (e InstallMethod) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-type LoadBalanceStrategy string
-
-const (
-	LoadBalanceStrategySimpleShuffle LoadBalanceStrategy = "simple_shuffle"
-	LoadBalanceStrategyLatency       LoadBalanceStrategy = "latency"
-	LoadBalanceStrategyUsageV2       LoadBalanceStrategy = "usage_v2"
-	LoadBalanceStrategyLeastBusy     LoadBalanceStrategy = "least_busy"
-	LoadBalanceStrategyCost          LoadBalanceStrategy = "cost"
-)
-
-var AllLoadBalanceStrategy = []LoadBalanceStrategy{
-	LoadBalanceStrategySimpleShuffle,
-	LoadBalanceStrategyLatency,
-	LoadBalanceStrategyUsageV2,
-	LoadBalanceStrategyLeastBusy,
-	LoadBalanceStrategyCost,
-}
-
-func (e LoadBalanceStrategy) IsValid() bool {
-	switch e {
-	case LoadBalanceStrategySimpleShuffle, LoadBalanceStrategyLatency, LoadBalanceStrategyUsageV2, LoadBalanceStrategyLeastBusy, LoadBalanceStrategyCost:
-		return true
-	}
-	return false
-}
-
-func (e LoadBalanceStrategy) String() string {
-	return string(e)
-}
-
-func (e *LoadBalanceStrategy) UnmarshalGQL(v any) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = LoadBalanceStrategy(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid LoadBalanceStrategy", str)
-	}
-	return nil
-}
-
-func (e LoadBalanceStrategy) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-func (e *LoadBalanceStrategy) UnmarshalJSON(b []byte) error {
-	s, err := strconv.Unquote(string(b))
-	if err != nil {
-		return err
-	}
-	return e.UnmarshalGQL(s)
-}
-
-func (e LoadBalanceStrategy) MarshalJSON() ([]byte, error) {
-	var buf bytes.Buffer
-	e.MarshalGQL(&buf)
-	return buf.Bytes(), nil
-}
-
 type LoadBalancingStrategy string
 
 const (
-	LoadBalancingStrategyRoundRobin LoadBalancingStrategy = "ROUND_ROBIN"
+	LoadBalancingStrategySimpleShuffle       LoadBalancingStrategy = "SIMPLE_SHUFFLE"
+	LoadBalancingStrategyLeastBusy           LoadBalancingStrategy = "LEAST_BUSY"
+	LoadBalancingStrategyLatencyBasedRouting LoadBalancingStrategy = "LATENCY_BASED_ROUTING"
+	LoadBalancingStrategyUsageBasedRoutingV2 LoadBalancingStrategy = "USAGE_BASED_ROUTING_V2"
+	LoadBalancingStrategyCostBasedRouting    LoadBalancingStrategy = "COST_BASED_ROUTING"
 )
 
 var AllLoadBalancingStrategy = []LoadBalancingStrategy{
-	LoadBalancingStrategyRoundRobin,
+	LoadBalancingStrategySimpleShuffle,
+	LoadBalancingStrategyLeastBusy,
+	LoadBalancingStrategyLatencyBasedRouting,
+	LoadBalancingStrategyUsageBasedRoutingV2,
+	LoadBalancingStrategyCostBasedRouting,
 }
 
 func (e LoadBalancingStrategy) IsValid() bool {
 	switch e {
-	case LoadBalancingStrategyRoundRobin:
+	case LoadBalancingStrategySimpleShuffle, LoadBalancingStrategyLeastBusy, LoadBalancingStrategyLatencyBasedRouting, LoadBalancingStrategyUsageBasedRoutingV2, LoadBalancingStrategyCostBasedRouting:
 		return true
 	}
 	return false
@@ -1824,7 +1775,6 @@ type ModelGatewaySortField string
 const (
 	ModelGatewaySortFieldName      ModelGatewaySortField = "NAME"
 	ModelGatewaySortFieldEndpoint  ModelGatewaySortField = "ENDPOINT"
-	ModelGatewaySortFieldStatus    ModelGatewaySortField = "STATUS"
 	ModelGatewaySortFieldCreatedAt ModelGatewaySortField = "CREATED_AT"
 	ModelGatewaySortFieldUpdatedAt ModelGatewaySortField = "UPDATED_AT"
 )
@@ -1832,14 +1782,13 @@ const (
 var AllModelGatewaySortField = []ModelGatewaySortField{
 	ModelGatewaySortFieldName,
 	ModelGatewaySortFieldEndpoint,
-	ModelGatewaySortFieldStatus,
 	ModelGatewaySortFieldCreatedAt,
 	ModelGatewaySortFieldUpdatedAt,
 }
 
 func (e ModelGatewaySortField) IsValid() bool {
 	switch e {
-	case ModelGatewaySortFieldName, ModelGatewaySortFieldEndpoint, ModelGatewaySortFieldStatus, ModelGatewaySortFieldCreatedAt, ModelGatewaySortFieldUpdatedAt:
+	case ModelGatewaySortFieldName, ModelGatewaySortFieldEndpoint, ModelGatewaySortFieldCreatedAt, ModelGatewaySortFieldUpdatedAt:
 		return true
 	}
 	return false
@@ -1875,63 +1824,6 @@ func (e *ModelGatewaySortField) UnmarshalJSON(b []byte) error {
 }
 
 func (e ModelGatewaySortField) MarshalJSON() ([]byte, error) {
-	var buf bytes.Buffer
-	e.MarshalGQL(&buf)
-	return buf.Bytes(), nil
-}
-
-type ModelGatewayStatus string
-
-const (
-	ModelGatewayStatusConnected    ModelGatewayStatus = "CONNECTED"
-	ModelGatewayStatusDisconnected ModelGatewayStatus = "DISCONNECTED"
-	ModelGatewayStatusError        ModelGatewayStatus = "ERROR"
-)
-
-var AllModelGatewayStatus = []ModelGatewayStatus{
-	ModelGatewayStatusConnected,
-	ModelGatewayStatusDisconnected,
-	ModelGatewayStatusError,
-}
-
-func (e ModelGatewayStatus) IsValid() bool {
-	switch e {
-	case ModelGatewayStatusConnected, ModelGatewayStatusDisconnected, ModelGatewayStatusError:
-		return true
-	}
-	return false
-}
-
-func (e ModelGatewayStatus) String() string {
-	return string(e)
-}
-
-func (e *ModelGatewayStatus) UnmarshalGQL(v any) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = ModelGatewayStatus(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid ModelGatewayStatus", str)
-	}
-	return nil
-}
-
-func (e ModelGatewayStatus) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-func (e *ModelGatewayStatus) UnmarshalJSON(b []byte) error {
-	s, err := strconv.Unquote(string(b))
-	if err != nil {
-		return err
-	}
-	return e.UnmarshalGQL(s)
-}
-
-func (e ModelGatewayStatus) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil
@@ -2477,22 +2369,20 @@ func (e ResourcePoolSyncState) MarshalJSON() ([]byte, error) {
 type RoleName string
 
 const (
-	RoleNameAdmin         RoleName = "admin"
-	RoleNameUser          RoleName = "user"
-	RoleNameObservability RoleName = "observability"
-	RoleNameTenantAdmin   RoleName = "tenant_admin"
+	RoleNameAdmin    RoleName = "admin"
+	RoleNameUser     RoleName = "user"
+	RoleNameReadOnly RoleName = "read_only"
 )
 
 var AllRoleName = []RoleName{
 	RoleNameAdmin,
 	RoleNameUser,
-	RoleNameObservability,
-	RoleNameTenantAdmin,
+	RoleNameReadOnly,
 }
 
 func (e RoleName) IsValid() bool {
 	switch e {
-	case RoleNameAdmin, RoleNameUser, RoleNameObservability, RoleNameTenantAdmin:
+	case RoleNameAdmin, RoleNameUser, RoleNameReadOnly:
 		return true
 	}
 	return false

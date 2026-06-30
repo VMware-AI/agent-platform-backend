@@ -30,6 +30,13 @@ func (VirtualKey) Fields() []ent.Field {
 		field.UUID("agent_id", uuid.UUID{}).Optional().Nillable(),             // 绑定的智能体ID (0619 第7页)
 		field.UUID("rate_limit_policy_id", uuid.UUID{}).Optional().Nillable(), // 关联策略
 		field.String("team_id").Optional(),                                    // = department / litellm team
+		// The GatewayConnection that ISSUED this key (LLD-14). Its whole lifecycle
+		// (revoke/regenerate/recycle/reconcile) routes by this, decoupled from the
+		// department's *current* gateway binding. NULL for keys issued before this
+		// field (or on the legacy injected gateway) → callers fall back to the
+		// team_id→department→gateway derivation. No FK edge: a key row outlives a
+		// gateway delete (audit), and deletion is guarded in app logic.
+		field.UUID("gateway_connection_id", uuid.UUID{}).Optional().Nillable(),
 		field.Strings("models").Optional(),
 		field.Float("max_budget").Optional(),
 		// active=启用, disabled=禁用(可切回), revoked=已撤销(终态)

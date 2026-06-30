@@ -6,5 +6,9 @@ query Me {
       email
       role
       mustChangePassword
+      lastLoginAt
+      connectionStatus
+      createdAt
+      enabled
     }
   }

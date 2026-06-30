@@ -2,12 +2,14 @@ package graph
 
 import (
 	"context"
+	"log"
 
 	"github.com/google/uuid"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
+	"github.com/VMware-AI/agent-platform-backend/internal/reconcile"
 )
 
 // gatewayMasterKey resolves a connection's litellm master key from the secret
@@ -23,11 +25,18 @@ func (r *Resolver) gatewayMasterKey(ctx context.Context, g *ent.GatewayConnectio
 
 // buildGatewayKeyClient builds a litellm key/team client bound to a SPECIFIC
 // gateway row. Injectable (GatewayKeyClientFor) for tests; nil → a real client.
+// Returns nil on construction failure (empty master key / bad endpoint) so the
+// caller treats it as "no client configured" rather than panicking.
 func (r *Resolver) buildGatewayKeyClient(ctx context.Context, g *ent.GatewayConnection) gateway.Client {
 	if r.GatewayKeyClientFor != nil {
 		return r.GatewayKeyClientFor(ctx, g)
 	}
-	return gateway.NewHTTPClient(g.Endpoint, r.gatewayMasterKey(ctx, g))
+	c, err := gateway.NewHTTPClient(g.Endpoint, r.gatewayMasterKey(ctx, g))
+	if err != nil {
+		log.Printf("gateway key client build failed for %s: %v", g.ID, err)
+		return nil
+	}
+	return c
 }
 
 // defaultGateway returns the platform default GatewayConnection (is_default), or
@@ -89,6 +98,19 @@ func (r *Resolver) gatewayKeyClientForConn(ctx context.Context, connID *uuid.UUI
 	return r.Gateway
 }
 
+// gatewayKeyClientForVK routes key ops to the gateway that ISSUED the key (LLD-14
+// §3.3): its persisted gateway_connection_id, else — for legacy rows minted before
+// T1 (NULL) — the team_id→department→gateway derivation. This decouples a key's
+// lifecycle (revoke/regenerate/recycle/disable) from the department's *current*
+// gateway binding, so a department re-bind can't strand the key on its original
+// gateway as an active billable orphan (bug #5).
+func (r *Resolver) gatewayKeyClientForVK(ctx context.Context, vk *ent.VirtualKey) gateway.Client {
+	if vk.GatewayConnectionID != nil {
+		return r.gatewayKeyClientForConn(ctx, vk.GatewayConnectionID)
+	}
+	return r.gatewayKeyClient(ctx, deptIDFromTeam(&vk.TeamID))
+}
+
 // gatewayModels resolves the gateway.ModelManager (upstream/router sync) — the
 // platform default gateway — falling back to the legacy injected r.GatewayModels.
 // nil = no gateway configured.
@@ -104,11 +126,115 @@ func (r *Resolver) gatewayModels(ctx context.Context) gateway.ModelManager {
 	return r.GatewayModels
 }
 
-// ReconcileGateway resolves the platform default gateway's key client for the
-// background reconciler (LLD-13 §3.3). Exported so cmd/server can wire it as the
-// reconciler's per-cycle GatewayFunc. nil when no default gateway is configured.
-func (r *Resolver) ReconcileGateway(ctx context.Context) gateway.Client {
-	return r.gatewayKeyClient(ctx, nil)
+// ReconcileTargets partitions every governance row across the gateways that own
+// it, so the background reconciler scans each gateway against only its own keys/
+// teams (LLD-14 §3.4 / OQ-5). Exported so cmd/server can wire it as the
+// reconciler's per-cycle GatewaysFunc.
+//
+// Each GatewayConnection becomes a target. A key is assigned to the gateway that
+// ISSUED it (its persisted gateway_connection_id); a legacy NULL key (minted
+// before T1) — or one whose recorded gateway no longer exists — falls back to the
+// §3.3 department-derived gateway (its team's department binding, else the
+// default). Departments are assigned by the same binding-else-default rule. Rows
+// that resolve to no gateway at all (no default configured) are left unscanned —
+// never wrongly revoked. When no GatewayConnection is configured, a single legacy
+// target (the injected r.Gateway + all rows) preserves the pre-LLD-13
+// single-gateway install; nil when there is no gateway at all (caller skips).
+func (r *Resolver) ReconcileTargets(ctx context.Context) ([]reconcile.GatewayTarget, error) {
+	conns, err := r.Ent.GatewayConnection.Query().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	keys, err := r.Ent.VirtualKey.Query().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	depts, err := r.Ent.Department.Query().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// No DB gateway configured → legacy single-gateway install: reconcile the
+	// injected r.Gateway against all rows (pre-LLD-13 behavior). nil when there is
+	// no gateway at all → the caller skips the cycle.
+	if len(conns) == 0 {
+		if r.Gateway == nil {
+			return nil, nil
+		}
+		return []reconcile.GatewayTarget{{Gateway: r.Gateway, Keys: keys, Depts: depts}}, nil
+	}
+
+	// One row bucket per GatewayConnection, plus a lookup of the platform default.
+	type bucket struct {
+		conn  *ent.GatewayConnection
+		keys  []*ent.VirtualKey
+		depts []*ent.Department
+	}
+	buckets := make(map[uuid.UUID]*bucket, len(conns))
+	var defaultConn *ent.GatewayConnection
+	for _, c := range conns {
+		buckets[c.ID] = &bucket{conn: c}
+		if c.IsDefault {
+			defaultConn = c
+		}
+	}
+	deptByID := make(map[uuid.UUID]*ent.Department, len(depts))
+	for _, d := range depts {
+		deptByID[d.ID] = d
+	}
+
+	// connForDept applies resolveDeptGateway's binding-else-default selection to the
+	// partition: a department's bound gateway when it still exists, else the platform
+	// default (nil when neither). Unlike resolveDeptGateway it does NOT surface a
+	// dangling binding as an error — for a bounded, best-effort background scan,
+	// routing such a (structurally-prevented) row to the default bucket is safe.
+	connForDept := func(d *ent.Department) *ent.GatewayConnection {
+		if d != nil && d.GatewayConnectionID != nil {
+			if b, ok := buckets[*d.GatewayConnectionID]; ok {
+				return b.conn
+			}
+		}
+		return defaultConn
+	}
+
+	// Assign each key to its issuing gateway (persisted id), else the §3.3
+	// department-derived fallback for legacy NULL / dangling rows.
+	for _, vk := range keys {
+		var c *ent.GatewayConnection
+		if vk.GatewayConnectionID != nil {
+			if b, ok := buckets[*vk.GatewayConnectionID]; ok {
+				c = b.conn
+			}
+		}
+		if c == nil {
+			var dept *ent.Department
+			if deptID := deptIDFromTeam(&vk.TeamID); deptID != nil {
+				dept = deptByID[*deptID]
+			}
+			c = connForDept(dept)
+		}
+		if c == nil {
+			continue // unresolved + no default → leave unscanned (never wrongly revoked)
+		}
+		buckets[c.ID].keys = append(buckets[c.ID].keys, vk)
+	}
+
+	// Assign each department to its serving gateway (binding else default).
+	for _, d := range depts {
+		if c := connForDept(d); c != nil {
+			buckets[c.ID].depts = append(buckets[c.ID].depts, d)
+		}
+	}
+
+	targets := make([]reconcile.GatewayTarget, 0, len(buckets))
+	for _, b := range buckets {
+		targets = append(targets, reconcile.GatewayTarget{
+			Gateway: r.buildGatewayKeyClient(ctx, b.conn),
+			Keys:    b.keys,
+			Depts:   b.depts,
+		})
+	}
+	return targets, nil
 }
 
 // deptIDFromTeam interprets a virtual key's team id as a department id (a key's
@@ -124,14 +250,29 @@ func deptIDFromTeam(teamID *string) *uuid.UUID {
 	return nil
 }
 
-// deployGateway resolves the key client AND the public URL a deployed agent's VM
-// should call (LLD-13 §3.3): the department's gateway, else the platform default,
-// else the legacy injected r.Gateway + r.GatewayURL. A nil client = unconfigured.
-func (r *Resolver) deployGateway(ctx context.Context, deptID *uuid.UUID) (gateway.Client, string) {
+// resolveKeyGateway resolves the GatewayConnection that should ISSUE a key for a
+// department (its bound gateway, else the platform default) AND a client bound to
+// it (LLD-14 §3.2). The returned connection — nil when only the legacy injected
+// r.Gateway is available — is persisted on the VirtualKey row so the key's later
+// lifecycle (revoke/recycle/reconcile) routes back to the same gateway, decoupled
+// from the department's *current* binding.
+func (r *Resolver) resolveKeyGateway(ctx context.Context, deptID *uuid.UUID) (*ent.GatewayConnection, gateway.Client) {
 	if g, err := r.resolveDeptGateway(ctx, deptID); err == nil && g != nil {
-		return r.buildGatewayKeyClient(ctx, g), gatewayPublicURL(g)
+		return g, r.buildGatewayKeyClient(ctx, g)
 	}
-	return r.Gateway, r.GatewayURL
+	return nil, r.Gateway
+}
+
+// deployGateway resolves the key client, the public URL a deployed agent's VM
+// should call, AND the issuing GatewayConnection (LLD-13 §3.3 / LLD-14): the
+// department's gateway, else the platform default, else the legacy injected
+// r.Gateway + r.GatewayURL. A nil client = unconfigured; a nil connection = the
+// legacy fallback (no DB row to persist on the key).
+func (r *Resolver) deployGateway(ctx context.Context, deptID *uuid.UUID) (gateway.Client, string, *ent.GatewayConnection) {
+	if conn, gw := r.resolveKeyGateway(ctx, deptID); conn != nil {
+		return gw, gatewayPublicURL(conn), conn
+	}
+	return r.Gateway, r.GatewayURL, nil
 }
 
 // gatewayModelsForConn builds the ModelManager for a SPECIFIC connection (a

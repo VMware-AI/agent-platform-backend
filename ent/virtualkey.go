@@ -37,6 +37,8 @@ type VirtualKey struct {
 	RateLimitPolicyID *uuid.UUID `json:"rate_limit_policy_id,omitempty"`
 	// TeamID holds the value of the "team_id" field.
 	TeamID string `json:"team_id,omitempty"`
+	// GatewayConnectionID holds the value of the "gateway_connection_id" field.
+	GatewayConnectionID *uuid.UUID `json:"gateway_connection_id,omitempty"`
 	// Models holds the value of the "models" field.
 	Models []string `json:"models,omitempty"`
 	// MaxBudget holds the value of the "max_budget" field.
@@ -53,7 +55,7 @@ func (*VirtualKey) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case virtualkey.FieldAgentID, virtualkey.FieldRateLimitPolicyID:
+		case virtualkey.FieldAgentID, virtualkey.FieldRateLimitPolicyID, virtualkey.FieldGatewayConnectionID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case virtualkey.FieldModels:
 			values[i] = new([]byte)
@@ -141,6 +143,13 @@ func (_m *VirtualKey) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field team_id", values[i])
 			} else if value.Valid {
 				_m.TeamID = value.String
+			}
+		case virtualkey.FieldGatewayConnectionID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field gateway_connection_id", values[i])
+			} else if value.Valid {
+				_m.GatewayConnectionID = new(uuid.UUID)
+				*_m.GatewayConnectionID = *value.S.(*uuid.UUID)
 			}
 		case virtualkey.FieldModels:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -234,6 +243,11 @@ func (_m *VirtualKey) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("team_id=")
 	builder.WriteString(_m.TeamID)
+	builder.WriteString(", ")
+	if v := _m.GatewayConnectionID; v != nil {
+		builder.WriteString("gateway_connection_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("models=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Models))

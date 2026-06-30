@@ -7,24 +7,23 @@ package graph
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
+	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 // CreateModelGateway registers a litellm gateway (console 模型网关 page). masterKey
-// is written to the secret store (明文不落库); provider/strategy are fixed to the
-// console's single supported values.
+// is written to the secret store (明文不落库). On a successful save the gateway
+// is synced in the background (status / strategy / backendModelCount are
+// populated by an async goroutine — the mutation response returns the row in
+// its just-created state, which the UI refreshes on the next list query).
 func (r *mutationResolver) CreateModelGateway(ctx context.Context, input model.ModelGatewayInput) (*model.ModelGateway, error) {
 	c := r.Ent.GatewayConnection.Create().SetName(input.Name).SetEndpoint(input.Endpoint)
-	if input.AdminURL != nil {
-		c.SetAdminURL(*input.AdminURL)
-	}
 	ref, set, minted, err := r.resolveKeySecretRef(ctx, "gateway/"+input.Name, input.MasterKey, nil)
 	if err != nil {
 		return nil, err
@@ -40,11 +39,15 @@ func (r *mutationResolver) CreateModelGateway(ctx context.Context, input model.M
 		return nil, err
 	}
 	r.audit(ctx, "model_gateway.create", "gateway_connection", g.ID.String(), true, actorID(auth.FromContext(ctx)))
-	cnt, err := r.backendModelCount(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return toModelGateway(g, cnt), nil
+	// Fire-and-forget sync: probe litellm and persist status / strategy /
+	// backendModelCount. The mutation response returns immediately with the
+	// row's just-created state (backendModelCount = 0, lastSyncStatus = NEVER,
+	// loadBalancingStrategy = the column's default "SIMPLE_SHUFFLE"); the UI
+	// sees the populated values on the next list query, within a few seconds.
+	// We do NOT block the mutation on the probe — slow / unreachable gateways
+	// would freeze the form.
+	r.syncGatewayInBackground(g.ID)
+	return r.toModelGateway(g), nil
 }
 
 // UpdateModelGateway edits a gateway's name/endpoint and (on a re-submitted
@@ -59,9 +62,6 @@ func (r *mutationResolver) UpdateModelGateway(ctx context.Context, id string, in
 		return nil, err
 	}
 	u := r.Ent.GatewayConnection.UpdateOneID(gid).SetName(input.Name).SetEndpoint(input.Endpoint)
-	if input.AdminURL != nil {
-		u.SetAdminURL(*input.AdminURL)
-	}
 	// On a re-submitted masterKey the secret store mints a NEW ref; remember the
 	// prior one so we can delete it after the row is updated (no orphan on rotate).
 	rotatedFrom := ""
@@ -84,11 +84,7 @@ func (r *mutationResolver) UpdateModelGateway(ctx context.Context, id string, in
 		r.deleteSecretRef(ctx, rotatedFrom) // best-effort: retire the rotated-away key
 	}
 	r.audit(ctx, "model_gateway.update", "gateway_connection", id, true, actorID(auth.FromContext(ctx)))
-	cnt, err := r.backendModelCount(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return toModelGateway(g, cnt), nil
+	return r.toModelGateway(g), nil
 }
 
 // DeleteModelGateway removes a gateway, returning its id for the toast. Shares
@@ -102,9 +98,15 @@ func (r *mutationResolver) DeleteModelGateway(ctx context.Context, id string) (*
 	return &model.DeleteModelGatewayPayload{DeletedID: id}, nil
 }
 
-// TestModelGatewayConnection pings the live litellm gateway, records the status,
-// and returns the measured round-trip latency.
-func (r *mutationResolver) TestModelGatewayConnection(ctx context.Context, id string) (*model.ModelGatewayTestResult, error) {
+// SyncModelGatewayConnection pings the live litellm gateway, persists the
+// connectivity status, the current global routing strategy, and the count of
+// models the gateway reports. loadBalancingStrategy and backendModelCount are
+// only written when their respective probes succeed; on failure the previously
+// stored values are preserved so a transient outage doesn't zero the displayed
+// count or reset the strategy. The result's gateway is the post-sync row —
+// all three fields (status, strategy, count) are read directly from the ent
+// columns.
+func (r *mutationResolver) SyncModelGatewayConnection(ctx context.Context, id string) (*model.ModelGatewaySyncResult, error) {
 	gid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid id")
@@ -113,41 +115,61 @@ func (r *mutationResolver) TestModelGatewayConnection(ctx context.Context, id st
 	if err != nil {
 		return nil, err
 	}
-	// Test the gateway under test specifically: a client bound to its own endpoint
-	// and master key (resolved from the secret store), not a process-wide default —
-	// so the result and persisted status reflect this row even with many gateways.
-	status := gatewayconnection.StatusConnected
-	message := "connection ok"
-	start := time.Now()
-	terr := r.buildGatewayModels(ctx, g).TestConnection(ctx)
-	ms := int(time.Since(start).Milliseconds())
-	latency := &ms
-	if terr != nil {
-		status = gatewayconnection.StatusError
-		// Never echo the raw transport error to the client — it can embed the
-		// endpoint (and any user-info in it). Log the detail server-side only.
-		message = "connection failed"
-		log.Printf("model gateway test failed (id=%s): %v", id, terr)
+	r.beginSync(g.ID)
+
+	mgr := r.buildGatewayModels(ctx, g)
+	status, strategy := probeGatewayConnection(ctx, mgr)
+	count, ok := probeGatewayBackendModelCount(ctx, mgr)
+	var cntArg *int
+	if ok {
+		cntArg = &count
 	}
-	// Persist status + (on success) last_synced_at via the shared helper so this
-	// page and the routing page agree on "last synced".
-	g, err = r.applyGatewayTestResult(ctx, g, status)
+
+	g, err = r.applyGatewayTestResult(ctx, g, status, cntArg, strategy)
+	// Clear the SYNCING overlay BEFORE returning so the post-sync projection
+	// reflects the freshly-written row state, not the in-flight placeholder.
+	r.endSync(g.ID)
 	if err != nil {
 		return nil, err
 	}
+	ok = status == gatewayconnection.StatusConnected
+	r.audit(ctx, "model_gateway.sync", "gateway_connection", id, ok, actorID(auth.FromContext(ctx)))
+	return &model.ModelGatewaySyncResult{
+		Success: ok,
+		Message: testResultMessage(ok),
+		Gateway: r.toModelGateway(g),
+	}, nil
+}
+
+// TestNewModelGatewayConnection is the pre-create dry-run: probe a not-yet-
+// persisted gateway config. The form-level "Test Connection" button on the
+// 接入表单 uses this. No row is created or modified; the result carries no
+// gateway payload. Only the connectivity probe runs — the routing-strategy
+// and backend-model-count probes are intentionally skipped (dry-run is for
+// "can I reach this box?", not "what's it configured to do?").
+func (r *mutationResolver) TestNewModelGatewayConnection(ctx context.Context, input model.TestModelGatewayConnectionInput) (*model.ModelGatewayTestResult, error) {
+	if input.Endpoint == "" || input.MasterKey == "" {
+		return nil, gqlerror.Errorf("endpoint and masterKey are required")
+	}
+	// Build a per-row HTTP client bound to the typed-in endpoint + key. We
+	// bypass the ent row / secret-store round-trip because the user has not
+	// saved anything yet — the master key in the input is the plaintext
+	// they typed, not a ref. The connection never leaves the request scope.
+	c, err := gateway.NewHTTPClient(input.Endpoint, input.MasterKey)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid endpoint or master key: %v", err)
+	}
+	var mgr gateway.ModelManager = c
+	if r.GatewayClientFor != nil {
+		mgr = r.GatewayClientFor(ctx, input.Endpoint, input.MasterKey)
+	}
+	status := probeGatewayConnectionStatus(ctx, mgr)
 	ok := status == gatewayconnection.StatusConnected
-	r.audit(ctx, "model_gateway.test", "gateway_connection", id, ok, actorID(auth.FromContext(ctx)))
-	cnt, err := r.backendModelCount(ctx)
-	if err != nil {
-		return nil, err
-	}
+	r.audit(ctx, "model_gateway.test_dry_run", "gateway_connection", input.Endpoint, ok, actorID(auth.FromContext(ctx)))
 	return &model.ModelGatewayTestResult{
-		Success:   ok,
-		Status:    modelGatewayStatus(status),
-		LatencyMs: latency,
-		Message:   message,
-		TestedAt:  time.Now(),
-		Gateway:   toModelGateway(g, cnt),
+		Success:  ok,
+		Message:  testResultMessage(ok),
+		TestedAt: time.Now(),
 	}, nil
 }
 
@@ -155,16 +177,11 @@ func (r *mutationResolver) TestModelGatewayConnection(ctx context.Context, id st
 // the console's ModelGateway aggregate.
 func (r *queryResolver) ModelGateways(ctx context.Context, filter *model.ModelGatewayFilterInput, page model.PageInput, sort *model.ModelGatewaySort) (*model.ModelGatewayConnection, error) {
 	base := r.Ent.GatewayConnection.Query()
-	if filter != nil {
-		if filter.Search != nil && *filter.Search != "" {
-			base = base.Where(gatewayconnection.Or(
-				gatewayconnection.NameContainsFold(*filter.Search),
-				gatewayconnection.EndpointContainsFold(*filter.Search),
-			))
-		}
-		if filter.Status != nil {
-			base = base.Where(gatewayconnection.StatusEQ(entGatewayStatus(*filter.Status)))
-		}
+	if filter != nil && filter.Search != nil && *filter.Search != "" {
+		base = base.Where(gatewayconnection.Or(
+			gatewayconnection.NameContainsFold(*filter.Search),
+			gatewayconnection.EndpointContainsFold(*filter.Search),
+		))
 	}
 	total, err := base.Clone().Count(ctx)
 	if err != nil {
@@ -181,13 +198,9 @@ func (r *queryResolver) ModelGateways(ctx context.Context, filter *model.ModelGa
 	if err != nil {
 		return nil, err
 	}
-	cnt, err := r.backendModelCount(ctx)
-	if err != nil {
-		return nil, err
-	}
 	nodes := make([]model.ModelGateway, 0, len(gws))
 	for _, g := range gws {
-		nodes = append(nodes, *toModelGateway(g, cnt))
+		nodes = append(nodes, *r.toModelGateway(g))
 	}
 	return &model.ModelGatewayConnection{Nodes: nodes, TotalCount: total}, nil
 }
@@ -199,7 +212,7 @@ func (r *queryResolver) ModelGatewaySyncSummary(ctx context.Context) (*model.Mod
 	if err != nil {
 		return nil, err
 	}
-	success, failed := 0, 0
+	success, failed, syncing := 0, 0, 0
 	var lastSyncedAt *time.Time
 	for _, g := range gws {
 		switch g.Status {
@@ -208,13 +221,19 @@ func (r *queryResolver) ModelGatewaySyncSummary(ctx context.Context) (*model.Mod
 		case gatewayconnection.StatusError:
 			failed++
 		}
+		// A row whose id is in the resolver's in-flight sync map is counted
+		// toward syncing, not success/failed — so the banner reflects a
+		// sync in progress even before it lands.
+		if r.isSyncing(g.ID) {
+			syncing++
+		}
 		// Most recent real sync across the fleet — independent of current status, so
 		// a gateway that synced then dropped still contributes its sync time.
 		if g.LastSyncedAt != nil && (lastSyncedAt == nil || g.LastSyncedAt.After(*lastSyncedAt)) {
 			lastSyncedAt = g.LastSyncedAt
 		}
 	}
-	// Total state machine over the three ent states (connected/error/disconnected).
+	// Total state machine over the four states (connected/error/disconnected/syncing).
 	// Disconnected rows count as "not yet synced": they make a fleet neither fully
 	// SYNCED nor FAILED, so a mix with any success is PARTIAL.
 	state := model.ModelGatewaySyncStateNever
@@ -227,6 +246,8 @@ func (r *queryResolver) ModelGatewaySyncSummary(ctx context.Context) (*model.Mod
 		state = model.ModelGatewaySyncStateFailed
 	case success > 0 && (failed > 0 || success < len(gws)):
 		state = model.ModelGatewaySyncStatePartial
+	case syncing == len(gws) && len(gws) > 0:
+		state = model.ModelGatewaySyncStateSyncing
 	default:
 		// no success, no failure → all disconnected (never synced)
 		state = model.ModelGatewaySyncStateNever

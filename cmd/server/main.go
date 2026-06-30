@@ -157,10 +157,11 @@ func main() {
 	if cfg.ReconcileInterval > 0 {
 		rec := &reconcile.Reconciler{
 			Ent: client,
-			// Reconcile the platform default gateway, resolved from DB each cycle
-			// (LLD-13 §3.3); cycles are skipped until a default gateway exists.
-			GatewayFunc: func(ctx context.Context) reconcile.Gateway { return resolver.ReconcileGateway(ctx) },
-			Prune:       cfg.ReconcilePrune,
+			// Reconcile EVERY configured gateway against only its own keys/teams,
+			// partitioned from DB each cycle (LLD-14 §3.4 / OQ-5); cycles are skipped
+			// until at least one gateway is configured.
+			GatewaysFunc: resolver.ReconcileTargets,
+			Prune:        cfg.ReconcilePrune,
 		}
 		// Single-flight across replicas via a Postgres advisory lock so the prune
 		// runs on exactly one replica (postgres only — the dev sqlite path has a
@@ -171,7 +172,7 @@ func main() {
 			rec.IsLeader = lease.IsLeader
 		}
 		interval := time.Duration(cfg.ReconcileInterval) * time.Second
-		log.Printf("gateway-key reconciler: every %s (prune=%v), default gateway", interval, cfg.ReconcilePrune)
+		log.Printf("gateway-key reconciler: every %s (prune=%v), all gateways", interval, cfg.ReconcilePrune)
 		go rec.Run(reconcileCtx, interval)
 	}
 
@@ -181,6 +182,15 @@ func main() {
 		poolSyncCtx, stopPoolSync := context.WithCancel(context.Background())
 		defer stopPoolSync()
 		go resolver.StartAutoSync(poolSyncCtx, time.Duration(cfg.PoolSyncIntervalSeconds)*time.Second)
+	}
+
+	// Periodically re-sync every model gateway (status, loadBalancingStrategy,
+	// backendModelCount). Default 10m; disable with MODEL_GATEWAY_SYNC_INTERVAL_SECONDS=0.
+	if cfg.ModelGatewaySyncIntervalSeconds > 0 {
+		mgSyncCtx, stopMGSync := context.WithCancel(context.Background())
+		defer stopMGSync()
+		log.Printf("model-gateway auto-sync: every %s", time.Duration(cfg.ModelGatewaySyncIntervalSeconds)*time.Second)
+		go resolver.StartModelGatewayAutoSync(mgSyncCtx, time.Duration(cfg.ModelGatewaySyncIntervalSeconds)*time.Second)
 	}
 
 	es := graph.NewExecutableSchema(graph.Config{

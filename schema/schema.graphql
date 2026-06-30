@@ -10,8 +10,7 @@ scalar Map
 enum RoleName {
   admin
   user
-  observability
-  tenant_admin
+  read_only
 }
 
 type User {
@@ -24,7 +23,10 @@ type User {
   role: RoleName!
   tenantId: ID
   mustChangePassword: Boolean!
-  isActive: Boolean!
+  enabled: Boolean!
+  # ONLINE when the user currently has at least one live session (derived from the
+  # session store, not a column). For the `me` caller this is necessarily ONLINE.
+  connectionStatus: ConnectionStatus! @goField(forceResolver: true)
   lastLoginAt: Time
   createdAt: Time!
 }

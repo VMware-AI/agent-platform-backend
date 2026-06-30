@@ -25,7 +25,7 @@ func (User) Fields() []ent.Field {
 		// Sensitive: never serialized into GraphQL output or logs.
 		field.String("password_hash").NotEmpty().Sensitive(),
 		field.Enum("role").
-			Values("admin", "user", "observability", "tenant-admin").
+			Values("admin", "user", "read_only").
 			Default("user"),
 		field.UUID("tenant_id", uuid.UUID{}).Optional().Nillable(),
 		field.Bool("must_change_password").Default(true),

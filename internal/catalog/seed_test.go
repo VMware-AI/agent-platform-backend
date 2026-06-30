@@ -104,3 +104,21 @@ func TestSeed_PreservesOperatorEdits(t *testing.T) {
 		t.Errorf("seed clobbered operator edits: %+v", got)
 	}
 }
+
+// Air-gap (#75): no built-in install command may hardcode an external host. Every
+// package/script fetch must go through the {{AGENT_PKG_BASE_URL}} mirror so an
+// offline deployment points at an internal mirror with one knob. goose/xiaoguai
+// already complied; this pins qoder (the former online-only holdout) and guards
+// any future entry from re-introducing a hardcoded URL.
+func TestBuiltins_FetchOnlyViaMirrorPlaceholder(t *testing.T) {
+	for _, e := range builtins {
+		if strings.Contains(e.installCommand, "http://") || strings.Contains(e.installCommand, "https://") {
+			t.Errorf("%s install_command hardcodes an external URL (air-gap regression): %q", e.kind, e.installCommand)
+		}
+		// A scheme-less host (e.g. `curl example.com/x`) would slip past the check
+		// above, so also require the mirror placeholder whenever the command fetches.
+		if strings.Contains(e.installCommand, "curl") && !strings.Contains(e.installCommand, "{{AGENT_PKG_BASE_URL}}") {
+			t.Errorf("%s fetches via curl but not through the {{AGENT_PKG_BASE_URL}} mirror: %q", e.kind, e.installCommand)
+		}
+	}
+}

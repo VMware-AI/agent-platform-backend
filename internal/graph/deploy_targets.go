@@ -27,6 +27,7 @@ type deployTargets struct {
 	deployTeamID string
 	gw           gateway.Client
 	gwURL        string
+	gwConn       *ent.GatewayConnection
 	ownerID      uuid.UUID
 	familyID     uuid.UUID
 	versionID    uuid.UUID
@@ -69,7 +70,7 @@ func (r *mutationResolver) resolveDeployTargets(ctx context.Context, input model
 	if deptID != nil {
 		deployTeamID = deptID.String()
 	}
-	gw, gwURL := r.deployGateway(ctx, deptID)
+	gw, gwURL, gwConn := r.deployGateway(ctx, deptID)
 	if gw == nil {
 		return nil, gqlerror.Errorf("deploy is not configured (gateway required)")
 	}
@@ -141,6 +142,7 @@ func (r *mutationResolver) resolveDeployTargets(ctx context.Context, input model
 		deployTeamID: deployTeamID,
 		gw:           gw,
 		gwURL:        gwURL,
+		gwConn:       gwConn,
 		ownerID:      ownerID,
 		familyID:     familyID,
 		versionID:    versionID,

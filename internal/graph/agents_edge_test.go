@@ -272,62 +272,38 @@ func TestAgentsEdge_VisibilityScopingByRole(t *testing.T) {
 	qr := &queryResolver{r}
 	bg := context.Background()
 
-	tenantA := uuid.New()
-	tenantB := uuid.New()
 	uA := r.Ent.User.Create().SetUsername("ua").SetEmail("ua@x.io").
-		SetPasswordHash("x").SetRole("user").SetTenantID(tenantA).SaveX(bg)
+		SetPasswordHash("x").SetRole("user").SaveX(bg)
 	uB := r.Ent.User.Create().SetUsername("ub").SetEmail("ub@x.io").
-		SetPasswordHash("x").SetRole("user").SetTenantID(tenantB).SaveX(bg)
+		SetPasswordHash("x").SetRole("user").SaveX(bg)
 
-	// tenant A: two agents (one owned by uA), tenant B: one agent.
-	seedAgentEdge(t, r, "a-own", "goose", agent.StatusRunning, uA.ID, nil, &tenantA)
-	seedAgentEdge(t, r, "a-other", "goose", agent.StatusRunning, uuid.New(), nil, &tenantA)
-	seedAgentEdge(t, r, "b-one", "goose", agent.StatusRunning, uB.ID, nil, &tenantB)
+	// Three agents: a-own (uA), a-other (random owner), b-one (uB).
+	seedAgentEdge(t, r, "a-own", "goose", agent.StatusRunning, uA.ID, nil, nil)
+	seedAgentEdge(t, r, "a-other", "goose", agent.StatusRunning, uuid.New(), nil, nil)
+	seedAgentEdge(t, r, "b-one", "goose", agent.StatusRunning, uB.ID, nil, nil)
 
 	// admin → all 3.
 	if c := mustAgentsEdge(t, qr, adminCtx(), nil, nil, nil); c.TotalCount != 3 {
 		t.Fatalf("admin should see all 3, got %d", c.TotalCount)
 	}
 
-	// tenant-admin of A → only A's 2 agents, none of B's.
-	taCtx := tenantAdminCtx(uuid.New().String(), tenantA.String())
-	taConn := mustAgentsEdge(t, qr, taCtx, nil, nil, nil)
-	if taConn.TotalCount != 2 {
-		t.Fatalf("tenant-admin(A) should see 2, got %d", taConn.TotalCount)
-	}
-	if findNode(taConn.Nodes, "b-one") != nil {
-		t.Fatal("tenant-admin(A) must NOT see tenant B's agent")
+	// read_only → all 3 (new in 3-role refactor: read_only sees all agents).
+	roCtx := readOnlyCtx()
+	roConn := mustAgentsEdge(t, qr, roCtx, nil, nil, nil)
+	if roConn.TotalCount != 3 {
+		t.Fatalf("read_only should see all 3, got %d", roConn.TotalCount)
 	}
 
-	// regular user uA → only the agent they own, not the tenant-mate's.
+	// regular user uA → only the agent they own.
 	uaConn := mustAgentsEdge(t, qr, userCtx(uA.ID.String(), string(auth.RoleUser)), nil, nil, nil)
 	if uaConn.TotalCount != 1 || findNode(uaConn.Nodes, "a-own") == nil {
 		t.Fatalf("user uA should see only a-own, got %+v", uaConn.Nodes)
 	}
 	if findNode(uaConn.Nodes, "a-other") != nil {
-		t.Fatal("regular user must not see another owner's agent in the same tenant")
+		t.Fatal("regular user must not see another owner's agent")
 	}
-}
-
-// A tenant-admin whose TenantID is malformed must fail closed (denyAll), seeing
-// zero agents — never the un-tenanted / cross-tenant fallback.
-func TestAgentsEdge_TenantAdminMalformedTenantDeniesAll(t *testing.T) {
-	r, cleanup := newTestResolver(t)
-	defer cleanup()
-	qr := &queryResolver{r}
-	bg := context.Background()
-
-	owner := r.Ent.User.Create().SetUsername("mt").SetEmail("mt@x.io").
-		SetPasswordHash("x").SetRole("user").SaveX(bg)
-	tenant := uuid.New()
-	seedAgentEdge(t, r, "scoped", "goose", agent.StatusRunning, owner.ID, nil, &tenant)
-	seedAgentEdge(t, r, "untenanted", "goose", agent.StatusRunning, owner.ID, nil, nil)
-
-	bad := auth.WithCurrentUser(context.Background(),
-		&auth.CurrentUser{ID: uuid.New().String(), Role: auth.RoleTenantAdmin, TenantID: "not-a-uuid"})
-	conn := mustAgentsEdge(t, qr, bad, nil, nil, nil)
-	if conn.TotalCount != 0 || len(conn.Nodes) != 0 {
-		t.Fatalf("malformed-tenant tenant-admin must see nothing, got total=%d", conn.TotalCount)
+	if findNode(uaConn.Nodes, "b-one") != nil {
+		t.Fatal("regular user must not see another user's agent")
 	}
 }
 

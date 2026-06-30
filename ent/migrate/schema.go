@@ -262,12 +262,12 @@ var (
 		{Name: "name", Type: field.TypeString, Unique: true},
 		{Name: "endpoint", Type: field.TypeString},
 		{Name: "master_key_ref", Type: field.TypeString, Nullable: true},
-		{Name: "admin_url", Type: field.TypeString, Nullable: true},
 		{Name: "public_url", Type: field.TypeString, Nullable: true},
 		{Name: "is_default", Type: field.TypeBool, Default: false},
 		{Name: "last_synced_at", Type: field.TypeTime, Nullable: true},
+		{Name: "backend_model_count", Type: field.TypeInt, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"connected", "disconnected", "error"}, Default: "disconnected"},
-		{Name: "load_balance_strategy", Type: field.TypeEnum, Enums: []string{"simple_shuffle", "latency", "usage_v2", "least_busy", "cost"}, Default: "simple_shuffle"},
+		{Name: "load_balance_strategy", Type: field.TypeEnum, Enums: []string{"SIMPLE_SHUFFLE", "LEAST_BUSY", "LATENCY_BASED_ROUTING", "USAGE_BASED_ROUTING_V2", "COST_BASED_ROUTING"}, Default: "SIMPLE_SHUFFLE"},
 	}
 	// GatewayConnectionsTable holds the schema information for the "gateway_connections" table.
 	GatewayConnectionsTable = &schema.Table{
@@ -278,7 +278,7 @@ var (
 			{
 				Name:    "gatewayconnection_is_default",
 				Unique:  true,
-				Columns: []*schema.Column{GatewayConnectionsColumns[8]},
+				Columns: []*schema.Column{GatewayConnectionsColumns[7]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "is_default",
 				},
@@ -338,7 +338,7 @@ var (
 		{Name: "gateway_connection_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "gateway_name", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "upstreams", Type: field.TypeJSON, Nullable: true},
-		{Name: "strategy", Type: field.TypeEnum, Enums: []string{"simple_shuffle", "latency", "usage_v2", "least_busy", "cost"}, Default: "simple_shuffle"},
+		{Name: "strategy", Type: field.TypeEnum, Enums: []string{"SIMPLE_SHUFFLE", "LEAST_BUSY", "LATENCY_BASED_ROUTING", "USAGE_BASED_ROUTING_V2", "COST_BASED_ROUTING"}, Default: "SIMPLE_SHUFFLE"},
 		{Name: "ui_strategy", Type: field.TypeEnum, Enums: []string{"ROUND_ROBIN", "WEIGHTED_ROUND_ROBIN", "RANDOM"}, Default: "ROUND_ROBIN"},
 		{Name: "enabled", Type: field.TypeBool, Default: true},
 	}
@@ -768,7 +768,7 @@ var (
 		{Name: "username", Type: field.TypeString, Unique: true},
 		{Name: "email", Type: field.TypeString, Unique: true},
 		{Name: "password_hash", Type: field.TypeString},
-		{Name: "role", Type: field.TypeEnum, Enums: []string{"admin", "user", "observability", "tenant-admin"}, Default: "user"},
+		{Name: "role", Type: field.TypeEnum, Enums: []string{"admin", "user", "read_only"}, Default: "user"},
 		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "must_change_password", Type: field.TypeBool, Default: true},
 		{Name: "is_active", Type: field.TypeBool, Default: true},
@@ -799,6 +799,7 @@ var (
 		{Name: "agent_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "rate_limit_policy_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "team_id", Type: field.TypeString, Nullable: true},
+		{Name: "gateway_connection_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "models", Type: field.TypeJSON, Nullable: true},
 		{Name: "max_budget", Type: field.TypeFloat64, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "disabled", "revoked"}, Default: "active"},

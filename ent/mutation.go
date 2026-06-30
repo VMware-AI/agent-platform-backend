@@ -7973,24 +7973,25 @@ func (m *EnvironmentMutation) ResetEdge(name string) error {
 // GatewayConnectionMutation represents an operation that mutates the GatewayConnection nodes in the graph.
 type GatewayConnectionMutation struct {
 	config
-	op                    Op
-	typ                   string
-	id                    *uuid.UUID
-	created_at            *time.Time
-	updated_at            *time.Time
-	name                  *string
-	endpoint              *string
-	master_key_ref        *string
-	admin_url             *string
-	public_url            *string
-	is_default            *bool
-	last_synced_at        *time.Time
-	status                *gatewayconnection.Status
-	load_balance_strategy *gatewayconnection.LoadBalanceStrategy
-	clearedFields         map[string]struct{}
-	done                  bool
-	oldValue              func(context.Context) (*GatewayConnection, error)
-	predicates            []predicate.GatewayConnection
+	op                     Op
+	typ                    string
+	id                     *uuid.UUID
+	created_at             *time.Time
+	updated_at             *time.Time
+	name                   *string
+	endpoint               *string
+	master_key_ref         *string
+	public_url             *string
+	is_default             *bool
+	last_synced_at         *time.Time
+	backend_model_count    *int
+	addbackend_model_count *int
+	status                 *gatewayconnection.Status
+	load_balance_strategy  *gatewayconnection.LoadBalanceStrategy
+	clearedFields          map[string]struct{}
+	done                   bool
+	oldValue               func(context.Context) (*GatewayConnection, error)
+	predicates             []predicate.GatewayConnection
 }
 
 var _ ent.Mutation = (*GatewayConnectionMutation)(nil)
@@ -8290,55 +8291,6 @@ func (m *GatewayConnectionMutation) ResetMasterKeyRef() {
 	delete(m.clearedFields, gatewayconnection.FieldMasterKeyRef)
 }
 
-// SetAdminURL sets the "admin_url" field.
-func (m *GatewayConnectionMutation) SetAdminURL(s string) {
-	m.admin_url = &s
-}
-
-// AdminURL returns the value of the "admin_url" field in the mutation.
-func (m *GatewayConnectionMutation) AdminURL() (r string, exists bool) {
-	v := m.admin_url
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldAdminURL returns the old "admin_url" field's value of the GatewayConnection entity.
-// If the GatewayConnection object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *GatewayConnectionMutation) OldAdminURL(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAdminURL is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAdminURL requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAdminURL: %w", err)
-	}
-	return oldValue.AdminURL, nil
-}
-
-// ClearAdminURL clears the value of the "admin_url" field.
-func (m *GatewayConnectionMutation) ClearAdminURL() {
-	m.admin_url = nil
-	m.clearedFields[gatewayconnection.FieldAdminURL] = struct{}{}
-}
-
-// AdminURLCleared returns if the "admin_url" field was cleared in this mutation.
-func (m *GatewayConnectionMutation) AdminURLCleared() bool {
-	_, ok := m.clearedFields[gatewayconnection.FieldAdminURL]
-	return ok
-}
-
-// ResetAdminURL resets all changes to the "admin_url" field.
-func (m *GatewayConnectionMutation) ResetAdminURL() {
-	m.admin_url = nil
-	delete(m.clearedFields, gatewayconnection.FieldAdminURL)
-}
-
 // SetPublicURL sets the "public_url" field.
 func (m *GatewayConnectionMutation) SetPublicURL(s string) {
 	m.public_url = &s
@@ -8473,6 +8425,76 @@ func (m *GatewayConnectionMutation) ResetLastSyncedAt() {
 	delete(m.clearedFields, gatewayconnection.FieldLastSyncedAt)
 }
 
+// SetBackendModelCount sets the "backend_model_count" field.
+func (m *GatewayConnectionMutation) SetBackendModelCount(i int) {
+	m.backend_model_count = &i
+	m.addbackend_model_count = nil
+}
+
+// BackendModelCount returns the value of the "backend_model_count" field in the mutation.
+func (m *GatewayConnectionMutation) BackendModelCount() (r int, exists bool) {
+	v := m.backend_model_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBackendModelCount returns the old "backend_model_count" field's value of the GatewayConnection entity.
+// If the GatewayConnection object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GatewayConnectionMutation) OldBackendModelCount(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBackendModelCount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBackendModelCount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBackendModelCount: %w", err)
+	}
+	return oldValue.BackendModelCount, nil
+}
+
+// AddBackendModelCount adds i to the "backend_model_count" field.
+func (m *GatewayConnectionMutation) AddBackendModelCount(i int) {
+	if m.addbackend_model_count != nil {
+		*m.addbackend_model_count += i
+	} else {
+		m.addbackend_model_count = &i
+	}
+}
+
+// AddedBackendModelCount returns the value that was added to the "backend_model_count" field in this mutation.
+func (m *GatewayConnectionMutation) AddedBackendModelCount() (r int, exists bool) {
+	v := m.addbackend_model_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearBackendModelCount clears the value of the "backend_model_count" field.
+func (m *GatewayConnectionMutation) ClearBackendModelCount() {
+	m.backend_model_count = nil
+	m.addbackend_model_count = nil
+	m.clearedFields[gatewayconnection.FieldBackendModelCount] = struct{}{}
+}
+
+// BackendModelCountCleared returns if the "backend_model_count" field was cleared in this mutation.
+func (m *GatewayConnectionMutation) BackendModelCountCleared() bool {
+	_, ok := m.clearedFields[gatewayconnection.FieldBackendModelCount]
+	return ok
+}
+
+// ResetBackendModelCount resets all changes to the "backend_model_count" field.
+func (m *GatewayConnectionMutation) ResetBackendModelCount() {
+	m.backend_model_count = nil
+	m.addbackend_model_count = nil
+	delete(m.clearedFields, gatewayconnection.FieldBackendModelCount)
+}
+
 // SetStatus sets the "status" field.
 func (m *GatewayConnectionMutation) SetStatus(ga gatewayconnection.Status) {
 	m.status = &ga
@@ -8595,9 +8617,6 @@ func (m *GatewayConnectionMutation) Fields() []string {
 	if m.master_key_ref != nil {
 		fields = append(fields, gatewayconnection.FieldMasterKeyRef)
 	}
-	if m.admin_url != nil {
-		fields = append(fields, gatewayconnection.FieldAdminURL)
-	}
 	if m.public_url != nil {
 		fields = append(fields, gatewayconnection.FieldPublicURL)
 	}
@@ -8606,6 +8625,9 @@ func (m *GatewayConnectionMutation) Fields() []string {
 	}
 	if m.last_synced_at != nil {
 		fields = append(fields, gatewayconnection.FieldLastSyncedAt)
+	}
+	if m.backend_model_count != nil {
+		fields = append(fields, gatewayconnection.FieldBackendModelCount)
 	}
 	if m.status != nil {
 		fields = append(fields, gatewayconnection.FieldStatus)
@@ -8631,14 +8653,14 @@ func (m *GatewayConnectionMutation) Field(name string) (ent.Value, bool) {
 		return m.Endpoint()
 	case gatewayconnection.FieldMasterKeyRef:
 		return m.MasterKeyRef()
-	case gatewayconnection.FieldAdminURL:
-		return m.AdminURL()
 	case gatewayconnection.FieldPublicURL:
 		return m.PublicURL()
 	case gatewayconnection.FieldIsDefault:
 		return m.IsDefault()
 	case gatewayconnection.FieldLastSyncedAt:
 		return m.LastSyncedAt()
+	case gatewayconnection.FieldBackendModelCount:
+		return m.BackendModelCount()
 	case gatewayconnection.FieldStatus:
 		return m.Status()
 	case gatewayconnection.FieldLoadBalanceStrategy:
@@ -8662,14 +8684,14 @@ func (m *GatewayConnectionMutation) OldField(ctx context.Context, name string) (
 		return m.OldEndpoint(ctx)
 	case gatewayconnection.FieldMasterKeyRef:
 		return m.OldMasterKeyRef(ctx)
-	case gatewayconnection.FieldAdminURL:
-		return m.OldAdminURL(ctx)
 	case gatewayconnection.FieldPublicURL:
 		return m.OldPublicURL(ctx)
 	case gatewayconnection.FieldIsDefault:
 		return m.OldIsDefault(ctx)
 	case gatewayconnection.FieldLastSyncedAt:
 		return m.OldLastSyncedAt(ctx)
+	case gatewayconnection.FieldBackendModelCount:
+		return m.OldBackendModelCount(ctx)
 	case gatewayconnection.FieldStatus:
 		return m.OldStatus(ctx)
 	case gatewayconnection.FieldLoadBalanceStrategy:
@@ -8718,13 +8740,6 @@ func (m *GatewayConnectionMutation) SetField(name string, value ent.Value) error
 		}
 		m.SetMasterKeyRef(v)
 		return nil
-	case gatewayconnection.FieldAdminURL:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetAdminURL(v)
-		return nil
 	case gatewayconnection.FieldPublicURL:
 		v, ok := value.(string)
 		if !ok {
@@ -8745,6 +8760,13 @@ func (m *GatewayConnectionMutation) SetField(name string, value ent.Value) error
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetLastSyncedAt(v)
+		return nil
+	case gatewayconnection.FieldBackendModelCount:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBackendModelCount(v)
 		return nil
 	case gatewayconnection.FieldStatus:
 		v, ok := value.(gatewayconnection.Status)
@@ -8767,13 +8789,21 @@ func (m *GatewayConnectionMutation) SetField(name string, value ent.Value) error
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *GatewayConnectionMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addbackend_model_count != nil {
+		fields = append(fields, gatewayconnection.FieldBackendModelCount)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *GatewayConnectionMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case gatewayconnection.FieldBackendModelCount:
+		return m.AddedBackendModelCount()
+	}
 	return nil, false
 }
 
@@ -8782,6 +8812,13 @@ func (m *GatewayConnectionMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *GatewayConnectionMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case gatewayconnection.FieldBackendModelCount:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBackendModelCount(v)
+		return nil
 	}
 	return fmt.Errorf("unknown GatewayConnection numeric field %s", name)
 }
@@ -8793,14 +8830,14 @@ func (m *GatewayConnectionMutation) ClearedFields() []string {
 	if m.FieldCleared(gatewayconnection.FieldMasterKeyRef) {
 		fields = append(fields, gatewayconnection.FieldMasterKeyRef)
 	}
-	if m.FieldCleared(gatewayconnection.FieldAdminURL) {
-		fields = append(fields, gatewayconnection.FieldAdminURL)
-	}
 	if m.FieldCleared(gatewayconnection.FieldPublicURL) {
 		fields = append(fields, gatewayconnection.FieldPublicURL)
 	}
 	if m.FieldCleared(gatewayconnection.FieldLastSyncedAt) {
 		fields = append(fields, gatewayconnection.FieldLastSyncedAt)
+	}
+	if m.FieldCleared(gatewayconnection.FieldBackendModelCount) {
+		fields = append(fields, gatewayconnection.FieldBackendModelCount)
 	}
 	return fields
 }
@@ -8819,14 +8856,14 @@ func (m *GatewayConnectionMutation) ClearField(name string) error {
 	case gatewayconnection.FieldMasterKeyRef:
 		m.ClearMasterKeyRef()
 		return nil
-	case gatewayconnection.FieldAdminURL:
-		m.ClearAdminURL()
-		return nil
 	case gatewayconnection.FieldPublicURL:
 		m.ClearPublicURL()
 		return nil
 	case gatewayconnection.FieldLastSyncedAt:
 		m.ClearLastSyncedAt()
+		return nil
+	case gatewayconnection.FieldBackendModelCount:
+		m.ClearBackendModelCount()
 		return nil
 	}
 	return fmt.Errorf("unknown GatewayConnection nullable field %s", name)
@@ -8851,9 +8888,6 @@ func (m *GatewayConnectionMutation) ResetField(name string) error {
 	case gatewayconnection.FieldMasterKeyRef:
 		m.ResetMasterKeyRef()
 		return nil
-	case gatewayconnection.FieldAdminURL:
-		m.ResetAdminURL()
-		return nil
 	case gatewayconnection.FieldPublicURL:
 		m.ResetPublicURL()
 		return nil
@@ -8862,6 +8896,9 @@ func (m *GatewayConnectionMutation) ResetField(name string) error {
 		return nil
 	case gatewayconnection.FieldLastSyncedAt:
 		m.ResetLastSyncedAt()
+		return nil
+	case gatewayconnection.FieldBackendModelCount:
+		m.ResetBackendModelCount()
 		return nil
 	case gatewayconnection.FieldStatus:
 		m.ResetStatus()
@@ -23919,28 +23956,29 @@ func (m *UserMutation) ResetEdge(name string) error {
 // VirtualKeyMutation represents an operation that mutates the VirtualKey nodes in the graph.
 type VirtualKeyMutation struct {
 	config
-	op                   Op
-	typ                  string
-	id                   *uuid.UUID
-	created_at           *time.Time
-	updated_at           *time.Time
-	litellm_key          *string
-	litellm_token        *string
-	alias                *string
-	user_id              *uuid.UUID
-	agent_id             *uuid.UUID
-	rate_limit_policy_id *uuid.UUID
-	team_id              *string
-	models               *[]string
-	appendmodels         []string
-	max_budget           *float64
-	addmax_budget        *float64
-	status               *virtualkey.Status
-	expires_at           *time.Time
-	clearedFields        map[string]struct{}
-	done                 bool
-	oldValue             func(context.Context) (*VirtualKey, error)
-	predicates           []predicate.VirtualKey
+	op                    Op
+	typ                   string
+	id                    *uuid.UUID
+	created_at            *time.Time
+	updated_at            *time.Time
+	litellm_key           *string
+	litellm_token         *string
+	alias                 *string
+	user_id               *uuid.UUID
+	agent_id              *uuid.UUID
+	rate_limit_policy_id  *uuid.UUID
+	team_id               *string
+	gateway_connection_id *uuid.UUID
+	models                *[]string
+	appendmodels          []string
+	max_budget            *float64
+	addmax_budget         *float64
+	status                *virtualkey.Status
+	expires_at            *time.Time
+	clearedFields         map[string]struct{}
+	done                  bool
+	oldValue              func(context.Context) (*VirtualKey, error)
+	predicates            []predicate.VirtualKey
 }
 
 var _ ent.Mutation = (*VirtualKeyMutation)(nil)
@@ -24436,6 +24474,55 @@ func (m *VirtualKeyMutation) ResetTeamID() {
 	delete(m.clearedFields, virtualkey.FieldTeamID)
 }
 
+// SetGatewayConnectionID sets the "gateway_connection_id" field.
+func (m *VirtualKeyMutation) SetGatewayConnectionID(u uuid.UUID) {
+	m.gateway_connection_id = &u
+}
+
+// GatewayConnectionID returns the value of the "gateway_connection_id" field in the mutation.
+func (m *VirtualKeyMutation) GatewayConnectionID() (r uuid.UUID, exists bool) {
+	v := m.gateway_connection_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldGatewayConnectionID returns the old "gateway_connection_id" field's value of the VirtualKey entity.
+// If the VirtualKey object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VirtualKeyMutation) OldGatewayConnectionID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldGatewayConnectionID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldGatewayConnectionID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGatewayConnectionID: %w", err)
+	}
+	return oldValue.GatewayConnectionID, nil
+}
+
+// ClearGatewayConnectionID clears the value of the "gateway_connection_id" field.
+func (m *VirtualKeyMutation) ClearGatewayConnectionID() {
+	m.gateway_connection_id = nil
+	m.clearedFields[virtualkey.FieldGatewayConnectionID] = struct{}{}
+}
+
+// GatewayConnectionIDCleared returns if the "gateway_connection_id" field was cleared in this mutation.
+func (m *VirtualKeyMutation) GatewayConnectionIDCleared() bool {
+	_, ok := m.clearedFields[virtualkey.FieldGatewayConnectionID]
+	return ok
+}
+
+// ResetGatewayConnectionID resets all changes to the "gateway_connection_id" field.
+func (m *VirtualKeyMutation) ResetGatewayConnectionID() {
+	m.gateway_connection_id = nil
+	delete(m.clearedFields, virtualkey.FieldGatewayConnectionID)
+}
+
 // SetModels sets the "models" field.
 func (m *VirtualKeyMutation) SetModels(s []string) {
 	m.models = &s
@@ -24690,7 +24777,7 @@ func (m *VirtualKeyMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *VirtualKeyMutation) Fields() []string {
-	fields := make([]string, 0, 13)
+	fields := make([]string, 0, 14)
 	if m.created_at != nil {
 		fields = append(fields, virtualkey.FieldCreatedAt)
 	}
@@ -24717,6 +24804,9 @@ func (m *VirtualKeyMutation) Fields() []string {
 	}
 	if m.team_id != nil {
 		fields = append(fields, virtualkey.FieldTeamID)
+	}
+	if m.gateway_connection_id != nil {
+		fields = append(fields, virtualkey.FieldGatewayConnectionID)
 	}
 	if m.models != nil {
 		fields = append(fields, virtualkey.FieldModels)
@@ -24756,6 +24846,8 @@ func (m *VirtualKeyMutation) Field(name string) (ent.Value, bool) {
 		return m.RateLimitPolicyID()
 	case virtualkey.FieldTeamID:
 		return m.TeamID()
+	case virtualkey.FieldGatewayConnectionID:
+		return m.GatewayConnectionID()
 	case virtualkey.FieldModels:
 		return m.Models()
 	case virtualkey.FieldMaxBudget:
@@ -24791,6 +24883,8 @@ func (m *VirtualKeyMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldRateLimitPolicyID(ctx)
 	case virtualkey.FieldTeamID:
 		return m.OldTeamID(ctx)
+	case virtualkey.FieldGatewayConnectionID:
+		return m.OldGatewayConnectionID(ctx)
 	case virtualkey.FieldModels:
 		return m.OldModels(ctx)
 	case virtualkey.FieldMaxBudget:
@@ -24870,6 +24964,13 @@ func (m *VirtualKeyMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTeamID(v)
+		return nil
+	case virtualkey.FieldGatewayConnectionID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetGatewayConnectionID(v)
 		return nil
 	case virtualkey.FieldModels:
 		v, ok := value.([]string)
@@ -24959,6 +25060,9 @@ func (m *VirtualKeyMutation) ClearedFields() []string {
 	if m.FieldCleared(virtualkey.FieldTeamID) {
 		fields = append(fields, virtualkey.FieldTeamID)
 	}
+	if m.FieldCleared(virtualkey.FieldGatewayConnectionID) {
+		fields = append(fields, virtualkey.FieldGatewayConnectionID)
+	}
 	if m.FieldCleared(virtualkey.FieldModels) {
 		fields = append(fields, virtualkey.FieldModels)
 	}
@@ -24996,6 +25100,9 @@ func (m *VirtualKeyMutation) ClearField(name string) error {
 		return nil
 	case virtualkey.FieldTeamID:
 		m.ClearTeamID()
+		return nil
+	case virtualkey.FieldGatewayConnectionID:
+		m.ClearGatewayConnectionID()
 		return nil
 	case virtualkey.FieldModels:
 		m.ClearModels()
@@ -25040,6 +25147,9 @@ func (m *VirtualKeyMutation) ResetField(name string) error {
 		return nil
 	case virtualkey.FieldTeamID:
 		m.ResetTeamID()
+		return nil
+	case virtualkey.FieldGatewayConnectionID:
+		m.ResetGatewayConnectionID()
 		return nil
 	case virtualkey.FieldModels:
 		m.ResetModels()
