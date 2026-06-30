@@ -101,11 +101,24 @@ type bwCreated struct {
 // Put creates a login item via `bw serve` and returns its "vault://<id>" ref
 // (LLD-08 §6). Used to persist a rotated agent UI password so the platform DB
 // only ever stores the pointer, never the plaintext.
+//
+// Credential layout: the (Username, Password) pair maps to Bitwarden's login
+// item login.username / login.password (basic auth). A standalone API/master
+// key (Credential.APIKey only) is stored as a custom field named "api_key" —
+// that's what Resolve reads back into Credential.APIKey. Both forms round-trip
+// (Put → Resolve) so a master-key-only Put (the gateway onboarding path,
+// `Credential{APIKey: "sk-…"}`) is recoverable, and a user/password Put
+// (agent UI rotation) is unchanged.
 func (v *VaultwardenResolver) Put(ctx context.Context, name string, cred Credential) (string, error) {
 	payload := map[string]any{
 		"type":  1, // login
 		"name":  name,
 		"login": map[string]string{"username": cred.Username, "password": cred.Password},
+	}
+	if cred.APIKey != "" {
+		payload["fields"] = []map[string]string{
+			{"name": "api_key", "value": cred.APIKey},
+		}
 	}
 	buf, err := json.Marshal(payload)
 	if err != nil {

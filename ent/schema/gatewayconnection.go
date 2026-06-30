@@ -22,9 +22,6 @@ func (GatewayConnection) Fields() []ent.Field {
 		field.String("name").NotEmpty().Unique(),
 		field.String("endpoint").NotEmpty(),
 		field.String("master_key_ref").Optional(), // vault://item-id
-		// admin_url: the litellm admin UI URL the operator enters (console ModelGateway.adminUrl).
-		// Optional — projection falls back to <endpoint>/ui when unset.
-		field.String("admin_url").Optional(),
 		// public_url: the gateway URL provisioned VMs/agents actually call (LLD-13
 		// §3.3, replaces the GATEWAY_PUBLIC_URL env). Optional — falls back to
 		// endpoint when unset (the backend's own API base may differ from a public ingress).
@@ -37,10 +34,15 @@ func (GatewayConnection) Fields() []ent.Field {
 		// successful connection test). Nil = never synced. Distinct from updated_at
 		// so an unrelated edit does not move the apparent sync time.
 		field.Time("last_synced_at").Optional().Nillable(),
+		// backend_model_count: number of models the gateway reports (len of GET
+		// /models' data array). Set on a successful sync, preserved on failure
+		// (so a transient outage doesn't zero the displayed count). Nil until the
+		// first successful sync — projected as 0 in that case.
+		field.Int("backend_model_count").Optional().Nillable(),
 		field.Enum("status").Values("connected", "disconnected", "error").Default("disconnected"),
 		field.Enum("load_balance_strategy").
-			Values("simple_shuffle", "latency", "usage_v2", "least_busy", "cost").
-			Default("simple_shuffle"),
+			Values("SIMPLE_SHUFFLE", "LEAST_BUSY", "LATENCY_BASED_ROUTING", "USAGE_BASED_ROUTING_V2", "COST_BASED_ROUTING").
+			Default("SIMPLE_SHUFFLE"),
 	}
 }
 

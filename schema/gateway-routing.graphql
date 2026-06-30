@@ -6,13 +6,6 @@ enum GatewayStatus {
   disconnected
   error
 }
-enum LoadBalanceStrategy {
-  simple_shuffle
-  latency
-  usage_v2
-  least_busy
-  cost
-}
 enum UpstreamProvider {
   vllm
   openai
@@ -45,7 +38,7 @@ type GatewayConnection {
   # The platform default gateway — used for ops with no department context. At most one.
   isDefault: Boolean!
   status: GatewayStatus!
-  loadBalanceStrategy: LoadBalanceStrategy!
+  loadBalanceStrategy: LoadBalancingStrategy!
   createdAt: Time!
 }
 
@@ -69,7 +62,7 @@ type ModelRoute {
   upstreams: [String!]!
   # Console alias for `upstreams` — the models this route can serve (模型路由 page).
   supportedModels: [String!]!
-  strategy: LoadBalanceStrategy!
+  strategy: LoadBalancingStrategy!
   # Console-facing load-balancing strategy (模型路由 page).
   uiStrategy: ModelRouteStrategy!
   enabled: Boolean!
@@ -90,7 +83,7 @@ input RegisterGatewayConnectionInput {
   # 优先于 masterKeyRef。
   masterKey: String
   masterKeyRef: String
-  loadBalanceStrategy: LoadBalanceStrategy
+  loadBalanceStrategy: LoadBalancingStrategy
   # The URL provisioned VMs call (LLD-13 §3.3); omitted → falls back to endpoint.
   publicUrl: String
   # Mark this the platform default gateway; setting true clears the flag on any other.
@@ -112,7 +105,7 @@ input UpsertModelRouteInput {
   modelAlias: String!
   backendGatewayId: ID
   upstreams: [String!]
-  strategy: LoadBalanceStrategy
+  strategy: LoadBalancingStrategy
   enabled: Boolean
 }
 

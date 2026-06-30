@@ -17,11 +17,10 @@ import (
 
 func litellmGatewayInput(name, endpoint string, masterKey *string) model.ModelGatewayInput {
 	return model.ModelGatewayInput{
-		Name:                  name,
-		Endpoint:              endpoint,
-		Provider:              model.ModelGatewayProviderLitellm,
-		LoadBalancingStrategy: model.LoadBalancingStrategyRoundRobin,
-		MasterKey:             masterKey,
+		Name:      name,
+		Endpoint:  endpoint,
+		Provider:  model.ModelGatewayProviderLitellm,
+		MasterKey: masterKey,
 	}
 }
 

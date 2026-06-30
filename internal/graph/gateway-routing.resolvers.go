@@ -71,7 +71,7 @@ func (r *mutationResolver) RegisterGatewayConnection(ctx context.Context, input 
 		c.SetPublicURL(*input.PublicURL)
 	}
 	if input.LoadBalanceStrategy != nil {
-		c.SetLoadBalanceStrategy(gatewayconnection.LoadBalanceStrategy(*input.LoadBalanceStrategy))
+		c.SetLoadBalanceStrategy(gatewayconnection.LoadBalanceStrategy(string(*input.LoadBalanceStrategy)))
 	}
 	g, err := c.Save(ctx)
 	if err != nil {
@@ -109,8 +109,11 @@ func (r *mutationResolver) TestGatewayConnection(ctx context.Context, id string)
 		}
 	}
 	// Shared with the ModelGateway façade: a successful test also stamps
-	// last_synced_at, so both pages agree on "last synced".
-	g, err = r.applyGatewayTestResult(ctx, g, status)
+	// last_synced_at, so both pages agree on "last synced". The legacy
+	// routing-page test does not probe loadBalancingStrategy or
+	// backendModelCount, so those columns are passed as nil (preserved on
+	// the row).
+	g, err = r.applyGatewayTestResult(ctx, g, status, nil, nil)
 	if err != nil {
 		return "", err
 	}
@@ -245,7 +248,7 @@ func (r *mutationResolver) UpsertModelRoute(ctx context.Context, input model.Ups
 		c := r.Ent.ModelRoute.Create().SetName(input.Name).SetModelAlias(input.ModelAlias).
 			SetEnabled(enabled).SetUpstreams(input.Upstreams).SetNillableGatewayConnectionID(gwID)
 		if input.Strategy != nil {
-			c.SetStrategy(modelroute.Strategy(*input.Strategy))
+			c.SetStrategy(modelroute.Strategy(string(*input.Strategy)))
 		}
 		mr, err = c.Save(ctx)
 	case err != nil:
@@ -254,7 +257,7 @@ func (r *mutationResolver) UpsertModelRoute(ctx context.Context, input model.Ups
 		u := r.Ent.ModelRoute.UpdateOne(existing).SetModelAlias(input.ModelAlias).
 			SetEnabled(enabled).SetUpstreams(input.Upstreams).SetNillableGatewayConnectionID(gwID)
 		if input.Strategy != nil {
-			u.SetStrategy(modelroute.Strategy(*input.Strategy))
+			u.SetStrategy(modelroute.Strategy(string(*input.Strategy)))
 		}
 		mr, err = u.Save(ctx)
 	}

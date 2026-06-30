@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
@@ -11,6 +12,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/secrets"
 	"github.com/VMware-AI/agent-platform-backend/internal/session"
 	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
+	"github.com/google/uuid"
 )
 
 // VCenterClient is what resolvers need from a connected vCenter (deploy +
@@ -84,6 +86,17 @@ type Resolver struct {
 	// permCache memoizes custom-role permission sets for @hasPermission; nil
 	// disables caching (every check queries — used in tests for freshness).
 	permCache *permCache
+	// inflightSyncs is a process-local set of GatewayConnection IDs that are
+	// currently being synced. toModelGateway consults it to project the
+	// "currently syncing" overlay onto lastSyncStatus, so a long sync shows
+	// SYNCING in the list without a separate persisted column. Best-effort:
+	// multi-replica deployments cannot see each other's in-flight writes, and
+	// a crashed/panic'd sync leaves the entry until process restart (the
+	// resolver only ever adds, never auto-expires). Periodic cleanup is via
+	// the in-process list on each sync entry's defer, which is enough for
+	// the UI's purposes (eventual consistency on crash).
+	inflightSyncs   map[uuid.UUID]struct{}
+	inflightSyncsMu sync.Mutex
 }
 
 // EnablePermissionCache turns on memoization of custom-role permission sets for

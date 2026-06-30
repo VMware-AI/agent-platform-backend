@@ -1,17 +1,12 @@
 # 模型网关 (model gateway) page façade over GatewayConnection (重蒙皮 P4).
 # The console renders the litellm gateway as a single aggregate entity; the richer
 # upstream/route model stays in gateway-routing.graphql. Computed fields are real
-# where a source exists (backendModelCount = upstream count, test = live litellm
-# ping + measured latency); sync state is derived from the connection status.
+# where a source exists (backendModelCount = live count from GET /models, sync =
+# 周期巡检 / 手动按钮 / 创建后自动); sync state is derived from the connection
+# status, in-flight writes, and an in-memory inflight map.
 
 enum ModelGatewayProvider {
   LITELLM
-}
-
-enum ModelGatewayStatus {
-  CONNECTED
-  DISCONNECTED
-  ERROR
 }
 
 enum ModelGatewaySyncState {
@@ -23,7 +18,11 @@ enum ModelGatewaySyncState {
 }
 
 enum LoadBalancingStrategy {
-  ROUND_ROBIN
+  SIMPLE_SHUFFLE
+  LEAST_BUSY
+  LATENCY_BASED_ROUTING
+  USAGE_BASED_ROUTING_V2
+  COST_BASED_ROUTING
 }
 
 type ModelGateway {
@@ -31,11 +30,8 @@ type ModelGateway {
   name: String!
   provider: ModelGatewayProvider!
   endpoint: String!
-  status: ModelGatewayStatus!
   backendModelCount: Int!
-  loadBalancingStrategy: LoadBalancingStrategy!
-  latencyMs: Int
-  adminUrl: String
+  loadBalancingStrategy: LoadBalancingStrategy
   lastSyncAt: Time
   lastSyncStatus: ModelGatewaySyncState!
   lastSyncMessage: String
@@ -46,7 +42,6 @@ type ModelGateway {
 enum ModelGatewaySortField {
   NAME
   ENDPOINT
-  STATUS
   CREATED_AT
   UPDATED_AT
 }
@@ -69,12 +64,18 @@ type ModelGatewaySyncSummary {
   message: String
 }
 
+# testNewModelGatewayConnection (dry-run, pre-create) 的返回值：仅三字段，不带 gateway。
 type ModelGatewayTestResult {
   success: Boolean!
-  status: ModelGatewayStatus!
-  latencyMs: Int
   message: String!
   testedAt: Time!
+}
+
+# syncModelGatewayConnection 的返回值：gateway 必返（非 null），所有策略/状态/
+# lastSyncAt/backendModelCount 等信息都从 gateway 内部字段读取。
+type ModelGatewaySyncResult {
+  success: Boolean!
+  message: String!
   gateway: ModelGateway!
 }
 
@@ -84,17 +85,23 @@ type DeleteModelGatewayPayload {
 
 input ModelGatewayFilterInput {
   search: String
-  status: ModelGatewayStatus
 }
 
 input ModelGatewayInput {
   name: String!
   provider: ModelGatewayProvider!
   endpoint: String!
-  adminUrl: String
   # litellm master key(接入表单填写)→ 后端写 secret store,只存引用,明文不落库。
   masterKey: String
-  loadBalancingStrategy: LoadBalancingStrategy!
+}
+
+# Pre-create test input — the form-level "Test Connection" button on the 接入表单
+# uses this to ping a not-yet-persisted gateway config. Carries the minimal
+# fields the probe needs: endpoint + masterKey. (name, provider are either fixed
+# or irrelevant to the live test.)
+input TestModelGatewayConnectionInput {
+  endpoint: String!
+  masterKey: String!
 }
 
 extend type Query {
@@ -107,5 +114,11 @@ extend type Mutation {
   createModelGateway(input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
   updateModelGateway(id: ID!, input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
   deleteModelGateway(id: ID!): DeleteModelGatewayPayload! @hasRole(any: [admin])
-  testModelGatewayConnection(id: ID!): ModelGatewayTestResult! @hasRole(any: [admin])
+  # 同步一个已存在的 gateway: 探测连通性 + 路由策略 + 后端模型数, 写回 ent 列.
+  # gateway 字段返回同步后的最新状态, 业务信息从 gateway 内部读取.
+  syncModelGatewayConnection(id: ID!): ModelGatewaySyncResult! @hasRole(any: [admin])
+  # Pre-create dry-run probe. No row is created or modified; the result's
+  # `gateway` field is null. Strategy probe is intentionally skipped (dry-run
+  # 只测连通性, 不拉 /config/router 也不解析 /models 的 data 数组).
+  testNewModelGatewayConnection(input: TestModelGatewayConnectionInput!): ModelGatewayTestResult! @hasRole(any: [admin])
 }

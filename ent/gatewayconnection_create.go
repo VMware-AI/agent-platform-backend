@@ -75,20 +75,6 @@ func (_c *GatewayConnectionCreate) SetNillableMasterKeyRef(v *string) *GatewayCo
 	return _c
 }
 
-// SetAdminURL sets the "admin_url" field.
-func (_c *GatewayConnectionCreate) SetAdminURL(v string) *GatewayConnectionCreate {
-	_c.mutation.SetAdminURL(v)
-	return _c
-}
-
-// SetNillableAdminURL sets the "admin_url" field if the given value is not nil.
-func (_c *GatewayConnectionCreate) SetNillableAdminURL(v *string) *GatewayConnectionCreate {
-	if v != nil {
-		_c.SetAdminURL(*v)
-	}
-	return _c
-}
-
 // SetPublicURL sets the "public_url" field.
 func (_c *GatewayConnectionCreate) SetPublicURL(v string) *GatewayConnectionCreate {
 	_c.mutation.SetPublicURL(v)
@@ -127,6 +113,20 @@ func (_c *GatewayConnectionCreate) SetLastSyncedAt(v time.Time) *GatewayConnecti
 func (_c *GatewayConnectionCreate) SetNillableLastSyncedAt(v *time.Time) *GatewayConnectionCreate {
 	if v != nil {
 		_c.SetLastSyncedAt(*v)
+	}
+	return _c
+}
+
+// SetBackendModelCount sets the "backend_model_count" field.
+func (_c *GatewayConnectionCreate) SetBackendModelCount(v int) *GatewayConnectionCreate {
+	_c.mutation.SetBackendModelCount(v)
+	return _c
+}
+
+// SetNillableBackendModelCount sets the "backend_model_count" field if the given value is not nil.
+func (_c *GatewayConnectionCreate) SetNillableBackendModelCount(v *int) *GatewayConnectionCreate {
+	if v != nil {
+		_c.SetBackendModelCount(*v)
 	}
 	return _c
 }
@@ -332,10 +332,6 @@ func (_c *GatewayConnectionCreate) createSpec() (*GatewayConnection, *sqlgraph.C
 		_spec.SetField(gatewayconnection.FieldMasterKeyRef, field.TypeString, value)
 		_node.MasterKeyRef = value
 	}
-	if value, ok := _c.mutation.AdminURL(); ok {
-		_spec.SetField(gatewayconnection.FieldAdminURL, field.TypeString, value)
-		_node.AdminURL = value
-	}
 	if value, ok := _c.mutation.PublicURL(); ok {
 		_spec.SetField(gatewayconnection.FieldPublicURL, field.TypeString, value)
 		_node.PublicURL = value
@@ -347,6 +343,10 @@ func (_c *GatewayConnectionCreate) createSpec() (*GatewayConnection, *sqlgraph.C
 	if value, ok := _c.mutation.LastSyncedAt(); ok {
 		_spec.SetField(gatewayconnection.FieldLastSyncedAt, field.TypeTime, value)
 		_node.LastSyncedAt = &value
+	}
+	if value, ok := _c.mutation.BackendModelCount(); ok {
+		_spec.SetField(gatewayconnection.FieldBackendModelCount, field.TypeInt, value)
+		_node.BackendModelCount = &value
 	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(gatewayconnection.FieldStatus, field.TypeEnum, value)

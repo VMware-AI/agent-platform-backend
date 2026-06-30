@@ -86,16 +86,16 @@ var (
 // Strategy defines the type for the "strategy" enum field.
 type Strategy string
 
-// StrategySimpleShuffle is the default value of the Strategy enum.
-const DefaultStrategy = StrategySimpleShuffle
+// StrategySIMPLE_SHUFFLE is the default value of the Strategy enum.
+const DefaultStrategy = StrategySIMPLE_SHUFFLE
 
 // Strategy values.
 const (
-	StrategySimpleShuffle Strategy = "simple_shuffle"
-	StrategyLatency       Strategy = "latency"
-	StrategyUsageV2       Strategy = "usage_v2"
-	StrategyLeastBusy     Strategy = "least_busy"
-	StrategyCost          Strategy = "cost"
+	StrategySIMPLE_SHUFFLE         Strategy = "SIMPLE_SHUFFLE"
+	StrategyLEAST_BUSY             Strategy = "LEAST_BUSY"
+	StrategyLATENCY_BASED_ROUTING  Strategy = "LATENCY_BASED_ROUTING"
+	StrategyUSAGE_BASED_ROUTING_V2 Strategy = "USAGE_BASED_ROUTING_V2"
+	StrategyCOST_BASED_ROUTING     Strategy = "COST_BASED_ROUTING"
 )
 
 func (s Strategy) String() string {
@@ -105,7 +105,7 @@ func (s Strategy) String() string {
 // StrategyValidator is a validator for the "strategy" field enum values. It is called by the builders before save.
 func StrategyValidator(s Strategy) error {
 	switch s {
-	case StrategySimpleShuffle, StrategyLatency, StrategyUsageV2, StrategyLeastBusy, StrategyCost:
+	case StrategySIMPLE_SHUFFLE, StrategyLEAST_BUSY, StrategyLATENCY_BASED_ROUTING, StrategyUSAGE_BASED_ROUTING_V2, StrategyCOST_BASED_ROUTING:
 		return nil
 	default:
 		return fmt.Errorf("modelroute: invalid enum value for strategy field: %q", s)

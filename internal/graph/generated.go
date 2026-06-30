@@ -346,7 +346,6 @@ type ComplexityRoot struct {
 	}
 
 	ModelGateway struct {
-		AdminURL              func(childComplexity int) int
 		BackendModelCount     func(childComplexity int) int
 		CreatedAt             func(childComplexity int) int
 		Endpoint              func(childComplexity int) int
@@ -354,17 +353,21 @@ type ComplexityRoot struct {
 		LastSyncAt            func(childComplexity int) int
 		LastSyncMessage       func(childComplexity int) int
 		LastSyncStatus        func(childComplexity int) int
-		LatencyMs             func(childComplexity int) int
 		LoadBalancingStrategy func(childComplexity int) int
 		Name                  func(childComplexity int) int
 		Provider              func(childComplexity int) int
-		Status                func(childComplexity int) int
 		UpdatedAt             func(childComplexity int) int
 	}
 
 	ModelGatewayConnection struct {
 		Nodes      func(childComplexity int) int
 		TotalCount func(childComplexity int) int
+	}
+
+	ModelGatewaySyncResult struct {
+		Gateway func(childComplexity int) int
+		Message func(childComplexity int) int
+		Success func(childComplexity int) int
 	}
 
 	ModelGatewaySyncSummary struct {
@@ -376,12 +379,9 @@ type ComplexityRoot struct {
 	}
 
 	ModelGatewayTestResult struct {
-		Gateway   func(childComplexity int) int
-		LatencyMs func(childComplexity int) int
-		Message   func(childComplexity int) int
-		Status    func(childComplexity int) int
-		Success   func(childComplexity int) int
-		TestedAt  func(childComplexity int) int
+		Message  func(childComplexity int) int
+		Success  func(childComplexity int) int
+		TestedAt func(childComplexity int) int
 	}
 
 	ModelRoute struct {
@@ -416,77 +416,78 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddMembership              func(childComplexity int, userID string, departmentID string, role *model.MembershipRole) int
-		AddOvaTemplateVersion      func(childComplexity int, input model.AddOvaTemplateVersionInput) int
-		AssignUserRole             func(childComplexity int, userID string, roleID string) int
-		AssignUsersToRole          func(childComplexity int, input model.AssignUsersToRoleInput) int
-		ChangePassword             func(childComplexity int, oldPassword string, newPassword string) int
-		CreateAgent                func(childComplexity int, input model.CreateAgentInput) int
-		CreateAgentConfig          func(childComplexity int, input model.CreateAgentConfigInput) int
-		CreateCustomRole           func(childComplexity int, input model.CreateCustomRoleInput) int
-		CreateDepartment           func(childComplexity int, input model.CreateDepartmentInput) int
-		CreateModelGateway         func(childComplexity int, input model.ModelGatewayInput) int
-		CreateModelRoute           func(childComplexity int, input model.CreateModelRouteInput) int
-		CreateOvaTemplateFamily    func(childComplexity int, input model.CreateOvaTemplateFamilyInput) int
-		CreateResourcePool         func(childComplexity int, input model.CreateResourcePoolInput) int
-		CreateUser                 func(childComplexity int, input model.CreateUserInput) int
-		DeleteAgentConfig          func(childComplexity int, id string) int
-		DeleteArtifact             func(childComplexity int, id string) int
-		DeleteCustomRole           func(childComplexity int, id string) int
-		DeleteDepartment           func(childComplexity int, id string) int
-		DeleteGatewayConnection    func(childComplexity int, id string) int
-		DeleteImage                func(childComplexity int, id string) int
-		DeleteModelGateway         func(childComplexity int, id string) int
-		DeleteModelRoute           func(childComplexity int, id string) int
-		DeleteRateLimitPolicy      func(childComplexity int, id string) int
-		DeleteResourcePool         func(childComplexity int, id string) int
-		DeleteSkill                func(childComplexity int, id string) int
-		DeleteUpstream             func(childComplexity int, id string) int
-		DeleteUser                 func(childComplexity int, id string) int
-		DeployAgent                func(childComplexity int, input model.DeployAgentInput) int
-		IssueVirtualKey            func(childComplexity int, input model.IssueVirtualKeyInput) int
-		Login                      func(childComplexity int, input model.LoginInput) int
-		Logout                     func(childComplexity int) int
-		RecordRequestLog           func(childComplexity int, input model.RecordRequestLogInput) int
-		RecordTokenUsage           func(childComplexity int, input model.RecordTokenUsageInput) int
-		RecycleAgent               func(childComplexity int, input model.RecycleAgentInput) int
-		RegenerateVirtualKey       func(childComplexity int, id string) int
-		RegisterGatewayConnection  func(childComplexity int, input model.RegisterGatewayConnectionInput) int
-		RemoveMembership           func(childComplexity int, userID string, departmentID string) int
-		RemoveUserRole             func(childComplexity int, userID string, roleID string) int
-		RequestRotation            func(childComplexity int, agentID string, kind model.RotationKind) int
-		ResetUserPassword          func(childComplexity int, id string) int
-		RevertAgentSnapshot        func(childComplexity int, input model.RevertAgentSnapshotInput) int
-		RevokeAgentEnrollment      func(childComplexity int, agentID string) int
-		RevokeVirtualKey           func(childComplexity int, id string) int
-		SetAgentConfigKnowledge    func(childComplexity int, configID string, knowledgeArtifactIds []string) int
-		SetAgentStatus             func(childComplexity int, id string, status model.AgentStatus) int
-		SetDefaultAgentConfig      func(childComplexity int, id string) int
-		SetModelRouteEnabled       func(childComplexity int, id string, enabled bool) int
-		SetRateLimitPolicyEnabled  func(childComplexity int, id string, enabled bool) int
-		SetRolePermissions         func(childComplexity int, roleID string, permissionKeys []string) int
-		SetRouterTier              func(childComplexity int, tier model.RouterTierLevel, modelAlias string) int
-		SetVirtualKeyEnabled       func(childComplexity int, id string, enabled bool) int
-		SnapshotAgent              func(childComplexity int, input model.SnapshotAgentInput) int
-		SyncResourcePool           func(childComplexity int, id string) int
-		TestGatewayConnection      func(childComplexity int, id string) int
-		TestModelGatewayConnection func(childComplexity int, id string) int
-		TestResourcePoolConnection func(childComplexity int, input model.TestResourcePoolConnectionInput) int
-		ToggleUserEnabled          func(childComplexity int, id string) int
-		UpdateAgentConfig          func(childComplexity int, id string, input model.UpdateAgentConfigInput) int
-		UpdateModelGateway         func(childComplexity int, id string, input model.ModelGatewayInput) int
-		UpdateModelRoute           func(childComplexity int, id string, input model.UpdateModelRouteInput) int
-		UpdatePlatformSettings     func(childComplexity int, input model.UpdatePlatformSettingsInput) int
-		UpdateResourcePool         func(childComplexity int, id string, input model.UpdateResourcePoolInput) int
-		UpdateUser                 func(childComplexity int, id string, input model.UpdateUserInput) int
-		UpsertAgentTemplate        func(childComplexity int, input model.UpsertAgentTemplateInput) int
-		UpsertArtifact             func(childComplexity int, input model.UpsertArtifactInput) int
-		UpsertImage                func(childComplexity int, input model.UpsertImageInput) int
-		UpsertModelRoute           func(childComplexity int, input model.UpsertModelRouteInput) int
-		UpsertPermission           func(childComplexity int, key string, description *string) int
-		UpsertRateLimitPolicy      func(childComplexity int, input model.UpsertRateLimitPolicyInput) int
-		UpsertSkill                func(childComplexity int, input model.UpsertSkillInput) int
-		UpsertUpstream             func(childComplexity int, input model.UpsertUpstreamInput) int
+		AddMembership                 func(childComplexity int, userID string, departmentID string, role *model.MembershipRole) int
+		AddOvaTemplateVersion         func(childComplexity int, input model.AddOvaTemplateVersionInput) int
+		AssignUserRole                func(childComplexity int, userID string, roleID string) int
+		AssignUsersToRole             func(childComplexity int, input model.AssignUsersToRoleInput) int
+		ChangePassword                func(childComplexity int, oldPassword string, newPassword string) int
+		CreateAgent                   func(childComplexity int, input model.CreateAgentInput) int
+		CreateAgentConfig             func(childComplexity int, input model.CreateAgentConfigInput) int
+		CreateCustomRole              func(childComplexity int, input model.CreateCustomRoleInput) int
+		CreateDepartment              func(childComplexity int, input model.CreateDepartmentInput) int
+		CreateModelGateway            func(childComplexity int, input model.ModelGatewayInput) int
+		CreateModelRoute              func(childComplexity int, input model.CreateModelRouteInput) int
+		CreateOvaTemplateFamily       func(childComplexity int, input model.CreateOvaTemplateFamilyInput) int
+		CreateResourcePool            func(childComplexity int, input model.CreateResourcePoolInput) int
+		CreateUser                    func(childComplexity int, input model.CreateUserInput) int
+		DeleteAgentConfig             func(childComplexity int, id string) int
+		DeleteArtifact                func(childComplexity int, id string) int
+		DeleteCustomRole              func(childComplexity int, id string) int
+		DeleteDepartment              func(childComplexity int, id string) int
+		DeleteGatewayConnection       func(childComplexity int, id string) int
+		DeleteImage                   func(childComplexity int, id string) int
+		DeleteModelGateway            func(childComplexity int, id string) int
+		DeleteModelRoute              func(childComplexity int, id string) int
+		DeleteRateLimitPolicy         func(childComplexity int, id string) int
+		DeleteResourcePool            func(childComplexity int, id string) int
+		DeleteSkill                   func(childComplexity int, id string) int
+		DeleteUpstream                func(childComplexity int, id string) int
+		DeleteUser                    func(childComplexity int, id string) int
+		DeployAgent                   func(childComplexity int, input model.DeployAgentInput) int
+		IssueVirtualKey               func(childComplexity int, input model.IssueVirtualKeyInput) int
+		Login                         func(childComplexity int, input model.LoginInput) int
+		Logout                        func(childComplexity int) int
+		RecordRequestLog              func(childComplexity int, input model.RecordRequestLogInput) int
+		RecordTokenUsage              func(childComplexity int, input model.RecordTokenUsageInput) int
+		RecycleAgent                  func(childComplexity int, input model.RecycleAgentInput) int
+		RegenerateVirtualKey          func(childComplexity int, id string) int
+		RegisterGatewayConnection     func(childComplexity int, input model.RegisterGatewayConnectionInput) int
+		RemoveMembership              func(childComplexity int, userID string, departmentID string) int
+		RemoveUserRole                func(childComplexity int, userID string, roleID string) int
+		RequestRotation               func(childComplexity int, agentID string, kind model.RotationKind) int
+		ResetUserPassword             func(childComplexity int, id string) int
+		RevertAgentSnapshot           func(childComplexity int, input model.RevertAgentSnapshotInput) int
+		RevokeAgentEnrollment         func(childComplexity int, agentID string) int
+		RevokeVirtualKey              func(childComplexity int, id string) int
+		SetAgentConfigKnowledge       func(childComplexity int, configID string, knowledgeArtifactIds []string) int
+		SetAgentStatus                func(childComplexity int, id string, status model.AgentStatus) int
+		SetDefaultAgentConfig         func(childComplexity int, id string) int
+		SetModelRouteEnabled          func(childComplexity int, id string, enabled bool) int
+		SetRateLimitPolicyEnabled     func(childComplexity int, id string, enabled bool) int
+		SetRolePermissions            func(childComplexity int, roleID string, permissionKeys []string) int
+		SetRouterTier                 func(childComplexity int, tier model.RouterTierLevel, modelAlias string) int
+		SetVirtualKeyEnabled          func(childComplexity int, id string, enabled bool) int
+		SnapshotAgent                 func(childComplexity int, input model.SnapshotAgentInput) int
+		SyncModelGatewayConnection    func(childComplexity int, id string) int
+		SyncResourcePool              func(childComplexity int, id string) int
+		TestGatewayConnection         func(childComplexity int, id string) int
+		TestNewModelGatewayConnection func(childComplexity int, input model.TestModelGatewayConnectionInput) int
+		TestResourcePoolConnection    func(childComplexity int, input model.TestResourcePoolConnectionInput) int
+		ToggleUserEnabled             func(childComplexity int, id string) int
+		UpdateAgentConfig             func(childComplexity int, id string, input model.UpdateAgentConfigInput) int
+		UpdateModelGateway            func(childComplexity int, id string, input model.ModelGatewayInput) int
+		UpdateModelRoute              func(childComplexity int, id string, input model.UpdateModelRouteInput) int
+		UpdatePlatformSettings        func(childComplexity int, input model.UpdatePlatformSettingsInput) int
+		UpdateResourcePool            func(childComplexity int, id string, input model.UpdateResourcePoolInput) int
+		UpdateUser                    func(childComplexity int, id string, input model.UpdateUserInput) int
+		UpsertAgentTemplate           func(childComplexity int, input model.UpsertAgentTemplateInput) int
+		UpsertArtifact                func(childComplexity int, input model.UpsertArtifactInput) int
+		UpsertImage                   func(childComplexity int, input model.UpsertImageInput) int
+		UpsertModelRoute              func(childComplexity int, input model.UpsertModelRouteInput) int
+		UpsertPermission              func(childComplexity int, key string, description *string) int
+		UpsertRateLimitPolicy         func(childComplexity int, input model.UpsertRateLimitPolicyInput) int
+		UpsertSkill                   func(childComplexity int, input model.UpsertSkillInput) int
+		UpsertUpstream                func(childComplexity int, input model.UpsertUpstreamInput) int
 	}
 
 	OvaTemplateFamily struct {
@@ -848,7 +849,8 @@ type MutationResolver interface {
 	CreateModelGateway(ctx context.Context, input model.ModelGatewayInput) (*model.ModelGateway, error)
 	UpdateModelGateway(ctx context.Context, id string, input model.ModelGatewayInput) (*model.ModelGateway, error)
 	DeleteModelGateway(ctx context.Context, id string) (*model.DeleteModelGatewayPayload, error)
-	TestModelGatewayConnection(ctx context.Context, id string) (*model.ModelGatewayTestResult, error)
+	SyncModelGatewayConnection(ctx context.Context, id string) (*model.ModelGatewaySyncResult, error)
+	TestNewModelGatewayConnection(ctx context.Context, input model.TestModelGatewayConnectionInput) (*model.ModelGatewayTestResult, error)
 	RecordRequestLog(ctx context.Context, input model.RecordRequestLogInput) (*model.RequestLog, error)
 	UpsertRateLimitPolicy(ctx context.Context, input model.UpsertRateLimitPolicyInput) (*model.RateLimitPolicy, error)
 	SetRateLimitPolicyEnabled(ctx context.Context, id string, enabled bool) (*model.RateLimitPolicy, error)
@@ -2089,12 +2091,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.MeteringSummary.TotalOutputTokens(childComplexity), true
 
-	case "ModelGateway.adminUrl":
-		if e.ComplexityRoot.ModelGateway.AdminURL == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ModelGateway.AdminURL(childComplexity), true
 	case "ModelGateway.backendModelCount":
 		if e.ComplexityRoot.ModelGateway.BackendModelCount == nil {
 			break
@@ -2137,12 +2133,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelGateway.LastSyncStatus(childComplexity), true
-	case "ModelGateway.latencyMs":
-		if e.ComplexityRoot.ModelGateway.LatencyMs == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ModelGateway.LatencyMs(childComplexity), true
 	case "ModelGateway.loadBalancingStrategy":
 		if e.ComplexityRoot.ModelGateway.LoadBalancingStrategy == nil {
 			break
@@ -2161,12 +2151,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelGateway.Provider(childComplexity), true
-	case "ModelGateway.status":
-		if e.ComplexityRoot.ModelGateway.Status == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ModelGateway.Status(childComplexity), true
 	case "ModelGateway.updatedAt":
 		if e.ComplexityRoot.ModelGateway.UpdatedAt == nil {
 			break
@@ -2186,6 +2170,25 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelGatewayConnection.TotalCount(childComplexity), true
+
+	case "ModelGatewaySyncResult.gateway":
+		if e.ComplexityRoot.ModelGatewaySyncResult.Gateway == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewaySyncResult.Gateway(childComplexity), true
+	case "ModelGatewaySyncResult.message":
+		if e.ComplexityRoot.ModelGatewaySyncResult.Message == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewaySyncResult.Message(childComplexity), true
+	case "ModelGatewaySyncResult.success":
+		if e.ComplexityRoot.ModelGatewaySyncResult.Success == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewaySyncResult.Success(childComplexity), true
 
 	case "ModelGatewaySyncSummary.failedCount":
 		if e.ComplexityRoot.ModelGatewaySyncSummary.FailedCount == nil {
@@ -2218,30 +2221,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.ModelGatewaySyncSummary.SuccessCount(childComplexity), true
 
-	case "ModelGatewayTestResult.gateway":
-		if e.ComplexityRoot.ModelGatewayTestResult.Gateway == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ModelGatewayTestResult.Gateway(childComplexity), true
-	case "ModelGatewayTestResult.latencyMs":
-		if e.ComplexityRoot.ModelGatewayTestResult.LatencyMs == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ModelGatewayTestResult.LatencyMs(childComplexity), true
 	case "ModelGatewayTestResult.message":
 		if e.ComplexityRoot.ModelGatewayTestResult.Message == nil {
 			break
 		}
 
 		return e.ComplexityRoot.ModelGatewayTestResult.Message(childComplexity), true
-	case "ModelGatewayTestResult.status":
-		if e.ComplexityRoot.ModelGatewayTestResult.Status == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ModelGatewayTestResult.Status(childComplexity), true
 	case "ModelGatewayTestResult.success":
 		if e.ComplexityRoot.ModelGatewayTestResult.Success == nil {
 			break
@@ -2957,6 +2942,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.SnapshotAgent(childComplexity, args["input"].(model.SnapshotAgentInput)), true
+	case "Mutation.syncModelGatewayConnection":
+		if e.ComplexityRoot.Mutation.SyncModelGatewayConnection == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_syncModelGatewayConnection_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.SyncModelGatewayConnection(childComplexity, args["id"].(string)), true
 	case "Mutation.syncResourcePool":
 		if e.ComplexityRoot.Mutation.SyncResourcePool == nil {
 			break
@@ -2979,17 +2975,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.TestGatewayConnection(childComplexity, args["id"].(string)), true
-	case "Mutation.testModelGatewayConnection":
-		if e.ComplexityRoot.Mutation.TestModelGatewayConnection == nil {
+	case "Mutation.testNewModelGatewayConnection":
+		if e.ComplexityRoot.Mutation.TestNewModelGatewayConnection == nil {
 			break
 		}
 
-		args, err := ec.field_Mutation_testModelGatewayConnection_args(ctx, rawArgs)
+		args, err := ec.field_Mutation_testNewModelGatewayConnection_args(ctx, rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Mutation.TestModelGatewayConnection(childComplexity, args["id"].(string)), true
+		return e.ComplexityRoot.Mutation.TestNewModelGatewayConnection(childComplexity, args["input"].(model.TestModelGatewayConnectionInput)), true
 	case "Mutation.testResourcePoolConnection":
 		if e.ComplexityRoot.Mutation.TestResourcePoolConnection == nil {
 			break
@@ -4560,6 +4556,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputResourcePoolSort,
 		ec.unmarshalInputRevertAgentSnapshotInput,
 		ec.unmarshalInputSnapshotAgentInput,
+		ec.unmarshalInputTestModelGatewayConnectionInput,
 		ec.unmarshalInputTestResourcePoolConnectionInput,
 		ec.unmarshalInputUpdateAgentConfigInput,
 		ec.unmarshalInputUpdateModelRouteInput,
@@ -5351,13 +5348,6 @@ enum GatewayStatus {
   disconnected
   error
 }
-enum LoadBalanceStrategy {
-  simple_shuffle
-  latency
-  usage_v2
-  least_busy
-  cost
-}
 enum UpstreamProvider {
   vllm
   openai
@@ -5390,7 +5380,7 @@ type GatewayConnection {
   # The platform default gateway — used for ops with no department context. At most one.
   isDefault: Boolean!
   status: GatewayStatus!
-  loadBalanceStrategy: LoadBalanceStrategy!
+  loadBalanceStrategy: LoadBalancingStrategy!
   createdAt: Time!
 }
 
@@ -5414,7 +5404,7 @@ type ModelRoute {
   upstreams: [String!]!
   # Console alias for ` + "`" + `upstreams` + "`" + ` — the models this route can serve (模型路由 page).
   supportedModels: [String!]!
-  strategy: LoadBalanceStrategy!
+  strategy: LoadBalancingStrategy!
   # Console-facing load-balancing strategy (模型路由 page).
   uiStrategy: ModelRouteStrategy!
   enabled: Boolean!
@@ -5435,7 +5425,7 @@ input RegisterGatewayConnectionInput {
   # 优先于 masterKeyRef。
   masterKey: String
   masterKeyRef: String
-  loadBalanceStrategy: LoadBalanceStrategy
+  loadBalanceStrategy: LoadBalancingStrategy
   # The URL provisioned VMs call (LLD-13 §3.3); omitted → falls back to endpoint.
   publicUrl: String
   # Mark this the platform default gateway; setting true clears the flag on any other.
@@ -5457,7 +5447,7 @@ input UpsertModelRouteInput {
   modelAlias: String!
   backendGatewayId: ID
   upstreams: [String!]
-  strategy: LoadBalanceStrategy
+  strategy: LoadBalancingStrategy
   enabled: Boolean
 }
 
@@ -5643,17 +5633,12 @@ extend type Mutation {
 	{Name: "../../schema/modelgateway.graphql", Input: `# 模型网关 (model gateway) page façade over GatewayConnection (重蒙皮 P4).
 # The console renders the litellm gateway as a single aggregate entity; the richer
 # upstream/route model stays in gateway-routing.graphql. Computed fields are real
-# where a source exists (backendModelCount = upstream count, test = live litellm
-# ping + measured latency); sync state is derived from the connection status.
+# where a source exists (backendModelCount = live count from GET /models, sync =
+# 周期巡检 / 手动按钮 / 创建后自动); sync state is derived from the connection
+# status, in-flight writes, and an in-memory inflight map.
 
 enum ModelGatewayProvider {
   LITELLM
-}
-
-enum ModelGatewayStatus {
-  CONNECTED
-  DISCONNECTED
-  ERROR
 }
 
 enum ModelGatewaySyncState {
@@ -5665,7 +5650,11 @@ enum ModelGatewaySyncState {
 }
 
 enum LoadBalancingStrategy {
-  ROUND_ROBIN
+  SIMPLE_SHUFFLE
+  LEAST_BUSY
+  LATENCY_BASED_ROUTING
+  USAGE_BASED_ROUTING_V2
+  COST_BASED_ROUTING
 }
 
 type ModelGateway {
@@ -5673,11 +5662,8 @@ type ModelGateway {
   name: String!
   provider: ModelGatewayProvider!
   endpoint: String!
-  status: ModelGatewayStatus!
   backendModelCount: Int!
-  loadBalancingStrategy: LoadBalancingStrategy!
-  latencyMs: Int
-  adminUrl: String
+  loadBalancingStrategy: LoadBalancingStrategy
   lastSyncAt: Time
   lastSyncStatus: ModelGatewaySyncState!
   lastSyncMessage: String
@@ -5688,7 +5674,6 @@ type ModelGateway {
 enum ModelGatewaySortField {
   NAME
   ENDPOINT
-  STATUS
   CREATED_AT
   UPDATED_AT
 }
@@ -5711,12 +5696,18 @@ type ModelGatewaySyncSummary {
   message: String
 }
 
+# testNewModelGatewayConnection (dry-run, pre-create) 的返回值：仅三字段，不带 gateway。
 type ModelGatewayTestResult {
   success: Boolean!
-  status: ModelGatewayStatus!
-  latencyMs: Int
   message: String!
   testedAt: Time!
+}
+
+# syncModelGatewayConnection 的返回值：gateway 必返（非 null），所有策略/状态/
+# lastSyncAt/backendModelCount 等信息都从 gateway 内部字段读取。
+type ModelGatewaySyncResult {
+  success: Boolean!
+  message: String!
   gateway: ModelGateway!
 }
 
@@ -5726,17 +5717,23 @@ type DeleteModelGatewayPayload {
 
 input ModelGatewayFilterInput {
   search: String
-  status: ModelGatewayStatus
 }
 
 input ModelGatewayInput {
   name: String!
   provider: ModelGatewayProvider!
   endpoint: String!
-  adminUrl: String
   # litellm master key(接入表单填写)→ 后端写 secret store,只存引用,明文不落库。
   masterKey: String
-  loadBalancingStrategy: LoadBalancingStrategy!
+}
+
+# Pre-create test input — the form-level "Test Connection" button on the 接入表单
+# uses this to ping a not-yet-persisted gateway config. Carries the minimal
+# fields the probe needs: endpoint + masterKey. (name, provider are either fixed
+# or irrelevant to the live test.)
+input TestModelGatewayConnectionInput {
+  endpoint: String!
+  masterKey: String!
 }
 
 extend type Query {
@@ -5749,7 +5746,13 @@ extend type Mutation {
   createModelGateway(input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
   updateModelGateway(id: ID!, input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
   deleteModelGateway(id: ID!): DeleteModelGatewayPayload! @hasRole(any: [admin])
-  testModelGatewayConnection(id: ID!): ModelGatewayTestResult! @hasRole(any: [admin])
+  # 同步一个已存在的 gateway: 探测连通性 + 路由策略 + 后端模型数, 写回 ent 列.
+  # gateway 字段返回同步后的最新状态, 业务信息从 gateway 内部读取.
+  syncModelGatewayConnection(id: ID!): ModelGatewaySyncResult! @hasRole(any: [admin])
+  # Pre-create dry-run probe. No row is created or modified; the result's
+  # ` + "`" + `gateway` + "`" + ` field is null. Strategy probe is intentionally skipped (dry-run
+  # 只测连通性, 不拉 /config/router 也不解析 /models 的 data 数组).
+  testNewModelGatewayConnection(input: TestModelGatewayConnectionInput!): ModelGatewayTestResult! @hasRole(any: [admin])
 }
 `, BuiltIn: false},
 	{Name: "../../schema/observability.graphql", Input: `# Request logs (请求日志) + rate-limit policies (限流策略). 0619.
@@ -6980,16 +6983,10 @@ func (ec *executionContext) childFields_ModelGateway(ctx context.Context, field 
 		return ec.fieldContext_ModelGateway_provider(ctx, field)
 	case "endpoint":
 		return ec.fieldContext_ModelGateway_endpoint(ctx, field)
-	case "status":
-		return ec.fieldContext_ModelGateway_status(ctx, field)
 	case "backendModelCount":
 		return ec.fieldContext_ModelGateway_backendModelCount(ctx, field)
 	case "loadBalancingStrategy":
 		return ec.fieldContext_ModelGateway_loadBalancingStrategy(ctx, field)
-	case "latencyMs":
-		return ec.fieldContext_ModelGateway_latencyMs(ctx, field)
-	case "adminUrl":
-		return ec.fieldContext_ModelGateway_adminUrl(ctx, field)
 	case "lastSyncAt":
 		return ec.fieldContext_ModelGateway_lastSyncAt(ctx, field)
 	case "lastSyncStatus":
@@ -7014,6 +7011,18 @@ func (ec *executionContext) childFields_ModelGatewayConnection(ctx context.Conte
 	return nil, fmt.Errorf("no field named %q was found under type ModelGatewayConnection", field.Name)
 }
 
+func (ec *executionContext) childFields_ModelGatewaySyncResult(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "success":
+		return ec.fieldContext_ModelGatewaySyncResult_success(ctx, field)
+	case "message":
+		return ec.fieldContext_ModelGatewaySyncResult_message(ctx, field)
+	case "gateway":
+		return ec.fieldContext_ModelGatewaySyncResult_gateway(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type ModelGatewaySyncResult", field.Name)
+}
+
 func (ec *executionContext) childFields_ModelGatewaySyncSummary(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "state":
@@ -7034,16 +7043,10 @@ func (ec *executionContext) childFields_ModelGatewayTestResult(ctx context.Conte
 	switch field.Name {
 	case "success":
 		return ec.fieldContext_ModelGatewayTestResult_success(ctx, field)
-	case "status":
-		return ec.fieldContext_ModelGatewayTestResult_status(ctx, field)
-	case "latencyMs":
-		return ec.fieldContext_ModelGatewayTestResult_latencyMs(ctx, field)
 	case "message":
 		return ec.fieldContext_ModelGatewayTestResult_message(ctx, field)
 	case "testedAt":
 		return ec.fieldContext_ModelGatewayTestResult_testedAt(ctx, field)
-	case "gateway":
-		return ec.fieldContext_ModelGatewayTestResult_gateway(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type ModelGatewayTestResult", field.Name)
 }
@@ -8582,6 +8585,20 @@ func (ec *executionContext) field_Mutation_snapshotAgent_args(ctx context.Contex
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_syncModelGatewayConnection_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_syncResourcePool_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -8610,17 +8627,17 @@ func (ec *executionContext) field_Mutation_testGatewayConnection_args(ctx contex
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_testModelGatewayConnection_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+func (ec *executionContext) field_Mutation_testNewModelGatewayConnection_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
-		func(ctx context.Context, v any) (string, error) {
-			return ec.unmarshalNID2string(ctx, v)
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.TestModelGatewayConnectionInput, error) {
+			return ec.unmarshalNTestModelGatewayConnectionInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTestModelGatewayConnectionInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["id"] = arg0
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -13205,15 +13222,15 @@ func (ec *executionContext) _GatewayConnection_loadBalanceStrategy(ctx context.C
 			return obj.LoadBalanceStrategy, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v model.LoadBalanceStrategy) graphql.Marshaler {
-			return ec.marshalNLoadBalanceStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalanceStrategy(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v model.LoadBalancingStrategy) graphql.Marshaler {
+			return ec.marshalNLoadBalancingStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
 func (ec *executionContext) fieldContext_GatewayConnection_loadBalanceStrategy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("GatewayConnection", field, false, false, errors.New("field of type LoadBalanceStrategy does not have child fields"))
+	return graphql.NewScalarFieldContext("GatewayConnection", field, false, false, errors.New("field of type LoadBalancingStrategy does not have child fields"))
 }
 
 func (ec *executionContext) _GatewayConnection_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.GatewayConnection) (ret graphql.Marshaler) {
@@ -14070,29 +14087,6 @@ func (ec *executionContext) fieldContext_ModelGateway_endpoint(_ context.Context
 	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
-func (ec *executionContext) _ModelGateway_status(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ModelGateway_status(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Status, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v model.ModelGatewayStatus) graphql.Marshaler {
-			return ec.marshalNModelGatewayStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_ModelGateway_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type ModelGatewayStatus does not have child fields"))
-}
-
 func (ec *executionContext) _ModelGateway_backendModelCount(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -14128,61 +14122,15 @@ func (ec *executionContext) _ModelGateway_loadBalancingStrategy(ctx context.Cont
 			return obj.LoadBalancingStrategy, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v model.LoadBalancingStrategy) graphql.Marshaler {
-			return ec.marshalNLoadBalancingStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.LoadBalancingStrategy) graphql.Marshaler {
+			return ec.marshalOLoadBalancingStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, selections, v)
 		},
 		true,
-		true,
+		false,
 	)
 }
 func (ec *executionContext) fieldContext_ModelGateway_loadBalancingStrategy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type LoadBalancingStrategy does not have child fields"))
-}
-
-func (ec *executionContext) _ModelGateway_latencyMs(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ModelGateway_latencyMs(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.LatencyMs, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
-			return ec.marshalOInt2ᚖint(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_ModelGateway_latencyMs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _ModelGateway_adminUrl(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ModelGateway_adminUrl(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.AdminURL, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
-			return ec.marshalOString2ᚖstring(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_ModelGateway_adminUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _ModelGateway_lastSyncAt(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
@@ -14355,6 +14303,84 @@ func (ec *executionContext) fieldContext_ModelGatewayConnection_totalCount(_ con
 	return graphql.NewScalarFieldContext("ModelGatewayConnection", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
+func (ec *executionContext) _ModelGatewaySyncResult_success(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewaySyncResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewaySyncResult_success(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Success, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewaySyncResult_success(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGatewaySyncResult", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGatewaySyncResult_message(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewaySyncResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewaySyncResult_message(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Message, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewaySyncResult_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGatewaySyncResult", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGatewaySyncResult_gateway(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewaySyncResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewaySyncResult_gateway(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Gateway, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ModelGateway) graphql.Marshaler {
+			return ec.marshalNModelGateway2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGateway(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewaySyncResult_gateway(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ModelGatewaySyncResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ModelGateway(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ModelGatewaySyncSummary_state(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewaySyncSummary) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -14493,52 +14519,6 @@ func (ec *executionContext) fieldContext_ModelGatewayTestResult_success(_ contex
 	return graphql.NewScalarFieldContext("ModelGatewayTestResult", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
-func (ec *executionContext) _ModelGatewayTestResult_status(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayTestResult) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ModelGatewayTestResult_status(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Status, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v model.ModelGatewayStatus) graphql.Marshaler {
-			return ec.marshalNModelGatewayStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_ModelGatewayTestResult_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ModelGatewayTestResult", field, false, false, errors.New("field of type ModelGatewayStatus does not have child fields"))
-}
-
-func (ec *executionContext) _ModelGatewayTestResult_latencyMs(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayTestResult) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ModelGatewayTestResult_latencyMs(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.LatencyMs, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
-			return ec.marshalOInt2ᚖint(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_ModelGatewayTestResult_latencyMs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ModelGatewayTestResult", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
 func (ec *executionContext) _ModelGatewayTestResult_message(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayTestResult) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -14583,38 +14563,6 @@ func (ec *executionContext) _ModelGatewayTestResult_testedAt(ctx context.Context
 }
 func (ec *executionContext) fieldContext_ModelGatewayTestResult_testedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ModelGatewayTestResult", field, false, false, errors.New("field of type Time does not have child fields"))
-}
-
-func (ec *executionContext) _ModelGatewayTestResult_gateway(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayTestResult) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ModelGatewayTestResult_gateway(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Gateway, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.ModelGateway) graphql.Marshaler {
-			return ec.marshalNModelGateway2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGateway(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_ModelGatewayTestResult_gateway(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ModelGatewayTestResult",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_ModelGateway(ctx, field)
-		},
-	}
-	return fc, nil
 }
 
 func (ec *executionContext) _ModelRoute_id(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
@@ -14790,15 +14738,15 @@ func (ec *executionContext) _ModelRoute_strategy(ctx context.Context, field grap
 			return obj.Strategy, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v model.LoadBalanceStrategy) graphql.Marshaler {
-			return ec.marshalNLoadBalanceStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalanceStrategy(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v model.LoadBalancingStrategy) graphql.Marshaler {
+			return ec.marshalNLoadBalancingStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
 func (ec *executionContext) fieldContext_ModelRoute_strategy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type LoadBalanceStrategy does not have child fields"))
+	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type LoadBalancingStrategy does not have child fields"))
 }
 
 func (ec *executionContext) _ModelRoute_uiStrategy(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
@@ -17862,17 +17810,79 @@ func (ec *executionContext) fieldContext_Mutation_deleteModelGateway(ctx context
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_testModelGatewayConnection(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Mutation_syncModelGatewayConnection(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Mutation_testModelGatewayConnection(ctx, field)
+			return ec.fieldContext_Mutation_syncModelGatewayConnection(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().TestModelGatewayConnection(ctx, fc.Args["id"].(string))
+			return ec.Resolvers.Mutation().SyncModelGatewayConnection(ctx, fc.Args["id"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.ModelGatewaySyncResult
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.ModelGatewaySyncResult
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ModelGatewaySyncResult) graphql.Marshaler {
+			return ec.marshalNModelGatewaySyncResult2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySyncResult(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_syncModelGatewayConnection(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ModelGatewaySyncResult(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_syncModelGatewayConnection_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_testNewModelGatewayConnection(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_testNewModelGatewayConnection(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().TestNewModelGatewayConnection(ctx, fc.Args["input"].(model.TestModelGatewayConnectionInput))
 		},
 		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
 			directive0 := next
@@ -17900,7 +17910,7 @@ func (ec *executionContext) _Mutation_testModelGatewayConnection(ctx context.Con
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_Mutation_testModelGatewayConnection(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_testNewModelGatewayConnection(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -17917,7 +17927,7 @@ func (ec *executionContext) fieldContext_Mutation_testModelGatewayConnection(ctx
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_testModelGatewayConnection_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_testNewModelGatewayConnection_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -27345,7 +27355,7 @@ func (ec *executionContext) unmarshalInputModelGatewayFilterInput(ctx context.Co
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"search", "status"}
+	fieldsInOrder := [...]string{"search"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -27359,13 +27369,6 @@ func (ec *executionContext) unmarshalInputModelGatewayFilterInput(ctx context.Co
 				return it, err
 			}
 			it.Search = data
-		case "status":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
-			data, err := ec.unmarshalOModelGatewayStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Status = data
 		}
 	}
 	return it, nil
@@ -27382,7 +27385,7 @@ func (ec *executionContext) unmarshalInputModelGatewayInput(ctx context.Context,
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "provider", "endpoint", "adminUrl", "masterKey", "loadBalancingStrategy"}
+	fieldsInOrder := [...]string{"name", "provider", "endpoint", "masterKey"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -27410,13 +27413,6 @@ func (ec *executionContext) unmarshalInputModelGatewayInput(ctx context.Context,
 				return it, err
 			}
 			it.Endpoint = data
-		case "adminUrl":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("adminUrl"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.AdminURL = data
 		case "masterKey":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("masterKey"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -27424,13 +27420,6 @@ func (ec *executionContext) unmarshalInputModelGatewayInput(ctx context.Context,
 				return it, err
 			}
 			it.MasterKey = data
-		case "loadBalancingStrategy":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("loadBalancingStrategy"))
-			data, err := ec.unmarshalNLoadBalancingStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.LoadBalancingStrategy = data
 		}
 	}
 	return it, nil
@@ -27871,7 +27860,7 @@ func (ec *executionContext) unmarshalInputRegisterGatewayConnectionInput(ctx con
 			it.MasterKeyRef = data
 		case "loadBalanceStrategy":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("loadBalanceStrategy"))
-			data, err := ec.unmarshalOLoadBalanceStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalanceStrategy(ctx, v)
+			data, err := ec.unmarshalOLoadBalancingStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -28154,6 +28143,43 @@ func (ec *executionContext) unmarshalInputSnapshotAgentInput(ctx context.Context
 				return it, err
 			}
 			it.Description = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputTestModelGatewayConnectionInput(ctx context.Context, obj any) (model.TestModelGatewayConnectionInput, error) {
+	var it model.TestModelGatewayConnectionInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"endpoint", "masterKey"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "endpoint":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("endpoint"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Endpoint = data
+		case "masterKey":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("masterKey"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.MasterKey = data
 		}
 	}
 	return it, nil
@@ -28743,7 +28769,7 @@ func (ec *executionContext) unmarshalInputUpsertModelRouteInput(ctx context.Cont
 			it.Upstreams = data
 		case "strategy":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("strategy"))
-			data, err := ec.unmarshalOLoadBalanceStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalanceStrategy(ctx, v)
+			data, err := ec.unmarshalOLoadBalancingStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -31469,11 +31495,6 @@ func (ec *executionContext) _ModelGateway(ctx context.Context, sel ast.Selection
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "status":
-			out.Values[i] = ec._ModelGateway_status(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "backendModelCount":
 			out.Values[i] = ec._ModelGateway_backendModelCount(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -31481,16 +31502,6 @@ func (ec *executionContext) _ModelGateway(ctx context.Context, sel ast.Selection
 			}
 		case "loadBalancingStrategy":
 			out.Values[i] = ec._ModelGateway_loadBalancingStrategy(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "latencyMs":
-			out.Values[i] = ec._ModelGateway_latencyMs(ctx, field, obj)
-			if out.Values[i] == graphql.RequiredNull {
-				out.Invalids++
-			}
-		case "adminUrl":
-			out.Values[i] = ec._ModelGateway_adminUrl(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
@@ -31560,6 +31571,55 @@ func (ec *executionContext) _ModelGatewayConnection(ctx context.Context, sel ast
 			}
 		case "totalCount":
 			out.Values[i] = ec._ModelGatewayConnection_totalCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var modelGatewaySyncResultImplementors = []string{"ModelGatewaySyncResult"}
+
+func (ec *executionContext) _ModelGatewaySyncResult(ctx context.Context, sel ast.SelectionSet, obj *model.ModelGatewaySyncResult) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, modelGatewaySyncResultImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ModelGatewaySyncResult")
+		case "success":
+			out.Values[i] = ec._ModelGatewaySyncResult_success(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "message":
+			out.Values[i] = ec._ModelGatewaySyncResult_message(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "gateway":
+			out.Values[i] = ec._ModelGatewaySyncResult_gateway(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -31661,16 +31721,6 @@ func (ec *executionContext) _ModelGatewayTestResult(ctx context.Context, sel ast
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "status":
-			out.Values[i] = ec._ModelGatewayTestResult_status(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "latencyMs":
-			out.Values[i] = ec._ModelGatewayTestResult_latencyMs(ctx, field, obj)
-			if out.Values[i] == graphql.RequiredNull {
-				out.Invalids++
-			}
 		case "message":
 			out.Values[i] = ec._ModelGatewayTestResult_message(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -31678,11 +31728,6 @@ func (ec *executionContext) _ModelGatewayTestResult(ctx context.Context, sel ast
 			}
 		case "testedAt":
 			out.Values[i] = ec._ModelGatewayTestResult_testedAt(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "gateway":
-			out.Values[i] = ec._ModelGatewayTestResult_gateway(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -32276,9 +32321,16 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "testModelGatewayConnection":
+		case "syncModelGatewayConnection":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_testModelGatewayConnection(ctx, field)
+				return ec._Mutation_syncModelGatewayConnection(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "testNewModelGatewayConnection":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_testNewModelGatewayConnection(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -36698,16 +36750,6 @@ func (ec *executionContext) marshalNIssuedVirtualKey2ᚖgithubᚗcomᚋVMwareᚑ
 	return ec._IssuedVirtualKey(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNLoadBalanceStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalanceStrategy(ctx context.Context, v any) (model.LoadBalanceStrategy, error) {
-	var res model.LoadBalanceStrategy
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNLoadBalanceStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalanceStrategy(ctx context.Context, sel ast.SelectionSet, v model.LoadBalanceStrategy) graphql.Marshaler {
-	return v
-}
-
 func (ec *executionContext) unmarshalNLoadBalancingStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx context.Context, v any) (model.LoadBalancingStrategy, error) {
 	var res model.LoadBalancingStrategy
 	err := res.UnmarshalGQL(v)
@@ -36880,14 +36922,18 @@ func (ec *executionContext) marshalNModelGatewaySortField2githubᚗcomᚋVMware�
 	return v
 }
 
-func (ec *executionContext) unmarshalNModelGatewayStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx context.Context, v any) (model.ModelGatewayStatus, error) {
-	var res model.ModelGatewayStatus
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
+func (ec *executionContext) marshalNModelGatewaySyncResult2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySyncResult(ctx context.Context, sel ast.SelectionSet, v model.ModelGatewaySyncResult) graphql.Marshaler {
+	return ec._ModelGatewaySyncResult(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNModelGatewayStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx context.Context, sel ast.SelectionSet, v model.ModelGatewayStatus) graphql.Marshaler {
-	return v
+func (ec *executionContext) marshalNModelGatewaySyncResult2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySyncResult(ctx context.Context, sel ast.SelectionSet, v *model.ModelGatewaySyncResult) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ModelGatewaySyncResult(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNModelGatewaySyncState2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySyncState(ctx context.Context, v any) (model.ModelGatewaySyncState, error) {
@@ -37666,6 +37712,11 @@ func (ec *executionContext) marshalNSyncResourcePoolPayload2ᚖgithubᚗcomᚋVM
 	return ec._SyncResourcePoolPayload(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNTestModelGatewayConnectionInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTestModelGatewayConnectionInput(ctx context.Context, v any) (model.TestModelGatewayConnectionInput, error) {
+	res, err := ec.unmarshalInputTestModelGatewayConnectionInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNTestResourcePoolConnectionInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTestResourcePoolConnectionInput(ctx context.Context, v any) (model.TestResourcePoolConnectionInput, error) {
 	res, err := ec.unmarshalInputTestResourcePoolConnectionInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -38273,16 +38324,16 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	return res
 }
 
-func (ec *executionContext) unmarshalOLoadBalanceStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalanceStrategy(ctx context.Context, v any) (*model.LoadBalanceStrategy, error) {
+func (ec *executionContext) unmarshalOLoadBalancingStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx context.Context, v any) (*model.LoadBalancingStrategy, error) {
 	if v == nil {
 		return nil, nil
 	}
-	var res = new(model.LoadBalanceStrategy)
+	var res = new(model.LoadBalancingStrategy)
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOLoadBalanceStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalanceStrategy(ctx context.Context, sel ast.SelectionSet, v *model.LoadBalanceStrategy) graphql.Marshaler {
+func (ec *executionContext) marshalOLoadBalancingStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx context.Context, sel ast.SelectionSet, v *model.LoadBalancingStrategy) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -38353,22 +38404,6 @@ func (ec *executionContext) unmarshalOModelGatewaySort2ᚖgithubᚗcomᚋVMware�
 	}
 	res, err := ec.unmarshalInputModelGatewaySort(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOModelGatewayStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx context.Context, v any) (*model.ModelGatewayStatus, error) {
-	if v == nil {
-		return nil, nil
-	}
-	var res = new(model.ModelGatewayStatus)
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOModelGatewayStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx context.Context, sel ast.SelectionSet, v *model.ModelGatewayStatus) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return v
 }
 
 func (ec *executionContext) unmarshalOModelRouteStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx context.Context, v any) (*model.ModelRouteStrategy, error) {
