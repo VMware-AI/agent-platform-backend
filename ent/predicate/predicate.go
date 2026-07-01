@@ -54,6 +54,9 @@ type OvaTemplateVersion func(*sql.Selector)
 // Permission is the predicate function for permission builders.
 type Permission func(*sql.Selector)
 
+// PlatformSecret is the predicate function for platformsecret builders.
+type PlatformSecret func(*sql.Selector)
+
 // RateLimitPolicy is the predicate function for ratelimitpolicy builders.
 type RateLimitPolicy func(*sql.Selector)
 

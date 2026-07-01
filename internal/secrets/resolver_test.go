@@ -3,8 +3,6 @@ package secrets
 import (
 	"context"
 	"errors"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 )
 
@@ -40,30 +38,6 @@ func TestEnvResolver(t *testing.T) {
 	}
 }
 
-func TestVaultwardenResolver(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/object/item/abc123" {
-			http.Error(w, "not found", http.StatusNotFound)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"success":true,"data":{"login":{"username":"svc-vc","password":"vpw"},"fields":[{"name":"api_key","value":"sk-1"}]}}`))
-	}))
-	defer srv.Close()
-
-	r := NewVaultwardenResolver(srv.URL)
-	c, err := r.Resolve(context.Background(), "vault://abc123")
-	if err != nil {
-		t.Fatalf("Resolve: %v", err)
-	}
-	if c.Username != "svc-vc" || c.Password != "vpw" || c.APIKey != "sk-1" {
-		t.Fatalf("unexpected cred: %+v", c)
-	}
-	if _, err := r.Resolve(context.Background(), "vault://nope"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("missing item want ErrNotFound, got %v", err)
-	}
-}
-
 func TestStaticResolver_PutThenResolve(t *testing.T) {
 	s := NewStaticResolver(nil)
 	ref, err := s.Put(context.Background(), "agent-ui/vm-1", Credential{Username: "agent", Password: "p@ss"})
@@ -87,10 +61,11 @@ func TestStaticResolver_PutThenResolve(t *testing.T) {
 	}
 }
 
-// VaultwardenResolver and StaticResolver must both satisfy Resolver + Store.
+// The encrypted DBStore (production) and the StaticResolver (test double) must
+// both satisfy Resolver + Store.
 var (
-	_ Resolver = (*VaultwardenResolver)(nil)
-	_ Store    = (*VaultwardenResolver)(nil)
+	_ Resolver = (*DBStore)(nil)
+	_ Store    = (*DBStore)(nil)
 	_ Resolver = (*StaticResolver)(nil)
 	_ Store    = (*StaticResolver)(nil)
 )

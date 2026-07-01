@@ -21,6 +21,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplatefamily"
 	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplateversion"
 	"github.com/VMware-AI/agent-platform-backend/ent/permission"
+	"github.com/VMware-AI/agent-platform-backend/ent/platformsecret"
 	"github.com/VMware-AI/agent-platform-backend/ent/ratelimitpolicy"
 	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
@@ -443,6 +444,37 @@ func init() {
 	permissionDescID := permissionFields[0].Descriptor()
 	// permission.DefaultID holds the default value on creation for the id field.
 	permission.DefaultID = permissionDescID.Default.(func() uuid.UUID)
+	platformsecretMixin := schema.PlatformSecret{}.Mixin()
+	platformsecretMixinFields0 := platformsecretMixin[0].Fields()
+	_ = platformsecretMixinFields0
+	platformsecretFields := schema.PlatformSecret{}.Fields()
+	_ = platformsecretFields
+	// platformsecretDescCreatedAt is the schema descriptor for created_at field.
+	platformsecretDescCreatedAt := platformsecretMixinFields0[0].Descriptor()
+	// platformsecret.DefaultCreatedAt holds the default value on creation for the created_at field.
+	platformsecret.DefaultCreatedAt = platformsecretDescCreatedAt.Default.(func() time.Time)
+	// platformsecretDescUpdatedAt is the schema descriptor for updated_at field.
+	platformsecretDescUpdatedAt := platformsecretMixinFields0[1].Descriptor()
+	// platformsecret.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	platformsecret.DefaultUpdatedAt = platformsecretDescUpdatedAt.Default.(func() time.Time)
+	// platformsecret.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	platformsecret.UpdateDefaultUpdatedAt = platformsecretDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// platformsecretDescRef is the schema descriptor for ref field.
+	platformsecretDescRef := platformsecretFields[0].Descriptor()
+	// platformsecret.RefValidator is a validator for the "ref" field. It is called by the builders before save.
+	platformsecret.RefValidator = platformsecretDescRef.Validators[0].(func(string) error)
+	// platformsecretDescUsername is the schema descriptor for username field.
+	platformsecretDescUsername := platformsecretFields[1].Descriptor()
+	// platformsecret.DefaultUsername holds the default value on creation for the username field.
+	platformsecret.DefaultUsername = platformsecretDescUsername.Default.(string)
+	// platformsecretDescPassword is the schema descriptor for password field.
+	platformsecretDescPassword := platformsecretFields[2].Descriptor()
+	// platformsecret.DefaultPassword holds the default value on creation for the password field.
+	platformsecret.DefaultPassword = platformsecretDescPassword.Default.(string)
+	// platformsecretDescAPIKey is the schema descriptor for api_key field.
+	platformsecretDescAPIKey := platformsecretFields[3].Descriptor()
+	// platformsecret.DefaultAPIKey holds the default value on creation for the api_key field.
+	platformsecret.DefaultAPIKey = platformsecretDescAPIKey.Default.(string)
 	ratelimitpolicyMixin := schema.RateLimitPolicy{}.Mixin()
 	ratelimitpolicyMixinFields0 := ratelimitpolicyMixin[0].Fields()
 	_ = ratelimitpolicyMixinFields0

@@ -8,12 +8,15 @@
 #   ./start_backend_local.sh                         # sane defaults
 #   ADMIN_BOOTSTRAP_PASSWORD='MyStrong!Pass1' \
 #     ./start_backend_local.sh                      # explicit admin pw, no first-login nag
+#   SECRETS_ENCRYPTION_KEY='<hex>' ./start_backend_local.sh   # explicit key, skip auto-gen
 #   ./start_backend_local.sh --help                 # show this help
 #
 # After it boots:
 #   admin user:    admin (password = $ADMIN_BOOTSTRAP_PASSWORD, or dev default if blank)
 #   GraphQL:       http://localhost:8080/query
 #   Playground:    http://localhost:8080/
+#   secrets:       encrypted db-backed store (platform_secrets, AES-GCM);
+#                  key auto-generated to deploy/.secrets_encryption_key on first run
 set -euo pipefail
 
 usage() {
@@ -31,6 +34,31 @@ esac
 # Resolve paths so the script works no matter where it's invoked from.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# ---------- secrets encryption key (required since feat/secrets-encrypted-pg) ----------
+# Credentials are stored in the platform_secrets table, encrypted at rest under a
+# single key (SECRETS_ENCRYPTION_KEY, SHA-256-derived to AES-256-GCM). The stored
+# ciphertext has no key-version prefix, so a rotating/changing key strands every
+# existing row (GCM auth tag fails). Persist the key on the host so every restart
+# uses the same one. First run: auto-generate. Explicit env var wins (CI/prod).
+KEY_FILE="${SCRIPT_DIR}/.secrets_encryption_key"
+if [[ -z "${SECRETS_ENCRYPTION_KEY:-}" ]]; then
+  if [[ -f "${KEY_FILE}" ]]; then
+    export SECRETS_ENCRYPTION_KEY="$(cat "${KEY_FILE}")"
+  else
+    if ! command -v openssl >/dev/null 2>&1; then
+      echo "error: SECRETS_ENCRYPTION_KEY not set and 'openssl' not found to generate one" >&2
+      echo "         set SECRETS_ENCRYPTION_KEY=<high-entropy string> and re-run" >&2
+      exit 1
+    fi
+    umask 077
+    openssl rand -hex 32 > "${KEY_FILE}"
+    chmod 600 "${KEY_FILE}"
+    export SECRETS_ENCRYPTION_KEY="$(cat "${KEY_FILE}")"
+    echo "generated new SECRETS_ENCRYPTION_KEY at ${KEY_FILE}"
+    echo "  (BACK THIS UP — losing the key strands every encrypted credential in platform_secrets)"
+  fi
+fi
 
 # ---------- sane dev defaults (override via env) ----------
 export APP_ENV="${APP_ENV:-dev}"
@@ -151,6 +179,7 @@ echo "   APP_ENV=${APP_ENV}    HTTP_ADDR=${HTTP_ADDR}"
 echo "   DATABASE_URL=${DATABASE_URL}"
 echo "   REDIS_URL=${REDIS_URL}"
 echo "   ALLOWED_ORIGINS=${ALLOWED_ORIGINS}"
+echo "   SECRETS_ENCRYPTION_KEY=<set>  (key file: ${KEY_FILE})"
 echo "────────────────────────────────────────────────────────────"
 echo
 

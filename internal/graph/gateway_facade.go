@@ -275,15 +275,15 @@ func (r *Resolver) buildGatewayModels(ctx context.Context, g *ent.GatewayConnect
 // real client — probes / ops see a normal error instead of nil.
 type errModelManager struct{ err error }
 
-func (e *errModelManager) TestConnection(context.Context) error    { return e.err }
+func (e *errModelManager) TestConnection(context.Context) error { return e.err }
 func (e *errModelManager) GetRoutingStrategy(context.Context) (gateway.RoutingStrategy, error) {
 	return "", e.err
 }
 func (e *errModelManager) ListModels(context.Context) ([]gateway.ModelInfo, error) {
 	return nil, e.err
 }
-func (e *errModelManager) NewModel(context.Context, gateway.ModelSpec) error   { return e.err }
-func (e *errModelManager) DeleteModel(context.Context, string) error            { return e.err }
+func (e *errModelManager) NewModel(context.Context, gateway.ModelSpec) error { return e.err }
+func (e *errModelManager) DeleteModel(context.Context, string) error         { return e.err }
 func (e *errModelManager) UpsertComplexityRouter(context.Context, gateway.RouterSpec) error {
 	return e.err
 }
