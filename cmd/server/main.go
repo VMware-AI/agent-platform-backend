@@ -131,17 +131,17 @@ func main() {
 	agentMgr := &agentmgr.Service{Ent: client, Secrets: sec}
 
 	resolver := &graph.Resolver{
-		Ent:                 client,
-		Sessions:            sessions,
-		SessionTTL:          ttl,
-		SecureCookies:       cfg.Env == "prod",
-		Secrets:             sec,
-		InstallVars:         installVars,
-		VCenterConnect:      vcConnect,
-		LoginLimiter:        loginLimiter,
-		AgentMgr:            agentMgr,
-		ControlPlaneURL:     os.Getenv("CONTROL_PLANE_URL"),
-		EnvScopeEnabled:     cfg.EnvScopeEnabled,
+		Ent:             client,
+		Sessions:        sessions,
+		SessionTTL:      ttl,
+		SecureCookies:   cfg.Env == "prod",
+		Secrets:         sec,
+		InstallVars:     installVars,
+		VCenterConnect:  vcConnect,
+		LoginLimiter:    loginLimiter,
+		AgentMgr:        agentMgr,
+		ControlPlaneURL: os.Getenv("CONTROL_PLANE_URL"),
+		EnvScopeEnabled: cfg.EnvScopeEnabled,
 	}
 	resolver.EnablePoolSync(
 		time.Duration(cfg.PoolSyncTimeoutSeconds)*time.Second,
