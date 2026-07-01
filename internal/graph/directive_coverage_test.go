@@ -22,6 +22,7 @@ var authExemptFields = map[string]string{
 	"changePassword": "self",
 	// resolver-authz: owner track / inline admin / catalog
 	"agents":                "owner track (Agents filters by owner; tenant-admin branch pending B2)",
+	"agent":                 "agentVisibilityPredicates (same visibility rule as agents list)",
 	"createAgent":           "owner = caller",
 	"setAgentStatus":        "owner oracle (getOwnedAgent)",
 	"agentTemplates":        "public catalog read",

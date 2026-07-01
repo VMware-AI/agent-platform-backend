@@ -22,6 +22,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/catalog"
 	"github.com/VMware-AI/agent-platform-backend/internal/config"
+	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph"
 	"github.com/VMware-AI/agent-platform-backend/internal/httpx"
 	"github.com/VMware-AI/agent-platform-backend/internal/leader"
@@ -142,6 +143,8 @@ func main() {
 		AgentMgr:        agentMgr,
 		ControlPlaneURL: os.Getenv("CONTROL_PLANE_URL"),
 		EnvScopeEnabled: cfg.EnvScopeEnabled,
+		Gateway:         gateway.NewMockClient(),
+		GatewayURL:      "http://localhost:4000",
 	}
 	resolver.EnablePoolSync(
 		time.Duration(cfg.PoolSyncTimeoutSeconds)*time.Second,

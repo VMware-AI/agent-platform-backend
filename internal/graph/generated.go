@@ -186,6 +186,13 @@ type ComplexityRoot struct {
 		User               func(childComplexity int) int
 	}
 
+	Cluster struct {
+		EsxiHosts     func(childComplexity int) int
+		Name          func(childComplexity int) int
+		Path          func(childComplexity int) int
+		ResourcePools func(childComplexity int) int
+	}
+
 	ContentLibraryItem struct {
 		Name func(childComplexity int) int
 		Type func(childComplexity int) int
@@ -254,6 +261,16 @@ type ComplexityRoot struct {
 		TotalResourcePools func(childComplexity int) int
 		TotalUsers         func(childComplexity int) int
 		TotalVirtualKeys   func(childComplexity int) int
+	}
+
+	DataCenter struct {
+		Clusters        func(childComplexity int) int
+		Datastores      func(childComplexity int) int
+		Folders         func(childComplexity int) int
+		Name            func(childComplexity int) int
+		Networks        func(childComplexity int) int
+		Path            func(childComplexity int) int
+		StoragePolicies func(childComplexity int) int
 	}
 
 	DateUsage struct {
@@ -351,7 +368,6 @@ type ComplexityRoot struct {
 	}
 
 	ModelGateway struct {
-		AdminURL              func(childComplexity int) int
 		BackendModelCount     func(childComplexity int) int
 		CreatedAt             func(childComplexity int) int
 		Endpoint              func(childComplexity int) int
@@ -359,17 +375,21 @@ type ComplexityRoot struct {
 		LastSyncAt            func(childComplexity int) int
 		LastSyncMessage       func(childComplexity int) int
 		LastSyncStatus        func(childComplexity int) int
-		LatencyMs             func(childComplexity int) int
 		LoadBalancingStrategy func(childComplexity int) int
 		Name                  func(childComplexity int) int
 		Provider              func(childComplexity int) int
-		Status                func(childComplexity int) int
 		UpdatedAt             func(childComplexity int) int
 	}
 
 	ModelGatewayConnection struct {
 		Nodes      func(childComplexity int) int
 		TotalCount func(childComplexity int) int
+	}
+
+	ModelGatewaySyncResult struct {
+		Gateway func(childComplexity int) int
+		Message func(childComplexity int) int
+		Success func(childComplexity int) int
 	}
 
 	ModelGatewaySyncSummary struct {
@@ -381,12 +401,9 @@ type ComplexityRoot struct {
 	}
 
 	ModelGatewayTestResult struct {
-		Gateway   func(childComplexity int) int
-		LatencyMs func(childComplexity int) int
-		Message   func(childComplexity int) int
-		Status    func(childComplexity int) int
-		Success   func(childComplexity int) int
-		TestedAt  func(childComplexity int) int
+		Message  func(childComplexity int) int
+		Success  func(childComplexity int) int
+		TestedAt func(childComplexity int) int
 	}
 
 	ModelRoute struct {
@@ -421,77 +438,78 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddMembership              func(childComplexity int, userID string, departmentID string, role *model.MembershipRole) int
-		AddOvaTemplateVersion      func(childComplexity int, input model.AddOvaTemplateVersionInput) int
-		AssignUserRole             func(childComplexity int, userID string, roleID string) int
-		AssignUsersToRole          func(childComplexity int, input model.AssignUsersToRoleInput) int
-		ChangePassword             func(childComplexity int, oldPassword string, newPassword string) int
-		CreateAgent                func(childComplexity int, input model.CreateAgentInput) int
-		CreateAgentConfig          func(childComplexity int, input model.CreateAgentConfigInput) int
-		CreateCustomRole           func(childComplexity int, input model.CreateCustomRoleInput) int
-		CreateDepartment           func(childComplexity int, input model.CreateDepartmentInput) int
-		CreateModelGateway         func(childComplexity int, input model.ModelGatewayInput) int
-		CreateModelRoute           func(childComplexity int, input model.CreateModelRouteInput) int
-		CreateOvaTemplateFamily    func(childComplexity int, input model.CreateOvaTemplateFamilyInput) int
-		CreateResourcePool         func(childComplexity int, input model.CreateResourcePoolInput) int
-		CreateUser                 func(childComplexity int, input model.CreateUserInput) int
-		DeleteAgentConfig          func(childComplexity int, id string) int
-		DeleteArtifact             func(childComplexity int, id string) int
-		DeleteCustomRole           func(childComplexity int, id string) int
-		DeleteDepartment           func(childComplexity int, id string) int
-		DeleteGatewayConnection    func(childComplexity int, id string) int
-		DeleteImage                func(childComplexity int, id string) int
-		DeleteModelGateway         func(childComplexity int, id string) int
-		DeleteModelRoute           func(childComplexity int, id string) int
-		DeleteRateLimitPolicy      func(childComplexity int, id string) int
-		DeleteResourcePool         func(childComplexity int, id string) int
-		DeleteSkill                func(childComplexity int, id string) int
-		DeleteUpstream             func(childComplexity int, id string) int
-		DeleteUser                 func(childComplexity int, id string) int
-		DeployAgent                func(childComplexity int, input model.DeployAgentInput) int
-		IssueVirtualKey            func(childComplexity int, input model.IssueVirtualKeyInput) int
-		Login                      func(childComplexity int, input model.LoginInput) int
-		Logout                     func(childComplexity int) int
-		RecordRequestLog           func(childComplexity int, input model.RecordRequestLogInput) int
-		RecordTokenUsage           func(childComplexity int, input model.RecordTokenUsageInput) int
-		RecycleAgent               func(childComplexity int, input model.RecycleAgentInput) int
-		RegenerateVirtualKey       func(childComplexity int, id string) int
-		RegisterGatewayConnection  func(childComplexity int, input model.RegisterGatewayConnectionInput) int
-		RemoveMembership           func(childComplexity int, userID string, departmentID string) int
-		RemoveUserRole             func(childComplexity int, userID string, roleID string) int
-		RequestRotation            func(childComplexity int, agentID string, kind model.RotationKind) int
-		ResetUserPassword          func(childComplexity int, id string) int
-		RevertAgentSnapshot        func(childComplexity int, input model.RevertAgentSnapshotInput) int
-		RevokeAgentEnrollment      func(childComplexity int, agentID string) int
-		RevokeVirtualKey           func(childComplexity int, id string) int
-		SetAgentConfigKnowledge    func(childComplexity int, configID string, knowledgeArtifactIds []string) int
-		SetAgentStatus             func(childComplexity int, id string, status model.AgentStatus) int
-		SetDefaultAgentConfig      func(childComplexity int, id string) int
-		SetModelRouteEnabled       func(childComplexity int, id string, enabled bool) int
-		SetRateLimitPolicyEnabled  func(childComplexity int, id string, enabled bool) int
-		SetRolePermissions         func(childComplexity int, roleID string, permissionKeys []string) int
-		SetRouterTier              func(childComplexity int, tier model.RouterTierLevel, modelAlias string) int
-		SetVirtualKeyEnabled       func(childComplexity int, id string, enabled bool) int
-		SnapshotAgent              func(childComplexity int, input model.SnapshotAgentInput) int
-		SyncResourcePool           func(childComplexity int, id string) int
-		TestGatewayConnection      func(childComplexity int, id string) int
-		TestModelGatewayConnection func(childComplexity int, id string) int
-		TestResourcePoolConnection func(childComplexity int, input model.TestResourcePoolConnectionInput) int
-		ToggleUserEnabled          func(childComplexity int, id string) int
-		UpdateAgentConfig          func(childComplexity int, id string, input model.UpdateAgentConfigInput) int
-		UpdateModelGateway         func(childComplexity int, id string, input model.ModelGatewayInput) int
-		UpdateModelRoute           func(childComplexity int, id string, input model.UpdateModelRouteInput) int
-		UpdatePlatformSettings     func(childComplexity int, input model.UpdatePlatformSettingsInput) int
-		UpdateResourcePool         func(childComplexity int, id string, input model.UpdateResourcePoolInput) int
-		UpdateUser                 func(childComplexity int, id string, input model.UpdateUserInput) int
-		UpsertAgentTemplate        func(childComplexity int, input model.UpsertAgentTemplateInput) int
-		UpsertArtifact             func(childComplexity int, input model.UpsertArtifactInput) int
-		UpsertImage                func(childComplexity int, input model.UpsertImageInput) int
-		UpsertModelRoute           func(childComplexity int, input model.UpsertModelRouteInput) int
-		UpsertPermission           func(childComplexity int, key string, description *string) int
-		UpsertRateLimitPolicy      func(childComplexity int, input model.UpsertRateLimitPolicyInput) int
-		UpsertSkill                func(childComplexity int, input model.UpsertSkillInput) int
-		UpsertUpstream             func(childComplexity int, input model.UpsertUpstreamInput) int
+		AddMembership                 func(childComplexity int, userID string, departmentID string, role *model.MembershipRole) int
+		AddOvaTemplateVersion         func(childComplexity int, input model.AddOvaTemplateVersionInput) int
+		AssignUserRole                func(childComplexity int, userID string, roleID string) int
+		AssignUsersToRole             func(childComplexity int, input model.AssignUsersToRoleInput) int
+		ChangePassword                func(childComplexity int, oldPassword string, newPassword string) int
+		CreateAgent                   func(childComplexity int, input model.CreateAgentInput) int
+		CreateAgentConfig             func(childComplexity int, input model.CreateAgentConfigInput) int
+		CreateCustomRole              func(childComplexity int, input model.CreateCustomRoleInput) int
+		CreateDepartment              func(childComplexity int, input model.CreateDepartmentInput) int
+		CreateModelGateway            func(childComplexity int, input model.ModelGatewayInput) int
+		CreateModelRoute              func(childComplexity int, input model.CreateModelRouteInput) int
+		CreateOvaTemplateFamily       func(childComplexity int, input model.CreateOvaTemplateFamilyInput) int
+		CreateResourcePool            func(childComplexity int, input model.CreateResourcePoolInput) int
+		CreateUser                    func(childComplexity int, input model.CreateUserInput) int
+		DeleteAgentConfig             func(childComplexity int, id string) int
+		DeleteArtifact                func(childComplexity int, id string) int
+		DeleteCustomRole              func(childComplexity int, id string) int
+		DeleteDepartment              func(childComplexity int, id string) int
+		DeleteGatewayConnection       func(childComplexity int, id string) int
+		DeleteImage                   func(childComplexity int, id string) int
+		DeleteModelGateway            func(childComplexity int, id string) int
+		DeleteModelRoute              func(childComplexity int, id string) int
+		DeleteRateLimitPolicy         func(childComplexity int, id string) int
+		DeleteResourcePool            func(childComplexity int, id string) int
+		DeleteSkill                   func(childComplexity int, id string) int
+		DeleteUpstream                func(childComplexity int, id string) int
+		DeleteUser                    func(childComplexity int, id string) int
+		DeployAgent                   func(childComplexity int, input model.DeployAgentInput) int
+		IssueVirtualKey               func(childComplexity int, input model.IssueVirtualKeyInput) int
+		Login                         func(childComplexity int, input model.LoginInput) int
+		Logout                        func(childComplexity int) int
+		RecordRequestLog              func(childComplexity int, input model.RecordRequestLogInput) int
+		RecordTokenUsage              func(childComplexity int, input model.RecordTokenUsageInput) int
+		RecycleAgent                  func(childComplexity int, input model.RecycleAgentInput) int
+		RegenerateVirtualKey          func(childComplexity int, id string) int
+		RegisterGatewayConnection     func(childComplexity int, input model.RegisterGatewayConnectionInput) int
+		RemoveMembership              func(childComplexity int, userID string, departmentID string) int
+		RemoveUserRole                func(childComplexity int, userID string, roleID string) int
+		RequestRotation               func(childComplexity int, agentID string, kind model.RotationKind) int
+		ResetUserPassword             func(childComplexity int, id string) int
+		RevertAgentSnapshot           func(childComplexity int, input model.RevertAgentSnapshotInput) int
+		RevokeAgentEnrollment         func(childComplexity int, agentID string) int
+		RevokeVirtualKey              func(childComplexity int, id string) int
+		SetAgentConfigKnowledge       func(childComplexity int, configID string, knowledgeArtifactIds []string) int
+		SetAgentStatus                func(childComplexity int, id string, status model.AgentStatus) int
+		SetDefaultAgentConfig         func(childComplexity int, id string) int
+		SetModelRouteEnabled          func(childComplexity int, id string, enabled bool) int
+		SetRateLimitPolicyEnabled     func(childComplexity int, id string, enabled bool) int
+		SetRolePermissions            func(childComplexity int, roleID string, permissionKeys []string) int
+		SetRouterTier                 func(childComplexity int, tier model.RouterTierLevel, modelAlias string) int
+		SetVirtualKeyEnabled          func(childComplexity int, id string, enabled bool) int
+		SnapshotAgent                 func(childComplexity int, input model.SnapshotAgentInput) int
+		SyncModelGatewayConnection    func(childComplexity int, id string) int
+		SyncResourcePool              func(childComplexity int, id string) int
+		TestGatewayConnection         func(childComplexity int, id string) int
+		TestNewModelGatewayConnection func(childComplexity int, input model.TestModelGatewayConnectionInput) int
+		TestResourcePoolConnection    func(childComplexity int, input model.TestResourcePoolConnectionInput) int
+		ToggleUserEnabled             func(childComplexity int, id string) int
+		UpdateAgentConfig             func(childComplexity int, id string, input model.UpdateAgentConfigInput) int
+		UpdateModelGateway            func(childComplexity int, id string, input model.ModelGatewayInput) int
+		UpdateModelRoute              func(childComplexity int, id string, input model.UpdateModelRouteInput) int
+		UpdatePlatformSettings        func(childComplexity int, input model.UpdatePlatformSettingsInput) int
+		UpdateResourcePool            func(childComplexity int, id string, input model.UpdateResourcePoolInput) int
+		UpdateUser                    func(childComplexity int, id string, input model.UpdateUserInput) int
+		UpsertAgentTemplate           func(childComplexity int, input model.UpsertAgentTemplateInput) int
+		UpsertArtifact                func(childComplexity int, input model.UpsertArtifactInput) int
+		UpsertImage                   func(childComplexity int, input model.UpsertImageInput) int
+		UpsertModelRoute              func(childComplexity int, input model.UpsertModelRouteInput) int
+		UpsertPermission              func(childComplexity int, key string, description *string) int
+		UpsertRateLimitPolicy         func(childComplexity int, input model.UpsertRateLimitPolicyInput) int
+		UpsertSkill                   func(childComplexity int, input model.UpsertSkillInput) int
+		UpsertUpstream                func(childComplexity int, input model.UpsertUpstreamInput) int
 	}
 
 	OvaTemplateFamily struct {
@@ -543,11 +561,17 @@ type ComplexityRoot struct {
 		Key         func(childComplexity int) int
 	}
 
+	PlacementRef struct {
+		Name func(childComplexity int) int
+		Path func(childComplexity int) int
+	}
+
 	PlatformSettings struct {
 		AgentUser func(childComplexity int) int
 	}
 
 	Query struct {
+		Agent                   func(childComplexity int, id string) int
 		AgentConfigs            func(childComplexity int, agentType *string) int
 		AgentSnapshots          func(childComplexity int, agentID string) int
 		AgentTemplates          func(childComplexity int) int
@@ -650,20 +674,16 @@ type ComplexityRoot struct {
 	}
 
 	ResourcePool struct {
-		ClusterCount       func(childComplexity int) int
-		ConnectionStatus   func(childComplexity int) int
 		ContentLibraryName func(childComplexity int) int
 		CreatedAt          func(childComplexity int) int
-		DatacenterCount    func(childComplexity int) int
+		Datacenters        func(childComplexity int) int
 		Endpoint           func(childComplexity int) int
-		EsxiHostCount      func(childComplexity int) int
 		ID                 func(childComplexity int) int
 		Insecure           func(childComplexity int) int
 		LastSyncedAt       func(childComplexity int) int
 		Name               func(childComplexity int) int
 		SyncStatus         func(childComplexity int) int
 		UpdatedAt          func(childComplexity int) int
-		VMInstanceCount    func(childComplexity int) int
 	}
 
 	ResourcePoolConnection struct {
@@ -688,6 +708,7 @@ type ComplexityRoot struct {
 		Description func(childComplexity int) int
 		ID          func(childComplexity int) int
 		Name        func(childComplexity int) int
+		RoleKey     func(childComplexity int) int
 		UserCount   func(childComplexity int) int
 	}
 
@@ -747,11 +768,12 @@ type ComplexityRoot struct {
 	}
 
 	User struct {
+		ConnectionStatus   func(childComplexity int) int
 		CreatedAt          func(childComplexity int) int
 		DisplayName        func(childComplexity int) int
 		Email              func(childComplexity int) int
+		Enabled            func(childComplexity int) int
 		ID                 func(childComplexity int) int
-		IsActive           func(childComplexity int) int
 		LastLoginAt        func(childComplexity int) int
 		MustChangePassword func(childComplexity int) int
 		Role               func(childComplexity int) int
@@ -861,7 +883,8 @@ type MutationResolver interface {
 	CreateModelGateway(ctx context.Context, input model.ModelGatewayInput) (*model.ModelGateway, error)
 	UpdateModelGateway(ctx context.Context, id string, input model.ModelGatewayInput) (*model.ModelGateway, error)
 	DeleteModelGateway(ctx context.Context, id string) (*model.DeleteModelGatewayPayload, error)
-	TestModelGatewayConnection(ctx context.Context, id string) (*model.ModelGatewayTestResult, error)
+	SyncModelGatewayConnection(ctx context.Context, id string) (*model.ModelGatewaySyncResult, error)
+	TestNewModelGatewayConnection(ctx context.Context, input model.TestModelGatewayConnectionInput) (*model.ModelGatewayTestResult, error)
 	RecordRequestLog(ctx context.Context, input model.RecordRequestLogInput) (*model.RequestLog, error)
 	UpsertRateLimitPolicy(ctx context.Context, input model.UpsertRateLimitPolicyInput) (*model.RateLimitPolicy, error)
 	SetRateLimitPolicyEnabled(ctx context.Context, id string, enabled bool) (*model.RateLimitPolicy, error)
@@ -903,6 +926,7 @@ type QueryResolver interface {
 	AgentTemplates(ctx context.Context) ([]model.AgentTemplate, error)
 	AgentConfigs(ctx context.Context, agentType *string) ([]model.AgentConfig, error)
 	Agents(ctx context.Context, filter *model.AgentFilter, pagination *model.Pagination, sort *model.AgentSort) (*model.AgentConnection, error)
+	Agent(ctx context.Context, id string) (*model.Agent, error)
 	Artifacts(ctx context.Context, kind *model.ArtifactKind) ([]model.Artifact, error)
 	ArtifactVersions(ctx context.Context, name string) ([]model.Artifact, error)
 	Skills(ctx context.Context) ([]model.Skill, error)
@@ -940,6 +964,8 @@ type QueryResolver interface {
 }
 type UserResolver interface {
 	DisplayName(ctx context.Context, obj *model.User) (string, error)
+
+	ConnectionStatus(ctx context.Context, obj *model.User) (model.ConnectionStatus, error)
 }
 
 // endregion ************************** generated!.gotpl **************************
@@ -1523,6 +1549,31 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.AuthPayload.User(childComplexity), true
 
+	case "Cluster.esxiHosts":
+		if e.ComplexityRoot.Cluster.EsxiHosts == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Cluster.EsxiHosts(childComplexity), true
+	case "Cluster.name":
+		if e.ComplexityRoot.Cluster.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Cluster.Name(childComplexity), true
+	case "Cluster.path":
+		if e.ComplexityRoot.Cluster.Path == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Cluster.Path(childComplexity), true
+	case "Cluster.resourcePools":
+		if e.ComplexityRoot.Cluster.ResourcePools == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Cluster.ResourcePools(childComplexity), true
+
 	case "ContentLibraryItem.name":
 		if e.ComplexityRoot.ContentLibraryItem.Name == nil {
 			break
@@ -1772,6 +1823,49 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.DashboardStats.TotalVirtualKeys(childComplexity), true
+
+	case "DataCenter.clusters":
+		if e.ComplexityRoot.DataCenter.Clusters == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DataCenter.Clusters(childComplexity), true
+	case "DataCenter.datastores":
+		if e.ComplexityRoot.DataCenter.Datastores == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DataCenter.Datastores(childComplexity), true
+	case "DataCenter.folders":
+		if e.ComplexityRoot.DataCenter.Folders == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DataCenter.Folders(childComplexity), true
+	case "DataCenter.name":
+		if e.ComplexityRoot.DataCenter.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DataCenter.Name(childComplexity), true
+	case "DataCenter.networks":
+		if e.ComplexityRoot.DataCenter.Networks == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DataCenter.Networks(childComplexity), true
+	case "DataCenter.path":
+		if e.ComplexityRoot.DataCenter.Path == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DataCenter.Path(childComplexity), true
+	case "DataCenter.storagePolicies":
+		if e.ComplexityRoot.DataCenter.StoragePolicies == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DataCenter.StoragePolicies(childComplexity), true
 
 	case "DateUsage.cost":
 		if e.ComplexityRoot.DateUsage.Cost == nil {
@@ -2116,12 +2210,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.MeteringSummary.TotalOutputTokens(childComplexity), true
 
-	case "ModelGateway.adminUrl":
-		if e.ComplexityRoot.ModelGateway.AdminURL == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ModelGateway.AdminURL(childComplexity), true
 	case "ModelGateway.backendModelCount":
 		if e.ComplexityRoot.ModelGateway.BackendModelCount == nil {
 			break
@@ -2164,12 +2252,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelGateway.LastSyncStatus(childComplexity), true
-	case "ModelGateway.latencyMs":
-		if e.ComplexityRoot.ModelGateway.LatencyMs == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ModelGateway.LatencyMs(childComplexity), true
 	case "ModelGateway.loadBalancingStrategy":
 		if e.ComplexityRoot.ModelGateway.LoadBalancingStrategy == nil {
 			break
@@ -2188,12 +2270,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelGateway.Provider(childComplexity), true
-	case "ModelGateway.status":
-		if e.ComplexityRoot.ModelGateway.Status == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ModelGateway.Status(childComplexity), true
 	case "ModelGateway.updatedAt":
 		if e.ComplexityRoot.ModelGateway.UpdatedAt == nil {
 			break
@@ -2213,6 +2289,25 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelGatewayConnection.TotalCount(childComplexity), true
+
+	case "ModelGatewaySyncResult.gateway":
+		if e.ComplexityRoot.ModelGatewaySyncResult.Gateway == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewaySyncResult.Gateway(childComplexity), true
+	case "ModelGatewaySyncResult.message":
+		if e.ComplexityRoot.ModelGatewaySyncResult.Message == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewaySyncResult.Message(childComplexity), true
+	case "ModelGatewaySyncResult.success":
+		if e.ComplexityRoot.ModelGatewaySyncResult.Success == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGatewaySyncResult.Success(childComplexity), true
 
 	case "ModelGatewaySyncSummary.failedCount":
 		if e.ComplexityRoot.ModelGatewaySyncSummary.FailedCount == nil {
@@ -2245,30 +2340,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.ModelGatewaySyncSummary.SuccessCount(childComplexity), true
 
-	case "ModelGatewayTestResult.gateway":
-		if e.ComplexityRoot.ModelGatewayTestResult.Gateway == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ModelGatewayTestResult.Gateway(childComplexity), true
-	case "ModelGatewayTestResult.latencyMs":
-		if e.ComplexityRoot.ModelGatewayTestResult.LatencyMs == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ModelGatewayTestResult.LatencyMs(childComplexity), true
 	case "ModelGatewayTestResult.message":
 		if e.ComplexityRoot.ModelGatewayTestResult.Message == nil {
 			break
 		}
 
 		return e.ComplexityRoot.ModelGatewayTestResult.Message(childComplexity), true
-	case "ModelGatewayTestResult.status":
-		if e.ComplexityRoot.ModelGatewayTestResult.Status == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ModelGatewayTestResult.Status(childComplexity), true
 	case "ModelGatewayTestResult.success":
 		if e.ComplexityRoot.ModelGatewayTestResult.Success == nil {
 			break
@@ -2984,6 +3061,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.SnapshotAgent(childComplexity, args["input"].(model.SnapshotAgentInput)), true
+	case "Mutation.syncModelGatewayConnection":
+		if e.ComplexityRoot.Mutation.SyncModelGatewayConnection == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_syncModelGatewayConnection_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.SyncModelGatewayConnection(childComplexity, args["id"].(string)), true
 	case "Mutation.syncResourcePool":
 		if e.ComplexityRoot.Mutation.SyncResourcePool == nil {
 			break
@@ -3006,17 +3094,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.TestGatewayConnection(childComplexity, args["id"].(string)), true
-	case "Mutation.testModelGatewayConnection":
-		if e.ComplexityRoot.Mutation.TestModelGatewayConnection == nil {
+	case "Mutation.testNewModelGatewayConnection":
+		if e.ComplexityRoot.Mutation.TestNewModelGatewayConnection == nil {
 			break
 		}
 
-		args, err := ec.field_Mutation_testModelGatewayConnection_args(ctx, rawArgs)
+		args, err := ec.field_Mutation_testNewModelGatewayConnection_args(ctx, rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Mutation.TestModelGatewayConnection(childComplexity, args["id"].(string)), true
+		return e.ComplexityRoot.Mutation.TestNewModelGatewayConnection(childComplexity, args["input"].(model.TestModelGatewayConnectionInput)), true
 	case "Mutation.testResourcePoolConnection":
 		if e.ComplexityRoot.Mutation.TestResourcePoolConnection == nil {
 			break
@@ -3386,6 +3474,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Permission.Key(childComplexity), true
 
+	case "PlacementRef.name":
+		if e.ComplexityRoot.PlacementRef.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PlacementRef.Name(childComplexity), true
+	case "PlacementRef.path":
+		if e.ComplexityRoot.PlacementRef.Path == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PlacementRef.Path(childComplexity), true
+
 	case "PlatformSettings.agentUser":
 		if e.ComplexityRoot.PlatformSettings.AgentUser == nil {
 			break
@@ -3393,6 +3494,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.PlatformSettings.AgentUser(childComplexity), true
 
+	case "Query.agent":
+		if e.ComplexityRoot.Query.Agent == nil {
+			break
+		}
+
+		args, err := ec.field_Query_agent_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.Agent(childComplexity, args["id"].(string)), true
 	case "Query.agentConfigs":
 		if e.ComplexityRoot.Query.AgentConfigs == nil {
 			break
@@ -4032,18 +4144,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.ResetPasswordPayload.User(childComplexity), true
 
-	case "ResourcePool.clusterCount":
-		if e.ComplexityRoot.ResourcePool.ClusterCount == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ResourcePool.ClusterCount(childComplexity), true
-	case "ResourcePool.connectionStatus":
-		if e.ComplexityRoot.ResourcePool.ConnectionStatus == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ResourcePool.ConnectionStatus(childComplexity), true
 	case "ResourcePool.contentLibraryName":
 		if e.ComplexityRoot.ResourcePool.ContentLibraryName == nil {
 			break
@@ -4056,24 +4156,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ResourcePool.CreatedAt(childComplexity), true
-	case "ResourcePool.datacenterCount":
-		if e.ComplexityRoot.ResourcePool.DatacenterCount == nil {
+	case "ResourcePool.datacenters":
+		if e.ComplexityRoot.ResourcePool.Datacenters == nil {
 			break
 		}
 
-		return e.ComplexityRoot.ResourcePool.DatacenterCount(childComplexity), true
+		return e.ComplexityRoot.ResourcePool.Datacenters(childComplexity), true
 	case "ResourcePool.endpoint":
 		if e.ComplexityRoot.ResourcePool.Endpoint == nil {
 			break
 		}
 
 		return e.ComplexityRoot.ResourcePool.Endpoint(childComplexity), true
-	case "ResourcePool.esxiHostCount":
-		if e.ComplexityRoot.ResourcePool.EsxiHostCount == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ResourcePool.EsxiHostCount(childComplexity), true
 	case "ResourcePool.id":
 		if e.ComplexityRoot.ResourcePool.ID == nil {
 			break
@@ -4110,12 +4204,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ResourcePool.UpdatedAt(childComplexity), true
-	case "ResourcePool.vmInstanceCount":
-		if e.ComplexityRoot.ResourcePool.VMInstanceCount == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ResourcePool.VMInstanceCount(childComplexity), true
 
 	case "ResourcePoolConnection.nodes":
 		if e.ComplexityRoot.ResourcePoolConnection.Nodes == nil {
@@ -4192,6 +4280,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Role.Name(childComplexity), true
+	case "Role.roleKey":
+		if e.ComplexityRoot.Role.RoleKey == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Role.RoleKey(childComplexity), true
 	case "Role.userCount":
 		if e.ComplexityRoot.Role.UserCount == nil {
 			break
@@ -4393,6 +4487,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Upstream.Provider(childComplexity), true
 
+	case "User.connectionStatus":
+		if e.ComplexityRoot.User.ConnectionStatus == nil {
+			break
+		}
+
+		return e.ComplexityRoot.User.ConnectionStatus(childComplexity), true
 	case "User.createdAt":
 		if e.ComplexityRoot.User.CreatedAt == nil {
 			break
@@ -4411,18 +4511,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.User.Email(childComplexity), true
+	case "User.enabled":
+		if e.ComplexityRoot.User.Enabled == nil {
+			break
+		}
+
+		return e.ComplexityRoot.User.Enabled(childComplexity), true
 	case "User.id":
 		if e.ComplexityRoot.User.ID == nil {
 			break
 		}
 
 		return e.ComplexityRoot.User.ID(childComplexity), true
-	case "User.isActive":
-		if e.ComplexityRoot.User.IsActive == nil {
-			break
-		}
-
-		return e.ComplexityRoot.User.IsActive(childComplexity), true
 	case "User.lastLoginAt":
 		if e.ComplexityRoot.User.LastLoginAt == nil {
 			break
@@ -4633,6 +4733,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputResourcePoolSort,
 		ec.unmarshalInputRevertAgentSnapshotInput,
 		ec.unmarshalInputSnapshotAgentInput,
+		ec.unmarshalInputTestModelGatewayConnectionInput,
 		ec.unmarshalInputTestResourcePoolConnectionInput,
 		ec.unmarshalInputUpdateAgentConfigInput,
 		ec.unmarshalInputUpdateModelRouteInput,
@@ -4748,7 +4849,10 @@ enum UserSortField {
   UPDATED_AT
 }
 
-# The user's role as a lightweight reference (embedded in AccountUser).
+# The user's role as a lightweight reference (embedded in AccountUser). id is a
+# standard UUID, derived from the same role key as the corresponding Role entity
+# in the roles query — so AccountUser.role.id === roles(roleId).id for the same
+# role key.
 type AccountRoleRef {
   id: ID!
   name: String!
@@ -4774,9 +4878,13 @@ type UserConnection {
   pageInfo: PageInfo!
 }
 
-# A built-in assignable role surfaced as an entity (id = the role key).
+# A built-in assignable role surfaced as an entity.
+# id is a standard UUID (deterministically derived from roleKey — see roles_builtin.go).
+# roleKey is the stable string key ("admin" | "user" | "read_only") used in @hasRole
+# directives and as a logical identifier.
 type Role {
   id: ID!
+  roleKey: String!
   name: String!
   description: String!
   userCount: Int!
@@ -4794,6 +4902,7 @@ input UserFilter {
   roleKeyword: String
   emailKeyword: String
   statusKeyword: ConnectionStatus
+  # Built-in role UUID (from the roles query).
   roleId: ID
 }
 
@@ -4820,6 +4929,8 @@ input UpdateUserInput {
 }
 
 input AssignUsersToRoleInput {
+  # Built-in role UUID (from the roles query). User-id-as-string mapping is now
+  # server-driven via Role.roleKey.
   roleId: ID!
   userIds: [ID!]!
 }
@@ -4850,21 +4961,21 @@ type AssignUsersToRolePayload {
 
 extend type Query {
   users(filter: UserFilter, pagination: Pagination, sort: UserSort): UserConnection!
-    @hasRole(any: [admin, tenant_admin])
-  roles(pagination: Pagination): RoleConnection! @hasRole(any: [admin, tenant_admin])
-  role(id: ID!): Role @hasRole(any: [admin, tenant_admin])
+    @hasRole(any: [admin])
+  roles(pagination: Pagination): RoleConnection! @hasRole(any: [admin])
+  role(id: ID!): Role @hasRole(any: [admin])
   # Debounced dedupe check for the create-user form.
-  userExists(username: String, email: String): Boolean! @hasRole(any: [admin, tenant_admin])
+  userExists(username: String, email: String): Boolean! @hasRole(any: [admin])
 }
 
 extend type Mutation {
-  createUser(input: CreateUserInput!): CreateUserPayload! @hasRole(any: [admin, tenant_admin])
-  updateUser(id: ID!, input: UpdateUserInput!): AccountUser! @hasRole(any: [admin, tenant_admin])
-  deleteUser(id: ID!): DeleteUserPayload! @hasRole(any: [admin, tenant_admin])
-  resetUserPassword(id: ID!): ResetPasswordPayload! @hasRole(any: [admin, tenant_admin])
-  toggleUserEnabled(id: ID!): ToggleUserEnabledPayload! @hasRole(any: [admin, tenant_admin])
+  createUser(input: CreateUserInput!): CreateUserPayload! @hasRole(any: [admin])
+  updateUser(id: ID!, input: UpdateUserInput!): AccountUser! @hasRole(any: [admin])
+  deleteUser(id: ID!): DeleteUserPayload! @hasRole(any: [admin])
+  resetUserPassword(id: ID!): ResetPasswordPayload! @hasRole(any: [admin])
+  toggleUserEnabled(id: ID!): ToggleUserEnabledPayload! @hasRole(any: [admin])
   assignUsersToRole(input: AssignUsersToRoleInput!): AssignUsersToRolePayload!
-    @hasRole(any: [admin, tenant_admin])
+    @hasRole(any: [admin])
 }
 `, BuiltIn: false},
 	{Name: "../../schema/agent.graphql", Input: `# Agent center (智能体中心): catalog/market, configs, and deployed instances.
@@ -5042,6 +5153,10 @@ extend type Query {
   # Admin sees all agents; tenant-admin their tenant; a regular user only their own
   # (owner scope). Paged/filtered/sorted connection (前后端整合契约).
   agents(filter: AgentFilter, pagination: Pagination, sort: AgentSort): AgentConnection!
+    @hasRole(any: [admin, read_only, user])
+  # Single-agent detail. Owner or admin; follows the same three-track visibility as
+  # the agents list (admin→all, tenant-admin→their tenant, user→own agents only).
+  agent(id: ID!): Agent!
 }
 
 extend type Mutation {
@@ -5139,8 +5254,8 @@ extend type Query {
 }
 
 extend type Mutation {
-  upsertArtifact(input: UpsertArtifactInput!): Artifact! @hasRole(any: [admin, tenant_admin])
-  deleteArtifact(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
+  upsertArtifact(input: UpsertArtifactInput!): Artifact! @hasRole(any: [admin])
+  deleteArtifact(id: ID!): Boolean! @hasRole(any: [admin])
   upsertSkill(input: UpsertSkillInput!): Skill! @hasRole(any: [admin])
   deleteSkill(id: ID!): Boolean! @hasRole(any: [admin])
   upsertImage(input: UpsertImageInput!): Image! @hasRole(any: [admin])
@@ -5209,10 +5324,10 @@ type DashboardOverview {
 extend type Query {
   # The console overview page. recentLimit/noticeLimit cap the two lists (默认 5).
   # Figures are platform-global (counts/notices are not tenant-scoped yet), so this
-  # is restricted to platform roles — exposing it to tenant_admin would leak other
+  # is restricted to platform roles — exposing it to read_only would leak other
   # tenants' counts/usage/audit. Per-tenant dashboard scoping is future work (C1).
   dashboardOverview(recentLimit: Int = 5, noticeLimit: Int = 5): DashboardOverview!
-    @hasRole(any: [admin, observability])
+    @hasRole(any: [admin, read_only])
 }
 `, BuiltIn: false},
 	{Name: "../../schema/department.graphql", Input: `# Departments (部门 = litellm team) + memberships. See doc43 / LLD-01.
@@ -5251,7 +5366,7 @@ input CreateDepartmentInput {
 }
 
 extend type Query {
-  departments: [Department!]! @hasRole(any: [admin, tenant_admin])
+  departments: [Department!]! @hasRole(any: [admin])
   # Platform/tenant admins OR the department's own dept-admin (delegation checked
   # in-resolver — LLD-01 §4.1 三轨判权).
   departmentMembers(departmentId: ID!): [Membership!]!
@@ -5259,8 +5374,8 @@ extend type Query {
 
 extend type Mutation {
   # Creates the department AND its litellm team (no orphan: rolls back on sync failure).
-  createDepartment(input: CreateDepartmentInput!): Department! @hasRole(any: [admin, tenant_admin])
-  deleteDepartment(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
+  createDepartment(input: CreateDepartmentInput!): Department! @hasRole(any: [admin])
+  deleteDepartment(id: ID!): Boolean! @hasRole(any: [admin])
   # Membership management is delegated: platform/tenant admins OR the department's
   # dept-admin (checked in-resolver, since @hasRole only covers platform/tenant level).
   addMembership(userId: ID!, departmentId: ID!, role: MembershipRole): Membership!
@@ -5430,13 +5545,6 @@ enum GatewayStatus {
   disconnected
   error
 }
-enum LoadBalanceStrategy {
-  simple_shuffle
-  latency
-  usage_v2
-  least_busy
-  cost
-}
 enum UpstreamProvider {
   vllm
   openai
@@ -5469,7 +5577,7 @@ type GatewayConnection {
   # The platform default gateway — used for ops with no department context. At most one.
   isDefault: Boolean!
   status: GatewayStatus!
-  loadBalanceStrategy: LoadBalanceStrategy!
+  loadBalanceStrategy: LoadBalancingStrategy!
   createdAt: Time!
 }
 
@@ -5493,7 +5601,7 @@ type ModelRoute {
   upstreams: [String!]!
   # Console alias for ` + "`" + `upstreams` + "`" + ` — the models this route can serve (模型路由 page).
   supportedModels: [String!]!
-  strategy: LoadBalanceStrategy!
+  strategy: LoadBalancingStrategy!
   # Console-facing load-balancing strategy (模型路由 page).
   uiStrategy: ModelRouteStrategy!
   enabled: Boolean!
@@ -5514,7 +5622,7 @@ input RegisterGatewayConnectionInput {
   # 优先于 masterKeyRef。
   masterKey: String
   masterKeyRef: String
-  loadBalanceStrategy: LoadBalanceStrategy
+  loadBalanceStrategy: LoadBalancingStrategy
   # The URL provisioned VMs call (LLD-13 §3.3); omitted → falls back to endpoint.
   publicUrl: String
   # Mark this the platform default gateway; setting true clears the flag on any other.
@@ -5536,7 +5644,7 @@ input UpsertModelRouteInput {
   modelAlias: String!
   backendGatewayId: ID
   upstreams: [String!]
-  strategy: LoadBalanceStrategy
+  strategy: LoadBalancingStrategy
   enabled: Boolean
 }
 
@@ -5705,7 +5813,7 @@ type MeteringOverview {
 }
 
 extend type Query {
-  # metering:view permission (admin + observability).
+  # metering:view permission (admin + read_only).
   tokenUsage(userId: ID, page: PageInput): [TokenUsage!]! @hasPermission(perm: "metering:view")
   meteringSummary(userId: ID): MeteringSummary! @hasPermission(perm: "metering:view")
   # Aggregated metering for the console 计量中心 over a time range (默认近7天).
@@ -5722,17 +5830,12 @@ extend type Mutation {
 	{Name: "../../schema/modelgateway.graphql", Input: `# 模型网关 (model gateway) page façade over GatewayConnection (重蒙皮 P4).
 # The console renders the litellm gateway as a single aggregate entity; the richer
 # upstream/route model stays in gateway-routing.graphql. Computed fields are real
-# where a source exists (backendModelCount = upstream count, test = live litellm
-# ping + measured latency); sync state is derived from the connection status.
+# where a source exists (backendModelCount = live count from GET /models, sync =
+# 周期巡检 / 手动按钮 / 创建后自动); sync state is derived from the connection
+# status, in-flight writes, and an in-memory inflight map.
 
 enum ModelGatewayProvider {
   LITELLM
-}
-
-enum ModelGatewayStatus {
-  CONNECTED
-  DISCONNECTED
-  ERROR
 }
 
 enum ModelGatewaySyncState {
@@ -5744,7 +5847,11 @@ enum ModelGatewaySyncState {
 }
 
 enum LoadBalancingStrategy {
-  ROUND_ROBIN
+  SIMPLE_SHUFFLE
+  LEAST_BUSY
+  LATENCY_BASED_ROUTING
+  USAGE_BASED_ROUTING_V2
+  COST_BASED_ROUTING
 }
 
 type ModelGateway {
@@ -5752,11 +5859,8 @@ type ModelGateway {
   name: String!
   provider: ModelGatewayProvider!
   endpoint: String!
-  status: ModelGatewayStatus!
   backendModelCount: Int!
-  loadBalancingStrategy: LoadBalancingStrategy!
-  latencyMs: Int
-  adminUrl: String
+  loadBalancingStrategy: LoadBalancingStrategy
   lastSyncAt: Time
   lastSyncStatus: ModelGatewaySyncState!
   lastSyncMessage: String
@@ -5767,7 +5871,6 @@ type ModelGateway {
 enum ModelGatewaySortField {
   NAME
   ENDPOINT
-  STATUS
   CREATED_AT
   UPDATED_AT
 }
@@ -5790,12 +5893,18 @@ type ModelGatewaySyncSummary {
   message: String
 }
 
+# testNewModelGatewayConnection (dry-run, pre-create) 的返回值：仅三字段，不带 gateway。
 type ModelGatewayTestResult {
   success: Boolean!
-  status: ModelGatewayStatus!
-  latencyMs: Int
   message: String!
   testedAt: Time!
+}
+
+# syncModelGatewayConnection 的返回值：gateway 必返（非 null），所有策略/状态/
+# lastSyncAt/backendModelCount 等信息都从 gateway 内部字段读取。
+type ModelGatewaySyncResult {
+  success: Boolean!
+  message: String!
   gateway: ModelGateway!
 }
 
@@ -5805,21 +5914,27 @@ type DeleteModelGatewayPayload {
 
 input ModelGatewayFilterInput {
   search: String
-  status: ModelGatewayStatus
 }
 
 input ModelGatewayInput {
   name: String!
   provider: ModelGatewayProvider!
   endpoint: String!
-  adminUrl: String
   # litellm master key(接入表单填写)→ 后端写 secret store,只存引用,明文不落库。
   masterKey: String
-  loadBalancingStrategy: LoadBalancingStrategy!
+}
+
+# Pre-create test input — the form-level "Test Connection" button on the 接入表单
+# uses this to ping a not-yet-persisted gateway config. Carries the minimal
+# fields the probe needs: endpoint + masterKey. (name, provider are either fixed
+# or irrelevant to the live test.)
+input TestModelGatewayConnectionInput {
+  endpoint: String!
+  masterKey: String!
 }
 
 extend type Query {
-  # page is the shared PageInput (limit/offset) defined alongside audit/observability.
+  # page is the shared PageInput (limit/offset) defined alongside audit/read_only.
   modelGateways(filter: ModelGatewayFilterInput, page: PageInput!, sort: ModelGatewaySort): ModelGatewayConnection! @hasRole(any: [admin])
   modelGatewaySyncSummary: ModelGatewaySyncSummary! @hasRole(any: [admin])
 }
@@ -5828,7 +5943,13 @@ extend type Mutation {
   createModelGateway(input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
   updateModelGateway(id: ID!, input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
   deleteModelGateway(id: ID!): DeleteModelGatewayPayload! @hasRole(any: [admin])
-  testModelGatewayConnection(id: ID!): ModelGatewayTestResult! @hasRole(any: [admin])
+  # 同步一个已存在的 gateway: 探测连通性 + 路由策略 + 后端模型数, 写回 ent 列.
+  # gateway 字段返回同步后的最新状态, 业务信息从 gateway 内部读取.
+  syncModelGatewayConnection(id: ID!): ModelGatewaySyncResult! @hasRole(any: [admin])
+  # Pre-create dry-run probe. No row is created or modified; the result's
+  # ` + "`" + `gateway` + "`" + ` field is null. Strategy probe is intentionally skipped (dry-run
+  # 只测连通性, 不拉 /config/router 也不解析 /models 的 data 数组).
+  testNewModelGatewayConnection(input: TestModelGatewayConnectionInput!): ModelGatewayTestResult! @hasRole(any: [admin])
 }
 `, BuiltIn: false},
 	{Name: "../../schema/observability.graphql", Input: `# Request logs (请求日志) + rate-limit policies (限流策略). 0619.
@@ -5920,7 +6041,7 @@ input UpsertRateLimitPolicyInput {
 
 extend type Query {
   requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
-  rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin, tenant_admin])
+  rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin])
   requestMetrics(from: Time!, to: Time!, granularity: RequestMetricsBucketGranularity!, filter: RequestMetricsFilter): RequestMetrics! @hasPermission(perm: "audit:view")
 }
 
@@ -6077,36 +6198,27 @@ input CreateCustomRoleInput {
 }
 
 extend type Query {
-  customRoles: [CustomRole!]! @hasRole(any: [admin, tenant_admin])
+  customRoles: [CustomRole!]! @hasRole(any: [admin])
   permissions: [Permission!]! @hasRole(any: [admin])
   userRoles(userId: ID!): [CustomRole!]! @hasRole(any: [admin])
 }
 
 extend type Mutation {
-  createCustomRole(input: CreateCustomRoleInput!): CustomRole! @hasRole(any: [admin, tenant_admin])
-  deleteCustomRole(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
+  createCustomRole(input: CreateCustomRoleInput!): CustomRole! @hasRole(any: [admin])
+  deleteCustomRole(id: ID!): Boolean! @hasRole(any: [admin])
   upsertPermission(key: String!, description: String): Permission! @hasRole(any: [admin])
   # Replace the role's permission set (the matrix row).
-  setRolePermissions(roleId: ID!, permissionKeys: [String!]!): CustomRole! @hasRole(any: [admin, tenant_admin])
-  assignUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
-  removeUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
+  setRolePermissions(roleId: ID!, permissionKeys: [String!]!): CustomRole! @hasRole(any: [admin])
+  assignUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin])
+  removeUserRole(userId: ID!, roleId: ID!): Boolean! @hasRole(any: [admin])
 }
 `, BuiltIn: false},
 	{Name: "../../schema/resourcepool.graphql", Input: `# Resource pool (vCenter) registration + inventory. See LLD-03 / LLD-06, 0619 第13页.
 # Shape aligned to the console 资源池 page (重蒙皮 P3): entity + connection + payloads.
 
-# Console connection status is binary (CONNECTED / DISCONNECTED). The ent column
-# keeps a third "error" state for accuracy; the GraphQL projection collapses it
-# to DISCONNECTED (see toModelResourcePool).
-enum PoolConnectionStatus {
-  CONNECTED
-  DISCONNECTED
-}
-
-# Inventory-sync state, distinct from connectionStatus. Derived: never synced →
-# NEVER; last sync ok → SYNCED; last sync errored → FAILED. (SYNCING/PARTIAL are
-# part of the console enum but the backend's sync is synchronous, so it never
-# produces them today.)
+# Inventory-sync state. Derived: never synced → NEVER; last sync ok → SYNCED;
+# last sync errored → FAILED. (SYNCING/PARTIAL are part of the console enum but
+# the backend's sync is synchronous, so it never produces them today.)
 enum ResourcePoolSyncState {
   SYNCED
   SYNCING
@@ -6118,13 +6230,39 @@ enum ResourcePoolSyncState {
 enum ResourcePoolSortField {
   NAME
   ENDPOINT
-  CONNECTION_STATUS
-  DATACENTER_COUNT
-  CLUSTER_COUNT
-  ESXI_HOST_COUNT
-  VM_INSTANCE_COUNT
+  SYNC_STATUS
   CREATED_AT
   UPDATED_AT
+}
+
+# vCenter deployment candidate resource — minimum information for an OVA
+# deployment target. Name is the vCenter display label; Path is the full
+# inventory path (e.g. /DC0/host/DC0_C0/Resources) used by find.NewFinder.
+# Path may be null when the resource is unambiguously identified by name.
+type PlacementRef {
+  name: String!
+  path: String
+}
+
+# vSphere cluster (parented under a Datacenter's host folder).
+type Cluster {
+  name: String!
+  path: String!
+  esxiHosts: [PlacementRef!]!
+  resourcePools: [PlacementRef!]!
+}
+
+# vSphere datacenter — top-level node of vCenter inventory.
+# storagePolicies is nullable: null means PBM pull failed (frontend can
+# distinguish "PBM not pulled" from "pulled but empty" via null vs []).
+type DataCenter {
+  name: String!
+  path: String!
+  clusters: [Cluster!]!
+  datastores: [PlacementRef!]!
+  networks: [PlacementRef!]!
+  folders: [PlacementRef!]!
+  storagePolicies: [PlacementRef!]!
 }
 
 type ResourcePool {
@@ -6135,11 +6273,10 @@ type ResourcePool {
   contentLibraryName: String!
   # Skip vCenter TLS verification for this pool (self-signed/internal CA). LLD-13.
   insecure: Boolean!
-  connectionStatus: PoolConnectionStatus!
-  datacenterCount: Int!
-  clusterCount: Int!
-  esxiHostCount: Int!
-  vmInstanceCount: Int!
+  # vCenter inventory snapshot — full nested tree (DC > Cluster > Host > RP
+  # plus datastores / networks / vm folders / storage policies). Synced by the
+  # background ticker; consumed by the OVA deploy form for cascading dropdowns.
+  datacenters: [DataCenter!]!
   syncStatus: ResourcePoolSyncState!
   lastSyncedAt: Time
   createdAt: Time!
@@ -6155,7 +6292,7 @@ type ResourcePoolConnection {
 input ResourcePoolFilter {
   nameKeyword: String
   endpointKeyword: String
-  connectionStatus: PoolConnectionStatus
+  syncStatus: ResourcePoolSyncState
 }
 
 input ResourcePoolSort {
@@ -6167,8 +6304,6 @@ input CreateResourcePoolInput {
   name: String!
   endpoint: String!
   contentLibraryName: String
-  datacenterCount: Int
-  clusterCount: Int
   # 跳过 vCenter TLS 验证(自签名/内网 CA);省略 = false(默认验证)。LLD-13。
   insecure: Boolean
   # vCenter (JVC) 凭据(可选;真机连接必填,前端表单可后补)。后端写入 secret store
@@ -6183,8 +6318,6 @@ input UpdateResourcePoolInput {
   name: String
   endpoint: String
   contentLibraryName: String
-  datacenterCount: Int
-  clusterCount: Int
   # 跳过 vCenter TLS 验证(自签名/内网 CA);省略 = 不变。LLD-13。
   insecure: Boolean
   # 重填凭据(轮换):同 create,写 secret store 后只存引用。
@@ -6269,10 +6402,9 @@ extend type Mutation {
   # Lightweight pre-save reachability probe from the 接入表单 (no credentials):
   # validate the endpoint is well-formed and dial-reachable (0619 第13页 连接状态).
   testResourcePoolConnection(input: TestResourcePoolConnectionInput!): ResourcePoolConnectionTest! @hasRole(any: [admin])
-  # Connect → count datacenters/clusters/hosts/VMs → persist (同步数据).
+  # Connect → fetch inventory tree → persist (同步数据).
   syncResourcePool(id: ID!): SyncResourcePoolPayload! @hasRole(any: [admin])
-}
-`, BuiltIn: false},
+}`, BuiltIn: false},
 	{Name: "../../schema/schema.graphql", Input: `# Agent Platform — GraphQL contract (single source of truth).
 # Consumed by the frontend (agent-platform-console). See LLD-01 §5.
 
@@ -6285,8 +6417,7 @@ scalar Map
 enum RoleName {
   admin
   user
-  observability
-  tenant_admin
+  read_only
 }
 
 type User {
@@ -6299,7 +6430,10 @@ type User {
   role: RoleName!
   tenantId: ID
   mustChangePassword: Boolean!
-  isActive: Boolean!
+  enabled: Boolean!
+  # ONLINE when the user currently has at least one live session (derived from the
+  # session store, not a column). For the ` + "`" + `me` + "`" + ` caller this is necessarily ONLINE.
+  connectionStatus: ConnectionStatus! @goField(forceResolver: true)
   lastLoginAt: Time
   createdAt: Time!
 }
@@ -6438,7 +6572,7 @@ input IssueVirtualKeyInput {
 }
 
 extend type Query {
-  virtualKeys(userId: ID): [VirtualKey!]! @hasRole(any: [admin])
+  virtualKeys(userId: ID): [VirtualKey!]! @hasRole(any: [admin, read_only])
 }
 
 extend type Mutation {
@@ -6742,6 +6876,20 @@ func (ec *executionContext) childFields_AuthPayload(ctx context.Context, field g
 	return nil, fmt.Errorf("no field named %q was found under type AuthPayload", field.Name)
 }
 
+func (ec *executionContext) childFields_Cluster(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "name":
+		return ec.fieldContext_Cluster_name(ctx, field)
+	case "path":
+		return ec.fieldContext_Cluster_path(ctx, field)
+	case "esxiHosts":
+		return ec.fieldContext_Cluster_esxiHosts(ctx, field)
+	case "resourcePools":
+		return ec.fieldContext_Cluster_resourcePools(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type Cluster", field.Name)
+}
+
 func (ec *executionContext) childFields_ContentLibraryItem(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "name":
@@ -6880,6 +7028,26 @@ func (ec *executionContext) childFields_DashboardStats(ctx context.Context, fiel
 		return ec.fieldContext_DashboardStats_monthlyCost(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type DashboardStats", field.Name)
+}
+
+func (ec *executionContext) childFields_DataCenter(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "name":
+		return ec.fieldContext_DataCenter_name(ctx, field)
+	case "path":
+		return ec.fieldContext_DataCenter_path(ctx, field)
+	case "clusters":
+		return ec.fieldContext_DataCenter_clusters(ctx, field)
+	case "datastores":
+		return ec.fieldContext_DataCenter_datastores(ctx, field)
+	case "networks":
+		return ec.fieldContext_DataCenter_networks(ctx, field)
+	case "folders":
+		return ec.fieldContext_DataCenter_folders(ctx, field)
+	case "storagePolicies":
+		return ec.fieldContext_DataCenter_storagePolicies(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type DataCenter", field.Name)
 }
 
 func (ec *executionContext) childFields_DateUsage(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -7080,16 +7248,10 @@ func (ec *executionContext) childFields_ModelGateway(ctx context.Context, field 
 		return ec.fieldContext_ModelGateway_provider(ctx, field)
 	case "endpoint":
 		return ec.fieldContext_ModelGateway_endpoint(ctx, field)
-	case "status":
-		return ec.fieldContext_ModelGateway_status(ctx, field)
 	case "backendModelCount":
 		return ec.fieldContext_ModelGateway_backendModelCount(ctx, field)
 	case "loadBalancingStrategy":
 		return ec.fieldContext_ModelGateway_loadBalancingStrategy(ctx, field)
-	case "latencyMs":
-		return ec.fieldContext_ModelGateway_latencyMs(ctx, field)
-	case "adminUrl":
-		return ec.fieldContext_ModelGateway_adminUrl(ctx, field)
 	case "lastSyncAt":
 		return ec.fieldContext_ModelGateway_lastSyncAt(ctx, field)
 	case "lastSyncStatus":
@@ -7114,6 +7276,18 @@ func (ec *executionContext) childFields_ModelGatewayConnection(ctx context.Conte
 	return nil, fmt.Errorf("no field named %q was found under type ModelGatewayConnection", field.Name)
 }
 
+func (ec *executionContext) childFields_ModelGatewaySyncResult(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "success":
+		return ec.fieldContext_ModelGatewaySyncResult_success(ctx, field)
+	case "message":
+		return ec.fieldContext_ModelGatewaySyncResult_message(ctx, field)
+	case "gateway":
+		return ec.fieldContext_ModelGatewaySyncResult_gateway(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type ModelGatewaySyncResult", field.Name)
+}
+
 func (ec *executionContext) childFields_ModelGatewaySyncSummary(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "state":
@@ -7134,16 +7308,10 @@ func (ec *executionContext) childFields_ModelGatewayTestResult(ctx context.Conte
 	switch field.Name {
 	case "success":
 		return ec.fieldContext_ModelGatewayTestResult_success(ctx, field)
-	case "status":
-		return ec.fieldContext_ModelGatewayTestResult_status(ctx, field)
-	case "latencyMs":
-		return ec.fieldContext_ModelGatewayTestResult_latencyMs(ctx, field)
 	case "message":
 		return ec.fieldContext_ModelGatewayTestResult_message(ctx, field)
 	case "testedAt":
 		return ec.fieldContext_ModelGatewayTestResult_testedAt(ctx, field)
-	case "gateway":
-		return ec.fieldContext_ModelGatewayTestResult_gateway(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type ModelGatewayTestResult", field.Name)
 }
@@ -7308,6 +7476,16 @@ func (ec *executionContext) childFields_Permission(ctx context.Context, field gr
 	return nil, fmt.Errorf("no field named %q was found under type Permission", field.Name)
 }
 
+func (ec *executionContext) childFields_PlacementRef(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "name":
+		return ec.fieldContext_PlacementRef_name(ctx, field)
+	case "path":
+		return ec.fieldContext_PlacementRef_path(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type PlacementRef", field.Name)
+}
+
 func (ec *executionContext) childFields_PlatformSettings(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "agentUser":
@@ -7440,16 +7618,8 @@ func (ec *executionContext) childFields_ResourcePool(ctx context.Context, field 
 		return ec.fieldContext_ResourcePool_contentLibraryName(ctx, field)
 	case "insecure":
 		return ec.fieldContext_ResourcePool_insecure(ctx, field)
-	case "connectionStatus":
-		return ec.fieldContext_ResourcePool_connectionStatus(ctx, field)
-	case "datacenterCount":
-		return ec.fieldContext_ResourcePool_datacenterCount(ctx, field)
-	case "clusterCount":
-		return ec.fieldContext_ResourcePool_clusterCount(ctx, field)
-	case "esxiHostCount":
-		return ec.fieldContext_ResourcePool_esxiHostCount(ctx, field)
-	case "vmInstanceCount":
-		return ec.fieldContext_ResourcePool_vmInstanceCount(ctx, field)
+	case "datacenters":
+		return ec.fieldContext_ResourcePool_datacenters(ctx, field)
 	case "syncStatus":
 		return ec.fieldContext_ResourcePool_syncStatus(ctx, field)
 	case "lastSyncedAt":
@@ -7500,6 +7670,8 @@ func (ec *executionContext) childFields_Role(ctx context.Context, field graphql.
 	switch field.Name {
 	case "id":
 		return ec.fieldContext_Role_id(ctx, field)
+	case "roleKey":
+		return ec.fieldContext_Role_roleKey(ctx, field)
 	case "name":
 		return ec.fieldContext_Role_name(ctx, field)
 	case "description":
@@ -7638,8 +7810,10 @@ func (ec *executionContext) childFields_User(ctx context.Context, field graphql.
 		return ec.fieldContext_User_tenantId(ctx, field)
 	case "mustChangePassword":
 		return ec.fieldContext_User_mustChangePassword(ctx, field)
-	case "isActive":
-		return ec.fieldContext_User_isActive(ctx, field)
+	case "enabled":
+		return ec.fieldContext_User_enabled(ctx, field)
+	case "connectionStatus":
+		return ec.fieldContext_User_connectionStatus(ctx, field)
 	case "lastLoginAt":
 		return ec.fieldContext_User_lastLoginAt(ctx, field)
 	case "createdAt":
@@ -8692,6 +8866,20 @@ func (ec *executionContext) field_Mutation_snapshotAgent_args(ctx context.Contex
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_syncModelGatewayConnection_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_syncResourcePool_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -8720,17 +8908,17 @@ func (ec *executionContext) field_Mutation_testGatewayConnection_args(ctx contex
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_testModelGatewayConnection_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+func (ec *executionContext) field_Mutation_testNewModelGatewayConnection_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
-		func(ctx context.Context, v any) (string, error) {
-			return ec.unmarshalNID2string(ctx, v)
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.TestModelGatewayConnectionInput, error) {
+			return ec.unmarshalNTestModelGatewayConnectionInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTestModelGatewayConnectionInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["id"] = arg0
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -9045,6 +9233,20 @@ func (ec *executionContext) field_Query_agentSnapshots_args(ctx context.Context,
 		return nil, err
 	}
 	args["agentId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_agent_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -11846,6 +12048,116 @@ func (ec *executionContext) fieldContext_AuthPayload_mustChangePassword(_ contex
 	return graphql.NewScalarFieldContext("AuthPayload", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
+func (ec *executionContext) _Cluster_name(ctx context.Context, field graphql.CollectedField, obj *model.Cluster) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Cluster_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Cluster_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Cluster", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Cluster_path(ctx context.Context, field graphql.CollectedField, obj *model.Cluster) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Cluster_path(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Path, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Cluster_path(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Cluster", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Cluster_esxiHosts(ctx context.Context, field graphql.CollectedField, obj *model.Cluster) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Cluster_esxiHosts(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.EsxiHosts, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.PlacementRef) graphql.Marshaler {
+			return ec.marshalNPlacementRef2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlacementRefᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Cluster_esxiHosts(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Cluster",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PlacementRef(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Cluster_resourcePools(ctx context.Context, field graphql.CollectedField, obj *model.Cluster) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Cluster_resourcePools(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ResourcePools, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.PlacementRef) graphql.Marshaler {
+			return ec.marshalNPlacementRef2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlacementRefᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Cluster_resourcePools(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Cluster",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PlacementRef(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ContentLibraryItem_name(ctx context.Context, field graphql.CollectedField, obj *model.ContentLibraryItem) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -12820,6 +13132,212 @@ func (ec *executionContext) fieldContext_DashboardStats_monthlyCost(_ context.Co
 	return graphql.NewScalarFieldContext("DashboardStats", field, false, false, errors.New("field of type Float does not have child fields"))
 }
 
+func (ec *executionContext) _DataCenter_name(ctx context.Context, field graphql.CollectedField, obj *model.DataCenter) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DataCenter_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DataCenter_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DataCenter", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _DataCenter_path(ctx context.Context, field graphql.CollectedField, obj *model.DataCenter) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DataCenter_path(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Path, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DataCenter_path(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DataCenter", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _DataCenter_clusters(ctx context.Context, field graphql.CollectedField, obj *model.DataCenter) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DataCenter_clusters(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Clusters, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.Cluster) graphql.Marshaler {
+			return ec.marshalNCluster2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐClusterᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DataCenter_clusters(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DataCenter",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Cluster(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DataCenter_datastores(ctx context.Context, field graphql.CollectedField, obj *model.DataCenter) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DataCenter_datastores(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Datastores, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.PlacementRef) graphql.Marshaler {
+			return ec.marshalNPlacementRef2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlacementRefᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DataCenter_datastores(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DataCenter",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PlacementRef(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DataCenter_networks(ctx context.Context, field graphql.CollectedField, obj *model.DataCenter) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DataCenter_networks(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Networks, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.PlacementRef) graphql.Marshaler {
+			return ec.marshalNPlacementRef2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlacementRefᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DataCenter_networks(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DataCenter",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PlacementRef(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DataCenter_folders(ctx context.Context, field graphql.CollectedField, obj *model.DataCenter) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DataCenter_folders(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Folders, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.PlacementRef) graphql.Marshaler {
+			return ec.marshalNPlacementRef2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlacementRefᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DataCenter_folders(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DataCenter",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PlacementRef(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DataCenter_storagePolicies(ctx context.Context, field graphql.CollectedField, obj *model.DataCenter) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DataCenter_storagePolicies(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.StoragePolicies, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.PlacementRef) graphql.Marshaler {
+			return ec.marshalNPlacementRef2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlacementRefᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DataCenter_storagePolicies(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DataCenter",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PlacementRef(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _DateUsage_date(ctx context.Context, field graphql.CollectedField, obj *model.DateUsage) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -13411,15 +13929,15 @@ func (ec *executionContext) _GatewayConnection_loadBalanceStrategy(ctx context.C
 			return obj.LoadBalanceStrategy, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v model.LoadBalanceStrategy) graphql.Marshaler {
-			return ec.marshalNLoadBalanceStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalanceStrategy(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v model.LoadBalancingStrategy) graphql.Marshaler {
+			return ec.marshalNLoadBalancingStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
 func (ec *executionContext) fieldContext_GatewayConnection_loadBalanceStrategy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("GatewayConnection", field, false, false, errors.New("field of type LoadBalanceStrategy does not have child fields"))
+	return graphql.NewScalarFieldContext("GatewayConnection", field, false, false, errors.New("field of type LoadBalancingStrategy does not have child fields"))
 }
 
 func (ec *executionContext) _GatewayConnection_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.GatewayConnection) (ret graphql.Marshaler) {
@@ -14276,29 +14794,6 @@ func (ec *executionContext) fieldContext_ModelGateway_endpoint(_ context.Context
 	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
-func (ec *executionContext) _ModelGateway_status(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ModelGateway_status(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Status, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v model.ModelGatewayStatus) graphql.Marshaler {
-			return ec.marshalNModelGatewayStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_ModelGateway_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type ModelGatewayStatus does not have child fields"))
-}
-
 func (ec *executionContext) _ModelGateway_backendModelCount(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -14334,61 +14829,15 @@ func (ec *executionContext) _ModelGateway_loadBalancingStrategy(ctx context.Cont
 			return obj.LoadBalancingStrategy, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v model.LoadBalancingStrategy) graphql.Marshaler {
-			return ec.marshalNLoadBalancingStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.LoadBalancingStrategy) graphql.Marshaler {
+			return ec.marshalOLoadBalancingStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, selections, v)
 		},
 		true,
-		true,
+		false,
 	)
 }
 func (ec *executionContext) fieldContext_ModelGateway_loadBalancingStrategy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type LoadBalancingStrategy does not have child fields"))
-}
-
-func (ec *executionContext) _ModelGateway_latencyMs(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ModelGateway_latencyMs(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.LatencyMs, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
-			return ec.marshalOInt2ᚖint(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_ModelGateway_latencyMs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _ModelGateway_adminUrl(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ModelGateway_adminUrl(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.AdminURL, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
-			return ec.marshalOString2ᚖstring(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_ModelGateway_adminUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _ModelGateway_lastSyncAt(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
@@ -14561,6 +15010,84 @@ func (ec *executionContext) fieldContext_ModelGatewayConnection_totalCount(_ con
 	return graphql.NewScalarFieldContext("ModelGatewayConnection", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
+func (ec *executionContext) _ModelGatewaySyncResult_success(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewaySyncResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewaySyncResult_success(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Success, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewaySyncResult_success(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGatewaySyncResult", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGatewaySyncResult_message(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewaySyncResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewaySyncResult_message(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Message, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewaySyncResult_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGatewaySyncResult", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGatewaySyncResult_gateway(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewaySyncResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGatewaySyncResult_gateway(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Gateway, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ModelGateway) graphql.Marshaler {
+			return ec.marshalNModelGateway2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGateway(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGatewaySyncResult_gateway(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ModelGatewaySyncResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ModelGateway(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ModelGatewaySyncSummary_state(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewaySyncSummary) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -14699,52 +15226,6 @@ func (ec *executionContext) fieldContext_ModelGatewayTestResult_success(_ contex
 	return graphql.NewScalarFieldContext("ModelGatewayTestResult", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
-func (ec *executionContext) _ModelGatewayTestResult_status(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayTestResult) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ModelGatewayTestResult_status(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Status, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v model.ModelGatewayStatus) graphql.Marshaler {
-			return ec.marshalNModelGatewayStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_ModelGatewayTestResult_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ModelGatewayTestResult", field, false, false, errors.New("field of type ModelGatewayStatus does not have child fields"))
-}
-
-func (ec *executionContext) _ModelGatewayTestResult_latencyMs(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayTestResult) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ModelGatewayTestResult_latencyMs(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.LatencyMs, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
-			return ec.marshalOInt2ᚖint(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_ModelGatewayTestResult_latencyMs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ModelGatewayTestResult", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
 func (ec *executionContext) _ModelGatewayTestResult_message(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayTestResult) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -14789,38 +15270,6 @@ func (ec *executionContext) _ModelGatewayTestResult_testedAt(ctx context.Context
 }
 func (ec *executionContext) fieldContext_ModelGatewayTestResult_testedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ModelGatewayTestResult", field, false, false, errors.New("field of type Time does not have child fields"))
-}
-
-func (ec *executionContext) _ModelGatewayTestResult_gateway(ctx context.Context, field graphql.CollectedField, obj *model.ModelGatewayTestResult) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ModelGatewayTestResult_gateway(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Gateway, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.ModelGateway) graphql.Marshaler {
-			return ec.marshalNModelGateway2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGateway(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_ModelGatewayTestResult_gateway(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ModelGatewayTestResult",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_ModelGateway(ctx, field)
-		},
-	}
-	return fc, nil
 }
 
 func (ec *executionContext) _ModelRoute_id(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
@@ -14996,15 +15445,15 @@ func (ec *executionContext) _ModelRoute_strategy(ctx context.Context, field grap
 			return obj.Strategy, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v model.LoadBalanceStrategy) graphql.Marshaler {
-			return ec.marshalNLoadBalanceStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalanceStrategy(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v model.LoadBalancingStrategy) graphql.Marshaler {
+			return ec.marshalNLoadBalancingStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
 func (ec *executionContext) fieldContext_ModelRoute_strategy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type LoadBalanceStrategy does not have child fields"))
+	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type LoadBalancingStrategy does not have child fields"))
 }
 
 func (ec *executionContext) _ModelRoute_uiStrategy(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
@@ -15456,7 +15905,7 @@ func (ec *executionContext) _Mutation_createUser(ctx context.Context, field grap
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.CreateUserPayload
 					return zeroVal, err
@@ -15518,7 +15967,7 @@ func (ec *executionContext) _Mutation_updateUser(ctx context.Context, field grap
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.AccountUser
 					return zeroVal, err
@@ -15580,7 +16029,7 @@ func (ec *executionContext) _Mutation_deleteUser(ctx context.Context, field grap
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.DeleteUserPayload
 					return zeroVal, err
@@ -15642,7 +16091,7 @@ func (ec *executionContext) _Mutation_resetUserPassword(ctx context.Context, fie
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.ResetPasswordPayload
 					return zeroVal, err
@@ -15704,7 +16153,7 @@ func (ec *executionContext) _Mutation_toggleUserEnabled(ctx context.Context, fie
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.ToggleUserEnabledPayload
 					return zeroVal, err
@@ -15766,7 +16215,7 @@ func (ec *executionContext) _Mutation_assignUsersToRole(ctx context.Context, fie
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.AssignUsersToRolePayload
 					return zeroVal, err
@@ -16288,7 +16737,7 @@ func (ec *executionContext) _Mutation_upsertArtifact(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.Artifact
 					return zeroVal, err
@@ -16350,7 +16799,7 @@ func (ec *executionContext) _Mutation_deleteArtifact(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
@@ -16660,7 +17109,7 @@ func (ec *executionContext) _Mutation_createDepartment(ctx context.Context, fiel
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.Department
 					return zeroVal, err
@@ -16722,7 +17171,7 @@ func (ec *executionContext) _Mutation_deleteDepartment(ctx context.Context, fiel
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
@@ -18068,17 +18517,79 @@ func (ec *executionContext) fieldContext_Mutation_deleteModelGateway(ctx context
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_testModelGatewayConnection(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Mutation_syncModelGatewayConnection(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Mutation_testModelGatewayConnection(ctx, field)
+			return ec.fieldContext_Mutation_syncModelGatewayConnection(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().TestModelGatewayConnection(ctx, fc.Args["id"].(string))
+			return ec.Resolvers.Mutation().SyncModelGatewayConnection(ctx, fc.Args["id"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.ModelGatewaySyncResult
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.ModelGatewaySyncResult
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.ModelGatewaySyncResult) graphql.Marshaler {
+			return ec.marshalNModelGatewaySyncResult2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySyncResult(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_syncModelGatewayConnection(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ModelGatewaySyncResult(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_syncModelGatewayConnection_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_testNewModelGatewayConnection(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_testNewModelGatewayConnection(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().TestNewModelGatewayConnection(ctx, fc.Args["input"].(model.TestModelGatewayConnectionInput))
 		},
 		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
 			directive0 := next
@@ -18106,7 +18617,7 @@ func (ec *executionContext) _Mutation_testModelGatewayConnection(ctx context.Con
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_Mutation_testModelGatewayConnection(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_testNewModelGatewayConnection(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -18123,7 +18634,7 @@ func (ec *executionContext) fieldContext_Mutation_testModelGatewayConnection(ctx
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_testModelGatewayConnection_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_testNewModelGatewayConnection_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -18518,7 +19029,7 @@ func (ec *executionContext) _Mutation_createCustomRole(ctx context.Context, fiel
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.CustomRole
 					return zeroVal, err
@@ -18580,7 +19091,7 @@ func (ec *executionContext) _Mutation_deleteCustomRole(ctx context.Context, fiel
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
@@ -18704,7 +19215,7 @@ func (ec *executionContext) _Mutation_setRolePermissions(ctx context.Context, fi
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.CustomRole
 					return zeroVal, err
@@ -18766,7 +19277,7 @@ func (ec *executionContext) _Mutation_assignUserRole(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
@@ -18828,7 +19339,7 @@ func (ec *executionContext) _Mutation_removeUserRole(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
@@ -20252,6 +20763,52 @@ func (ec *executionContext) fieldContext_Permission_description(_ context.Contex
 	return graphql.NewScalarFieldContext("Permission", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _PlacementRef_name(ctx context.Context, field graphql.CollectedField, obj *model.PlacementRef) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PlacementRef_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_PlacementRef_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PlacementRef", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _PlacementRef_path(ctx context.Context, field graphql.CollectedField, obj *model.PlacementRef) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PlacementRef_path(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Path, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_PlacementRef_path(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PlacementRef", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _PlatformSettings_agentUser(ctx context.Context, field graphql.CollectedField, obj *model.PlatformSettings) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -20385,7 +20942,7 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.UserConnection
 					return zeroVal, err
@@ -20447,7 +21004,7 @@ func (ec *executionContext) _Query_roles(ctx context.Context, field graphql.Coll
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.RoleConnection
 					return zeroVal, err
@@ -20509,7 +21066,7 @@ func (ec *executionContext) _Query_role(ctx context.Context, field graphql.Colle
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.Role
 					return zeroVal, err
@@ -20571,7 +21128,7 @@ func (ec *executionContext) _Query_userExists(ctx context.Context, field graphql
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
@@ -20705,7 +21262,25 @@ func (ec *executionContext) _Query_agents(ctx context.Context, field graphql.Col
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Query().Agents(ctx, fc.Args["filter"].(*model.AgentFilter), fc.Args["pagination"].(*model.Pagination), fc.Args["sort"].(*model.AgentSort))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "read_only", "user"})
+				if err != nil {
+					var zeroVal *model.AgentConnection
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.AgentConnection
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
 		func(ctx context.Context, selections ast.SelectionSet, v *model.AgentConnection) graphql.Marshaler {
 			return ec.marshalNAgentConnection2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentConnection(ctx, selections, v)
 		},
@@ -20731,6 +21306,50 @@ func (ec *executionContext) fieldContext_Query_agents(ctx context.Context, field
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_agents_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_agent(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_agent(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().Agent(ctx, fc.Args["id"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Agent) graphql.Marshaler {
+			return ec.marshalNAgent2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgent(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_agent(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Agent(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_agent_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -20905,7 +21524,7 @@ func (ec *executionContext) _Query_dashboardOverview(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "observability"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "read_only"})
 				if err != nil {
 					var zeroVal *model.DashboardOverview
 					return zeroVal, err
@@ -20966,7 +21585,7 @@ func (ec *executionContext) _Query_departments(ctx context.Context, field graphq
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal []model.Department
 					return zeroVal, err
@@ -21832,7 +22451,7 @@ func (ec *executionContext) _Query_rateLimitPolicies(ctx context.Context, field 
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal []model.RateLimitPolicy
 					return zeroVal, err
@@ -22068,7 +22687,7 @@ func (ec *executionContext) _Query_customRoles(ctx context.Context, field graphq
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal []model.CustomRole
 					return zeroVal, err
@@ -22529,7 +23148,7 @@ func (ec *executionContext) _Query_virtualKeys(ctx context.Context, field graphq
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "read_only"})
 				if err != nil {
 					var zeroVal []model.VirtualKey
 					return zeroVal, err
@@ -23667,119 +24286,36 @@ func (ec *executionContext) fieldContext_ResourcePool_insecure(_ context.Context
 	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
-func (ec *executionContext) _ResourcePool_connectionStatus(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
+func (ec *executionContext) _ResourcePool_datacenters(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ResourcePool_connectionStatus(ctx, field)
+			return ec.fieldContext_ResourcePool_datacenters(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return obj.ConnectionStatus, nil
+			return obj.Datacenters, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v model.PoolConnectionStatus) graphql.Marshaler {
-			return ec.marshalNPoolConnectionStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPoolConnectionStatus(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v []model.DataCenter) graphql.Marshaler {
+			return ec.marshalNDataCenter2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDataCenterᚄ(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_ResourcePool_connectionStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type PoolConnectionStatus does not have child fields"))
-}
-
-func (ec *executionContext) _ResourcePool_datacenterCount(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ResourcePool_datacenterCount(ctx, field)
+func (ec *executionContext) fieldContext_ResourcePool_datacenters(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ResourcePool",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_DataCenter(ctx, field)
 		},
-		func(ctx context.Context) (any, error) {
-			return obj.DatacenterCount, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
-			return ec.marshalNInt2int(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_ResourcePool_datacenterCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _ResourcePool_clusterCount(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ResourcePool_clusterCount(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.ClusterCount, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
-			return ec.marshalNInt2int(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_ResourcePool_clusterCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _ResourcePool_esxiHostCount(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ResourcePool_esxiHostCount(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.EsxiHostCount, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
-			return ec.marshalNInt2int(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_ResourcePool_esxiHostCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _ResourcePool_vmInstanceCount(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ResourcePool_vmInstanceCount(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.VMInstanceCount, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
-			return ec.marshalNInt2int(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_ResourcePool_vmInstanceCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type Int does not have child fields"))
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _ResourcePool_syncStatus(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
@@ -24106,6 +24642,29 @@ func (ec *executionContext) _Role_id(ctx context.Context, field graphql.Collecte
 }
 func (ec *executionContext) fieldContext_Role_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Role", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _Role_roleKey(ctx context.Context, field graphql.CollectedField, obj *model.Role) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Role_roleKey(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RoleKey, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Role_roleKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Role", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _Role_name(ctx context.Context, field graphql.CollectedField, obj *model.Role) (ret graphql.Marshaler) {
@@ -25119,16 +25678,16 @@ func (ec *executionContext) fieldContext_User_mustChangePassword(_ context.Conte
 	return graphql.NewScalarFieldContext("User", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
-func (ec *executionContext) _User_isActive(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_enabled(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_User_isActive(ctx, field)
+			return ec.fieldContext_User_enabled(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return obj.IsActive, nil
+			return obj.Enabled, nil
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
@@ -25138,8 +25697,31 @@ func (ec *executionContext) _User_isActive(ctx context.Context, field graphql.Co
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_User_isActive(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_User_enabled(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("User", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _User_connectionStatus(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_User_connectionStatus(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.User().ConnectionStatus(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.ConnectionStatus) graphql.Marshaler {
+			return ec.marshalNConnectionStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐConnectionStatus(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_User_connectionStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("User", field, true, true, errors.New("field of type ConnectionStatus does not have child fields"))
 }
 
 func (ec *executionContext) _User_lastLoginAt(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
@@ -27387,7 +27969,7 @@ func (ec *executionContext) unmarshalInputCreateResourcePoolInput(ctx context.Co
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "endpoint", "contentLibraryName", "datacenterCount", "clusterCount", "insecure", "username", "password", "secretRef"}
+	fieldsInOrder := [...]string{"name", "endpoint", "contentLibraryName", "insecure", "username", "password", "secretRef"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -27415,20 +27997,6 @@ func (ec *executionContext) unmarshalInputCreateResourcePoolInput(ctx context.Co
 				return it, err
 			}
 			it.ContentLibraryName = data
-		case "datacenterCount":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("datacenterCount"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.DatacenterCount = data
-		case "clusterCount":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("clusterCount"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ClusterCount = data
 		case "insecure":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("insecure"))
 			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
@@ -27772,7 +28340,7 @@ func (ec *executionContext) unmarshalInputModelGatewayFilterInput(ctx context.Co
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"search", "status"}
+	fieldsInOrder := [...]string{"search"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -27786,13 +28354,6 @@ func (ec *executionContext) unmarshalInputModelGatewayFilterInput(ctx context.Co
 				return it, err
 			}
 			it.Search = data
-		case "status":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
-			data, err := ec.unmarshalOModelGatewayStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Status = data
 		}
 	}
 	return it, nil
@@ -27809,7 +28370,7 @@ func (ec *executionContext) unmarshalInputModelGatewayInput(ctx context.Context,
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "provider", "endpoint", "adminUrl", "masterKey", "loadBalancingStrategy"}
+	fieldsInOrder := [...]string{"name", "provider", "endpoint", "masterKey"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -27837,13 +28398,6 @@ func (ec *executionContext) unmarshalInputModelGatewayInput(ctx context.Context,
 				return it, err
 			}
 			it.Endpoint = data
-		case "adminUrl":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("adminUrl"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.AdminURL = data
 		case "masterKey":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("masterKey"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -27851,13 +28405,6 @@ func (ec *executionContext) unmarshalInputModelGatewayInput(ctx context.Context,
 				return it, err
 			}
 			it.MasterKey = data
-		case "loadBalancingStrategy":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("loadBalancingStrategy"))
-			data, err := ec.unmarshalNLoadBalancingStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.LoadBalancingStrategy = data
 		}
 	}
 	return it, nil
@@ -28298,7 +28845,7 @@ func (ec *executionContext) unmarshalInputRegisterGatewayConnectionInput(ctx con
 			it.MasterKeyRef = data
 		case "loadBalanceStrategy":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("loadBalanceStrategy"))
-			data, err := ec.unmarshalOLoadBalanceStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalanceStrategy(ctx, v)
+			data, err := ec.unmarshalOLoadBalancingStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -28428,7 +28975,7 @@ func (ec *executionContext) unmarshalInputResourcePoolFilter(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"nameKeyword", "endpointKeyword", "connectionStatus"}
+	fieldsInOrder := [...]string{"nameKeyword", "endpointKeyword", "syncStatus"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -28449,13 +28996,13 @@ func (ec *executionContext) unmarshalInputResourcePoolFilter(ctx context.Context
 				return it, err
 			}
 			it.EndpointKeyword = data
-		case "connectionStatus":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("connectionStatus"))
-			data, err := ec.unmarshalOPoolConnectionStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPoolConnectionStatus(ctx, v)
+		case "syncStatus":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("syncStatus"))
+			data, err := ec.unmarshalOResourcePoolSyncState2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolSyncState(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.ConnectionStatus = data
+			it.SyncStatus = data
 		}
 	}
 	return it, nil
@@ -28581,6 +29128,43 @@ func (ec *executionContext) unmarshalInputSnapshotAgentInput(ctx context.Context
 				return it, err
 			}
 			it.Description = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputTestModelGatewayConnectionInput(ctx context.Context, obj any) (model.TestModelGatewayConnectionInput, error) {
+	var it model.TestModelGatewayConnectionInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"endpoint", "masterKey"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "endpoint":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("endpoint"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Endpoint = data
+		case "masterKey":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("masterKey"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.MasterKey = data
 		}
 	}
 	return it, nil
@@ -28787,7 +29371,7 @@ func (ec *executionContext) unmarshalInputUpdateResourcePoolInput(ctx context.Co
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "endpoint", "contentLibraryName", "datacenterCount", "clusterCount", "insecure", "username", "password", "secretRef"}
+	fieldsInOrder := [...]string{"name", "endpoint", "contentLibraryName", "insecure", "username", "password", "secretRef"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -28815,20 +29399,6 @@ func (ec *executionContext) unmarshalInputUpdateResourcePoolInput(ctx context.Co
 				return it, err
 			}
 			it.ContentLibraryName = data
-		case "datacenterCount":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("datacenterCount"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.DatacenterCount = data
-		case "clusterCount":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("clusterCount"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ClusterCount = data
 		case "insecure":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("insecure"))
 			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
@@ -29170,7 +29740,7 @@ func (ec *executionContext) unmarshalInputUpsertModelRouteInput(ctx context.Cont
 			it.Upstreams = data
 		case "strategy":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("strategy"))
-			data, err := ec.unmarshalOLoadBalanceStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalanceStrategy(ctx, v)
+			data, err := ec.unmarshalOLoadBalancingStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -30652,6 +31222,60 @@ func (ec *executionContext) _AuthPayload(ctx context.Context, sel ast.SelectionS
 	return out
 }
 
+var clusterImplementors = []string{"Cluster"}
+
+func (ec *executionContext) _Cluster(ctx context.Context, sel ast.SelectionSet, obj *model.Cluster) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, clusterImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Cluster")
+		case "name":
+			out.Values[i] = ec._Cluster_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "path":
+			out.Values[i] = ec._Cluster_path(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "esxiHosts":
+			out.Values[i] = ec._Cluster_esxiHosts(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "resourcePools":
+			out.Values[i] = ec._Cluster_resourcePools(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var contentLibraryItemImplementors = []string{"ContentLibraryItem"}
 
 func (ec *executionContext) _ContentLibraryItem(ctx context.Context, sel ast.SelectionSet, obj *model.ContentLibraryItem) graphql.Marshaler {
@@ -31166,6 +31790,75 @@ func (ec *executionContext) _DashboardStats(ctx context.Context, sel ast.Selecti
 			}
 		case "monthlyCost":
 			out.Values[i] = ec._DashboardStats_monthlyCost(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var dataCenterImplementors = []string{"DataCenter"}
+
+func (ec *executionContext) _DataCenter(ctx context.Context, sel ast.SelectionSet, obj *model.DataCenter) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, dataCenterImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DataCenter")
+		case "name":
+			out.Values[i] = ec._DataCenter_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "path":
+			out.Values[i] = ec._DataCenter_path(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "clusters":
+			out.Values[i] = ec._DataCenter_clusters(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "datastores":
+			out.Values[i] = ec._DataCenter_datastores(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "networks":
+			out.Values[i] = ec._DataCenter_networks(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "folders":
+			out.Values[i] = ec._DataCenter_folders(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "storagePolicies":
+			out.Values[i] = ec._DataCenter_storagePolicies(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -31940,11 +32633,6 @@ func (ec *executionContext) _ModelGateway(ctx context.Context, sel ast.Selection
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "status":
-			out.Values[i] = ec._ModelGateway_status(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "backendModelCount":
 			out.Values[i] = ec._ModelGateway_backendModelCount(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -31952,16 +32640,6 @@ func (ec *executionContext) _ModelGateway(ctx context.Context, sel ast.Selection
 			}
 		case "loadBalancingStrategy":
 			out.Values[i] = ec._ModelGateway_loadBalancingStrategy(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "latencyMs":
-			out.Values[i] = ec._ModelGateway_latencyMs(ctx, field, obj)
-			if out.Values[i] == graphql.RequiredNull {
-				out.Invalids++
-			}
-		case "adminUrl":
-			out.Values[i] = ec._ModelGateway_adminUrl(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
@@ -32031,6 +32709,55 @@ func (ec *executionContext) _ModelGatewayConnection(ctx context.Context, sel ast
 			}
 		case "totalCount":
 			out.Values[i] = ec._ModelGatewayConnection_totalCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var modelGatewaySyncResultImplementors = []string{"ModelGatewaySyncResult"}
+
+func (ec *executionContext) _ModelGatewaySyncResult(ctx context.Context, sel ast.SelectionSet, obj *model.ModelGatewaySyncResult) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, modelGatewaySyncResultImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ModelGatewaySyncResult")
+		case "success":
+			out.Values[i] = ec._ModelGatewaySyncResult_success(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "message":
+			out.Values[i] = ec._ModelGatewaySyncResult_message(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "gateway":
+			out.Values[i] = ec._ModelGatewaySyncResult_gateway(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -32132,16 +32859,6 @@ func (ec *executionContext) _ModelGatewayTestResult(ctx context.Context, sel ast
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "status":
-			out.Values[i] = ec._ModelGatewayTestResult_status(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "latencyMs":
-			out.Values[i] = ec._ModelGatewayTestResult_latencyMs(ctx, field, obj)
-			if out.Values[i] == graphql.RequiredNull {
-				out.Invalids++
-			}
 		case "message":
 			out.Values[i] = ec._ModelGatewayTestResult_message(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -32149,11 +32866,6 @@ func (ec *executionContext) _ModelGatewayTestResult(ctx context.Context, sel ast
 			}
 		case "testedAt":
 			out.Values[i] = ec._ModelGatewayTestResult_testedAt(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "gateway":
-			out.Values[i] = ec._ModelGatewayTestResult_gateway(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -32747,9 +33459,16 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "testModelGatewayConnection":
+		case "syncModelGatewayConnection":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_testModelGatewayConnection(ctx, field)
+				return ec._Mutation_syncModelGatewayConnection(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "testNewModelGatewayConnection":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_testNewModelGatewayConnection(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -33383,6 +34102,50 @@ func (ec *executionContext) _Permission(ctx context.Context, sel ast.SelectionSe
 	return out
 }
 
+var placementRefImplementors = []string{"PlacementRef"}
+
+func (ec *executionContext) _PlacementRef(ctx context.Context, sel ast.SelectionSet, obj *model.PlacementRef) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, placementRefImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PlacementRef")
+		case "name":
+			out.Values[i] = ec._PlacementRef_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "path":
+			out.Values[i] = ec._PlacementRef_path(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var platformSettingsImplementors = []string{"PlatformSettings"}
 
 func (ec *executionContext) _PlatformSettings(ctx context.Context, sel ast.SelectionSet, obj *model.PlatformSettings) graphql.Marshaler {
@@ -33627,6 +34390,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_agents(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "agent":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_agent(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -34854,28 +35639,8 @@ func (ec *executionContext) _ResourcePool(ctx context.Context, sel ast.Selection
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "connectionStatus":
-			out.Values[i] = ec._ResourcePool_connectionStatus(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "datacenterCount":
-			out.Values[i] = ec._ResourcePool_datacenterCount(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "clusterCount":
-			out.Values[i] = ec._ResourcePool_clusterCount(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "esxiHostCount":
-			out.Values[i] = ec._ResourcePool_esxiHostCount(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "vmInstanceCount":
-			out.Values[i] = ec._ResourcePool_vmInstanceCount(ctx, field, obj)
+		case "datacenters":
+			out.Values[i] = ec._ResourcePool_datacenters(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -35077,6 +35842,11 @@ func (ec *executionContext) _Role(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = graphql.MarshalString("Role")
 		case "id":
 			out.Values[i] = ec._Role_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "roleKey":
+			out.Values[i] = ec._Role_roleKey(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -35627,11 +36397,47 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
-		case "isActive":
-			out.Values[i] = ec._User_isActive(ctx, field, obj)
+		case "enabled":
+			out.Values[i] = ec._User_enabled(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "connectionStatus":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_connectionStatus(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "lastLoginAt":
 			out.Values[i] = ec._User_lastLoginAt(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
@@ -36729,6 +37535,26 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
+func (ec *executionContext) marshalNCluster2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCluster(ctx context.Context, sel ast.SelectionSet, v model.Cluster) graphql.Marshaler {
+	return ec._Cluster(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNCluster2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐClusterᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Cluster) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNCluster2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCluster(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) unmarshalNConnectionStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐConnectionStatus(ctx context.Context, v any) (model.ConnectionStatus, error) {
 	var res model.ConnectionStatus
 	err := res.UnmarshalGQL(v)
@@ -36978,6 +37804,26 @@ func (ec *executionContext) marshalNDashboardStats2ᚖgithubᚗcomᚋVMwareᚑAI
 		return graphql.Null
 	}
 	return ec._DashboardStats(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNDataCenter2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDataCenter(ctx context.Context, sel ast.SelectionSet, v model.DataCenter) graphql.Marshaler {
+	return ec._DataCenter(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNDataCenter2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDataCenterᚄ(ctx context.Context, sel ast.SelectionSet, v []model.DataCenter) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNDataCenter2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDataCenter(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalNDateUsage2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDateUsage(ctx context.Context, sel ast.SelectionSet, v model.DateUsage) graphql.Marshaler {
@@ -37268,16 +38114,6 @@ func (ec *executionContext) marshalNIssuedVirtualKey2ᚖgithubᚗcomᚋVMwareᚑ
 	return ec._IssuedVirtualKey(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNLoadBalanceStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalanceStrategy(ctx context.Context, v any) (model.LoadBalanceStrategy, error) {
-	var res model.LoadBalanceStrategy
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNLoadBalanceStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalanceStrategy(ctx context.Context, sel ast.SelectionSet, v model.LoadBalanceStrategy) graphql.Marshaler {
-	return v
-}
-
 func (ec *executionContext) unmarshalNLoadBalancingStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx context.Context, v any) (model.LoadBalancingStrategy, error) {
 	var res model.LoadBalancingStrategy
 	err := res.UnmarshalGQL(v)
@@ -37450,14 +38286,18 @@ func (ec *executionContext) marshalNModelGatewaySortField2githubᚗcomᚋVMware�
 	return v
 }
 
-func (ec *executionContext) unmarshalNModelGatewayStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx context.Context, v any) (model.ModelGatewayStatus, error) {
-	var res model.ModelGatewayStatus
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
+func (ec *executionContext) marshalNModelGatewaySyncResult2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySyncResult(ctx context.Context, sel ast.SelectionSet, v model.ModelGatewaySyncResult) graphql.Marshaler {
+	return ec._ModelGatewaySyncResult(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNModelGatewayStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx context.Context, sel ast.SelectionSet, v model.ModelGatewayStatus) graphql.Marshaler {
-	return v
+func (ec *executionContext) marshalNModelGatewaySyncResult2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySyncResult(ctx context.Context, sel ast.SelectionSet, v *model.ModelGatewaySyncResult) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ModelGatewaySyncResult(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNModelGatewaySyncState2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewaySyncState(ctx context.Context, v any) (model.ModelGatewaySyncState, error) {
@@ -37741,6 +38581,26 @@ func (ec *executionContext) marshalNPermission2ᚖgithubᚗcomᚋVMwareᚑAIᚋa
 	return ec._Permission(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNPlacementRef2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlacementRef(ctx context.Context, sel ast.SelectionSet, v model.PlacementRef) graphql.Marshaler {
+	return ec._PlacementRef(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPlacementRef2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlacementRefᚄ(ctx context.Context, sel ast.SelectionSet, v []model.PlacementRef) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNPlacementRef2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlacementRef(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) marshalNPlatformSettings2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlatformSettings(ctx context.Context, sel ast.SelectionSet, v model.PlatformSettings) graphql.Marshaler {
 	return ec._PlatformSettings(ctx, sel, &v)
 }
@@ -37753,16 +38613,6 @@ func (ec *executionContext) marshalNPlatformSettings2ᚖgithubᚗcomᚋVMwareᚑ
 		return graphql.Null
 	}
 	return ec._PlatformSettings(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalNPoolConnectionStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPoolConnectionStatus(ctx context.Context, v any) (model.PoolConnectionStatus, error) {
-	var res model.PoolConnectionStatus
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNPoolConnectionStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPoolConnectionStatus(ctx context.Context, sel ast.SelectionSet, v model.PoolConnectionStatus) graphql.Marshaler {
-	return v
 }
 
 func (ec *executionContext) marshalNRateLimitPolicy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRateLimitPolicy(ctx context.Context, sel ast.SelectionSet, v model.RateLimitPolicy) graphql.Marshaler {
@@ -38234,6 +39084,11 @@ func (ec *executionContext) marshalNSyncResourcePoolPayload2ᚖgithubᚗcomᚋVM
 		return graphql.Null
 	}
 	return ec._SyncResourcePoolPayload(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNTestModelGatewayConnectionInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTestModelGatewayConnectionInput(ctx context.Context, v any) (model.TestModelGatewayConnectionInput, error) {
+	res, err := ec.unmarshalInputTestModelGatewayConnectionInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNTestResourcePoolConnectionInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTestResourcePoolConnectionInput(ctx context.Context, v any) (model.TestResourcePoolConnectionInput, error) {
@@ -38863,16 +39718,16 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	return res
 }
 
-func (ec *executionContext) unmarshalOLoadBalanceStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalanceStrategy(ctx context.Context, v any) (*model.LoadBalanceStrategy, error) {
+func (ec *executionContext) unmarshalOLoadBalancingStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx context.Context, v any) (*model.LoadBalancingStrategy, error) {
 	if v == nil {
 		return nil, nil
 	}
-	var res = new(model.LoadBalanceStrategy)
+	var res = new(model.LoadBalancingStrategy)
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOLoadBalanceStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalanceStrategy(ctx context.Context, sel ast.SelectionSet, v *model.LoadBalanceStrategy) graphql.Marshaler {
+func (ec *executionContext) marshalOLoadBalancingStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx context.Context, sel ast.SelectionSet, v *model.LoadBalancingStrategy) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -38945,22 +39800,6 @@ func (ec *executionContext) unmarshalOModelGatewaySort2ᚖgithubᚗcomᚋVMware�
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalOModelGatewayStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx context.Context, v any) (*model.ModelGatewayStatus, error) {
-	if v == nil {
-		return nil, nil
-	}
-	var res = new(model.ModelGatewayStatus)
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOModelGatewayStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelGatewayStatus(ctx context.Context, sel ast.SelectionSet, v *model.ModelGatewayStatus) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return v
-}
-
 func (ec *executionContext) unmarshalOModelRouteStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx context.Context, v any) (*model.ModelRouteStrategy, error) {
 	if v == nil {
 		return nil, nil
@@ -39009,22 +39848,6 @@ func (ec *executionContext) unmarshalOPagination2ᚖgithubᚗcomᚋVMwareᚑAI�
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalOPoolConnectionStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPoolConnectionStatus(ctx context.Context, v any) (*model.PoolConnectionStatus, error) {
-	if v == nil {
-		return nil, nil
-	}
-	var res = new(model.PoolConnectionStatus)
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOPoolConnectionStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPoolConnectionStatus(ctx context.Context, sel ast.SelectionSet, v *model.PoolConnectionStatus) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return v
-}
-
 func (ec *executionContext) unmarshalORequestLogFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestLogFilter(ctx context.Context, v any) (*model.RequestLogFilter, error) {
 	if v == nil {
 		return nil, nil
@@ -39069,6 +39892,22 @@ func (ec *executionContext) unmarshalOResourcePoolSort2ᚖgithubᚗcomᚋVMware�
 	}
 	res, err := ec.unmarshalInputResourcePoolSort(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOResourcePoolSyncState2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolSyncState(ctx context.Context, v any) (*model.ResourcePoolSyncState, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.ResourcePoolSyncState)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOResourcePoolSyncState2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolSyncState(ctx context.Context, sel ast.SelectionSet, v *model.ResourcePoolSyncState) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) marshalORole2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRole(ctx context.Context, sel ast.SelectionSet, v *model.Role) graphql.Marshaler {
