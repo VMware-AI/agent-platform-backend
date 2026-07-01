@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
+	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 	"github.com/google/uuid"
 )
 
@@ -36,14 +38,8 @@ type ResourcePool struct {
 	SecretRef string `json:"secret_ref,omitempty"`
 	// Insecure holds the value of the "insecure" field.
 	Insecure bool `json:"insecure,omitempty"`
-	// DatacenterCount holds the value of the "datacenter_count" field.
-	DatacenterCount int `json:"datacenter_count,omitempty"`
-	// ClusterCount holds the value of the "cluster_count" field.
-	ClusterCount int `json:"cluster_count,omitempty"`
-	// HostCount holds the value of the "host_count" field.
-	HostCount int `json:"host_count,omitempty"`
-	// VMCount holds the value of the "vm_count" field.
-	VMCount int `json:"vm_count,omitempty"`
+	// Inventory holds the value of the "inventory" field.
+	Inventory []vcenter.DataCenter `json:"inventory,omitempty"`
 	// LastSyncedAt holds the value of the "last_synced_at" field.
 	LastSyncedAt *time.Time `json:"last_synced_at,omitempty"`
 	// TenantID holds the value of the "tenant_id" field.
@@ -60,10 +56,10 @@ func (*ResourcePool) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case resourcepool.FieldTenantID, resourcepool.FieldEnvironmentID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case resourcepool.FieldInventory:
+			values[i] = new([]byte)
 		case resourcepool.FieldInsecure:
 			values[i] = new(sql.NullBool)
-		case resourcepool.FieldDatacenterCount, resourcepool.FieldClusterCount, resourcepool.FieldHostCount, resourcepool.FieldVMCount:
-			values[i] = new(sql.NullInt64)
 		case resourcepool.FieldName, resourcepool.FieldKind, resourcepool.FieldEndpoint, resourcepool.FieldStatus, resourcepool.FieldContentLibraryName, resourcepool.FieldSecretRef:
 			values[i] = new(sql.NullString)
 		case resourcepool.FieldCreatedAt, resourcepool.FieldUpdatedAt, resourcepool.FieldLastSyncedAt:
@@ -145,29 +141,13 @@ func (_m *ResourcePool) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Insecure = value.Bool
 			}
-		case resourcepool.FieldDatacenterCount:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field datacenter_count", values[i])
-			} else if value.Valid {
-				_m.DatacenterCount = int(value.Int64)
-			}
-		case resourcepool.FieldClusterCount:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field cluster_count", values[i])
-			} else if value.Valid {
-				_m.ClusterCount = int(value.Int64)
-			}
-		case resourcepool.FieldHostCount:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field host_count", values[i])
-			} else if value.Valid {
-				_m.HostCount = int(value.Int64)
-			}
-		case resourcepool.FieldVMCount:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field vm_count", values[i])
-			} else if value.Valid {
-				_m.VMCount = int(value.Int64)
+		case resourcepool.FieldInventory:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field inventory", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Inventory); err != nil {
+					return fmt.Errorf("unmarshal field inventory: %w", err)
+				}
 			}
 		case resourcepool.FieldLastSyncedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -253,17 +233,8 @@ func (_m *ResourcePool) String() string {
 	builder.WriteString("insecure=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Insecure))
 	builder.WriteString(", ")
-	builder.WriteString("datacenter_count=")
-	builder.WriteString(fmt.Sprintf("%v", _m.DatacenterCount))
-	builder.WriteString(", ")
-	builder.WriteString("cluster_count=")
-	builder.WriteString(fmt.Sprintf("%v", _m.ClusterCount))
-	builder.WriteString(", ")
-	builder.WriteString("host_count=")
-	builder.WriteString(fmt.Sprintf("%v", _m.HostCount))
-	builder.WriteString(", ")
-	builder.WriteString("vm_count=")
-	builder.WriteString(fmt.Sprintf("%v", _m.VMCount))
+	builder.WriteString("inventory=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Inventory))
 	builder.WriteString(", ")
 	if v := _m.LastSyncedAt; v != nil {
 		builder.WriteString("last_synced_at=")

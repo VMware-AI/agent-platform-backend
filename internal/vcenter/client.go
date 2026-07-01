@@ -472,3 +472,76 @@ func (c *Client) About() AboutInfo {
 func (c *Client) Logout(ctx context.Context) error {
 	return c.vc.Logout(ctx)
 }
+
+// RetryableError marks a vCenter call failure as safe to retry. Network
+// errors, transport-level timeouts and 5xx SOAP faults should be wrapped in
+// this type by the call sites that produce them, so the resource-pool
+// fault-tolerance chain (retrySync + gobreaker) can distinguish them from
+// business errors (4xx, auth failure, object-not-found) that must NOT be
+// retried.
+type RetryableError struct{ Err error }
+
+func (e *RetryableError) Error() string { return e.Err.Error() }
+func (e *RetryableError) Unwrap() error { return e.Err }
+
+// MaybeRetryable classifies err as retryable when its message matches a
+// known transient transport pattern. vSphere SOAP faults come back as
+// strings from govmomi (the SDK does not expose strongly-typed fault codes
+// for every status), so a substring check is the cheapest correct-enough
+// filter here. Call sites that know a more specific classification (e.g.
+// Connect failing on a DNS error vs an auth failure) should wrap err
+// directly with &RetryableError{Err: err} instead of relying on this helper.
+func MaybeRetryable(err error) error {
+	if err == nil {
+		return nil
+	}
+	msg := err.Error()
+	for _, needle := range []string{
+		"connection refused",
+		"connection reset",
+		"connection closed",
+		"i/o timeout",
+		"context deadline exceeded",
+		"EOF",
+		"reset by peer",
+		"no route to host",
+		"network is unreachable",
+		"temporarily unavailable",
+	} {
+		if containsCI(msg, needle) {
+			return &RetryableError{Err: err}
+		}
+	}
+	return err
+}
+
+// containsCI is a case-insensitive substring check; avoiding strings.ToLower
+// allocations keeps the call path allocation-free for the hot error path.
+func containsCI(s, needle string) bool {
+	if len(needle) == 0 {
+		return true
+	}
+	if len(needle) > len(s) {
+		return false
+	}
+	for i := 0; i+len(needle) <= len(s); i++ {
+		match := true
+		for j := 0; j < len(needle); j++ {
+			a, b := s[i+j], needle[j]
+			if a >= 'A' && a <= 'Z' {
+				a += 32
+			}
+			if b >= 'A' && b <= 'Z' {
+				b += 32
+			}
+			if a != b {
+				match = false
+				break
+			}
+		}
+		if match {
+			return true
+		}
+	}
+	return false
+}

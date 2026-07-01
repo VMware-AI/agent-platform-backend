@@ -27,6 +27,11 @@ type VCenterClient interface {
 	PowerOn(ctx context.Context, vmName string) error
 	Destroy(ctx context.Context, vmName string) error
 	Inventory(ctx context.Context) (vcenter.Inventory, error)
+	// FullInventory walks the vCenter inventory tree (per-DC errgroup +
+	// PBM) into the sync schema. Returned by FullInventory(ctx); the data
+	// is consumed by the resource-pool datacenters GraphQL field and powers
+	// the OVA deploy cascading dropdowns.
+	FullInventory(ctx context.Context) ([]vcenter.DataCenter, error)
 	CreateSnapshot(ctx context.Context, vmName, name, description string) error
 	RevertSnapshot(ctx context.Context, vmName, snapshotName string) error
 	ListSnapshots(ctx context.Context, vmName string) ([]vcenter.SnapshotInfo, error)
@@ -97,6 +102,12 @@ type Resolver struct {
 	// the UI's purposes (eventual consistency on crash).
 	inflightSyncs   map[uuid.UUID]struct{}
 	inflightSyncsMu sync.Mutex
+	// Pool fault-tolerance chain (syncResourcePool + auto-sync + first sync).
+	// nil disables all three sync paths; the rest of the resource-pool CRUD
+	// (create / update / delete / test-connection / list) keeps working.
+	poolBreakers       *poolBreakerRegistry
+	poolSyncTimeout    time.Duration
+	poolSyncMaxRetries int
 }
 
 // EnablePermissionCache turns on memoization of custom-role permission sets for
@@ -106,4 +117,23 @@ type Resolver struct {
 // by default; opt in via PERM_CACHE_TTL_SECONDS.
 func (r *Resolver) EnablePermissionCache(ttl time.Duration) {
 	r.permCache = newPermCache(ttl)
+}
+
+// EnablePoolSync wires the fault-tolerance chain (timeout + retry + breaker)
+// for the resource-pool sync paths. Called by main after constructing the
+// Resolver; tests that don't want sync behavior simply skip this call, in
+// which case syncOnePool / CreateResourcePool's fire-and-forget first sync
+// / the background ticker all become no-ops.
+func (r *Resolver) EnablePoolSync(timeout time.Duration, maxRetries, threshold, openSec int) {
+	// gobreaker.ReadyToTrip expects uint32; we accept int from config and
+	// clamp to 0 (which gives the breaker an unreachable trip threshold —
+	// effectively a no-op, useful in tests that want a registered but
+	// passive breaker).
+	var thr uint32
+	if threshold > 0 {
+		thr = uint32(threshold)
+	}
+	r.poolBreakers = newPoolBreakerRegistry(thr, openSec)
+	r.poolSyncTimeout = timeout
+	r.poolSyncMaxRetries = maxRetries
 }

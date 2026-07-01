@@ -42,6 +42,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/upstream"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
+	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 	"github.com/google/uuid"
 )
 
@@ -15789,14 +15790,8 @@ type ResourcePoolMutation struct {
 	content_library_name *string
 	secret_ref           *string
 	insecure             *bool
-	datacenter_count     *int
-	adddatacenter_count  *int
-	cluster_count        *int
-	addcluster_count     *int
-	host_count           *int
-	addhost_count        *int
-	vm_count             *int
-	addvm_count          *int
+	inventory            *[]vcenter.DataCenter
+	appendinventory      []vcenter.DataCenter
 	last_synced_at       *time.Time
 	tenant_id            *uuid.UUID
 	environment_id       *uuid.UUID
@@ -16260,228 +16255,69 @@ func (m *ResourcePoolMutation) ResetInsecure() {
 	m.insecure = nil
 }
 
-// SetDatacenterCount sets the "datacenter_count" field.
-func (m *ResourcePoolMutation) SetDatacenterCount(i int) {
-	m.datacenter_count = &i
-	m.adddatacenter_count = nil
+// SetInventory sets the "inventory" field.
+func (m *ResourcePoolMutation) SetInventory(vc []vcenter.DataCenter) {
+	m.inventory = &vc
+	m.appendinventory = nil
 }
 
-// DatacenterCount returns the value of the "datacenter_count" field in the mutation.
-func (m *ResourcePoolMutation) DatacenterCount() (r int, exists bool) {
-	v := m.datacenter_count
+// Inventory returns the value of the "inventory" field in the mutation.
+func (m *ResourcePoolMutation) Inventory() (r []vcenter.DataCenter, exists bool) {
+	v := m.inventory
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldDatacenterCount returns the old "datacenter_count" field's value of the ResourcePool entity.
+// OldInventory returns the old "inventory" field's value of the ResourcePool entity.
 // If the ResourcePool object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ResourcePoolMutation) OldDatacenterCount(ctx context.Context) (v int, err error) {
+func (m *ResourcePoolMutation) OldInventory(ctx context.Context) (v []vcenter.DataCenter, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldDatacenterCount is only allowed on UpdateOne operations")
+		return v, errors.New("OldInventory is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldDatacenterCount requires an ID field in the mutation")
+		return v, errors.New("OldInventory requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldDatacenterCount: %w", err)
+		return v, fmt.Errorf("querying old value for OldInventory: %w", err)
 	}
-	return oldValue.DatacenterCount, nil
+	return oldValue.Inventory, nil
 }
 
-// AddDatacenterCount adds i to the "datacenter_count" field.
-func (m *ResourcePoolMutation) AddDatacenterCount(i int) {
-	if m.adddatacenter_count != nil {
-		*m.adddatacenter_count += i
-	} else {
-		m.adddatacenter_count = &i
-	}
+// AppendInventory adds vc to the "inventory" field.
+func (m *ResourcePoolMutation) AppendInventory(vc []vcenter.DataCenter) {
+	m.appendinventory = append(m.appendinventory, vc...)
 }
 
-// AddedDatacenterCount returns the value that was added to the "datacenter_count" field in this mutation.
-func (m *ResourcePoolMutation) AddedDatacenterCount() (r int, exists bool) {
-	v := m.adddatacenter_count
-	if v == nil {
-		return
+// AppendedInventory returns the list of values that were appended to the "inventory" field in this mutation.
+func (m *ResourcePoolMutation) AppendedInventory() ([]vcenter.DataCenter, bool) {
+	if len(m.appendinventory) == 0 {
+		return nil, false
 	}
-	return *v, true
+	return m.appendinventory, true
 }
 
-// ResetDatacenterCount resets all changes to the "datacenter_count" field.
-func (m *ResourcePoolMutation) ResetDatacenterCount() {
-	m.datacenter_count = nil
-	m.adddatacenter_count = nil
+// ClearInventory clears the value of the "inventory" field.
+func (m *ResourcePoolMutation) ClearInventory() {
+	m.inventory = nil
+	m.appendinventory = nil
+	m.clearedFields[resourcepool.FieldInventory] = struct{}{}
 }
 
-// SetClusterCount sets the "cluster_count" field.
-func (m *ResourcePoolMutation) SetClusterCount(i int) {
-	m.cluster_count = &i
-	m.addcluster_count = nil
+// InventoryCleared returns if the "inventory" field was cleared in this mutation.
+func (m *ResourcePoolMutation) InventoryCleared() bool {
+	_, ok := m.clearedFields[resourcepool.FieldInventory]
+	return ok
 }
 
-// ClusterCount returns the value of the "cluster_count" field in the mutation.
-func (m *ResourcePoolMutation) ClusterCount() (r int, exists bool) {
-	v := m.cluster_count
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldClusterCount returns the old "cluster_count" field's value of the ResourcePool entity.
-// If the ResourcePool object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ResourcePoolMutation) OldClusterCount(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldClusterCount is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldClusterCount requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldClusterCount: %w", err)
-	}
-	return oldValue.ClusterCount, nil
-}
-
-// AddClusterCount adds i to the "cluster_count" field.
-func (m *ResourcePoolMutation) AddClusterCount(i int) {
-	if m.addcluster_count != nil {
-		*m.addcluster_count += i
-	} else {
-		m.addcluster_count = &i
-	}
-}
-
-// AddedClusterCount returns the value that was added to the "cluster_count" field in this mutation.
-func (m *ResourcePoolMutation) AddedClusterCount() (r int, exists bool) {
-	v := m.addcluster_count
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetClusterCount resets all changes to the "cluster_count" field.
-func (m *ResourcePoolMutation) ResetClusterCount() {
-	m.cluster_count = nil
-	m.addcluster_count = nil
-}
-
-// SetHostCount sets the "host_count" field.
-func (m *ResourcePoolMutation) SetHostCount(i int) {
-	m.host_count = &i
-	m.addhost_count = nil
-}
-
-// HostCount returns the value of the "host_count" field in the mutation.
-func (m *ResourcePoolMutation) HostCount() (r int, exists bool) {
-	v := m.host_count
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldHostCount returns the old "host_count" field's value of the ResourcePool entity.
-// If the ResourcePool object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ResourcePoolMutation) OldHostCount(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldHostCount is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldHostCount requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldHostCount: %w", err)
-	}
-	return oldValue.HostCount, nil
-}
-
-// AddHostCount adds i to the "host_count" field.
-func (m *ResourcePoolMutation) AddHostCount(i int) {
-	if m.addhost_count != nil {
-		*m.addhost_count += i
-	} else {
-		m.addhost_count = &i
-	}
-}
-
-// AddedHostCount returns the value that was added to the "host_count" field in this mutation.
-func (m *ResourcePoolMutation) AddedHostCount() (r int, exists bool) {
-	v := m.addhost_count
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetHostCount resets all changes to the "host_count" field.
-func (m *ResourcePoolMutation) ResetHostCount() {
-	m.host_count = nil
-	m.addhost_count = nil
-}
-
-// SetVMCount sets the "vm_count" field.
-func (m *ResourcePoolMutation) SetVMCount(i int) {
-	m.vm_count = &i
-	m.addvm_count = nil
-}
-
-// VMCount returns the value of the "vm_count" field in the mutation.
-func (m *ResourcePoolMutation) VMCount() (r int, exists bool) {
-	v := m.vm_count
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldVMCount returns the old "vm_count" field's value of the ResourcePool entity.
-// If the ResourcePool object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ResourcePoolMutation) OldVMCount(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldVMCount is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldVMCount requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldVMCount: %w", err)
-	}
-	return oldValue.VMCount, nil
-}
-
-// AddVMCount adds i to the "vm_count" field.
-func (m *ResourcePoolMutation) AddVMCount(i int) {
-	if m.addvm_count != nil {
-		*m.addvm_count += i
-	} else {
-		m.addvm_count = &i
-	}
-}
-
-// AddedVMCount returns the value that was added to the "vm_count" field in this mutation.
-func (m *ResourcePoolMutation) AddedVMCount() (r int, exists bool) {
-	v := m.addvm_count
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetVMCount resets all changes to the "vm_count" field.
-func (m *ResourcePoolMutation) ResetVMCount() {
-	m.vm_count = nil
-	m.addvm_count = nil
+// ResetInventory resets all changes to the "inventory" field.
+func (m *ResourcePoolMutation) ResetInventory() {
+	m.inventory = nil
+	m.appendinventory = nil
+	delete(m.clearedFields, resourcepool.FieldInventory)
 }
 
 // SetLastSyncedAt sets the "last_synced_at" field.
@@ -16665,7 +16501,7 @@ func (m *ResourcePoolMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ResourcePoolMutation) Fields() []string {
-	fields := make([]string, 0, 16)
+	fields := make([]string, 0, 13)
 	if m.created_at != nil {
 		fields = append(fields, resourcepool.FieldCreatedAt)
 	}
@@ -16693,17 +16529,8 @@ func (m *ResourcePoolMutation) Fields() []string {
 	if m.insecure != nil {
 		fields = append(fields, resourcepool.FieldInsecure)
 	}
-	if m.datacenter_count != nil {
-		fields = append(fields, resourcepool.FieldDatacenterCount)
-	}
-	if m.cluster_count != nil {
-		fields = append(fields, resourcepool.FieldClusterCount)
-	}
-	if m.host_count != nil {
-		fields = append(fields, resourcepool.FieldHostCount)
-	}
-	if m.vm_count != nil {
-		fields = append(fields, resourcepool.FieldVMCount)
+	if m.inventory != nil {
+		fields = append(fields, resourcepool.FieldInventory)
 	}
 	if m.last_synced_at != nil {
 		fields = append(fields, resourcepool.FieldLastSyncedAt)
@@ -16740,14 +16567,8 @@ func (m *ResourcePoolMutation) Field(name string) (ent.Value, bool) {
 		return m.SecretRef()
 	case resourcepool.FieldInsecure:
 		return m.Insecure()
-	case resourcepool.FieldDatacenterCount:
-		return m.DatacenterCount()
-	case resourcepool.FieldClusterCount:
-		return m.ClusterCount()
-	case resourcepool.FieldHostCount:
-		return m.HostCount()
-	case resourcepool.FieldVMCount:
-		return m.VMCount()
+	case resourcepool.FieldInventory:
+		return m.Inventory()
 	case resourcepool.FieldLastSyncedAt:
 		return m.LastSyncedAt()
 	case resourcepool.FieldTenantID:
@@ -16781,14 +16602,8 @@ func (m *ResourcePoolMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldSecretRef(ctx)
 	case resourcepool.FieldInsecure:
 		return m.OldInsecure(ctx)
-	case resourcepool.FieldDatacenterCount:
-		return m.OldDatacenterCount(ctx)
-	case resourcepool.FieldClusterCount:
-		return m.OldClusterCount(ctx)
-	case resourcepool.FieldHostCount:
-		return m.OldHostCount(ctx)
-	case resourcepool.FieldVMCount:
-		return m.OldVMCount(ctx)
+	case resourcepool.FieldInventory:
+		return m.OldInventory(ctx)
 	case resourcepool.FieldLastSyncedAt:
 		return m.OldLastSyncedAt(ctx)
 	case resourcepool.FieldTenantID:
@@ -16867,33 +16682,12 @@ func (m *ResourcePoolMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetInsecure(v)
 		return nil
-	case resourcepool.FieldDatacenterCount:
-		v, ok := value.(int)
+	case resourcepool.FieldInventory:
+		v, ok := value.([]vcenter.DataCenter)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetDatacenterCount(v)
-		return nil
-	case resourcepool.FieldClusterCount:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetClusterCount(v)
-		return nil
-	case resourcepool.FieldHostCount:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetHostCount(v)
-		return nil
-	case resourcepool.FieldVMCount:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetVMCount(v)
+		m.SetInventory(v)
 		return nil
 	case resourcepool.FieldLastSyncedAt:
 		v, ok := value.(time.Time)
@@ -16923,36 +16717,13 @@ func (m *ResourcePoolMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *ResourcePoolMutation) AddedFields() []string {
-	var fields []string
-	if m.adddatacenter_count != nil {
-		fields = append(fields, resourcepool.FieldDatacenterCount)
-	}
-	if m.addcluster_count != nil {
-		fields = append(fields, resourcepool.FieldClusterCount)
-	}
-	if m.addhost_count != nil {
-		fields = append(fields, resourcepool.FieldHostCount)
-	}
-	if m.addvm_count != nil {
-		fields = append(fields, resourcepool.FieldVMCount)
-	}
-	return fields
+	return nil
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *ResourcePoolMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case resourcepool.FieldDatacenterCount:
-		return m.AddedDatacenterCount()
-	case resourcepool.FieldClusterCount:
-		return m.AddedClusterCount()
-	case resourcepool.FieldHostCount:
-		return m.AddedHostCount()
-	case resourcepool.FieldVMCount:
-		return m.AddedVMCount()
-	}
 	return nil, false
 }
 
@@ -16961,34 +16732,6 @@ func (m *ResourcePoolMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *ResourcePoolMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case resourcepool.FieldDatacenterCount:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddDatacenterCount(v)
-		return nil
-	case resourcepool.FieldClusterCount:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddClusterCount(v)
-		return nil
-	case resourcepool.FieldHostCount:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddHostCount(v)
-		return nil
-	case resourcepool.FieldVMCount:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddVMCount(v)
-		return nil
 	}
 	return fmt.Errorf("unknown ResourcePool numeric field %s", name)
 }
@@ -17002,6 +16745,9 @@ func (m *ResourcePoolMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(resourcepool.FieldSecretRef) {
 		fields = append(fields, resourcepool.FieldSecretRef)
+	}
+	if m.FieldCleared(resourcepool.FieldInventory) {
+		fields = append(fields, resourcepool.FieldInventory)
 	}
 	if m.FieldCleared(resourcepool.FieldLastSyncedAt) {
 		fields = append(fields, resourcepool.FieldLastSyncedAt)
@@ -17031,6 +16777,9 @@ func (m *ResourcePoolMutation) ClearField(name string) error {
 		return nil
 	case resourcepool.FieldSecretRef:
 		m.ClearSecretRef()
+		return nil
+	case resourcepool.FieldInventory:
+		m.ClearInventory()
 		return nil
 	case resourcepool.FieldLastSyncedAt:
 		m.ClearLastSyncedAt()
@@ -17076,17 +16825,8 @@ func (m *ResourcePoolMutation) ResetField(name string) error {
 	case resourcepool.FieldInsecure:
 		m.ResetInsecure()
 		return nil
-	case resourcepool.FieldDatacenterCount:
-		m.ResetDatacenterCount()
-		return nil
-	case resourcepool.FieldClusterCount:
-		m.ResetClusterCount()
-		return nil
-	case resourcepool.FieldHostCount:
-		m.ResetHostCount()
-		return nil
-	case resourcepool.FieldVMCount:
-		m.ResetVMCount()
+	case resourcepool.FieldInventory:
+		m.ResetInventory()
 		return nil
 	case resourcepool.FieldLastSyncedAt:
 		m.ResetLastSyncedAt()

@@ -22,7 +22,7 @@ func TestRegisterAndListResourcePool(t *testing.T) {
 		t.Fatalf("CreateResourcePool: %v", err)
 	}
 	p := created.Pool
-	if p.Name != "vCenter_OC1" || p.ConnectionStatus != model.PoolConnectionStatusDisconnected {
+	if p.Name != "vCenter_OC1" || p.SyncStatus != model.ResourcePoolSyncStateNever {
 		t.Fatalf("unexpected pool: %+v", p)
 	}
 

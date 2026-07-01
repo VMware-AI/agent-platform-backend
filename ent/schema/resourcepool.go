@@ -3,6 +3,7 @@ package schema
 import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/field"
+	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 	"github.com/google/uuid"
 )
 
@@ -30,11 +31,13 @@ func (ResourcePool) Fields() []ent.Field {
 		// the operator opts in per-pool at 接入 time for air-gapped vCenters with a
 		// self-signed/internal CA (LLD-13: replaces the global VCENTER_INSECURE env).
 		field.Bool("insecure").Default(false),
-		// Inventory counts from the last sync (0619 第13页).
-		field.Int("datacenter_count").NonNegative().Default(0),
-		field.Int("cluster_count").NonNegative().Default(0),
-		field.Int("host_count").NonNegative().Default(0),
-		field.Int("vm_count").NonNegative().Default(0),
+		// vCenter inventory snapshot — the full inventory tree (DC > Cluster > Host
+		// > ResourcePool, plus per-DC datastores / networks / vm folders / storage
+		// policies). Synced by the background ticker; consumed by the OVA deploy
+		// form to power cascading dropdowns. Storage policy sub-list may be nil
+		// when PBM pull failed (frontend distinguishes null vs []). See B5: Go
+		// type lives in internal/vcenter; ent imports it for serialization.
+		field.JSON("inventory", []vcenter.DataCenter{}).Optional().Default([]vcenter.DataCenter{}),
 		// last_synced_at: when syncResourcePool last succeeded. Nil = never synced.
 		// Drives the console's syncStatus (NEVER/SYNCED) + lastSyncedAt column.
 		field.Time("last_synced_at").Optional().Nillable(),

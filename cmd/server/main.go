@@ -131,18 +131,24 @@ func main() {
 	agentMgr := &agentmgr.Service{Ent: client, Secrets: sec}
 
 	resolver := &graph.Resolver{
-		Ent:             client,
-		Sessions:        sessions,
-		SessionTTL:      ttl,
-		SecureCookies:   cfg.Env == "prod",
-		Secrets:         sec,
-		InstallVars:     installVars,
-		VCenterConnect:  vcConnect,
-		LoginLimiter:    loginLimiter,
-		AgentMgr:        agentMgr,
-		ControlPlaneURL: os.Getenv("CONTROL_PLANE_URL"),
-		EnvScopeEnabled: cfg.EnvScopeEnabled,
+		Ent:                 client,
+		Sessions:            sessions,
+		SessionTTL:          ttl,
+		SecureCookies:       cfg.Env == "prod",
+		Secrets:             sec,
+		InstallVars:         installVars,
+		VCenterConnect:      vcConnect,
+		LoginLimiter:        loginLimiter,
+		AgentMgr:            agentMgr,
+		ControlPlaneURL:     os.Getenv("CONTROL_PLANE_URL"),
+		EnvScopeEnabled:     cfg.EnvScopeEnabled,
 	}
+	resolver.EnablePoolSync(
+		time.Duration(cfg.PoolSyncTimeoutSeconds)*time.Second,
+		cfg.PoolSyncMaxRetries,
+		cfg.PoolSyncBreakerThreshold,
+		cfg.PoolSyncBreakerOpenSeconds,
+	)
 	// In-process @hasPermission cache (process-local; see permcache.go). Disabled by
 	// default — enable it (single-replica only) via PERM_CACHE_TTL_SECONDS>0, so a
 	// multi-replica deployment never serves stale permissions after a revocation.
@@ -178,7 +184,7 @@ func main() {
 	}
 
 	// Periodically re-sync resource pools that have stored credentials.
-	// Disabled unless POOL_SYNC_INTERVAL_SECONDS > 0.
+	// Default 60m; disabled when POOL_SYNC_INTERVAL_SECONDS=0.
 	if cfg.PoolSyncIntervalSeconds > 0 {
 		poolSyncCtx, stopPoolSync := context.WithCancel(context.Background())
 		defer stopPoolSync()

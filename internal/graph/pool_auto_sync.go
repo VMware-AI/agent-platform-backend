@@ -11,7 +11,10 @@ import (
 // StartAutoSync periodically re-syncs every resource pool that has a secret
 // reference (i.e. credentials are stored). It runs until ctx is cancelled.
 // A single cycle that errors on one pool logs and continues with the rest —
-// a bad pool never blocks the others.
+// a bad pool never blocks the others. The actual sync work is delegated to
+// syncOnePool so the fire-and-forget first sync (CreateResourcePool) and the
+// manual syncResourcePool mutation share the same fault-tolerance chain
+// (timeout → retry → breaker).
 func (r *Resolver) StartAutoSync(ctx context.Context, interval time.Duration) {
 	log.Printf("pool auto-sync: every %s", interval)
 	ticker := time.NewTicker(interval)
@@ -38,29 +41,11 @@ func (r *Resolver) syncAllPools(ctx context.Context) {
 		return
 	}
 	for _, pool := range pools {
-		conn, err := r.connectPool(ctx, pool)
-		if err != nil {
-			log.Printf("pool auto-sync: connect pool %s: %v", pool.Name, err)
-			_, _ = r.Ent.ResourcePool.UpdateOne(pool).SetStatus(resourcepool.StatusError).Save(ctx)
-			continue
-		}
-		inv, err := conn.Inventory(ctx)
-		_ = conn.Logout(ctx)
-		if err != nil {
-			log.Printf("pool auto-sync: inventory pool %s: %v", pool.Name, err)
-			_, _ = r.Ent.ResourcePool.UpdateOne(pool).SetStatus(resourcepool.StatusError).Save(ctx)
-			continue
-		}
-		_, err = r.Ent.ResourcePool.UpdateOne(pool).
-			SetStatus(resourcepool.StatusConnected).
-			SetDatacenterCount(inv.Datacenters).
-			SetClusterCount(inv.Clusters).
-			SetHostCount(inv.Hosts).
-			SetVMCount(inv.VMs).
-			SetLastSyncedAt(time.Now()).
-			Save(ctx)
-		if err != nil {
-			log.Printf("pool auto-sync: save pool %s: %v", pool.Name, err)
+		if _, _, err := r.syncOnePool(ctx, pool); err != nil {
+			// syncOnePool already stamps status=error on real failures and
+			// suppresses the stamp when the breaker is open. Just log here
+			// so we keep ticker progress visible.
+			log.Printf("pool auto-sync: pool %s: %v", pool.Name, err)
 		}
 	}
 }

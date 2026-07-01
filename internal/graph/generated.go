@@ -186,6 +186,13 @@ type ComplexityRoot struct {
 		User               func(childComplexity int) int
 	}
 
+	Cluster struct {
+		EsxiHosts     func(childComplexity int) int
+		Name          func(childComplexity int) int
+		Path          func(childComplexity int) int
+		ResourcePools func(childComplexity int) int
+	}
+
 	CreateOvaTemplateFamilyPayload struct {
 		Family func(childComplexity int) int
 	}
@@ -249,6 +256,16 @@ type ComplexityRoot struct {
 		TotalResourcePools func(childComplexity int) int
 		TotalUsers         func(childComplexity int) int
 		TotalVirtualKeys   func(childComplexity int) int
+	}
+
+	DataCenter struct {
+		Clusters        func(childComplexity int) int
+		Datastores      func(childComplexity int) int
+		Folders         func(childComplexity int) int
+		Name            func(childComplexity int) int
+		Networks        func(childComplexity int) int
+		Path            func(childComplexity int) int
+		StoragePolicies func(childComplexity int) int
 	}
 
 	DateUsage struct {
@@ -539,6 +556,11 @@ type ComplexityRoot struct {
 		Key         func(childComplexity int) int
 	}
 
+	PlacementRef struct {
+		Name func(childComplexity int) int
+		Path func(childComplexity int) int
+	}
+
 	PlatformSettings struct {
 		AgentUser func(childComplexity int) int
 	}
@@ -643,20 +665,16 @@ type ComplexityRoot struct {
 	}
 
 	ResourcePool struct {
-		ClusterCount       func(childComplexity int) int
-		ConnectionStatus   func(childComplexity int) int
 		ContentLibraryName func(childComplexity int) int
 		CreatedAt          func(childComplexity int) int
-		DatacenterCount    func(childComplexity int) int
+		Datacenters        func(childComplexity int) int
 		Endpoint           func(childComplexity int) int
-		EsxiHostCount      func(childComplexity int) int
 		ID                 func(childComplexity int) int
 		Insecure           func(childComplexity int) int
 		LastSyncedAt       func(childComplexity int) int
 		Name               func(childComplexity int) int
 		SyncStatus         func(childComplexity int) int
 		UpdatedAt          func(childComplexity int) int
-		VMInstanceCount    func(childComplexity int) int
 	}
 
 	ResourcePoolConnection struct {
@@ -1511,6 +1529,31 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.AuthPayload.User(childComplexity), true
 
+	case "Cluster.esxiHosts":
+		if e.ComplexityRoot.Cluster.EsxiHosts == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Cluster.EsxiHosts(childComplexity), true
+	case "Cluster.name":
+		if e.ComplexityRoot.Cluster.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Cluster.Name(childComplexity), true
+	case "Cluster.path":
+		if e.ComplexityRoot.Cluster.Path == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Cluster.Path(childComplexity), true
+	case "Cluster.resourcePools":
+		if e.ComplexityRoot.Cluster.ResourcePools == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Cluster.ResourcePools(childComplexity), true
+
 	case "CreateOvaTemplateFamilyPayload.family":
 		if e.ComplexityRoot.CreateOvaTemplateFamilyPayload.Family == nil {
 			break
@@ -1747,6 +1790,49 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.DashboardStats.TotalVirtualKeys(childComplexity), true
+
+	case "DataCenter.clusters":
+		if e.ComplexityRoot.DataCenter.Clusters == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DataCenter.Clusters(childComplexity), true
+	case "DataCenter.datastores":
+		if e.ComplexityRoot.DataCenter.Datastores == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DataCenter.Datastores(childComplexity), true
+	case "DataCenter.folders":
+		if e.ComplexityRoot.DataCenter.Folders == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DataCenter.Folders(childComplexity), true
+	case "DataCenter.name":
+		if e.ComplexityRoot.DataCenter.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DataCenter.Name(childComplexity), true
+	case "DataCenter.networks":
+		if e.ComplexityRoot.DataCenter.Networks == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DataCenter.Networks(childComplexity), true
+	case "DataCenter.path":
+		if e.ComplexityRoot.DataCenter.Path == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DataCenter.Path(childComplexity), true
+	case "DataCenter.storagePolicies":
+		if e.ComplexityRoot.DataCenter.StoragePolicies == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DataCenter.StoragePolicies(childComplexity), true
 
 	case "DateUsage.cost":
 		if e.ComplexityRoot.DateUsage.Cost == nil {
@@ -3355,6 +3441,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Permission.Key(childComplexity), true
 
+	case "PlacementRef.name":
+		if e.ComplexityRoot.PlacementRef.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PlacementRef.Name(childComplexity), true
+	case "PlacementRef.path":
+		if e.ComplexityRoot.PlacementRef.Path == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PlacementRef.Path(childComplexity), true
+
 	case "PlatformSettings.agentUser":
 		if e.ComplexityRoot.PlatformSettings.AgentUser == nil {
 			break
@@ -3968,18 +4067,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.ResetPasswordPayload.User(childComplexity), true
 
-	case "ResourcePool.clusterCount":
-		if e.ComplexityRoot.ResourcePool.ClusterCount == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ResourcePool.ClusterCount(childComplexity), true
-	case "ResourcePool.connectionStatus":
-		if e.ComplexityRoot.ResourcePool.ConnectionStatus == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ResourcePool.ConnectionStatus(childComplexity), true
 	case "ResourcePool.contentLibraryName":
 		if e.ComplexityRoot.ResourcePool.ContentLibraryName == nil {
 			break
@@ -3992,24 +4079,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ResourcePool.CreatedAt(childComplexity), true
-	case "ResourcePool.datacenterCount":
-		if e.ComplexityRoot.ResourcePool.DatacenterCount == nil {
+	case "ResourcePool.datacenters":
+		if e.ComplexityRoot.ResourcePool.Datacenters == nil {
 			break
 		}
 
-		return e.ComplexityRoot.ResourcePool.DatacenterCount(childComplexity), true
+		return e.ComplexityRoot.ResourcePool.Datacenters(childComplexity), true
 	case "ResourcePool.endpoint":
 		if e.ComplexityRoot.ResourcePool.Endpoint == nil {
 			break
 		}
 
 		return e.ComplexityRoot.ResourcePool.Endpoint(childComplexity), true
-	case "ResourcePool.esxiHostCount":
-		if e.ComplexityRoot.ResourcePool.EsxiHostCount == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ResourcePool.EsxiHostCount(childComplexity), true
 	case "ResourcePool.id":
 		if e.ComplexityRoot.ResourcePool.ID == nil {
 			break
@@ -4046,12 +4127,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ResourcePool.UpdatedAt(childComplexity), true
-	case "ResourcePool.vmInstanceCount":
-		if e.ComplexityRoot.ResourcePool.VMInstanceCount == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ResourcePool.VMInstanceCount(childComplexity), true
 
 	case "ResourcePoolConnection.nodes":
 		if e.ComplexityRoot.ResourcePoolConnection.Nodes == nil {
@@ -6019,18 +6094,9 @@ extend type Mutation {
 	{Name: "../../schema/resourcepool.graphql", Input: `# Resource pool (vCenter) registration + inventory. See LLD-03 / LLD-06, 0619 第13页.
 # Shape aligned to the console 资源池 page (重蒙皮 P3): entity + connection + payloads.
 
-# Console connection status is binary (CONNECTED / DISCONNECTED). The ent column
-# keeps a third "error" state for accuracy; the GraphQL projection collapses it
-# to DISCONNECTED (see toModelResourcePool).
-enum PoolConnectionStatus {
-  CONNECTED
-  DISCONNECTED
-}
-
-# Inventory-sync state, distinct from connectionStatus. Derived: never synced →
-# NEVER; last sync ok → SYNCED; last sync errored → FAILED. (SYNCING/PARTIAL are
-# part of the console enum but the backend's sync is synchronous, so it never
-# produces them today.)
+# Inventory-sync state. Derived: never synced → NEVER; last sync ok → SYNCED;
+# last sync errored → FAILED. (SYNCING/PARTIAL are part of the console enum but
+# the backend's sync is synchronous, so it never produces them today.)
 enum ResourcePoolSyncState {
   SYNCED
   SYNCING
@@ -6042,13 +6108,39 @@ enum ResourcePoolSyncState {
 enum ResourcePoolSortField {
   NAME
   ENDPOINT
-  CONNECTION_STATUS
-  DATACENTER_COUNT
-  CLUSTER_COUNT
-  ESXI_HOST_COUNT
-  VM_INSTANCE_COUNT
+  SYNC_STATUS
   CREATED_AT
   UPDATED_AT
+}
+
+# vCenter deployment candidate resource — minimum information for an OVA
+# deployment target. Name is the vCenter display label; Path is the full
+# inventory path (e.g. /DC0/host/DC0_C0/Resources) used by find.NewFinder.
+# Path may be null when the resource is unambiguously identified by name.
+type PlacementRef {
+  name: String!
+  path: String
+}
+
+# vSphere cluster (parented under a Datacenter's host folder).
+type Cluster {
+  name: String!
+  path: String!
+  esxiHosts: [PlacementRef!]!
+  resourcePools: [PlacementRef!]!
+}
+
+# vSphere datacenter — top-level node of vCenter inventory.
+# storagePolicies is nullable: null means PBM pull failed (frontend can
+# distinguish "PBM not pulled" from "pulled but empty" via null vs []).
+type DataCenter {
+  name: String!
+  path: String!
+  clusters: [Cluster!]!
+  datastores: [PlacementRef!]!
+  networks: [PlacementRef!]!
+  folders: [PlacementRef!]!
+  storagePolicies: [PlacementRef!]!
 }
 
 type ResourcePool {
@@ -6059,11 +6151,10 @@ type ResourcePool {
   contentLibraryName: String!
   # Skip vCenter TLS verification for this pool (self-signed/internal CA). LLD-13.
   insecure: Boolean!
-  connectionStatus: PoolConnectionStatus!
-  datacenterCount: Int!
-  clusterCount: Int!
-  esxiHostCount: Int!
-  vmInstanceCount: Int!
+  # vCenter inventory snapshot — full nested tree (DC > Cluster > Host > RP
+  # plus datastores / networks / vm folders / storage policies). Synced by the
+  # background ticker; consumed by the OVA deploy form for cascading dropdowns.
+  datacenters: [DataCenter!]!
   syncStatus: ResourcePoolSyncState!
   lastSyncedAt: Time
   createdAt: Time!
@@ -6079,7 +6170,7 @@ type ResourcePoolConnection {
 input ResourcePoolFilter {
   nameKeyword: String
   endpointKeyword: String
-  connectionStatus: PoolConnectionStatus
+  syncStatus: ResourcePoolSyncState
 }
 
 input ResourcePoolSort {
@@ -6091,8 +6182,6 @@ input CreateResourcePoolInput {
   name: String!
   endpoint: String!
   contentLibraryName: String
-  datacenterCount: Int
-  clusterCount: Int
   # 跳过 vCenter TLS 验证(自签名/内网 CA);省略 = false(默认验证)。LLD-13。
   insecure: Boolean
   # vCenter (JVC) 凭据(可选;真机连接必填,前端表单可后补)。后端写入 secret store
@@ -6107,8 +6196,6 @@ input UpdateResourcePoolInput {
   name: String
   endpoint: String
   contentLibraryName: String
-  datacenterCount: Int
-  clusterCount: Int
   # 跳过 vCenter TLS 验证(自签名/内网 CA);省略 = 不变。LLD-13。
   insecure: Boolean
   # 重填凭据(轮换):同 create,写 secret store 后只存引用。
@@ -6180,10 +6267,9 @@ extend type Mutation {
   # Lightweight pre-save reachability probe from the 接入表单 (no credentials):
   # validate the endpoint is well-formed and dial-reachable (0619 第13页 连接状态).
   testResourcePoolConnection(input: TestResourcePoolConnectionInput!): ResourcePoolConnectionTest! @hasRole(any: [admin])
-  # Connect → count datacenters/clusters/hosts/VMs → persist (同步数据).
+  # Connect → fetch inventory tree → persist (同步数据).
   syncResourcePool(id: ID!): SyncResourcePoolPayload! @hasRole(any: [admin])
-}
-`, BuiltIn: false},
+}`, BuiltIn: false},
 	{Name: "../../schema/schema.graphql", Input: `# Agent Platform — GraphQL contract (single source of truth).
 # Consumed by the frontend (agent-platform-console). See LLD-01 §5.
 
@@ -6655,6 +6741,20 @@ func (ec *executionContext) childFields_AuthPayload(ctx context.Context, field g
 	return nil, fmt.Errorf("no field named %q was found under type AuthPayload", field.Name)
 }
 
+func (ec *executionContext) childFields_Cluster(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "name":
+		return ec.fieldContext_Cluster_name(ctx, field)
+	case "path":
+		return ec.fieldContext_Cluster_path(ctx, field)
+	case "esxiHosts":
+		return ec.fieldContext_Cluster_esxiHosts(ctx, field)
+	case "resourcePools":
+		return ec.fieldContext_Cluster_resourcePools(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type Cluster", field.Name)
+}
+
 func (ec *executionContext) childFields_CreateOvaTemplateFamilyPayload(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "family":
@@ -6783,6 +6883,26 @@ func (ec *executionContext) childFields_DashboardStats(ctx context.Context, fiel
 		return ec.fieldContext_DashboardStats_monthlyCost(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type DashboardStats", field.Name)
+}
+
+func (ec *executionContext) childFields_DataCenter(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "name":
+		return ec.fieldContext_DataCenter_name(ctx, field)
+	case "path":
+		return ec.fieldContext_DataCenter_path(ctx, field)
+	case "clusters":
+		return ec.fieldContext_DataCenter_clusters(ctx, field)
+	case "datastores":
+		return ec.fieldContext_DataCenter_datastores(ctx, field)
+	case "networks":
+		return ec.fieldContext_DataCenter_networks(ctx, field)
+	case "folders":
+		return ec.fieldContext_DataCenter_folders(ctx, field)
+	case "storagePolicies":
+		return ec.fieldContext_DataCenter_storagePolicies(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type DataCenter", field.Name)
 }
 
 func (ec *executionContext) childFields_DateUsage(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -7211,6 +7331,16 @@ func (ec *executionContext) childFields_Permission(ctx context.Context, field gr
 	return nil, fmt.Errorf("no field named %q was found under type Permission", field.Name)
 }
 
+func (ec *executionContext) childFields_PlacementRef(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "name":
+		return ec.fieldContext_PlacementRef_name(ctx, field)
+	case "path":
+		return ec.fieldContext_PlacementRef_path(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type PlacementRef", field.Name)
+}
+
 func (ec *executionContext) childFields_PlatformSettings(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "agentUser":
@@ -7343,16 +7473,8 @@ func (ec *executionContext) childFields_ResourcePool(ctx context.Context, field 
 		return ec.fieldContext_ResourcePool_contentLibraryName(ctx, field)
 	case "insecure":
 		return ec.fieldContext_ResourcePool_insecure(ctx, field)
-	case "connectionStatus":
-		return ec.fieldContext_ResourcePool_connectionStatus(ctx, field)
-	case "datacenterCount":
-		return ec.fieldContext_ResourcePool_datacenterCount(ctx, field)
-	case "clusterCount":
-		return ec.fieldContext_ResourcePool_clusterCount(ctx, field)
-	case "esxiHostCount":
-		return ec.fieldContext_ResourcePool_esxiHostCount(ctx, field)
-	case "vmInstanceCount":
-		return ec.fieldContext_ResourcePool_vmInstanceCount(ctx, field)
+	case "datacenters":
+		return ec.fieldContext_ResourcePool_datacenters(ctx, field)
 	case "syncStatus":
 		return ec.fieldContext_ResourcePool_syncStatus(ctx, field)
 	case "lastSyncedAt":
@@ -11703,6 +11825,116 @@ func (ec *executionContext) fieldContext_AuthPayload_mustChangePassword(_ contex
 	return graphql.NewScalarFieldContext("AuthPayload", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
+func (ec *executionContext) _Cluster_name(ctx context.Context, field graphql.CollectedField, obj *model.Cluster) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Cluster_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Cluster_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Cluster", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Cluster_path(ctx context.Context, field graphql.CollectedField, obj *model.Cluster) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Cluster_path(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Path, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Cluster_path(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Cluster", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Cluster_esxiHosts(ctx context.Context, field graphql.CollectedField, obj *model.Cluster) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Cluster_esxiHosts(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.EsxiHosts, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.PlacementRef) graphql.Marshaler {
+			return ec.marshalNPlacementRef2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlacementRefᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Cluster_esxiHosts(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Cluster",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PlacementRef(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Cluster_resourcePools(ctx context.Context, field graphql.CollectedField, obj *model.Cluster) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Cluster_resourcePools(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ResourcePools, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.PlacementRef) graphql.Marshaler {
+			return ec.marshalNPlacementRef2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlacementRefᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Cluster_resourcePools(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Cluster",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PlacementRef(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _CreateOvaTemplateFamilyPayload_family(ctx context.Context, field graphql.CollectedField, obj *model.CreateOvaTemplateFamilyPayload) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -12629,6 +12861,212 @@ func (ec *executionContext) _DashboardStats_monthlyCost(ctx context.Context, fie
 }
 func (ec *executionContext) fieldContext_DashboardStats_monthlyCost(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("DashboardStats", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _DataCenter_name(ctx context.Context, field graphql.CollectedField, obj *model.DataCenter) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DataCenter_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DataCenter_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DataCenter", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _DataCenter_path(ctx context.Context, field graphql.CollectedField, obj *model.DataCenter) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DataCenter_path(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Path, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DataCenter_path(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DataCenter", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _DataCenter_clusters(ctx context.Context, field graphql.CollectedField, obj *model.DataCenter) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DataCenter_clusters(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Clusters, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.Cluster) graphql.Marshaler {
+			return ec.marshalNCluster2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐClusterᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DataCenter_clusters(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DataCenter",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Cluster(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DataCenter_datastores(ctx context.Context, field graphql.CollectedField, obj *model.DataCenter) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DataCenter_datastores(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Datastores, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.PlacementRef) graphql.Marshaler {
+			return ec.marshalNPlacementRef2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlacementRefᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DataCenter_datastores(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DataCenter",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PlacementRef(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DataCenter_networks(ctx context.Context, field graphql.CollectedField, obj *model.DataCenter) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DataCenter_networks(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Networks, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.PlacementRef) graphql.Marshaler {
+			return ec.marshalNPlacementRef2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlacementRefᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DataCenter_networks(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DataCenter",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PlacementRef(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DataCenter_folders(ctx context.Context, field graphql.CollectedField, obj *model.DataCenter) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DataCenter_folders(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Folders, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.PlacementRef) graphql.Marshaler {
+			return ec.marshalNPlacementRef2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlacementRefᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DataCenter_folders(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DataCenter",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PlacementRef(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DataCenter_storagePolicies(ctx context.Context, field graphql.CollectedField, obj *model.DataCenter) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DataCenter_storagePolicies(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.StoragePolicies, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.PlacementRef) graphql.Marshaler {
+			return ec.marshalNPlacementRef2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlacementRefᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DataCenter_storagePolicies(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DataCenter",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PlacementRef(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _DateUsage_date(ctx context.Context, field graphql.CollectedField, obj *model.DateUsage) (ret graphql.Marshaler) {
@@ -20056,6 +20494,52 @@ func (ec *executionContext) fieldContext_Permission_description(_ context.Contex
 	return graphql.NewScalarFieldContext("Permission", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _PlacementRef_name(ctx context.Context, field graphql.CollectedField, obj *model.PlacementRef) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PlacementRef_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_PlacementRef_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PlacementRef", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _PlacementRef_path(ctx context.Context, field graphql.CollectedField, obj *model.PlacementRef) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PlacementRef_path(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Path, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_PlacementRef_path(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PlacementRef", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _PlatformSettings_agentUser(ctx context.Context, field graphql.CollectedField, obj *model.PlatformSettings) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -23303,119 +23787,36 @@ func (ec *executionContext) fieldContext_ResourcePool_insecure(_ context.Context
 	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
-func (ec *executionContext) _ResourcePool_connectionStatus(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
+func (ec *executionContext) _ResourcePool_datacenters(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ResourcePool_connectionStatus(ctx, field)
+			return ec.fieldContext_ResourcePool_datacenters(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return obj.ConnectionStatus, nil
+			return obj.Datacenters, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v model.PoolConnectionStatus) graphql.Marshaler {
-			return ec.marshalNPoolConnectionStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPoolConnectionStatus(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v []model.DataCenter) graphql.Marshaler {
+			return ec.marshalNDataCenter2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDataCenterᚄ(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_ResourcePool_connectionStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type PoolConnectionStatus does not have child fields"))
-}
-
-func (ec *executionContext) _ResourcePool_datacenterCount(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ResourcePool_datacenterCount(ctx, field)
+func (ec *executionContext) fieldContext_ResourcePool_datacenters(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ResourcePool",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_DataCenter(ctx, field)
 		},
-		func(ctx context.Context) (any, error) {
-			return obj.DatacenterCount, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
-			return ec.marshalNInt2int(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_ResourcePool_datacenterCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _ResourcePool_clusterCount(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ResourcePool_clusterCount(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.ClusterCount, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
-			return ec.marshalNInt2int(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_ResourcePool_clusterCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _ResourcePool_esxiHostCount(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ResourcePool_esxiHostCount(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.EsxiHostCount, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
-			return ec.marshalNInt2int(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_ResourcePool_esxiHostCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _ResourcePool_vmInstanceCount(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ResourcePool_vmInstanceCount(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.VMInstanceCount, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
-			return ec.marshalNInt2int(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_ResourcePool_vmInstanceCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ResourcePool", field, false, false, errors.New("field of type Int does not have child fields"))
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _ResourcePool_syncStatus(ctx context.Context, field graphql.CollectedField, obj *model.ResourcePool) (ret graphql.Marshaler) {
@@ -26977,7 +27378,7 @@ func (ec *executionContext) unmarshalInputCreateResourcePoolInput(ctx context.Co
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "endpoint", "contentLibraryName", "datacenterCount", "clusterCount", "insecure", "username", "password", "secretRef"}
+	fieldsInOrder := [...]string{"name", "endpoint", "contentLibraryName", "insecure", "username", "password", "secretRef"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -27005,20 +27406,6 @@ func (ec *executionContext) unmarshalInputCreateResourcePoolInput(ctx context.Co
 				return it, err
 			}
 			it.ContentLibraryName = data
-		case "datacenterCount":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("datacenterCount"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.DatacenterCount = data
-		case "clusterCount":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("clusterCount"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ClusterCount = data
 		case "insecure":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("insecure"))
 			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
@@ -27990,7 +28377,7 @@ func (ec *executionContext) unmarshalInputResourcePoolFilter(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"nameKeyword", "endpointKeyword", "connectionStatus"}
+	fieldsInOrder := [...]string{"nameKeyword", "endpointKeyword", "syncStatus"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -28011,13 +28398,13 @@ func (ec *executionContext) unmarshalInputResourcePoolFilter(ctx context.Context
 				return it, err
 			}
 			it.EndpointKeyword = data
-		case "connectionStatus":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("connectionStatus"))
-			data, err := ec.unmarshalOPoolConnectionStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPoolConnectionStatus(ctx, v)
+		case "syncStatus":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("syncStatus"))
+			data, err := ec.unmarshalOResourcePoolSyncState2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolSyncState(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.ConnectionStatus = data
+			it.SyncStatus = data
 		}
 	}
 	return it, nil
@@ -28386,7 +28773,7 @@ func (ec *executionContext) unmarshalInputUpdateResourcePoolInput(ctx context.Co
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "endpoint", "contentLibraryName", "datacenterCount", "clusterCount", "insecure", "username", "password", "secretRef"}
+	fieldsInOrder := [...]string{"name", "endpoint", "contentLibraryName", "insecure", "username", "password", "secretRef"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -28414,20 +28801,6 @@ func (ec *executionContext) unmarshalInputUpdateResourcePoolInput(ctx context.Co
 				return it, err
 			}
 			it.ContentLibraryName = data
-		case "datacenterCount":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("datacenterCount"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.DatacenterCount = data
-		case "clusterCount":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("clusterCount"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ClusterCount = data
 		case "insecure":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("insecure"))
 			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
@@ -30251,6 +30624,60 @@ func (ec *executionContext) _AuthPayload(ctx context.Context, sel ast.SelectionS
 	return out
 }
 
+var clusterImplementors = []string{"Cluster"}
+
+func (ec *executionContext) _Cluster(ctx context.Context, sel ast.SelectionSet, obj *model.Cluster) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, clusterImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Cluster")
+		case "name":
+			out.Values[i] = ec._Cluster_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "path":
+			out.Values[i] = ec._Cluster_path(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "esxiHosts":
+			out.Values[i] = ec._Cluster_esxiHosts(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "resourcePools":
+			out.Values[i] = ec._Cluster_resourcePools(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var createOvaTemplateFamilyPayloadImplementors = []string{"CreateOvaTemplateFamilyPayload"}
 
 func (ec *executionContext) _CreateOvaTemplateFamilyPayload(ctx context.Context, sel ast.SelectionSet, obj *model.CreateOvaTemplateFamilyPayload) graphql.Marshaler {
@@ -30721,6 +31148,75 @@ func (ec *executionContext) _DashboardStats(ctx context.Context, sel ast.Selecti
 			}
 		case "monthlyCost":
 			out.Values[i] = ec._DashboardStats_monthlyCost(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var dataCenterImplementors = []string{"DataCenter"}
+
+func (ec *executionContext) _DataCenter(ctx context.Context, sel ast.SelectionSet, obj *model.DataCenter) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, dataCenterImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DataCenter")
+		case "name":
+			out.Values[i] = ec._DataCenter_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "path":
+			out.Values[i] = ec._DataCenter_path(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "clusters":
+			out.Values[i] = ec._DataCenter_clusters(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "datastores":
+			out.Values[i] = ec._DataCenter_datastores(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "networks":
+			out.Values[i] = ec._DataCenter_networks(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "folders":
+			out.Values[i] = ec._DataCenter_folders(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "storagePolicies":
+			out.Values[i] = ec._DataCenter_storagePolicies(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -32964,6 +33460,50 @@ func (ec *executionContext) _Permission(ctx context.Context, sel ast.SelectionSe
 	return out
 }
 
+var placementRefImplementors = []string{"PlacementRef"}
+
+func (ec *executionContext) _PlacementRef(ctx context.Context, sel ast.SelectionSet, obj *model.PlacementRef) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, placementRefImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PlacementRef")
+		case "name":
+			out.Values[i] = ec._PlacementRef_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "path":
+			out.Values[i] = ec._PlacementRef_path(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var platformSettingsImplementors = []string{"PlatformSettings"}
 
 func (ec *executionContext) _PlatformSettings(ctx context.Context, sel ast.SelectionSet, obj *model.PlatformSettings) graphql.Marshaler {
@@ -34369,28 +34909,8 @@ func (ec *executionContext) _ResourcePool(ctx context.Context, sel ast.Selection
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "connectionStatus":
-			out.Values[i] = ec._ResourcePool_connectionStatus(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "datacenterCount":
-			out.Values[i] = ec._ResourcePool_datacenterCount(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "clusterCount":
-			out.Values[i] = ec._ResourcePool_clusterCount(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "esxiHostCount":
-			out.Values[i] = ec._ResourcePool_esxiHostCount(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "vmInstanceCount":
-			out.Values[i] = ec._ResourcePool_vmInstanceCount(ctx, field, obj)
+		case "datacenters":
+			out.Values[i] = ec._ResourcePool_datacenters(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -36231,6 +36751,26 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
+func (ec *executionContext) marshalNCluster2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCluster(ctx context.Context, sel ast.SelectionSet, v model.Cluster) graphql.Marshaler {
+	return ec._Cluster(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNCluster2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐClusterᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Cluster) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNCluster2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCluster(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) unmarshalNConnectionStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐConnectionStatus(ctx context.Context, v any) (model.ConnectionStatus, error) {
 	var res model.ConnectionStatus
 	err := res.UnmarshalGQL(v)
@@ -36460,6 +37000,26 @@ func (ec *executionContext) marshalNDashboardStats2ᚖgithubᚗcomᚋVMwareᚑAI
 		return graphql.Null
 	}
 	return ec._DashboardStats(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNDataCenter2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDataCenter(ctx context.Context, sel ast.SelectionSet, v model.DataCenter) graphql.Marshaler {
+	return ec._DataCenter(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNDataCenter2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDataCenterᚄ(ctx context.Context, sel ast.SelectionSet, v []model.DataCenter) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNDataCenter2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDataCenter(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalNDateUsage2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐDateUsage(ctx context.Context, sel ast.SelectionSet, v model.DateUsage) graphql.Marshaler {
@@ -37217,6 +37777,26 @@ func (ec *executionContext) marshalNPermission2ᚖgithubᚗcomᚋVMwareᚑAIᚋa
 	return ec._Permission(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNPlacementRef2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlacementRef(ctx context.Context, sel ast.SelectionSet, v model.PlacementRef) graphql.Marshaler {
+	return ec._PlacementRef(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPlacementRef2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlacementRefᚄ(ctx context.Context, sel ast.SelectionSet, v []model.PlacementRef) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNPlacementRef2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlacementRef(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) marshalNPlatformSettings2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlatformSettings(ctx context.Context, sel ast.SelectionSet, v model.PlatformSettings) graphql.Marshaler {
 	return ec._PlatformSettings(ctx, sel, &v)
 }
@@ -37229,16 +37809,6 @@ func (ec *executionContext) marshalNPlatformSettings2ᚖgithubᚗcomᚋVMwareᚑ
 		return graphql.Null
 	}
 	return ec._PlatformSettings(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalNPoolConnectionStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPoolConnectionStatus(ctx context.Context, v any) (model.PoolConnectionStatus, error) {
-	var res model.PoolConnectionStatus
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNPoolConnectionStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPoolConnectionStatus(ctx context.Context, sel ast.SelectionSet, v model.PoolConnectionStatus) graphql.Marshaler {
-	return v
 }
 
 func (ec *executionContext) marshalNRateLimitPolicy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRateLimitPolicy(ctx context.Context, sel ast.SelectionSet, v model.RateLimitPolicy) graphql.Marshaler {
@@ -38454,22 +39024,6 @@ func (ec *executionContext) unmarshalOPagination2ᚖgithubᚗcomᚋVMwareᚑAI�
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalOPoolConnectionStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPoolConnectionStatus(ctx context.Context, v any) (*model.PoolConnectionStatus, error) {
-	if v == nil {
-		return nil, nil
-	}
-	var res = new(model.PoolConnectionStatus)
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOPoolConnectionStatus2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPoolConnectionStatus(ctx context.Context, sel ast.SelectionSet, v *model.PoolConnectionStatus) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return v
-}
-
 func (ec *executionContext) unmarshalORequestLogFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestLogFilter(ctx context.Context, v any) (*model.RequestLogFilter, error) {
 	if v == nil {
 		return nil, nil
@@ -38514,6 +39068,22 @@ func (ec *executionContext) unmarshalOResourcePoolSort2ᚖgithubᚗcomᚋVMware�
 	}
 	res, err := ec.unmarshalInputResourcePoolSort(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOResourcePoolSyncState2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolSyncState(ctx context.Context, v any) (*model.ResourcePoolSyncState, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.ResourcePoolSyncState)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOResourcePoolSyncState2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePoolSyncState(ctx context.Context, sel ast.SelectionSet, v *model.ResourcePoolSyncState) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) marshalORole2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRole(ctx context.Context, sel ast.SelectionSet, v *model.Role) graphql.Marshaler {
