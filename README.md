@@ -97,7 +97,7 @@ dev/prod 行为不同的用 ✅ / ⚠️ 标注。
 | `DB_AUTO_MIGRATE` | `true` \| `false` | 否（dev 默认 `true`，prod 默认 `false`） | dev 启动自动改表；prod 必须关，改用 Atlas 版本化迁移 |
 | `ADMIN_BOOTSTRAP_PASSWORD` | `AdminLocal123!` | prod 是（dev 否） | 空库时种子 admin 密码；dev 不设会用 `ChangeMe123!` 并强制首登改密 |
 | `CONTROL_PLANE_URL` | `https://api.example.com` | 否 | 控制面自身对外 URL；resolver 透传 |
-| `VAULTWARDEN_URL` | `https://vault.example.com` | prod 是（dev 否） | 空 → 用进程内静态 secret 存（写入即丢，仅 dev）；prod 必须接 Vaultwarden 做凭据持久化 |
+| `SECRETS_ENCRYPTION_KEY` | `openssl rand -hex 32` | **是**（任何环境） | AES-256-GCM 加密 `platform_secrets` 的密钥；SHA-256 派生到 32 字节；空 → 启动 fail-fast。**不支持轮换**：存储格式无 key-version 前缀，换密钥会让所有密文 GCM 校验失败。dev 用 `deploy/start_backend_*.sh` 首次运行自动生成并写到 `deploy/.secrets_encryption_key`（mode `0600`），prod 必须手动注入并离线备份。详见下方"凭据加密密钥"一节 |
 | `RECONCILE_INTERVAL_SECONDS` | `300` | 否（默认 `0`=关） | 网关 key 与治理表的对账周期；>0 且存在默认网关连接才生效 |
 | `RECONCILE_PRUNE` | `false` | 否 | `true` → 对账时删除孤儿/吊销陈旧行（默认只报告，drift-safe）。多副本下对账经 Postgres advisory lock 选主，仅单副本执行 prune（不会重复删） |
 | `DB_MAX_OPEN_CONNS` | `20` | 否 | postgres 连接池上限；`0`=Go 默认无上限（多副本下可打爆 `max_connections`），按 `max_connections / 副本数` 调；仅 postgres |
@@ -106,11 +106,67 @@ dev/prod 行为不同的用 ✅ / ⚠️ 标注。
 | `AGENT_PKG_BASE_URL` | `https://mirror.example.com/agent-pkgs` | 否 | 离线镜像基址，替换 catalog 安装命令里的 `{{AGENT_PKG_BASE_URL}}`；空 → 占位符保留 |
 | `ENV_SCOPE_ENABLED` | `false` | 否 | LLD-10 环境隔离；前端 `X-Environment` 契约未就绪前保持关 |
 | `ATLAS_DEV_URL` | `postgres://localhost:5432/atlas_dev` | 仅 `make migrate-diff` 时 | Atlas diff 的 dev DB；运行 backend 不读 |
-| `*` (任意) | — | — | `internal/secrets/resolver.go` 允许把任意环境变量名写进 vaultwarden 凭据引用（`vaultwarden://env:USER:PASS:APIKEY` 形式），用于上游 API key 注入 |
+| `*` (任意) | — | — | 凭据引用：模型网关 / vCenter 等凭据在 console 配置后由 `internal/secrets` 解析到 `platform_secrets` 表里的密文（不需要 `vaultwarden://` 这类特殊 scheme——旧方案已删除） |
 
 > `AGENT_USER`（装机命令里 `{{AGENT_USER}}` 的 OS 用户）不再是启动 env——它是数据库平台设置（LLD-13），在 console「平台设置」页里改，默认 `agent`。
 >
 > 模型网关（`LITELLM_BASE_URL` / `LITELLM_MASTER_KEY` / `GATEWAY_PUBLIC_URL`）也不再是启动 env——在 console「模型网关接入」页添加网关连接，后端按部门/默认网关从 DB 解析（LLD-13 §3.3）。
+
+## 凭据加密密钥（`SECRETS_ENCRYPTION_KEY`）
+
+vCenter 密码、模型网关凭据等都加密存在 `platform_secrets` 表里，加密用 AES-256-GCM，密钥从 `SECRETS_ENCRYPTION_KEY` 经 SHA-256 派生到 32 字节。**同一把密钥在所有环境里复用**——没有 dev/prod 之分。
+
+### 生成密钥
+
+任何非空字符串都行（短了等于熵被压到 32 字节，长了被截），但**用全熵的密码学随机串**：
+
+```bash
+# 32 字节随机，hex 编码（64 字符；最常用）
+openssl rand -hex 32
+
+# 32 字节随机，base64 编码（44 字符，含末尾 =）
+openssl rand -base64 32
+
+# 64 字节随机，base64url（无 padding，URL/文件友好）
+openssl rand -base64 64 | tr -d '=' | tr '/+' '_-'
+```
+
+或者用 `/dev/urandom`（Linux）：
+
+```bash
+# 32 字节裸二进制 → 转 hex
+head -c 32 /dev/urandom | xxd -p -c 64
+```
+
+校验长度：hex 串 64 字符、base64 串 44 字符（`=` 结尾），分别对应 32 字节。
+
+### 设置密钥
+
+```bash
+# 1. 临时（当前 shell）
+export SECRETS_ENCRYPTION_KEY='<上面生成的串>'
+
+# 2. 写入 deploy/.env（连同 litellm 配置一起；用 deploy/start_backend_*.sh 时自动加载）
+echo "SECRETS_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> deploy/.env
+
+# 3. Kubernetes（推荐 Secret；不要进 ConfigMap）
+kubectl create secret generic agent-platform \
+  --from-literal=SECRETS_ENCRYPTION_KEY='<生成的串>'
+
+# 4. systemd / 裸机：写到 /etc/agent-platform.env，service 里用 EnvironmentFile=
+```
+
+### ⚠️ 备份 & 不要轮换
+
+存储格式**不带 key-version 前缀**（`internal/secrets/crypto.go`），轮换密钥会让旧密文 GCM 校验失败 —— **当前不支持密钥轮换**。所以：
+
+- **丢失密钥 = 永久丢失所有 `platform_secrets` 加密凭据**（vCenter 密码、模型网关 key 等）。必须离线备份到密码管理器 / Vault / 加密 USB。
+- 将来要加轮换需要先在密文里塞一个 version 字节并做 re-encrypt 流程（见 `crypto.go` 注释）。**现在不要尝试轮换**。
+- 生产用专用密钥，跟 dev 区分；dev 的串泄露也不会丢生产凭据。
+
+### `deploy/start_backend_*.sh` 自动生成
+
+为了一键跑通，dev 启动器会在首次运行自动生成密钥并写入 `deploy/.secrets_encryption_key`（mode `0600`），后续启动直接复用。容器路径（`start_backend_docker.sh`）在 host 侧读出密钥再 `-e` 注入容器，因为容器每次 `docker run --pull=always` 是新的，**不能在容器内自生成**（每次拉新镜像会跑出不同密钥，把已有密文全锁死）。
 
 dev 最小集（开箱即跑）：
 
@@ -130,7 +186,7 @@ DATABASE_URL=postgres://…?sslmode=require \
 REDIS_URL=redis://… \
 ADMIN_BOOTSTRAP_PASSWORD='≥12 字符强密码' \
 ALLOWED_ORIGINS=https://console.example.com \
-VAULTWARDEN_URL=https://vault.example.com \
+SECRETS_ENCRYPTION_KEY='<openssl rand -hex 32 生成的串>' \
 DB_AUTO_MIGRATE=false
 ```
 

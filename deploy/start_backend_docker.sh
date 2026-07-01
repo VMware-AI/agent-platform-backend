@@ -35,6 +35,9 @@
 #   GraphQL:       http://localhost:<HTTP_PORT>/query
 #   Playground:    http://localhost:<HTTP_PORT>/
 #   (HTTP_PORT is derived from HTTP_ADDR; defaults to 8080.)
+#   secrets:       encrypted db-backed store; key from
+#                  deploy/.secrets_encryption_key (auto-generated first run;
+#                  BACK IT UP — losing the key strands every encrypted credential)
 set -euo pipefail
 
 # ╔═══════════════════════════════════════════════════════════════════════╗
@@ -174,6 +177,33 @@ fi
 
 IMAGE="${IMAGE_REPO}:${IMAGE_TAG}"
 
+# ---------- secrets encryption key (required since feat/secrets-encrypted-pg) ----------
+# Credentials are stored in the platform_secrets table, encrypted at rest under
+# a single key (SECRETS_ENCRYPTION_KEY, SHA-256-derived to AES-256-GCM). The
+# stored ciphertext has no key-version prefix, so a rotating/changing key strands
+# every existing row. The container is recreated on every `up` (--pull=always +
+# --rm), so the key MUST live on the host and be injected via -e — generating
+# inside the container would produce a different key per run and lock out all
+# previously-stored credentials. First run: auto-generate. Explicit env wins.
+KEY_FILE="${SCRIPT_DIR}/.secrets_encryption_key"
+if [[ -z "${SECRETS_ENCRYPTION_KEY:-}" ]]; then
+  if [[ -f "${KEY_FILE}" ]]; then
+    export SECRETS_ENCRYPTION_KEY="$(cat "${KEY_FILE}")"
+  else
+    if ! command -v openssl >/dev/null 2>&1; then
+      echo "error: SECRETS_ENCRYPTION_KEY not set and 'openssl' not found to generate one" >&2
+      echo "         set SECRETS_ENCRYPTION_KEY=<high-entropy string> and re-run" >&2
+      exit 1
+    fi
+    umask 077
+    openssl rand -hex 32 > "${KEY_FILE}"
+    chmod 600 "${KEY_FILE}"
+    export SECRETS_ENCRYPTION_KEY="$(cat "${KEY_FILE}")"
+    echo "generated new SECRETS_ENCRYPTION_KEY at ${KEY_FILE}"
+    echo "  (BACK THIS UP — losing the key strands every encrypted credential in platform_secrets)"
+  fi
+fi
+
 # Postgres + redis are reached via HOST_IP.
 # 5433 avoids clashing with a native/homebrew pg on 5432.
 export DATABASE_URL="${DATABASE_URL:-postgres://${PG_USER}:${PG_PASSWORD}@${HOST_IP}:${PG_PORT}/${PG_DB}?sslmode=disable}"
@@ -307,6 +337,7 @@ echo "   HOST_IP=${HOST_IP}     HTTP_ADDR=${HTTP_ADDR}  → host :${HTTP_PORT}"
 echo "   DATABASE_URL=${DATABASE_URL}"
 echo "   REDIS_URL=${REDIS_URL}"
 echo "   ALLOWED_ORIGINS=${ALLOWED_ORIGINS}"
+echo "   SECRETS_ENCRYPTION_KEY=<set>  (key file: ${KEY_FILE})"
 echo "────────────────────────────────────────────────────────────"
 echo
 echo "(pulling ${IMAGE}; Ctrl-C to stop and remove the container)"
@@ -329,4 +360,5 @@ exec docker run \
   -e DB_AUTO_MIGRATE \
   -e SESSION_TTL_SECONDS \
   -e ADMIN_BOOTSTRAP_PASSWORD \
+  -e SECRETS_ENCRYPTION_KEY \
   "${IMAGE}"

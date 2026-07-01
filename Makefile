@@ -6,7 +6,7 @@ REGISTRY  ?= quay.io/vmware-ai
 PLATFORMS ?= linux/amd64,linux/arm64
 BUILDER   ?= agent-platform-builder
 VERSION   := $(shell cat VERSION)
-TAG       := $(VERSION)-$(shell date -u +%Y%m%d)
+TAG       ?= $(VERSION)-$(shell date -u +%Y%m%d)
 
 # Regenerate Ent + gqlgen code.
 generate:
