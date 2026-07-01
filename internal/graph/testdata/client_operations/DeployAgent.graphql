@@ -36,7 +36,6 @@ fragment OvaTemplateVersionFields on OvaTemplateVersion {
         id
         name
         endpoint
-        connectionStatus
         syncStatus
         lastSyncedAt
       }

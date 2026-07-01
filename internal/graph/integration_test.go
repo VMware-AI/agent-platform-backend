@@ -19,6 +19,11 @@ func newTestResolver(t *testing.T) (*Resolver, func()) {
 		t.Fatalf("open store: %v", err)
 	}
 	r := &Resolver{Ent: client, Sessions: session.NewMemoryStore(), SessionTTL: time.Hour}
+	// Sync plumbing is intentionally NOT enabled by default. Tests that
+	// want to exercise SyncResourcePool / the fire-and-forget first sync
+	// must call r.EnablePoolSync(...) themselves; otherwise CreateResourcePool
+	// returns a pool in its default NEVER state, which keeps filter/sort
+	// assertions stable across tests that share the in-memory sqlite cache.
 	return r, func() { _ = client.Close() }
 }
 

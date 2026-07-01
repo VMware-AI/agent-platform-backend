@@ -57,8 +57,29 @@ type Config struct {
 	DBConnMaxLifetimeMinutes int
 	// PoolSyncIntervalSeconds is how often (seconds) the background goroutine
 	// re-syncs every resource pool that has stored credentials.
-	// 0 (default) disables it.
+	// Default 3600 (60m); set 0 to disable. The first sync also runs
+	// fire-and-forget at resource-pool creation time, so even with 0 the
+	// operator can trigger a sync via the syncResourcePool mutation.
 	PoolSyncIntervalSeconds int
+	// PoolSyncTimeoutSeconds caps a single pool's sync (connect + inventory
+	// + full inventory + DB write). Default 30s; reduce for high-fanout
+	// fleets where one slow vCenter would otherwise block ticker progress
+	// (the per-endpoint circuit breaker provides the heavy lifting; this is
+	// just the time budget).
+	PoolSyncTimeoutSeconds int
+	// PoolSyncMaxRetries is the number of retries *on top of* the first
+	// attempt, with exponential backoff (1s/2s/4s + jitter). Only
+	// network/timeout/5xx-style errors retry; business errors (auth
+	// failure, object-not-found) return immediately. Default 3.
+	PoolSyncMaxRetries int
+	// PoolSyncBreakerThreshold trips the per-endpoint circuit breaker after
+	// this many consecutive sync failures. Default 5. Zero or negative
+	// disables the breaker (falls back to no-op settings).
+	PoolSyncBreakerThreshold int
+	// PoolSyncBreakerOpenSeconds keeps the breaker in Open state for this
+	// long after tripping; after which it enters HalfOpen and lets one
+	// request through to probe. Default 60s.
+	PoolSyncBreakerOpenSeconds int
 	// ModelGatewaySyncIntervalSeconds is how often (seconds) the background
 	// goroutine syncs every litellm GatewayConnection row (status, routing
 	// strategy, backend-model count). Default 1800 (30m). 0 disables the
@@ -132,7 +153,19 @@ func Load() (*Config, error) {
 	if c.DBConnMaxLifetimeMinutes, err = getenvInt("DB_CONN_MAX_LIFETIME_MINUTES", 30); err != nil {
 		return nil, err
 	}
-	if c.PoolSyncIntervalSeconds, err = getenvInt("POOL_SYNC_INTERVAL_SECONDS", 0); err != nil {
+	if c.PoolSyncIntervalSeconds, err = getenvInt("POOL_SYNC_INTERVAL_SECONDS", 3600); err != nil {
+		return nil, err
+	}
+	if c.PoolSyncTimeoutSeconds, err = getenvInt("POOL_SYNC_TIMEOUT_SECONDS", 30); err != nil {
+		return nil, err
+	}
+	if c.PoolSyncMaxRetries, err = getenvInt("POOL_SYNC_MAX_RETRIES", 3); err != nil {
+		return nil, err
+	}
+	if c.PoolSyncBreakerThreshold, err = getenvInt("POOL_SYNC_BREAKER_THRESHOLD", 5); err != nil {
+		return nil, err
+	}
+	if c.PoolSyncBreakerOpenSeconds, err = getenvInt("POOL_SYNC_BREAKER_OPEN_SECONDS", 60); err != nil {
 		return nil, err
 	}
 	if c.ModelGatewaySyncIntervalSeconds, err = getenvInt("MODEL_GATEWAY_SYNC_INTERVAL_SECONDS", 1800); err != nil {

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 	"github.com/google/uuid"
 )
 
@@ -33,14 +34,8 @@ const (
 	FieldSecretRef = "secret_ref"
 	// FieldInsecure holds the string denoting the insecure field in the database.
 	FieldInsecure = "insecure"
-	// FieldDatacenterCount holds the string denoting the datacenter_count field in the database.
-	FieldDatacenterCount = "datacenter_count"
-	// FieldClusterCount holds the string denoting the cluster_count field in the database.
-	FieldClusterCount = "cluster_count"
-	// FieldHostCount holds the string denoting the host_count field in the database.
-	FieldHostCount = "host_count"
-	// FieldVMCount holds the string denoting the vm_count field in the database.
-	FieldVMCount = "vm_count"
+	// FieldInventory holds the string denoting the inventory field in the database.
+	FieldInventory = "inventory"
 	// FieldLastSyncedAt holds the string denoting the last_synced_at field in the database.
 	FieldLastSyncedAt = "last_synced_at"
 	// FieldTenantID holds the string denoting the tenant_id field in the database.
@@ -63,10 +58,7 @@ var Columns = []string{
 	FieldContentLibraryName,
 	FieldSecretRef,
 	FieldInsecure,
-	FieldDatacenterCount,
-	FieldClusterCount,
-	FieldHostCount,
-	FieldVMCount,
+	FieldInventory,
 	FieldLastSyncedAt,
 	FieldTenantID,
 	FieldEnvironmentID,
@@ -97,22 +89,8 @@ var (
 	DefaultContentLibraryName string
 	// DefaultInsecure holds the default value on creation for the "insecure" field.
 	DefaultInsecure bool
-	// DefaultDatacenterCount holds the default value on creation for the "datacenter_count" field.
-	DefaultDatacenterCount int
-	// DatacenterCountValidator is a validator for the "datacenter_count" field. It is called by the builders before save.
-	DatacenterCountValidator func(int) error
-	// DefaultClusterCount holds the default value on creation for the "cluster_count" field.
-	DefaultClusterCount int
-	// ClusterCountValidator is a validator for the "cluster_count" field. It is called by the builders before save.
-	ClusterCountValidator func(int) error
-	// DefaultHostCount holds the default value on creation for the "host_count" field.
-	DefaultHostCount int
-	// HostCountValidator is a validator for the "host_count" field. It is called by the builders before save.
-	HostCountValidator func(int) error
-	// DefaultVMCount holds the default value on creation for the "vm_count" field.
-	DefaultVMCount int
-	// VMCountValidator is a validator for the "vm_count" field. It is called by the builders before save.
-	VMCountValidator func(int) error
+	// DefaultInventory holds the default value on creation for the "inventory" field.
+	DefaultInventory []vcenter.DataCenter
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -220,26 +198,6 @@ func BySecretRef(opts ...sql.OrderTermOption) OrderOption {
 // ByInsecure orders the results by the insecure field.
 func ByInsecure(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldInsecure, opts...).ToFunc()
-}
-
-// ByDatacenterCount orders the results by the datacenter_count field.
-func ByDatacenterCount(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldDatacenterCount, opts...).ToFunc()
-}
-
-// ByClusterCount orders the results by the cluster_count field.
-func ByClusterCount(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldClusterCount, opts...).ToFunc()
-}
-
-// ByHostCount orders the results by the host_count field.
-func ByHostCount(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldHostCount, opts...).ToFunc()
-}
-
-// ByVMCount orders the results by the vm_count field.
-func ByVMCount(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldVMCount, opts...).ToFunc()
 }
 
 // ByLastSyncedAt orders the results by the last_synced_at field.

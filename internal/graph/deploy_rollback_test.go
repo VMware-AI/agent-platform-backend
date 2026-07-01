@@ -34,6 +34,9 @@ func (f *fakeVCenter) Destroy(_ context.Context, vmName string) error {
 func (f *fakeVCenter) Inventory(context.Context) (vcenter.Inventory, error) {
 	return vcenter.Inventory{}, nil
 }
+func (f *fakeVCenter) FullInventory(context.Context) ([]vcenter.DataCenter, error) {
+	return nil, nil
+}
 func (f *fakeVCenter) CreateSnapshot(_ context.Context, vmName, name, description string) error {
 	if f.snapshots == nil {
 		f.snapshots = map[string][]vcenter.SnapshotInfo{}

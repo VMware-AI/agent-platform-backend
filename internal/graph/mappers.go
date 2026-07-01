@@ -42,11 +42,7 @@ func toModelResourcePool(p *ent.ResourcePool) *model.ResourcePool {
 		Endpoint:           p.Endpoint,
 		ContentLibraryName: p.ContentLibraryName,
 		Insecure:           p.Insecure,
-		ConnectionStatus:   poolConnStatus(p.Status),
-		DatacenterCount:    p.DatacenterCount,
-		ClusterCount:       p.ClusterCount,
-		EsxiHostCount:      p.HostCount,
-		VMInstanceCount:    p.VMCount,
+		Datacenters:        toModelDataCenters(p.Inventory),
 		SyncStatus:         poolSyncState(p),
 		LastSyncedAt:       p.LastSyncedAt,
 		CreatedAt:          p.CreatedAt,
@@ -54,14 +50,62 @@ func toModelResourcePool(p *ent.ResourcePool) *model.ResourcePool {
 	}
 }
 
-// poolConnStatus collapses the ent tri-state (connected/disconnected/error) into
-// the console's binary status: only "connected" reads as CONNECTED; everything
-// else (including error) reads as DISCONNECTED.
-func poolConnStatus(s resourcepool.Status) model.PoolConnectionStatus {
-	if s == resourcepool.StatusConnected {
-		return model.PoolConnectionStatusConnected
+// toModelDataCenters converts ent inventory (vcenter.DataCenter) into the
+// GraphQL model. StoragePolicies uses toModelPlacementRefsPtr so a nil
+// source list (PBM pull failed) maps to GraphQL null, distinguishing it
+// from an empty list (PBM pull succeeded but the vCenter has no profiles).
+func toModelDataCenters(jsonVal []vcenter.DataCenter) []model.DataCenter {
+	out := make([]model.DataCenter, 0, len(jsonVal))
+	for _, dc := range jsonVal {
+		out = append(out, model.DataCenter{
+			Name:            dc.Name,
+			Path:            dc.Path,
+			Clusters:        toModelClusters(dc.Clusters),
+			Datastores:      toModelPlacementRefs(dc.Datastores),
+			Networks:        toModelPlacementRefs(dc.Networks),
+			Folders:         toModelPlacementRefs(dc.Folders),
+			StoragePolicies: toModelPlacementRefs(dc.StoragePolicies),
+		})
 	}
-	return model.PoolConnectionStatusDisconnected
+	return out
+}
+
+func toModelClusters(jsonVal []vcenter.Cluster) []model.Cluster {
+	out := make([]model.Cluster, 0, len(jsonVal))
+	for _, c := range jsonVal {
+		out = append(out, model.Cluster{
+			Name:          c.Name,
+			Path:          c.Path,
+			EsxiHosts:     toModelPlacementRefs(c.EsxiHosts),
+			ResourcePools: toModelPlacementRefs(c.ResourcePools),
+		})
+	}
+	return out
+}
+
+func toModelPlacementRefs(jsonVal []vcenter.PlacementRef) []model.PlacementRef {
+	out := make([]model.PlacementRef, 0, len(jsonVal))
+	for _, r := range jsonVal {
+		ref := model.PlacementRef{Name: r.Name}
+		if r.Path != "" {
+			p := r.Path
+			ref.Path = &p
+		}
+		out = append(out, ref)
+	}
+	return out
+}
+
+// toModelPlacementRefsPtr preserves the nil vs [] distinction for fields
+// that need to tell the frontend "never pulled" apart from "pulled but empty".
+// When source == nil, returns nil (GraphQL null). When source is a (possibly
+// empty) slice, returns a pointer to a non-nil slice.
+func toModelPlacementRefsPtr(jsonVal []vcenter.PlacementRef) *[]model.PlacementRef {
+	if jsonVal == nil {
+		return nil
+	}
+	refs := toModelPlacementRefs(jsonVal)
+	return &refs
 }
 
 // poolSyncState derives the console's inventory-sync state: never synced → NEVER;

@@ -182,6 +182,12 @@ type AuthPayload {
 	user: User!
 	mustChangePassword: Boolean!
 }
+type Cluster {
+	name: String!
+	path: String!
+	esxiHosts: [PlacementRef!]!
+	resourcePools: [PlacementRef!]!
+}
 enum ConnectionStatus {
 	ONLINE
 	OFFLINE
@@ -238,8 +244,6 @@ input CreateResourcePoolInput {
 	name: String!
 	endpoint: String!
 	contentLibraryName: String
-	datacenterCount: Int
-	clusterCount: Int
 	insecure: Boolean
 	username: String
 	password: String
@@ -316,6 +320,15 @@ type DashboardStats {
 	monthlyCalls: Int!
 	monthlyTokens: Int!
 	monthlyCost: Float!
+}
+type DataCenter {
+	name: String!
+	path: String!
+	clusters: [Cluster!]!
+	datastores: [PlacementRef!]!
+	networks: [PlacementRef!]!
+	folders: [PlacementRef!]!
+	storagePolicies: [PlacementRef!]!
 }
 type DateUsage {
 	date: String!
@@ -699,12 +712,12 @@ type Permission {
 	key: String!
 	description: String
 }
+type PlacementRef {
+	name: String!
+	path: String
+}
 type PlatformSettings {
 	agentUser: String!
-}
-enum PoolConnectionStatus {
-	CONNECTED
-	DISCONNECTED
 }
 type Query {
 	me: User!
@@ -852,11 +865,7 @@ type ResourcePool {
 	endpoint: String!
 	contentLibraryName: String!
 	insecure: Boolean!
-	connectionStatus: PoolConnectionStatus!
-	datacenterCount: Int!
-	clusterCount: Int!
-	esxiHostCount: Int!
-	vmInstanceCount: Int!
+	datacenters: [DataCenter!]!
 	syncStatus: ResourcePoolSyncState!
 	lastSyncedAt: Time
 	createdAt: Time!
@@ -879,7 +888,7 @@ type ResourcePoolConnectionTest {
 input ResourcePoolFilter {
 	nameKeyword: String
 	endpointKeyword: String
-	connectionStatus: PoolConnectionStatus
+	syncStatus: ResourcePoolSyncState
 }
 input ResourcePoolSort {
 	field: ResourcePoolSortField!
@@ -888,11 +897,7 @@ input ResourcePoolSort {
 enum ResourcePoolSortField {
 	NAME
 	ENDPOINT
-	CONNECTION_STATUS
-	DATACENTER_COUNT
-	CLUSTER_COUNT
-	ESXI_HOST_COUNT
-	VM_INSTANCE_COUNT
+	SYNC_STATUS
 	CREATED_AT
 	UPDATED_AT
 }
@@ -1006,8 +1011,6 @@ input UpdateResourcePoolInput {
 	name: String
 	endpoint: String
 	contentLibraryName: String
-	datacenterCount: Int
-	clusterCount: Int
 	insecure: Boolean
 	username: String
 	password: String

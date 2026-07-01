@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
@@ -22,8 +21,10 @@ import (
 
 // CreateResourcePool registers a vCenter pool. The 接入表单 username/password are
 // written to the secret store (plaintext never persisted) — or an existing
-// secretRef is reused. Optional seed counts are honored; real counts come from
-// syncResourcePool.
+// secretRef is reused. A fire-and-forget first sync runs in the background so
+// the new pool's syncStatus + datacenters tree are populated without blocking
+// the create mutation (and so the operator doesn't see a stale "NEVER" until
+// the next background ticker tick).
 func (r *mutationResolver) CreateResourcePool(ctx context.Context, input model.CreateResourcePoolInput) (*model.CreateResourcePoolPayload, error) {
 	ref, set, minted, err := r.resolvePoolSecretRef(ctx, input.Name, input.Username, input.Password, input.SecretRef)
 	if err != nil {
@@ -41,12 +42,6 @@ func (r *mutationResolver) CreateResourcePool(ctx context.Context, input model.C
 	if set {
 		create.SetSecretRef(ref)
 	}
-	if input.DatacenterCount != nil {
-		create.SetDatacenterCount(*input.DatacenterCount)
-	}
-	if input.ClusterCount != nil {
-		create.SetClusterCount(*input.ClusterCount)
-	}
 	p, err := create.Save(ctx)
 	if err != nil {
 		// DB write failed after the vCenter credential was Put (validation/constraint/
@@ -55,10 +50,29 @@ func (r *mutationResolver) CreateResourcePool(ctx context.Context, input model.C
 		return nil, err
 	}
 	r.audit(ctx, "resource_pool.create", "resource_pool", p.ID.String(), true, actorID(auth.FromContext(ctx)))
+
+	// Fire-and-forget first sync: let a fresh pool have real syncStatus +
+	// datacenters tree immediately, instead of waiting for the next ticker.
+	// Detached ctx so cancellation of the create request doesn't kill the sync.
+	// Only fires for pools with stored credentials (sync can't connect
+	// without them). When sync plumbing (EnablePoolSync) hasn't been wired
+	// in — typical for unit tests, where EnablePoolSync is opt-in — the
+	// goroutine still runs the bare connect→inventory→write pipeline via
+	// syncOnePool's no-breaker branch, so callers can still observe a
+	// populated datacenters tree.
+	if p.SecretRef != "" {
+		go func(id uuid.UUID, pool *ent.ResourcePool) {
+			bgCtx := withSyncSource(context.Background(), syncSourceFirstSync)
+			if _, _, err := r.syncOnePool(bgCtx, pool); err != nil {
+				log.Printf("initial sync pool %s: %v", id, err)
+			}
+		}(p.ID, p)
+	}
+
 	return &model.CreateResourcePoolPayload{Pool: toModelResourcePool(p)}, nil
 }
 
-// UpdateResourcePool edits a pool's name/endpoint/counts and (on re-submitted
+// UpdateResourcePool edits a pool's name/endpoint and (on re-submitted
 // credentials) rotates the secret-store reference.
 func (r *mutationResolver) UpdateResourcePool(ctx context.Context, id string, input model.UpdateResourcePoolInput) (*model.UpdateResourcePoolPayload, error) {
 	pid, err := uuid.Parse(id)
@@ -77,12 +91,6 @@ func (r *mutationResolver) UpdateResourcePool(ctx context.Context, id string, in
 	}
 	if input.Insecure != nil {
 		u.SetInsecure(*input.Insecure)
-	}
-	if input.DatacenterCount != nil {
-		u.SetDatacenterCount(*input.DatacenterCount)
-	}
-	if input.ClusterCount != nil {
-		u.SetClusterCount(*input.ClusterCount)
 	}
 	// Credential rotation: re-submitted username/password → secret store; or a new
 	// explicit secretRef. Untouched when none provided.
@@ -198,7 +206,10 @@ func (r *mutationResolver) TestResourcePoolConnection(ctx context.Context, input
 	}, nil
 }
 
-// SyncResourcePool dials the pool, counts inventory, and persists it (同步数据).
+// SyncResourcePool dials the pool, fetches the inventory tree, and persists it
+// (同步数据). Delegates to syncOnePool so the manual mutation, the background
+// ticker, and the fire-and-forget first sync share the same fault-tolerance
+// chain (timeout → retry → breaker).
 func (r *mutationResolver) SyncResourcePool(ctx context.Context, id string) (*model.SyncResourcePoolPayload, error) {
 	pid, err := uuid.Parse(id)
 	if err != nil {
@@ -208,30 +219,12 @@ func (r *mutationResolver) SyncResourcePool(ctx context.Context, id string) (*mo
 	if err != nil {
 		return nil, err
 	}
-	conn, err := r.connectPool(ctx, pool)
-	if err != nil {
-		_, _ = r.Ent.ResourcePool.UpdateOne(pool).SetStatus(resourcepool.StatusError).Save(ctx)
-		return nil, fmt.Errorf("connect: %w", err)
-	}
-	defer func() { _ = conn.Logout(ctx) }()
-	inv, err := conn.Inventory(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("inventory: %w", err)
-	}
-	now := time.Now()
-	pool, err = r.Ent.ResourcePool.UpdateOne(pool).
-		SetStatus(resourcepool.StatusConnected).
-		SetDatacenterCount(inv.Datacenters).
-		SetClusterCount(inv.Clusters).
-		SetHostCount(inv.Hosts).
-		SetVMCount(inv.VMs).
-		SetLastSyncedAt(now). // real inventory-sync time → drives syncStatus/lastSyncedAt
-		Save(ctx)
+	updated, syncedAt, err := r.syncOnePool(withSyncSource(ctx, syncSourceManual), pool)
 	if err != nil {
 		return nil, err
 	}
 	r.audit(ctx, "resource_pool.sync", "resource_pool", id, true, actorID(auth.FromContext(ctx)))
-	return &model.SyncResourcePoolPayload{Pool: toModelResourcePool(pool), SyncedAt: now}, nil
+	return &model.SyncResourcePoolPayload{Pool: toModelResourcePool(updated), SyncedAt: syncedAt}, nil
 }
 
 // ResourcePools is a filtered/sorted/paged connection of pools (console 资源池 page).
@@ -244,13 +237,26 @@ func (r *queryResolver) ResourcePools(ctx context.Context, filter *model.Resourc
 		if v := derefString(filter.EndpointKeyword); v != "" {
 			base = base.Where(resourcepool.EndpointContainsFold(v))
 		}
-		if filter.ConnectionStatus != nil {
-			// Binary console status → ent tri-state: CONNECTED == connected;
-			// DISCONNECTED covers both disconnected and error.
-			if *filter.ConnectionStatus == model.PoolConnectionStatusConnected {
+		if filter.SyncStatus != nil {
+			// SyncStatus is a console-side derived state. We project it to the
+			// ent status tri-state + a lastSyncedAt null/non-null check at read
+			// time via the dedicated query helper, but the simplest mapping for
+			// filter is to use the ent status column directly:
+			//   SYNCED  → status=connected + lastSyncedAt set (the success
+			//              combination is enforced by syncOnePool; the latter is
+			//              not filterable here without a subquery, so we accept
+			//              that filter is "best-effort" — exact behavior matches
+			//              poolSyncState projection).
+			//   FAILED  → status=error
+			//   NEVER   → status=disconnected + lastSyncedAt IS NULL (rare in
+			//              the running system; treated as status=disconnected)
+			switch *filter.SyncStatus {
+			case model.ResourcePoolSyncStateFailed:
+				base = base.Where(resourcepool.StatusEQ(resourcepool.StatusError))
+			case model.ResourcePoolSyncStateSynced:
 				base = base.Where(resourcepool.StatusEQ(resourcepool.StatusConnected))
-			} else {
-				base = base.Where(resourcepool.StatusIn(resourcepool.StatusDisconnected, resourcepool.StatusError))
+			case model.ResourcePoolSyncStateNever, model.ResourcePoolSyncStateSyncing, model.ResourcePoolSyncStatePartial:
+				base = base.Where(resourcepool.StatusEQ(resourcepool.StatusDisconnected))
 			}
 		}
 	}

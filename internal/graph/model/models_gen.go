@@ -187,6 +187,13 @@ type AuthPayload struct {
 	MustChangePassword bool   `json:"mustChangePassword"`
 }
 
+type Cluster struct {
+	Name          string         `json:"name"`
+	Path          string         `json:"path"`
+	EsxiHosts     []PlacementRef `json:"esxiHosts"`
+	ResourcePools []PlacementRef `json:"resourcePools"`
+}
+
 type CreateAgentConfigInput struct {
 	Name       string  `json:"name"`
 	AgentType  string  `json:"agentType"`
@@ -247,8 +254,6 @@ type CreateResourcePoolInput struct {
 	Name               string  `json:"name"`
 	Endpoint           string  `json:"endpoint"`
 	ContentLibraryName *string `json:"contentLibraryName,omitempty"`
-	DatacenterCount    *int    `json:"datacenterCount,omitempty"`
-	ClusterCount       *int    `json:"clusterCount,omitempty"`
 	Insecure           *bool   `json:"insecure,omitempty"`
 	Username           *string `json:"username,omitempty"`
 	Password           *string `json:"password,omitempty"`
@@ -324,6 +329,16 @@ type DashboardStats struct {
 	MonthlyCalls       int     `json:"monthlyCalls"`
 	MonthlyTokens      int     `json:"monthlyTokens"`
 	MonthlyCost        float64 `json:"monthlyCost"`
+}
+
+type DataCenter struct {
+	Name            string         `json:"name"`
+	Path            string         `json:"path"`
+	Clusters        []Cluster      `json:"clusters"`
+	Datastores      []PlacementRef `json:"datastores"`
+	Networks        []PlacementRef `json:"networks"`
+	Folders         []PlacementRef `json:"folders"`
+	StoragePolicies []PlacementRef `json:"storagePolicies"`
 }
 
 type DateUsage struct {
@@ -608,6 +623,11 @@ type Permission struct {
 	Description *string `json:"description,omitempty"`
 }
 
+type PlacementRef struct {
+	Name string  `json:"name"`
+	Path *string `json:"path,omitempty"`
+}
+
 type PlatformSettings struct {
 	AgentUser string `json:"agentUser"`
 }
@@ -726,11 +746,7 @@ type ResourcePool struct {
 	Endpoint           string                `json:"endpoint"`
 	ContentLibraryName string                `json:"contentLibraryName"`
 	Insecure           bool                  `json:"insecure"`
-	ConnectionStatus   PoolConnectionStatus  `json:"connectionStatus"`
-	DatacenterCount    int                   `json:"datacenterCount"`
-	ClusterCount       int                   `json:"clusterCount"`
-	EsxiHostCount      int                   `json:"esxiHostCount"`
-	VMInstanceCount    int                   `json:"vmInstanceCount"`
+	Datacenters        []DataCenter          `json:"datacenters"`
 	SyncStatus         ResourcePoolSyncState `json:"syncStatus"`
 	LastSyncedAt       *time.Time            `json:"lastSyncedAt,omitempty"`
 	CreatedAt          time.Time             `json:"createdAt"`
@@ -755,9 +771,9 @@ type ResourcePoolConnectionTest struct {
 }
 
 type ResourcePoolFilter struct {
-	NameKeyword      *string               `json:"nameKeyword,omitempty"`
-	EndpointKeyword  *string               `json:"endpointKeyword,omitempty"`
-	ConnectionStatus *PoolConnectionStatus `json:"connectionStatus,omitempty"`
+	NameKeyword     *string                `json:"nameKeyword,omitempty"`
+	EndpointKeyword *string                `json:"endpointKeyword,omitempty"`
+	SyncStatus      *ResourcePoolSyncState `json:"syncStatus,omitempty"`
 }
 
 type ResourcePoolSort struct {
@@ -862,8 +878,6 @@ type UpdateResourcePoolInput struct {
 	Name               *string `json:"name,omitempty"`
 	Endpoint           *string `json:"endpoint,omitempty"`
 	ContentLibraryName *string `json:"contentLibraryName,omitempty"`
-	DatacenterCount    *int    `json:"datacenterCount,omitempty"`
-	ClusterCount       *int    `json:"clusterCount,omitempty"`
 	Insecure           *bool   `json:"insecure,omitempty"`
 	Username           *string `json:"username,omitempty"`
 	Password           *string `json:"password,omitempty"`
@@ -2111,61 +2125,6 @@ func (e PasswordMode) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-type PoolConnectionStatus string
-
-const (
-	PoolConnectionStatusConnected    PoolConnectionStatus = "CONNECTED"
-	PoolConnectionStatusDisconnected PoolConnectionStatus = "DISCONNECTED"
-)
-
-var AllPoolConnectionStatus = []PoolConnectionStatus{
-	PoolConnectionStatusConnected,
-	PoolConnectionStatusDisconnected,
-}
-
-func (e PoolConnectionStatus) IsValid() bool {
-	switch e {
-	case PoolConnectionStatusConnected, PoolConnectionStatusDisconnected:
-		return true
-	}
-	return false
-}
-
-func (e PoolConnectionStatus) String() string {
-	return string(e)
-}
-
-func (e *PoolConnectionStatus) UnmarshalGQL(v any) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = PoolConnectionStatus(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid PoolConnectionStatus", str)
-	}
-	return nil
-}
-
-func (e PoolConnectionStatus) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-func (e *PoolConnectionStatus) UnmarshalJSON(b []byte) error {
-	s, err := strconv.Unquote(string(b))
-	if err != nil {
-		return err
-	}
-	return e.UnmarshalGQL(s)
-}
-
-func (e PoolConnectionStatus) MarshalJSON() ([]byte, error) {
-	var buf bytes.Buffer
-	e.MarshalGQL(&buf)
-	return buf.Bytes(), nil
-}
-
 type RequestMetricsBucketGranularity string
 
 const (
@@ -2226,32 +2185,24 @@ func (e RequestMetricsBucketGranularity) MarshalJSON() ([]byte, error) {
 type ResourcePoolSortField string
 
 const (
-	ResourcePoolSortFieldName             ResourcePoolSortField = "NAME"
-	ResourcePoolSortFieldEndpoint         ResourcePoolSortField = "ENDPOINT"
-	ResourcePoolSortFieldConnectionStatus ResourcePoolSortField = "CONNECTION_STATUS"
-	ResourcePoolSortFieldDatacenterCount  ResourcePoolSortField = "DATACENTER_COUNT"
-	ResourcePoolSortFieldClusterCount     ResourcePoolSortField = "CLUSTER_COUNT"
-	ResourcePoolSortFieldEsxiHostCount    ResourcePoolSortField = "ESXI_HOST_COUNT"
-	ResourcePoolSortFieldVMInstanceCount  ResourcePoolSortField = "VM_INSTANCE_COUNT"
-	ResourcePoolSortFieldCreatedAt        ResourcePoolSortField = "CREATED_AT"
-	ResourcePoolSortFieldUpdatedAt        ResourcePoolSortField = "UPDATED_AT"
+	ResourcePoolSortFieldName       ResourcePoolSortField = "NAME"
+	ResourcePoolSortFieldEndpoint   ResourcePoolSortField = "ENDPOINT"
+	ResourcePoolSortFieldSyncStatus ResourcePoolSortField = "SYNC_STATUS"
+	ResourcePoolSortFieldCreatedAt  ResourcePoolSortField = "CREATED_AT"
+	ResourcePoolSortFieldUpdatedAt  ResourcePoolSortField = "UPDATED_AT"
 )
 
 var AllResourcePoolSortField = []ResourcePoolSortField{
 	ResourcePoolSortFieldName,
 	ResourcePoolSortFieldEndpoint,
-	ResourcePoolSortFieldConnectionStatus,
-	ResourcePoolSortFieldDatacenterCount,
-	ResourcePoolSortFieldClusterCount,
-	ResourcePoolSortFieldEsxiHostCount,
-	ResourcePoolSortFieldVMInstanceCount,
+	ResourcePoolSortFieldSyncStatus,
 	ResourcePoolSortFieldCreatedAt,
 	ResourcePoolSortFieldUpdatedAt,
 }
 
 func (e ResourcePoolSortField) IsValid() bool {
 	switch e {
-	case ResourcePoolSortFieldName, ResourcePoolSortFieldEndpoint, ResourcePoolSortFieldConnectionStatus, ResourcePoolSortFieldDatacenterCount, ResourcePoolSortFieldClusterCount, ResourcePoolSortFieldEsxiHostCount, ResourcePoolSortFieldVMInstanceCount, ResourcePoolSortFieldCreatedAt, ResourcePoolSortFieldUpdatedAt:
+	case ResourcePoolSortFieldName, ResourcePoolSortFieldEndpoint, ResourcePoolSortFieldSyncStatus, ResourcePoolSortFieldCreatedAt, ResourcePoolSortFieldUpdatedAt:
 		return true
 	}
 	return false

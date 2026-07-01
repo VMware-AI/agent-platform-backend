@@ -56,8 +56,10 @@ func clampLimit(p *int, def, max int) int {
 }
 
 // applyResourcePoolSort orders a pool query by the console's sort field, with a
-// stable id tiebreak. CONNECTION_STATUS sorts on the ent status column; the
-// default (CREATED_AT) and any unmapped field fall back to created_at.
+// stable id tiebreak. SYNC_STATUS sorts on the ent status column (proxy: never-
+// synced rows have status=disconnected, errored sync rows have status=error;
+// the console derives SYNCED/SYNCING/FAILED/NEVER from status+last_synced_at).
+// The default (CREATED_AT) and any unmapped field fall back to created_at.
 func applyResourcePoolSort(q *ent.ResourcePoolQuery, sort *model.ResourcePoolSort) *ent.ResourcePoolQuery {
 	if sort == nil {
 		return q.Order(ent.Desc(resourcepool.FieldCreatedAt))
@@ -69,16 +71,8 @@ func applyResourcePoolSort(q *ent.ResourcePoolQuery, sort *model.ResourcePoolSor
 		col = resourcepool.FieldName
 	case model.ResourcePoolSortFieldEndpoint:
 		col = resourcepool.FieldEndpoint
-	case model.ResourcePoolSortFieldConnectionStatus:
+	case model.ResourcePoolSortFieldSyncStatus:
 		col = resourcepool.FieldStatus
-	case model.ResourcePoolSortFieldDatacenterCount:
-		col = resourcepool.FieldDatacenterCount
-	case model.ResourcePoolSortFieldClusterCount:
-		col = resourcepool.FieldClusterCount
-	case model.ResourcePoolSortFieldEsxiHostCount:
-		col = resourcepool.FieldHostCount
-	case model.ResourcePoolSortFieldVMInstanceCount:
-		col = resourcepool.FieldVMCount
 	case model.ResourcePoolSortFieldUpdatedAt:
 		col = resourcepool.FieldUpdatedAt
 	default: // CREATED_AT

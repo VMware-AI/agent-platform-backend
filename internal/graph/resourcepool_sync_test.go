@@ -47,15 +47,20 @@ func TestResourcePool_SyncTestUpdate(t *testing.T) {
 		t.Fatalf("sync: %v", err)
 	}
 	synced := syncedPayload.Pool
-	if synced.ConnectionStatus != model.PoolConnectionStatusConnected {
-		t.Fatalf("status = %v, want CONNECTED", synced.ConnectionStatus)
-	}
-	if synced.EsxiHostCount == 0 || synced.VMInstanceCount == 0 {
-		t.Fatalf("inventory counts not populated: hosts=%d vms=%d", synced.EsxiHostCount, synced.VMInstanceCount)
-	}
-	// a real sync stamps the column → projects to SYNCED + lastSyncedAt
+	// A real sync stamps status=connected and lastSyncedAt → projects to SYNCED.
 	if synced.LastSyncedAt == nil || synced.SyncStatus != model.ResourcePoolSyncStateSynced {
 		t.Fatalf("real sync should set lastSyncedAt + SYNCED: %v / %v", synced.LastSyncedAt, synced.SyncStatus)
+	}
+	// The full inventory tree must have at least one DC + one host.
+	if len(synced.Datacenters) == 0 {
+		t.Fatalf("expected at least one datacenter, got 0")
+	}
+	dc0 := synced.Datacenters[0]
+	if len(dc0.Clusters) == 0 {
+		t.Fatalf("expected DC0 to have at least one cluster, got 0")
+	}
+	if len(dc0.Clusters[0].EsxiHosts) == 0 {
+		t.Fatalf("expected DC0 first cluster to have at least one ESXi host")
 	}
 	if syncedPayload.SyncedAt.IsZero() {
 		t.Fatal("syncedAt not set")

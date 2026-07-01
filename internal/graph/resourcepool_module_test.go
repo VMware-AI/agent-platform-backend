@@ -67,17 +67,17 @@ func TestResourcePools_Connection(t *testing.T) {
 	if byEp.TotalCount != 2 {
 		t.Fatalf("endpointKeyword vc-a: %d, want 2", byEp.TotalCount)
 	}
-	// connectionStatus: all freshly-created pools are DISCONNECTED (never synced)
-	disc := mustPoolConn(t, qr, ctx, &model.ResourcePoolFilter{ConnectionStatus: poolStatusPtr(model.PoolConnectionStatusDisconnected)}, nil)
-	if disc.TotalCount != 3 {
-		t.Fatalf("disconnected: %d, want 3", disc.TotalCount)
+	// syncStatus filter: all freshly-created pools are NEVER (never synced)
+	never := mustPoolConn(t, qr, ctx, &model.ResourcePoolFilter{SyncStatus: statusStatePtr(model.ResourcePoolSyncStateNever)}, nil)
+	if never.TotalCount != 3 {
+		t.Fatalf("never-synced: %d, want 3", never.TotalCount)
 	}
-	conn := mustPoolConn(t, qr, ctx, &model.ResourcePoolFilter{ConnectionStatus: poolStatusPtr(model.PoolConnectionStatusConnected)}, nil)
-	if conn.TotalCount != 0 {
-		t.Fatalf("connected: %d, want 0", conn.TotalCount)
+	synced := mustPoolConn(t, qr, ctx, &model.ResourcePoolFilter{SyncStatus: statusStatePtr(model.ResourcePoolSyncStateSynced)}, nil)
+	if synced.TotalCount != 0 {
+		t.Fatalf("synced: %d, want 0", synced.TotalCount)
 	}
 
-	// sort by NAME asc + connection shape + every node DISCONNECTED
+	// sort by NAME asc + every node is NEVER (freshly created)
 	asc := mustPoolConn(t, qr, ctx, nil, &model.ResourcePoolSort{Field: model.ResourcePoolSortFieldName, Direction: model.SortDirectionAsc})
 	if asc.TotalCount != 3 || asc.Nodes[0].Name != "alpha-dc" || asc.Nodes[2].Name != "gamma-prod" {
 		t.Fatalf("sort: total=%d %s..%s", asc.TotalCount, asc.Nodes[0].Name, asc.Nodes[2].Name)
@@ -85,8 +85,8 @@ func TestResourcePools_Connection(t *testing.T) {
 	if asc.PageInfo == nil || asc.PageInfo.TotalPages != 1 {
 		t.Fatalf("pageInfo wrong: %+v", asc.PageInfo)
 	}
-	if asc.Nodes[0].ConnectionStatus != model.PoolConnectionStatusDisconnected {
-		t.Fatalf("fresh pool status = %v, want DISCONNECTED", asc.Nodes[0].ConnectionStatus)
+	if asc.Nodes[0].SyncStatus != model.ResourcePoolSyncStateNever {
+		t.Fatalf("fresh pool syncStatus = %v, want NEVER", asc.Nodes[0].SyncStatus)
 	}
 	// sort by NAME desc (covers the desc branch)
 	desc := mustPoolConn(t, qr, ctx, nil, &model.ResourcePoolSort{Field: model.ResourcePoolSortFieldName, Direction: model.SortDirectionDesc})
@@ -128,4 +128,4 @@ func mustPoolConn(t *testing.T, qr *queryResolver, ctx context.Context, f *model
 	return c
 }
 
-func poolStatusPtr(s model.PoolConnectionStatus) *model.PoolConnectionStatus { return &s }
+func statusStatePtr(s model.ResourcePoolSyncState) *model.ResourcePoolSyncState { return &s }

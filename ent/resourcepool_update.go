@@ -10,9 +10,11 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
+	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 	"github.com/google/uuid"
 )
 
@@ -146,87 +148,21 @@ func (_u *ResourcePoolUpdate) SetNillableInsecure(v *bool) *ResourcePoolUpdate {
 	return _u
 }
 
-// SetDatacenterCount sets the "datacenter_count" field.
-func (_u *ResourcePoolUpdate) SetDatacenterCount(v int) *ResourcePoolUpdate {
-	_u.mutation.ResetDatacenterCount()
-	_u.mutation.SetDatacenterCount(v)
+// SetInventory sets the "inventory" field.
+func (_u *ResourcePoolUpdate) SetInventory(v []vcenter.DataCenter) *ResourcePoolUpdate {
+	_u.mutation.SetInventory(v)
 	return _u
 }
 
-// SetNillableDatacenterCount sets the "datacenter_count" field if the given value is not nil.
-func (_u *ResourcePoolUpdate) SetNillableDatacenterCount(v *int) *ResourcePoolUpdate {
-	if v != nil {
-		_u.SetDatacenterCount(*v)
-	}
+// AppendInventory appends value to the "inventory" field.
+func (_u *ResourcePoolUpdate) AppendInventory(v []vcenter.DataCenter) *ResourcePoolUpdate {
+	_u.mutation.AppendInventory(v)
 	return _u
 }
 
-// AddDatacenterCount adds value to the "datacenter_count" field.
-func (_u *ResourcePoolUpdate) AddDatacenterCount(v int) *ResourcePoolUpdate {
-	_u.mutation.AddDatacenterCount(v)
-	return _u
-}
-
-// SetClusterCount sets the "cluster_count" field.
-func (_u *ResourcePoolUpdate) SetClusterCount(v int) *ResourcePoolUpdate {
-	_u.mutation.ResetClusterCount()
-	_u.mutation.SetClusterCount(v)
-	return _u
-}
-
-// SetNillableClusterCount sets the "cluster_count" field if the given value is not nil.
-func (_u *ResourcePoolUpdate) SetNillableClusterCount(v *int) *ResourcePoolUpdate {
-	if v != nil {
-		_u.SetClusterCount(*v)
-	}
-	return _u
-}
-
-// AddClusterCount adds value to the "cluster_count" field.
-func (_u *ResourcePoolUpdate) AddClusterCount(v int) *ResourcePoolUpdate {
-	_u.mutation.AddClusterCount(v)
-	return _u
-}
-
-// SetHostCount sets the "host_count" field.
-func (_u *ResourcePoolUpdate) SetHostCount(v int) *ResourcePoolUpdate {
-	_u.mutation.ResetHostCount()
-	_u.mutation.SetHostCount(v)
-	return _u
-}
-
-// SetNillableHostCount sets the "host_count" field if the given value is not nil.
-func (_u *ResourcePoolUpdate) SetNillableHostCount(v *int) *ResourcePoolUpdate {
-	if v != nil {
-		_u.SetHostCount(*v)
-	}
-	return _u
-}
-
-// AddHostCount adds value to the "host_count" field.
-func (_u *ResourcePoolUpdate) AddHostCount(v int) *ResourcePoolUpdate {
-	_u.mutation.AddHostCount(v)
-	return _u
-}
-
-// SetVMCount sets the "vm_count" field.
-func (_u *ResourcePoolUpdate) SetVMCount(v int) *ResourcePoolUpdate {
-	_u.mutation.ResetVMCount()
-	_u.mutation.SetVMCount(v)
-	return _u
-}
-
-// SetNillableVMCount sets the "vm_count" field if the given value is not nil.
-func (_u *ResourcePoolUpdate) SetNillableVMCount(v *int) *ResourcePoolUpdate {
-	if v != nil {
-		_u.SetVMCount(*v)
-	}
-	return _u
-}
-
-// AddVMCount adds value to the "vm_count" field.
-func (_u *ResourcePoolUpdate) AddVMCount(v int) *ResourcePoolUpdate {
-	_u.mutation.AddVMCount(v)
+// ClearInventory clears the value of the "inventory" field.
+func (_u *ResourcePoolUpdate) ClearInventory() *ResourcePoolUpdate {
+	_u.mutation.ClearInventory()
 	return _u
 }
 
@@ -353,26 +289,6 @@ func (_u *ResourcePoolUpdate) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "ResourcePool.status": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.DatacenterCount(); ok {
-		if err := resourcepool.DatacenterCountValidator(v); err != nil {
-			return &ValidationError{Name: "datacenter_count", err: fmt.Errorf(`ent: validator failed for field "ResourcePool.datacenter_count": %w`, err)}
-		}
-	}
-	if v, ok := _u.mutation.ClusterCount(); ok {
-		if err := resourcepool.ClusterCountValidator(v); err != nil {
-			return &ValidationError{Name: "cluster_count", err: fmt.Errorf(`ent: validator failed for field "ResourcePool.cluster_count": %w`, err)}
-		}
-	}
-	if v, ok := _u.mutation.HostCount(); ok {
-		if err := resourcepool.HostCountValidator(v); err != nil {
-			return &ValidationError{Name: "host_count", err: fmt.Errorf(`ent: validator failed for field "ResourcePool.host_count": %w`, err)}
-		}
-	}
-	if v, ok := _u.mutation.VMCount(); ok {
-		if err := resourcepool.VMCountValidator(v); err != nil {
-			return &ValidationError{Name: "vm_count", err: fmt.Errorf(`ent: validator failed for field "ResourcePool.vm_count": %w`, err)}
-		}
-	}
 	return nil
 }
 
@@ -424,29 +340,16 @@ func (_u *ResourcePoolUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if value, ok := _u.mutation.Insecure(); ok {
 		_spec.SetField(resourcepool.FieldInsecure, field.TypeBool, value)
 	}
-	if value, ok := _u.mutation.DatacenterCount(); ok {
-		_spec.SetField(resourcepool.FieldDatacenterCount, field.TypeInt, value)
+	if value, ok := _u.mutation.Inventory(); ok {
+		_spec.SetField(resourcepool.FieldInventory, field.TypeJSON, value)
 	}
-	if value, ok := _u.mutation.AddedDatacenterCount(); ok {
-		_spec.AddField(resourcepool.FieldDatacenterCount, field.TypeInt, value)
+	if value, ok := _u.mutation.AppendedInventory(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, resourcepool.FieldInventory, value)
+		})
 	}
-	if value, ok := _u.mutation.ClusterCount(); ok {
-		_spec.SetField(resourcepool.FieldClusterCount, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedClusterCount(); ok {
-		_spec.AddField(resourcepool.FieldClusterCount, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.HostCount(); ok {
-		_spec.SetField(resourcepool.FieldHostCount, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedHostCount(); ok {
-		_spec.AddField(resourcepool.FieldHostCount, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.VMCount(); ok {
-		_spec.SetField(resourcepool.FieldVMCount, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedVMCount(); ok {
-		_spec.AddField(resourcepool.FieldVMCount, field.TypeInt, value)
+	if _u.mutation.InventoryCleared() {
+		_spec.ClearField(resourcepool.FieldInventory, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.LastSyncedAt(); ok {
 		_spec.SetField(resourcepool.FieldLastSyncedAt, field.TypeTime, value)
@@ -604,87 +507,21 @@ func (_u *ResourcePoolUpdateOne) SetNillableInsecure(v *bool) *ResourcePoolUpdat
 	return _u
 }
 
-// SetDatacenterCount sets the "datacenter_count" field.
-func (_u *ResourcePoolUpdateOne) SetDatacenterCount(v int) *ResourcePoolUpdateOne {
-	_u.mutation.ResetDatacenterCount()
-	_u.mutation.SetDatacenterCount(v)
+// SetInventory sets the "inventory" field.
+func (_u *ResourcePoolUpdateOne) SetInventory(v []vcenter.DataCenter) *ResourcePoolUpdateOne {
+	_u.mutation.SetInventory(v)
 	return _u
 }
 
-// SetNillableDatacenterCount sets the "datacenter_count" field if the given value is not nil.
-func (_u *ResourcePoolUpdateOne) SetNillableDatacenterCount(v *int) *ResourcePoolUpdateOne {
-	if v != nil {
-		_u.SetDatacenterCount(*v)
-	}
+// AppendInventory appends value to the "inventory" field.
+func (_u *ResourcePoolUpdateOne) AppendInventory(v []vcenter.DataCenter) *ResourcePoolUpdateOne {
+	_u.mutation.AppendInventory(v)
 	return _u
 }
 
-// AddDatacenterCount adds value to the "datacenter_count" field.
-func (_u *ResourcePoolUpdateOne) AddDatacenterCount(v int) *ResourcePoolUpdateOne {
-	_u.mutation.AddDatacenterCount(v)
-	return _u
-}
-
-// SetClusterCount sets the "cluster_count" field.
-func (_u *ResourcePoolUpdateOne) SetClusterCount(v int) *ResourcePoolUpdateOne {
-	_u.mutation.ResetClusterCount()
-	_u.mutation.SetClusterCount(v)
-	return _u
-}
-
-// SetNillableClusterCount sets the "cluster_count" field if the given value is not nil.
-func (_u *ResourcePoolUpdateOne) SetNillableClusterCount(v *int) *ResourcePoolUpdateOne {
-	if v != nil {
-		_u.SetClusterCount(*v)
-	}
-	return _u
-}
-
-// AddClusterCount adds value to the "cluster_count" field.
-func (_u *ResourcePoolUpdateOne) AddClusterCount(v int) *ResourcePoolUpdateOne {
-	_u.mutation.AddClusterCount(v)
-	return _u
-}
-
-// SetHostCount sets the "host_count" field.
-func (_u *ResourcePoolUpdateOne) SetHostCount(v int) *ResourcePoolUpdateOne {
-	_u.mutation.ResetHostCount()
-	_u.mutation.SetHostCount(v)
-	return _u
-}
-
-// SetNillableHostCount sets the "host_count" field if the given value is not nil.
-func (_u *ResourcePoolUpdateOne) SetNillableHostCount(v *int) *ResourcePoolUpdateOne {
-	if v != nil {
-		_u.SetHostCount(*v)
-	}
-	return _u
-}
-
-// AddHostCount adds value to the "host_count" field.
-func (_u *ResourcePoolUpdateOne) AddHostCount(v int) *ResourcePoolUpdateOne {
-	_u.mutation.AddHostCount(v)
-	return _u
-}
-
-// SetVMCount sets the "vm_count" field.
-func (_u *ResourcePoolUpdateOne) SetVMCount(v int) *ResourcePoolUpdateOne {
-	_u.mutation.ResetVMCount()
-	_u.mutation.SetVMCount(v)
-	return _u
-}
-
-// SetNillableVMCount sets the "vm_count" field if the given value is not nil.
-func (_u *ResourcePoolUpdateOne) SetNillableVMCount(v *int) *ResourcePoolUpdateOne {
-	if v != nil {
-		_u.SetVMCount(*v)
-	}
-	return _u
-}
-
-// AddVMCount adds value to the "vm_count" field.
-func (_u *ResourcePoolUpdateOne) AddVMCount(v int) *ResourcePoolUpdateOne {
-	_u.mutation.AddVMCount(v)
+// ClearInventory clears the value of the "inventory" field.
+func (_u *ResourcePoolUpdateOne) ClearInventory() *ResourcePoolUpdateOne {
+	_u.mutation.ClearInventory()
 	return _u
 }
 
@@ -824,26 +661,6 @@ func (_u *ResourcePoolUpdateOne) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "ResourcePool.status": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.DatacenterCount(); ok {
-		if err := resourcepool.DatacenterCountValidator(v); err != nil {
-			return &ValidationError{Name: "datacenter_count", err: fmt.Errorf(`ent: validator failed for field "ResourcePool.datacenter_count": %w`, err)}
-		}
-	}
-	if v, ok := _u.mutation.ClusterCount(); ok {
-		if err := resourcepool.ClusterCountValidator(v); err != nil {
-			return &ValidationError{Name: "cluster_count", err: fmt.Errorf(`ent: validator failed for field "ResourcePool.cluster_count": %w`, err)}
-		}
-	}
-	if v, ok := _u.mutation.HostCount(); ok {
-		if err := resourcepool.HostCountValidator(v); err != nil {
-			return &ValidationError{Name: "host_count", err: fmt.Errorf(`ent: validator failed for field "ResourcePool.host_count": %w`, err)}
-		}
-	}
-	if v, ok := _u.mutation.VMCount(); ok {
-		if err := resourcepool.VMCountValidator(v); err != nil {
-			return &ValidationError{Name: "vm_count", err: fmt.Errorf(`ent: validator failed for field "ResourcePool.vm_count": %w`, err)}
-		}
-	}
 	return nil
 }
 
@@ -912,29 +729,16 @@ func (_u *ResourcePoolUpdateOne) sqlSave(ctx context.Context) (_node *ResourcePo
 	if value, ok := _u.mutation.Insecure(); ok {
 		_spec.SetField(resourcepool.FieldInsecure, field.TypeBool, value)
 	}
-	if value, ok := _u.mutation.DatacenterCount(); ok {
-		_spec.SetField(resourcepool.FieldDatacenterCount, field.TypeInt, value)
+	if value, ok := _u.mutation.Inventory(); ok {
+		_spec.SetField(resourcepool.FieldInventory, field.TypeJSON, value)
 	}
-	if value, ok := _u.mutation.AddedDatacenterCount(); ok {
-		_spec.AddField(resourcepool.FieldDatacenterCount, field.TypeInt, value)
+	if value, ok := _u.mutation.AppendedInventory(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, resourcepool.FieldInventory, value)
+		})
 	}
-	if value, ok := _u.mutation.ClusterCount(); ok {
-		_spec.SetField(resourcepool.FieldClusterCount, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedClusterCount(); ok {
-		_spec.AddField(resourcepool.FieldClusterCount, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.HostCount(); ok {
-		_spec.SetField(resourcepool.FieldHostCount, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedHostCount(); ok {
-		_spec.AddField(resourcepool.FieldHostCount, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.VMCount(); ok {
-		_spec.SetField(resourcepool.FieldVMCount, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedVMCount(); ok {
-		_spec.AddField(resourcepool.FieldVMCount, field.TypeInt, value)
+	if _u.mutation.InventoryCleared() {
+		_spec.ClearField(resourcepool.FieldInventory, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.LastSyncedAt(); ok {
 		_spec.SetField(resourcepool.FieldLastSyncedAt, field.TypeTime, value)

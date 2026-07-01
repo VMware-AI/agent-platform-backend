@@ -19,11 +19,14 @@ func TestResourcePool_Insecure(t *testing.T) {
 	r.Secrets = secrets.NewStaticResolver(map[string]secrets.Credential{
 		"vault://oc": {Username: "u", Password: "p"},
 	})
-	// Capture-only stub: record the insecure flag connectPool dials with, then
-	// short-circuit (no real vCenter needed to assert the flag plumbing).
-	var gotInsecure bool
-	r.VCenterConnect = func(_ context.Context, _, _, _ string, insecure bool) (VCenterClient, error) {
-		gotInsecure = insecure
+	// Capture-only stub: record the insecure flag connectPool dials with for
+	// EACH endpoint, then short-circuit (no real vCenter needed to assert
+	// the flag plumbing). Keyed by endpoint because CreateResourcePool now
+	// fires a fire-and-forget first-sync goroutine, so manual Sync calls
+	// race with background dials — a single shared bool races with goroutines.
+	gotInsecure := map[string]bool{}
+	r.VCenterConnect = func(_ context.Context, endpoint, _, _ string, insecure bool) (VCenterClient, error) {
+		gotInsecure[endpoint] = insecure
 		return nil, fmt.Errorf("stub: capture only")
 	}
 
@@ -54,13 +57,16 @@ func TestResourcePool_Insecure(t *testing.T) {
 		t.Fatal("omitted insecure must default to false (TLS verification on)")
 	}
 
-	// 3) connectPool dials each pool with ITS OWN insecure value.
+	// 3) connectPool dials each pool with ITS OWN insecure value. Each
+	// manual sync is its own dial, so endpoint-keyed capture is sufficient
+	// to assert each pool's TLS-skip independently of any racing
+	// fire-and-forget first-sync goroutines from CreateResourcePool.
 	_, _ = mr.SyncResourcePool(ctx, skip.Pool.ID)
-	if !gotInsecure {
+	if gotInsecure["https://vc.local"] != true {
 		t.Fatal("insecure pool must dial vCenter with insecure=true")
 	}
 	_, _ = mr.SyncResourcePool(ctx, verify.Pool.ID)
-	if gotInsecure {
+	if gotInsecure["https://vc2.local"] != false {
 		t.Fatal("default pool must dial vCenter with insecure=false")
 	}
 
@@ -73,7 +79,7 @@ func TestResourcePool_Insecure(t *testing.T) {
 		t.Fatal("update insecure=true must project Insecure=true")
 	}
 	_, _ = mr.SyncResourcePool(ctx, verify.Pool.ID)
-	if !gotInsecure {
+	if gotInsecure["https://vc2.local"] != true {
 		t.Fatal("after update, pool must dial vCenter with insecure=true")
 	}
 

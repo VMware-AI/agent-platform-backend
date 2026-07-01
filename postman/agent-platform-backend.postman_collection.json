@@ -1157,7 +1157,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query ResourcePools($filter: ResourcePoolFilter, $pagination: Pagination, $sort: ResourcePoolSort) {\\n  resourcePools(filter: $filter, pagination: $pagination, sort: $sort) {\\n    nodes { id name endpoint contentLibraryName insecure connectionStatus esxiHostCount vmInstanceCount syncStatus lastSyncedAt createdAt updatedAt }\\n    totalCount\\n    pageInfo { page pageSize totalPages }\\n  }\\n}\",\n  \"variables\": {\n    \"pagination\": {\n      \"page\": 1,\n      \"pageSize\": 20\n    },\n    \"sort\": {\n      \"field\": \"CREATED_AT\",\n      \"direction\": \"DESC\"\n    },\n    \"filter\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"query ResourcePools($filter: ResourcePoolFilter, $pagination: Pagination, $sort: ResourcePoolSort) {\\n  resourcePools(filter: $filter, pagination: $pagination, sort: $sort) {\\n    nodes { id name endpoint contentLibraryName insecure syncStatus lastSyncedAt datacenters { name path clusters { name path esxiHosts { name path } resourcePools { name path } } datastores { name path } networks { name path } folders { name path } } createdAt updatedAt }\\n    totalCount\\n    pageInfo { page pageSize totalPages }\\n  }\\n}\",\n  \"variables\": {\n    \"pagination\": {\n      \"page\": 1,\n      \"pageSize\": 20\n    },\n    \"sort\": {\n      \"field\": \"CREATED_AT\",\n      \"direction\": \"DESC\"\n    },\n    \"filter\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1189,7 +1189,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query ResourcePool($id: ID!) {\\n  resourcePool(id: $id) { id name endpoint contentLibraryName insecure connectionStatus esxiHostCount vmInstanceCount syncStatus lastSyncedAt createdAt updatedAt }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_POOL_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query ResourcePool($id: ID!) {\\n  resourcePool(id: $id) { id name endpoint contentLibraryName insecure syncStatus lastSyncedAt datacenters { name path clusters { name path esxiHosts { name path } resourcePools { name path } } datastores { name path } networks { name path } folders { name path } } createdAt updatedAt }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_POOL_ID\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1221,7 +1221,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateResourcePool($input: CreateResourcePoolInput!) {\\n  createResourcePool(input: $input) {\\n    pool { id name endpoint contentLibraryName insecure connectionStatus esxiHostCount vmInstanceCount syncStatus lastSyncedAt createdAt updatedAt }\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"dc01-pool\",\n      \"endpoint\": \"https://vcenter.example.com/sdk\",\n      \"contentLibraryName\": \"agent-ovas\",\n      \"datacenterCount\": 1,\n      \"clusterCount\": 2,\n      \"username\": \"admin@example.com\",\n      \"password\": \"secret\"\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation CreateResourcePool($input: CreateResourcePoolInput!) {\\n  createResourcePool(input: $input) {\\n    pool { id name endpoint contentLibraryName insecure syncStatus lastSyncedAt createdAt updatedAt }\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"dc01-pool\",\n      \"endpoint\": \"https://vcenter.example.com/sdk\",\n      \"contentLibraryName\": \"agent-ovas\",\n      \"username\": \"admin@example.com\",\n      \"password\": \"secret\"\n    }\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1253,7 +1253,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpdateResourcePool($id: ID!, $input: UpdateResourcePoolInput!) {\\n  updateResourcePool(id: $id, input: $input) {\\n    pool { id name endpoint contentLibraryName insecure connectionStatus esxiHostCount vmInstanceCount syncStatus lastSyncedAt createdAt updatedAt }\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_POOL_ID\",\n    \"input\": {\n      \"name\": \"dc01-pool-renamed\",\n      \"insecure\": true,\n      \"username\": \"admin@example.com\",\n      \"password\": \"newsecret\"\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation UpdateResourcePool($id: ID!, $input: UpdateResourcePoolInput!) {\\n  updateResourcePool(id: $id, input: $input) {\\n    pool { id name endpoint contentLibraryName insecure syncStatus lastSyncedAt createdAt updatedAt }\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_POOL_ID\",\n    \"input\": {\n      \"name\": \"dc01-pool-renamed\",\n      \"insecure\": true,\n      \"username\": \"admin@example.com\",\n      \"password\": \"newsecret\"\n    }\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1317,7 +1317,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SyncResourcePool($id: ID!) {\\n  syncResourcePool(id: $id) {\\n    pool { id name endpoint contentLibraryName insecure connectionStatus esxiHostCount vmInstanceCount syncStatus lastSyncedAt createdAt updatedAt }\\n    syncedAt\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_POOL_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation SyncResourcePool($id: ID!) {\\n  syncResourcePool(id: $id) {\\n    pool { id name endpoint contentLibraryName insecure syncStatus lastSyncedAt datacenters { name path clusters { name esxiHosts { name } } } createdAt updatedAt }\\n    syncedAt\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_POOL_ID\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1329,7 +1329,7 @@
                 "query"
               ]
             },
-            "description": "Connect \u2192 count datacenters/clusters/hosts/VMs \u2192 persist. Long-running \u2014 may take seconds."
+            "description": "Connect \u2192 fetch inventory tree (per-DC clusters/hosts/RPs + datastores/networks/vm folders/storage policies) \u2192 persist. Long-running \u2014 may take seconds."
           },
           "response": []
         },
@@ -3117,7 +3117,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeployAgent($input: DeployAgentInput!) {\\n  deployAgent(input: $input) {\\n    agent {\\n      id name type status endpoint createdAt updatedAt\\n      apiKey { id name }\\n      credentials { username }\\n      templateFamilyId templateVersionId resourcePoolId\\n    }\\n    virtualKeySecret\\n    templateVersion { id familyId version ovaIdentifier notes createdAt }\\n    resourcePool { id name endpoint connectionStatus syncStatus lastSyncedAt }\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"alice-coding-goose\",\n      \"templateFamilyId\": \"REPLACE_WITH_FAMILY_ID\",\n      \"templateVersionId\": \"REPLACE_WITH_VERSION_ID\",\n      \"resourcePoolId\": \"REPLACE_WITH_POOL_ID\",\n      \"departmentId\": null,\n      \"targetResourcePool\": \"/DC0/host/DC0_C0/Resources\",\n      \"hostname\": \"alice-goose\",\n      \"maxBudget\": 50\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation DeployAgent($input: DeployAgentInput!) {\\n  deployAgent(input: $input) {\\n    agent {\\n      id name type status endpoint createdAt updatedAt\\n      apiKey { id name }\\n      credentials { username }\\n      templateFamilyId templateVersionId resourcePoolId\\n    }\\n    virtualKeySecret\\n    templateVersion { id familyId version ovaIdentifier notes createdAt }\\n    resourcePool { id name endpoint syncStatus lastSyncedAt datacenters { name } }\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"alice-coding-goose\",\n      \"templateFamilyId\": \"REPLACE_WITH_FAMILY_ID\",\n      \"templateVersionId\": \"REPLACE_WITH_VERSION_ID\",\n      \"resourcePoolId\": \"REPLACE_WITH_POOL_ID\",\n      \"departmentId\": null,\n      \"targetResourcePool\": \"/DC0/host/DC0_C0/Resources\",\n      \"hostname\": \"alice-goose\",\n      \"maxBudget\": 50\n    }\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",

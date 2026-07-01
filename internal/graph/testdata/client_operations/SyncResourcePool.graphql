@@ -4,9 +4,6 @@ fragment ResourcePoolFields on ResourcePool {
     endpoint
     contentLibraryName
     insecure
-    connectionStatus
-    esxiHostCount
-    vmInstanceCount
     syncStatus
     lastSyncedAt
     createdAt
