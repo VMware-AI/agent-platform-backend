@@ -6,6 +6,7 @@ import (
 	"log"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
@@ -33,16 +34,22 @@ import (
 // resource pool is pointed at a single host rather than a vCenter. We do
 // not silently wrap the host in a synthetic DC.
 func (c *Client) FullInventory(ctx context.Context) ([]DataCenter, error) {
+	start := time.Now()
+	log.Printf("vcenter.FullInventory: start")
 	finder := find.NewFinder(c.vc.Client, true)
 	dcs, err := finder.DatacenterList(ctx, "*")
 	if err != nil {
+		log.Printf("vcenter.FullInventory: list dc failed err=%q elapsed=%s", err, time.Since(start))
 		return nil, fmt.Errorf("vcenter: list dc: %w", err)
 	}
+	log.Printf("vcenter.FullInventory: datacenter list returned %d dc(s)", len(dcs))
 	if len(dcs) == 0 {
 		host := ""
 		if u := c.vc.URL(); u != nil {
 			host = u.Host
 		}
+		log.Printf("vcenter.FullInventory: no datacenter found host=%s elapsed=%s",
+			host, time.Since(start))
 		return nil, fmt.Errorf(
 			"vcenter: no datacenter found at endpoint %q; this resource pool may point to a standalone ESXi host rather than a vCenter",
 			host,
@@ -56,10 +63,18 @@ func (c *Client) FullInventory(ctx context.Context) ([]DataCenter, error) {
 	for _, dc := range dcs {
 		dc := dc
 		g.Go(func() error {
+			dcStart := time.Now()
+			log.Printf("vcenter.FullInventory: walk dc %s start", dc.InventoryPath)
 			node, err := c.inventoryForDC(gctx, dc)
 			if err != nil {
+				log.Printf("vcenter.FullInventory: walk dc %s failed err=%q elapsed=%s",
+					dc.InventoryPath, err, time.Since(dcStart))
 				return fmt.Errorf("dc %s: %w", dc.InventoryPath, err)
 			}
+			log.Printf("vcenter.FullInventory: walk dc %s ok clusters=%d datastores=%d networks=%d folders=%d storage_policies=%v elapsed=%s",
+				dc.InventoryPath,
+				len(node.Clusters), len(node.Datastores), len(node.Networks), len(node.Folders),
+				storagePolicySummary(node.StoragePolicies), time.Since(dcStart))
 			mu.Lock()
 			out = append(out, node)
 			mu.Unlock()
@@ -67,17 +82,38 @@ func (c *Client) FullInventory(ctx context.Context) ([]DataCenter, error) {
 		})
 	}
 	if err := g.Wait(); err != nil {
+		log.Printf("vcenter.FullInventory: failed err=%q elapsed=%s", err, time.Since(start))
 		return out, err
 	}
 
 	// PBM independent endpoint (per-B1: per-DC attribution; per-A1: graceful
 	// on failure — storagePolicies stays nil so the frontend sees null).
+	pbmStart := time.Now()
 	if profiles, perr := c.listStorageProfiles(ctx); perr != nil {
-		log.Printf("vcenter: list storage profiles: %v", perr)
+		log.Printf("vcenter.FullInventory: PBM list failed err=%q elapsed=%s (storagePolicies will be nil on all DCs)",
+			perr, time.Since(pbmStart))
 	} else if len(profiles) > 0 {
 		attachStoragePolicies(out, profiles)
+		log.Printf("vcenter.FullInventory: PBM ok profiles=%d attached to %d dc(s) elapsed=%s",
+			len(profiles), len(out), time.Since(pbmStart))
+	} else {
+		log.Printf("vcenter.FullInventory: PBM returned 0 profiles elapsed=%s", time.Since(pbmStart))
 	}
+	log.Printf("vcenter.FullInventory: OK total_dcs=%d elapsed=%s", len(out), time.Since(start))
 	return out, nil
+}
+
+// storagePolicySummary renders "nil"/"empty"/"count" so the dc summary
+// log line is consistent with the entity layout (nil = PBM never pulled;
+// empty = pulled but the vCenter has no profiles).
+func storagePolicySummary(p []PlacementRef) any {
+	if p == nil {
+		return "nil"
+	}
+	if len(p) == 0 {
+		return "empty"
+	}
+	return len(p)
 }
 
 // inventoryForDC walks one datacenter's subtree. Layout per vSphere reality:

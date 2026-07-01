@@ -33,6 +33,7 @@ func (r *Resolver) syncAllPools(ctx context.Context) {
 	if r.VCenterConnect == nil {
 		return
 	}
+	tickCtx := withSyncSource(ctx, syncSourceTicker)
 	pools, err := r.Ent.ResourcePool.Query().
 		Where(resourcepool.SecretRefNEQ("")).
 		All(ctx)
@@ -40,8 +41,9 @@ func (r *Resolver) syncAllPools(ctx context.Context) {
 		log.Printf("pool auto-sync: query pools: %v", err)
 		return
 	}
+	log.Printf("pool auto-sync: ticking %d pool(s) with stored credentials", len(pools))
 	for _, pool := range pools {
-		if _, _, err := r.syncOnePool(ctx, pool); err != nil {
+		if _, _, err := r.syncOnePool(tickCtx, pool); err != nil {
 			// syncOnePool already stamps status=error on real failures and
 			// suppresses the stamp when the breaker is open. Just log here
 			// so we keep ticker progress visible.

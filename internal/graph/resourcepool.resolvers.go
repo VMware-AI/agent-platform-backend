@@ -62,7 +62,7 @@ func (r *mutationResolver) CreateResourcePool(ctx context.Context, input model.C
 	// populated datacenters tree.
 	if p.SecretRef != "" {
 		go func(id uuid.UUID, pool *ent.ResourcePool) {
-			bgCtx := context.Background()
+			bgCtx := withSyncSource(context.Background(), syncSourceFirstSync)
 			if _, _, err := r.syncOnePool(bgCtx, pool); err != nil {
 				log.Printf("initial sync pool %s: %v", id, err)
 			}
@@ -219,7 +219,7 @@ func (r *mutationResolver) SyncResourcePool(ctx context.Context, id string) (*mo
 	if err != nil {
 		return nil, err
 	}
-	updated, syncedAt, err := r.syncOnePool(ctx, pool)
+	updated, syncedAt, err := r.syncOnePool(withSyncSource(ctx, syncSourceManual), pool)
 	if err != nil {
 		return nil, err
 	}

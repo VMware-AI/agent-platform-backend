@@ -3,6 +3,7 @@ package graph
 import (
 	"context"
 	"errors"
+	"log"
 	"math/rand"
 	"time"
 
@@ -21,30 +22,39 @@ func retrySync(ctx context.Context, maxRetries int, fn func(context.Context) err
 	var lastErr error
 	for attempt := 0; attempt <= maxRetries; attempt++ {
 		if err := ctx.Err(); err != nil {
+			log.Printf("pool-sync.retry: ctx done before attempt %d err=%q", attempt+1, err)
 			return err
 		}
 		err := fn(ctx)
 		if err == nil {
+			if attempt > 0 {
+				log.Printf("pool-sync.retry: attempt %d succeeded after %d previous failure(s)",
+					attempt+1, attempt)
+			}
 			return nil
 		}
 		lastErr = err
 		if !isRetryable(err) {
+			log.Printf("pool-sync.retry: attempt %d failed with non-retryable err=%q, giving up",
+				attempt+1, err)
 			return err
 		}
 		if attempt == maxRetries {
+			log.Printf("pool-sync.retry: attempt %d failed (retryable) err=%q, retries exhausted (%d/%d)",
+				attempt+1, err, attempt+1, maxRetries+1)
 			break
 		}
 		backoff := time.Duration(1<<attempt) * time.Second // 1s, 2s, 4s
-		// Jitter ceiling is backoff/4; we MUST defend against rand.Int63n(0)
-		// (the Go runtime panics on a zero argument). When the ceiling would
-		// be zero, sleep the plain backoff without jitter.
 		var jitter time.Duration
 		if max := int64(backoff / 4); max > 0 {
 			jitter = time.Duration(rand.Int63n(max))
 		}
+		log.Printf("pool-sync.retry: attempt %d failed (retryable) err=%q, sleeping %s before retry %d/%d",
+			attempt+1, err, backoff+jitter, attempt+2, maxRetries+1)
 		select {
 		case <-time.After(backoff + jitter):
 		case <-ctx.Done():
+			log.Printf("pool-sync.retry: ctx cancelled during backoff err=%q", ctx.Err())
 			return ctx.Err()
 		}
 	}
