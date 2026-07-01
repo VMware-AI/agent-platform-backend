@@ -476,6 +476,35 @@ func (r *queryResolver) Agents(ctx context.Context, filter *model.AgentFilter, p
 	}, nil
 }
 
+// Agent returns a single agent by ID. Visibility follows the same three-track
+// rule as the agents list (admin→all, tenant-admin→their tenant, user→own).
+// Non-owner, non-admin callers get a not-found-style null result.
+func (r *queryResolver) Agent(ctx context.Context, id string) (*model.Agent, error) {
+	cu := auth.FromContext(ctx)
+	if cu == nil {
+		return nil, gqlerror.Errorf("unauthenticated")
+	}
+	aid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, notFoundErr("agent")
+	}
+	// Apply the same visibility predicates as the agents list, then narrow by ID.
+	q := r.Ent.Agent.Query()
+	q = q.Where(r.agentVisibilityPredicates(ctx, cu)...)
+	q = q.Where(agent.IDEQ(aid))
+	a, err := q.Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, notFoundErr("agent")
+		}
+		return nil, err
+	}
+	// Pre-batch the agent's owner + virtual key into the request cache so
+	// field resolvers (Owner, APIKey, Credentials) don't N+1 for a single row.
+	r.primeAgentRelations(ctx, []*ent.Agent{a})
+	return toModelAgent(a), nil
+}
+
 // Agent returns AgentResolver implementation.
 func (r *Resolver) Agent() AgentResolver { return &agentResolver{r} }
 

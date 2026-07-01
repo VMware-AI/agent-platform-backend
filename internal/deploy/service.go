@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
@@ -78,9 +79,19 @@ type Result struct {
 // Provision issues a key, clones the agent VM from the OVA template, injects
 // cloud-init via guestinfo, and powers it on. On any step's failure it rolls
 // back the work already done so no orphan VM or gateway key is left (LLD-05 §3).
+//
+// DEV_NO_VCENTER: when set (e.g. "1" or "true"), skips all vCenter operations
+// and returns the issued key immediately. The agent row is created but the VM
+// does not exist. This is for frontend/UI development without a live vCenter.
 func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
-	if s.Gateway == nil || s.VCenter == nil {
-		return nil, fmt.Errorf("deploy: gateway and vcenter must be configured")
+	if s.Gateway == nil {
+		return nil, fmt.Errorf("deploy: gateway must be configured")
+	}
+	// Dev mode: vCenter is optional; gateway is always required.
+	if os.Getenv("DEV_NO_VCENTER") != "1" && os.Getenv("DEV_NO_VCENTER") != "true" {
+		if s.VCenter == nil {
+			return nil, fmt.Errorf("deploy: gateway and vcenter must be configured")
+		}
 	}
 	if req.VMName == "" || req.UserID == "" || req.Template == "" {
 		return nil, fmt.Errorf("deploy: template, vmName and userId are required")
@@ -100,6 +111,11 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 	})
 	if err != nil {
 		return nil, fmt.Errorf("deploy: issue key: %w", err)
+	}
+
+	// Dev mode: skip VM provisioning, return the key immediately.
+	if os.Getenv("DEV_NO_VCENTER") == "1" || os.Getenv("DEV_NO_VCENTER") == "true" {
+		return &Result{VirtualKey: key.Key, VirtualKeyToken: key.Token, VMName: req.VMName}, nil
 	}
 
 	// 2) Clone the agent VM from the OVA template, powered off so guestinfo is
