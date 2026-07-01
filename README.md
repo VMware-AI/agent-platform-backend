@@ -100,6 +100,11 @@ dev/prod 行为不同的用 ✅ / ⚠️ 标注。
 | `SECRETS_ENCRYPTION_KEY` | `openssl rand -hex 32` | **是**（任何环境） | AES-256-GCM 加密 `platform_secrets` 的密钥；SHA-256 派生到 32 字节；空 → 启动 fail-fast。**不支持轮换**：存储格式无 key-version 前缀，换密钥会让所有密文 GCM 校验失败。dev 用 `deploy/start_backend_*.sh` 首次运行自动生成并写到 `deploy/.secrets_encryption_key`（mode `0600`），prod 必须手动注入并离线备份。详见下方"凭据加密密钥"一节 |
 | `RECONCILE_INTERVAL_SECONDS` | `300` | 否（默认 `0`=关） | 网关 key 与治理表的对账周期；>0 且存在默认网关连接才生效 |
 | `RECONCILE_PRUNE` | `false` | 否 | `true` → 对账时删除孤儿/吊销陈旧行（默认只报告，drift-safe）。多副本下对账经 Postgres advisory lock 选主，仅单副本执行 prune（不会重复删） |
+| `POOL_SYNC_INTERVAL_SECONDS` | `3600`（60m） | 否 | 资源池后台同步周期；扫描所有有 `secret_ref` 的池子并过 timeout→retry→breaker 链。`0`=关闭后台 ticker（手动 `syncResourcePool` 或创建即同步仍可用）。详见 [ResourcePool 同步机制](#resourcepool-同步机制) |
+| `POOL_SYNC_TIMEOUT_SECONDS` | `30` | 否 | 单池同步全链（connect + inventory + full inventory + DB 写回）总超时；终端 vCenter 慢响应不会拖住整个 ticker。`0` 走 30s 兜底（防 `ctx(0)` 即过期） |
+| `POOL_SYNC_MAX_RETRIES` | `3` | 否 | 失败重试次数（不含首次尝试）；指数退避 1s/2s/4s + 25% jitter。仅 `*vcenter.RetryableError`（网络/超时/5xx 等）触发；鉴权失败、对象不存在等业务错误不重试。`0`=只试一次 |
+| `POOL_SYNC_BREAKER_THRESHOLD` | `5` | 否 | 同一 endpoint（vCenter）连续失败该次数后熔断器跳闸（per-endpoint，`sony/gobreaker`）。`0` 或负数 → 关闭熔断器层（仍走 timeout + retry）。任一 endpoint 跳闸只影响该 endpoint 的池子，不会污染其他 endpoint |
+| `POOL_SYNC_BREAKER_OPEN_SECONDS` | `60` | 否 | 熔断器 Open 态持续秒数；到期进 HalfOpen，放 1 个探测请求（`MaxRequests=1`）。Open 期请求立即返回 `ErrOpenState`，**不写 `status`**（避免被误标 error；其他健康端不受影响） |
 | `DB_MAX_OPEN_CONNS` | `20` | 否 | postgres 连接池上限；`0`=Go 默认无上限（多副本下可打爆 `max_connections`），按 `max_connections / 副本数` 调；仅 postgres |
 | `DB_MAX_IDLE_CONNS` | `10` | 否 | 连接池空闲连接上限（Go 默认 2，高并发下连接抖动）；仅 postgres |
 | `DB_CONN_MAX_LIFETIME_MINUTES` | `30` | 否 | 连接最大存活分钟数，`0`=不回收；配合故障转移 / PgBouncer；仅 postgres |
@@ -189,6 +194,29 @@ ALLOWED_ORIGINS=https://console.example.com \
 SECRETS_ENCRYPTION_KEY='<openssl rand -hex 32 生成的串>' \
 DB_AUTO_MIGRATE=false
 ```
+
+## ResourcePool 同步机制
+
+vCenter 资源池（`ResourcePool`）同步由 5 个 env 控制，三个入口（`CreateResourcePool` 的 fire-and-forget 首同步 / `SyncResourcePool` 手动 mutation / `StartAutoSync` 后台 ticker）**走同一条 `syncOnePool` 路径**，共用同一条容错链：
+
+```
+30s 单池超时（POOL_SYNC_TIMEOUT_SECONDS）
+  → 指数退避重试（POOL_SYNC_MAX_RETRIES 次，1s/2s/4s + jitter）
+    → per-endpoint 熔断器（POOL_SYNC_BREAKER_THRESHOLD 次连败 → Open POOL_SYNC_BREAKER_OPEN_SECONDS）
+```
+
+**入口自动启用**（`cmd/server/main.go`）：
+- 创建后立即 fire-and-forget 首同步（不等 ticker 跑）
+- `POOL_SYNC_INTERVAL_SECONDS > 0` 时启 ticker；`0` 关掉后台周期但手动 sync 仍可用
+- 熔断器层始终启用（`EnablePoolSync` 在 main 里无条件调）；单测里 `resolver` 默认未启用 → 跳过 breaker 层直接走 retry+timeout
+
+**`status` / `last_synced_at` 写入规则**（唯一写入点：`internal/graph/pool_sync_one.go`）：
+- 成功 → `status=connected` + `last_synced_at=now`
+- 真失败 → `status=error`，`last_synced_at` **保留**上次成功时间（前端能展示"上次成功 + 当前失败"）
+- 熔断器 Open → **不写** `status`，下次 ticker / 手动 sync 自动探测恢复
+- `updateResourcePool` 改名字/凭据 → 不重置同步状态
+
+完整状态机、`syncStatus` 派生逻辑、修改入口时的不变量清单见 [internal/RESOURCE_POOL.md](internal/RESOURCE_POOL.md)。
 
 ## 状态（M1，70 测试全绿）
 
