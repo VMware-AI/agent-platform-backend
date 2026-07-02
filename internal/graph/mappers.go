@@ -51,9 +51,9 @@ func toModelResourcePool(p *ent.ResourcePool) *model.ResourcePool {
 }
 
 // toModelDataCenters converts ent inventory (vcenter.DataCenter) into the
-// GraphQL model. StoragePolicies uses toModelPlacementRefsPtr so a nil
-// source list (PBM pull failed) maps to GraphQL null, distinguishing it
-// from an empty list (PBM pull succeeded but the vCenter has no profiles).
+// GraphQL model. StoragePolicies is a plain non-null list — a failed PBM
+// pull and "no profiles" both map to [] (schema contract; see #98 for the
+// nullable variant if the console ever needs the distinction).
 func toModelDataCenters(jsonVal []vcenter.DataCenter) []model.DataCenter {
 	out := make([]model.DataCenter, 0, len(jsonVal))
 	for _, dc := range jsonVal {
@@ -94,18 +94,6 @@ func toModelPlacementRefs(jsonVal []vcenter.PlacementRef) []model.PlacementRef {
 		out = append(out, ref)
 	}
 	return out
-}
-
-// toModelPlacementRefsPtr preserves the nil vs [] distinction for fields
-// that need to tell the frontend "never pulled" apart from "pulled but empty".
-// When source == nil, returns nil (GraphQL null). When source is a (possibly
-// empty) slice, returns a pointer to a non-nil slice.
-func toModelPlacementRefsPtr(jsonVal []vcenter.PlacementRef) *[]model.PlacementRef {
-	if jsonVal == nil {
-		return nil
-	}
-	refs := toModelPlacementRefs(jsonVal)
-	return &refs
 }
 
 // poolSyncState derives the console's inventory-sync state: never synced → NEVER;

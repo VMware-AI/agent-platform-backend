@@ -152,9 +152,13 @@ func (r *Resolver) syncOnePool(ctx context.Context, pool *ent.ResourcePool) (*en
 		}
 		log.Printf("pool-sync [%s] pool=%s: FAILED err=%q total_elapsed=%s -> status=error",
 			source, poolName, err, time.Since(start))
-		_, _ = r.Ent.ResourcePool.UpdateOne(pool).
+		// Best-effort status write, but never silently: if even this errors the
+		// row keeps its stale status and the operator should know why (#98).
+		if _, werr := r.Ent.ResourcePool.UpdateOne(pool).
 			SetStatus(resourcepool.StatusError).
-			Save(context.Background())
+			Save(context.Background()); werr != nil {
+			log.Printf("pool-sync [%s] pool=%s: status=error write failed: %v", source, poolName, werr)
+		}
 		return nil, time.Time{}, err
 	}
 

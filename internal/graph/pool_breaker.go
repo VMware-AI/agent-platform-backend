@@ -35,7 +35,11 @@ func newPoolBreakerRegistry(threshold uint32, openSec int) *poolBreakerRegistry 
 			Interval:    0,   // no rolling window — counts are absolute since Open
 			Timeout:     time.Duration(openSec) * time.Second,
 			ReadyToTrip: func(c gobreaker.Counts) bool {
-				return c.ConsecutiveFailures >= threshold
+				// threshold 0 = breaker disabled (config doc: "zero or negative
+				// disables"). Guard explicitly: ConsecutiveFailures >= 0 is
+				// vacuously true, so an unguarded 0 would be the MOST aggressive
+				// setting (trip on first failure) — the inverse of the doc (#98).
+				return threshold > 0 && c.ConsecutiveFailures >= threshold
 			},
 			OnStateChange: func(name string, from, to gobreaker.State) {
 				log.Printf("pool-sync breaker %s: %s → %s", name, from, to)
