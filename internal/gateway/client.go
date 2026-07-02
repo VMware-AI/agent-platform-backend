@@ -508,6 +508,12 @@ func redactSecrets(body string) string {
 		{"sk-test-", " \"}`,\n\t"},
 		{"sk-local-", " \"}`,\n\t"},
 		{"Bearer ", " \"}`,\n\t"},
+		// Bare "sk-" LAST (#95): litellm-issued virtual keys carry no named
+		// prefix (just "sk-<random>") and 4xx bodies echo the request key, so
+		// without this entry those keys reached the logs unredacted. Running
+		// after the longer prefixes, the sentinel guard in replaceTokens keeps
+		// their already-redacted output intact.
+		{"sk-", " \"}`,\n\t"},
 	}
 	for _, p := range patterns {
 		body = replaceTokens(body, p.prefix, p.stop)
@@ -531,6 +537,14 @@ func replaceTokens(s, prefix, stop string) string {
 			return out.String()
 		}
 		j += i
+		// A key boundary is preceded by whitespace/punctuation, never by a
+		// word byte — skip matches embedded in longer words ("task-", "desk-")
+		// so the bare "sk-" pattern doesn't mangle ordinary log text.
+		if j > 0 && isWordByte(s[j-1]) {
+			out.WriteString(s[i : j+len(prefix)])
+			i = j + len(prefix)
+			continue
+		}
 		// Copy everything up to and INCLUDING the prefix.
 		out.WriteString(s[i : j+len(prefix)])
 		// Skip the token (prefix+1 onwards), emit [REDACTED].
@@ -538,9 +552,23 @@ func replaceTokens(s, prefix, stop string) string {
 		for k < len(s) && !strings.ContainsRune(stop, rune(s[k])) {
 			k++
 		}
-		out.WriteString("[REDACTED]")
+		// Already handled by an earlier, longer-prefix pass (e.g. the bare
+		// "sk-" pass seeing "sk-live-[REDACTED]"): keep that output verbatim
+		// instead of re-consuming the sentinel. Safe because real keys are
+		// alphanumeric and can never contain "[REDACTED]".
+		if tok := s[j+len(prefix) : k]; strings.HasSuffix(tok, "[REDACTED]") {
+			out.WriteString(tok)
+		} else {
+			out.WriteString("[REDACTED]")
+		}
 		i = k
 	}
+}
+
+// isWordByte reports whether b can appear inside an ordinary word — used to
+// reject secret-prefix matches that are really the tail of a longer token.
+func isWordByte(b byte) bool {
+	return b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z' || b >= '0' && b <= '9' || b == '_'
 }
 
 // --- circuit breaker ---
