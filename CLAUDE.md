@@ -15,7 +15,7 @@
 
 ## 2. CI gate 不得绕过(重要)
 
-**主干当前**若重跑 `gofmt -l .` 与 `migration-drift` 会**红**(`ent/migrate/schema.go` 生成物 vs committed 迁移漂移 + 部分网关文件非 gofmt 规范)—— 说明近期有合并未过这两道 gate。任何基于该主干的新 PR 都会被动继承、踩坑。
+(2026-07-02 更新:主干 gate 已恢复全绿 —— 此前「gofmt / migration-drift 重跑即红」的漂移已修复。保持它绿:)
 
 - **gate 红就修,不得强合 / 绕过。** 合并前确认目标分支 CI 全绿。
 - 改 ent schema **必过 `migration-drift`**:用 `make migrate-diff name=<x>`(ent SDK 生成)出迁移,**别手写、别删 gate 要的 ALTER**(手改会与 schema.go 生成物不一致 → CI 再生成漂移)。
