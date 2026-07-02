@@ -1,0 +1,27 @@
+name: Test (weekly)
+
+# Go tests are NOT part of the merge gate (CLAUDE.md §1: not actively
+# maintained during dev). They do not run on push/PR — no CI minutes per
+# commit and nothing is blocked. Instead they run:
+#   - weekly, so the maintainer's test round has fresh results, and
+#   - on demand via the "Run workflow" button (workflow_dispatch).
+# Scheduled runs execute against the default branch (main).
+#
+# Note: the suite runs without the postgres service (mirrors the old build-test
+# job, which had no DB) — tests use the in-memory/sqlite dev path.
+on:
+  schedule:
+    - cron: '0 1 * * 1' # Mondays 01:00 UTC
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+      - name: test
+        run: go test ./... -count=1
