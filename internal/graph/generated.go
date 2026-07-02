@@ -5167,15 +5167,15 @@ extend type Mutation {
   setAgentStatus(id: ID!, status: AgentStatus!): Agent!
 
   # Agent config management (智能体配置).
-  createAgentConfig(input: CreateAgentConfigInput!): AgentConfig! @hasRole(any: [admin, tenant_admin])
-  updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig! @hasRole(any: [admin, tenant_admin])
-  deleteAgentConfig(id: ID!): Boolean! @hasRole(any: [admin, tenant_admin])
+  createAgentConfig(input: CreateAgentConfigInput!): AgentConfig! @hasRole(any: [admin])
+  updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig! @hasRole(any: [admin])
+  deleteAgentConfig(id: ID!): Boolean! @hasRole(any: [admin])
   # Mark this config the default for its agent type (unsets others of that type).
-  setDefaultAgentConfig(id: ID!): AgentConfig! @hasRole(any: [admin, tenant_admin])
+  setDefaultAgentConfig(id: ID!): AgentConfig! @hasRole(any: [admin])
   # Replace the config's mounted OKF knowledge packs (LLD-11 K2). Each id must be a
   # kind=knowledge artifact visible to the caller's tenant; the set is replaced wholesale.
   setAgentConfigKnowledge(configId: ID!, knowledgeArtifactIds: [ID!]!): AgentConfig!
-    @hasRole(any: [admin, tenant_admin])
+    @hasRole(any: [admin])
 }
 `, BuiltIn: false},
 	{Name: "../../schema/content.graphql", Input: `# Content lib (制品库) / Skill hub / Harbor (镜像仓) CRUD. See LLD-06.
@@ -16427,7 +16427,7 @@ func (ec *executionContext) _Mutation_createAgentConfig(ctx context.Context, fie
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.AgentConfig
 					return zeroVal, err
@@ -16489,7 +16489,7 @@ func (ec *executionContext) _Mutation_updateAgentConfig(ctx context.Context, fie
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.AgentConfig
 					return zeroVal, err
@@ -16551,7 +16551,7 @@ func (ec *executionContext) _Mutation_deleteAgentConfig(ctx context.Context, fie
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal bool
 					return zeroVal, err
@@ -16613,7 +16613,7 @@ func (ec *executionContext) _Mutation_setDefaultAgentConfig(ctx context.Context,
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.AgentConfig
 					return zeroVal, err
@@ -16675,7 +16675,7 @@ func (ec *executionContext) _Mutation_setAgentConfigKnowledge(ctx context.Contex
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin", "tenant_admin"})
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
 				if err != nil {
 					var zeroVal *model.AgentConfig
 					return zeroVal, err

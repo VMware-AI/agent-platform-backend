@@ -143,8 +143,16 @@ func main() {
 		AgentMgr:        agentMgr,
 		ControlPlaneURL: os.Getenv("CONTROL_PLANE_URL"),
 		EnvScopeEnabled: cfg.EnvScopeEnabled,
-		Gateway:         gateway.NewMockClient(),
-		GatewayURL:      "http://localhost:4000",
+	}
+	// DEV_MOCK_GATEWAY: local-dev shortcut only. Injecting the mock unconditionally
+	// would silently issue fake sk-mock- keys (and mark deploys successful) whenever
+	// no DB gateway is configured, and reconcile with Prune could revoke real keys
+	// against the mock's view. Default stays nil: resolvers fail fast with "gateway
+	// not configured" and resolve real gateways per department from the DB (LLD-13).
+	if v := os.Getenv("DEV_MOCK_GATEWAY"); v == "1" || v == "true" {
+		resolver.Gateway = gateway.NewMockClient()
+		resolver.GatewayURL = "http://localhost:4000"
+		log.Printf("DEV_MOCK_GATEWAY=1: using in-memory mock LiteLLM gateway (dev only)")
 	}
 	resolver.EnablePoolSync(
 		time.Duration(cfg.PoolSyncTimeoutSeconds)*time.Second,

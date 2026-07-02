@@ -32,7 +32,7 @@ agentConfigs(agentType: String): [AgentConfig!]!
 
 ### `agents`
 
-Admin sees all agents; tenant-admin their tenant; a regular user only their own (owner scope). Paged/filtered/sorted connection (前后端整合契约).
+Admin + read_only see all agents; a regular user only their own (owner scope). Paged/filtered/sorted connection (前后端整合契约).
 
 ```graphql
 agents(filter: AgentFilter, pagination: Pagination, sort: AgentSort): AgentConnection!
@@ -49,7 +49,7 @@ agents(filter: AgentFilter, pagination: Pagination, sort: AgentSort): AgentConne
 
 ### `agent`
 
-Single-agent detail. Owner or admin; follows the same three-track visibility as the agents list (admin→all, tenant-admin→their tenant, user→own agents only).
+Single-agent detail. Follows the same three-track visibility as the agents list (admin/read_only→all, user→own agents only).
 
 ```graphql
 agent(id: ID!): Agent!
@@ -177,7 +177,7 @@ createAgentConfig(input: CreateAgentConfigInput!): AgentConfig!
 ```
 
 - **Returns:** `AgentConfig!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -190,7 +190,7 @@ updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig!
 ```
 
 - **Returns:** `AgentConfig!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -204,7 +204,7 @@ deleteAgentConfig(id: ID!): Boolean!
 ```
 
 - **Returns:** `Boolean!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -219,7 +219,7 @@ setDefaultAgentConfig(id: ID!): AgentConfig!
 ```
 
 - **Returns:** `AgentConfig!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -234,7 +234,7 @@ setAgentConfigKnowledge(configId: ID!, knowledgeArtifactIds: [ID!]!): AgentConfi
 ```
 
 - **Returns:** `AgentConfig!`
-- **Auth:** `@hasRole(any: [admin, tenant_admin])`
+- **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
