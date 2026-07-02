@@ -1,4 +1,4 @@
-h1:V9IW77sRmNQCTODAxr0L47LNK8VicF0GrdsYBK/3FAI=
+h1:ZFLSVjm7wIBZ8ftUrP5LjkKuY9De234LrARP/u/UYH4=
 20260621044227_baseline_plus_litellm_token.sql h1:iTLsV8voIrOm1TU0ohXku2Sn672dmDPkVUicQlsmrjc=
 20260621074547_artifact_inline_content.sql h1:BhzEiRK7nBOEHupwNzk4+8QNVVUNPeUGG8O2rdIggus=
 20260621083202_agent_enrollment_heartbeat_rotation.sql h1:uC4TghDghqOt+HWyFcrDzPjKgX8lvqKSr89l9k45GH0=
@@ -23,3 +23,4 @@ h1:V9IW77sRmNQCTODAxr0L47LNK8VicF0GrdsYBK/3FAI=
 20260629024727_vk_gateway_connection_id.sql h1:4G6f6571JCa6lIDzET9/K0o7H8jR81+niSX2g2+VDe0=
 20260630150503_platform_secrets.sql h1:IPPnOfDylN9KStteT7r9JM9sjuy6fOaTKxeWsDgn8pI=
 20260701144725_resourcepool_inventory.sql h1:pdhyHyeij34FtZheP507idAki7fKBKKe6csfwGHzshY=
+20260702160000_backfill_strategy_enum_case.sql h1:eaFDNdJYW+XZIp497+0EcBgBgHmGKNMUapd0Q97kNBo=
