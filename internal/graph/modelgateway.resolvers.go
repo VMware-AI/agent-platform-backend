@@ -115,7 +115,11 @@ func (r *mutationResolver) SyncModelGatewayConnection(ctx context.Context, id st
 	if err != nil {
 		return nil, err
 	}
-	r.beginSync(g.ID)
+	// Capture the id before applyGatewayTestResult reassigns g: on failure it
+	// returns (nil, err), and endSync(g.ID) would nil-deref AND leave the
+	// inflight entry stuck, showing this gateway as SYNCING until restart.
+	gwID := g.ID
+	r.beginSync(gwID)
 
 	mgr := r.buildGatewayModels(ctx, g)
 	status, strategy := probeGatewayConnection(ctx, mgr)
@@ -126,9 +130,10 @@ func (r *mutationResolver) SyncModelGatewayConnection(ctx context.Context, id st
 	}
 
 	g, err = r.applyGatewayTestResult(ctx, g, status, cntArg, strategy)
-	// Clear the SYNCING overlay BEFORE returning so the post-sync projection
-	// reflects the freshly-written row state, not the in-flight placeholder.
-	r.endSync(g.ID)
+	// Clear the SYNCING overlay BEFORE returning (on BOTH paths) so the
+	// post-sync projection reflects the freshly-written row state, not the
+	// in-flight placeholder.
+	r.endSync(gwID)
 	if err != nil {
 		return nil, err
 	}
