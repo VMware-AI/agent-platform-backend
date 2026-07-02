@@ -194,6 +194,11 @@ type Cluster struct {
 	ResourcePools []PlacementRef `json:"resourcePools"`
 }
 
+type ContentLibraryItem struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+
 type CreateAgentConfigInput struct {
 	Name       string  `json:"name"`
 	AgentType  string  `json:"agentType"`
@@ -379,6 +384,7 @@ type DeployAgentInput struct {
 	TargetResourcePool *string  `json:"targetResourcePool,omitempty"`
 	Hostname           *string  `json:"hostname,omitempty"`
 	MaxBudget          *float64 `json:"maxBudget,omitempty"`
+	TargetNetwork      *string  `json:"targetNetwork,omitempty"`
 }
 
 type DeployedAgent struct {
@@ -1017,6 +1023,13 @@ type VirtualKey struct {
 	Status            VirtualKeyStatus `json:"status"`
 	ExpiresAt         *time.Time       `json:"expiresAt,omitempty"`
 	CreatedAt         time.Time        `json:"createdAt"`
+}
+
+type VsphereNetwork struct {
+	Name    string `json:"name"`
+	Path    string `json:"path"`
+	Type    string `json:"type"`
+	DvsName string `json:"dvsName"`
 }
 
 type VsphereResourcePool struct {

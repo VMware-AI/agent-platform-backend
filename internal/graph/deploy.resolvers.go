@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/rotationcommand"
@@ -17,6 +18,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/deploy"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
+	_ "github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
@@ -57,17 +59,18 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		return nil, fmt.Errorf("create agent: %w", err)
 	}
 
+	devNoVC := os.Getenv("DEV_NO_VCENTER") == "1" || os.Getenv("DEV_NO_VCENTER") == "true"
+
+	if devNoVC {
+		return r.devDeployAgent(ctx, ag, t)
+	}
+
 	conn, err := r.VCenterConnect(ctx, t.pool.Endpoint, t.cred.Username, t.cred.Password, t.pool.Insecure)
 	if err != nil {
 		r.deleteAgentRow(ctx, ag)
 		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
 		return nil, fmt.Errorf("connect vcenter: %w", err)
 	}
-	// Release the vCenter session on return — every sibling resolver (recycle,
-	// snapshot, revert, vmTemplates, vsphereResourcePools, agentSnapshots) does
-	// this. Without it each deploy leaks a session until vCenter's per-user
-	// session limit is hit and all subsequent deploy/sync/snapshot calls fail at
-	// connect. Provision uses conn synchronously, so releasing on return is safe.
 	defer func() { _ = conn.Logout(ctx) }()
 
 	// Resolve the agent's inline default_config (agent→config→artifact.content)
@@ -113,6 +116,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		// no resource pool; specify resourcePool"). Empty = inherit the source's
 		// pool (only valid when the source is a regular VM, e.g. vcsim).
 		ResourcePool:     derefString(input.TargetResourcePool),
+		Network:          derefString(input.TargetNetwork),
 		Hostname:         derefString(input.Hostname),
 		MaxBudget:        input.MaxBudget,
 		DefaultConfig:    defaultConfig,
@@ -435,6 +439,42 @@ func (r *queryResolver) VsphereResourcePools(ctx context.Context, resourcePoolID
 	out := make([]model.VsphereResourcePool, 0, len(pools))
 	for _, p := range pools {
 		out = append(out, model.VsphereResourcePool{Name: p.Name, Path: p.Path})
+	}
+	return out, nil
+}
+
+// VsphereNetworks lists all networks/portgroups in a platform resource pool's
+// vCenter, powering the deploy form's NIC/portgroup picker. Admin-only.
+func (r *queryResolver) VsphereNetworks(ctx context.Context, resourcePoolID string) ([]model.VsphereNetwork, error) {
+	cu := auth.FromContext(ctx)
+	if cu == nil || cu.Role != auth.RoleAdmin {
+		return nil, gqlerror.Errorf("forbidden: admin only")
+	}
+	poolID, err := uuid.Parse(resourcePoolID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid resourcePoolId")
+	}
+	pool, err := r.Ent.ResourcePool.Get(ctx, poolID)
+	if err != nil {
+		return nil, err
+	}
+	conn, err := r.connectPool(ctx, pool)
+	if err != nil {
+		return nil, fmt.Errorf("connect vcenter: %w", err)
+	}
+	defer func() { _ = conn.Logout(ctx) }()
+	nets, err := conn.ListNetworks(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list networks: %w", err)
+	}
+	out := make([]model.VsphereNetwork, 0, len(nets))
+	for _, n := range nets {
+		out = append(out, model.VsphereNetwork{
+			Name:    n.Name,
+			Path:    n.Path,
+			Type:    n.Type,
+			DvsName: n.DVSName,
+		})
 	}
 	return out, nil
 }

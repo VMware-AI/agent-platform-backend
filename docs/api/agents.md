@@ -47,6 +47,21 @@ agents(filter: AgentFilter, pagination: Pagination, sort: AgentSort): AgentConne
 | `pagination` | `Pagination` | no | — |
 | `sort` | `AgentSort` | no | — |
 
+### `agent`
+
+Single-agent detail. Follows the same three-track visibility as the agents list (admin/read_only→all, user→own agents only).
+
+```graphql
+agent(id: ID!): Agent!
+```
+
+- **Returns:** `Agent!`
+- **Auth:** authenticated (no directive)
+
+| Argument | Type | Required | Default |
+|----------|------|----------|---------|
+| `id` | `ID!` | yes | — |
+
 ### `vmTemplates`
 
 List OVA templates in a resource pool's vCenter (powers the deploy form).
@@ -71,6 +86,21 @@ vsphereResourcePools(resourcePoolId: ID!): [VsphereResourcePool!]!
 ```
 
 - **Returns:** `[VsphereResourcePool!]!`
+- **Auth:** `@hasRole(any: [admin])`
+
+| Argument | Type | Required | Default |
+|----------|------|----------|---------|
+| `resourcePoolId` | `ID!` | yes | — |
+
+### `vsphereNetworks`
+
+List all networks/portgroups in a platform resource pool's vCenter. Powers the deploy form's NIC/portgroup picker. Admin-only.
+
+```graphql
+vsphereNetworks(resourcePoolId: ID!): [VsphereNetwork!]!
+```
+
+- **Returns:** `[VsphereNetwork!]!`
 - **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |
@@ -435,6 +465,19 @@ An OVA template VM available to clone agents from.
 | `name` | `String!` | — |
 | `uuid` | `String!` | — |
 
+### VsphereNetwork
+
+*Object*
+
+A network/portgroup available to the deploy form's NIC picker. type is "standard" (vSwitch portgroup) or "distributed" (dvPortgroup). dvsName is the parent distributed switch name; empty for standard portgroups.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `String!` | — |
+| `path` | `String!` | — |
+| `type` | `String!` | — |
+| `dvsName` | `String!` | — |
+
 ### VsphereResourcePool
 
 *Object*
@@ -503,6 +546,7 @@ A vCenter resource pool offered as a placement target for the cloned VM. A true 
 | `targetResourcePool` | `String` | Optional vSphere resource-pool name to place the VM clone in. A true OVA template has NO source resource pool, so vCenter's CloneFromTemplate requires an explicit placement pool for real deploys ("source has no resource pool; specify resourcePool"). Empty = inherit the source template's pool (only works when the source is a regular VM, e.g. vcsim). Optional to keep the contract backward-compatible. |
 | `hostname` | `String` | Optional cloud-init hostname for the VM (defaults to none). |
 | `maxBudget` | `Float` | Optional per-key spend cap handed to the gateway when issuing the agent's key. |
+| `targetNetwork` | `String` | Optional target network/portgroup path for the agent VM's NIC. Matches VsphereNetwork.path. "" = keep the source template's NIC mapping. |
 
 ### Pagination
 

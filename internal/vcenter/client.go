@@ -119,6 +119,7 @@ type CloneSpec struct {
 	ResourcePool string // target pool; "" = datacenter default
 	Datastore    string // target datastore; "" = inherit from source
 	Folder       string // target VM folder; "" = datacenter VM folder
+	Network      string // target network (standard portgroup or dvPortgroup); "" = keep the source template's NIC mapping unchanged
 }
 
 // CloneFromTemplate clones a template VM into a new agent VM and returns its
@@ -170,6 +171,16 @@ func (c *Client) CloneFromTemplate(ctx context.Context, spec CloneSpec) (*VMInfo
 	folder, err := c.cloneFolder(ctx, finder, dc, spec.Folder)
 	if err != nil {
 		return nil, err
+	}
+	// Remap the first NIC to the requested network/portgroup (optional).
+	if spec.Network != "" {
+		netDev, err := c.buildNetworkDevice(ctx, src, spec.Network)
+		if err != nil {
+			return nil, err
+		}
+		if netDev != nil {
+			relocate.DeviceChange = append(relocate.DeviceChange, netDev)
+		}
 	}
 	task, err := src.Clone(ctx, folder, spec.Name, types.VirtualMachineCloneSpec{
 		Location: relocate,
@@ -544,4 +555,120 @@ func containsCI(s, needle string) bool {
 		}
 	}
 	return false
+}
+
+// NetworkInfo describes a network/portgroup available to the deploy form.
+// Type is "standard" for standard vSwitch portgroups, "distributed" for dvPort
+// groups. DVSName is the parent distributed switch name (empty for standard).
+//
+// Path is the managed-object reference string (e.g. "Network:network-12"), NOT a
+// human path: it is the opaque identifier the deploy form sends back as
+// targetNetwork and the ONLY value that resolves a network unambiguously.
+// Same-named standard portgroups on different hosts are distinct Network MOs, so a
+// name/inventory-path would be ambiguous (find.MultipleFoundError); the moref is
+// unique. Name/Type/DVSName are for display.
+type NetworkInfo struct {
+	Name    string
+	Path    string
+	Type    string // "standard" | "distributed"
+	DVSName string
+}
+
+// ListNetworks enumerates standard portgroups and dvPortgroups visible in all
+// datacenters of this vCenter. Used to populate the network picker in the deploy
+// form so operators can pick the correct segment for the agent VM's NIC.
+func (c *Client) ListNetworks(ctx context.Context) ([]NetworkInfo, error) {
+	m := view.NewManager(c.vc.Client)
+	// Create a container view over Network objects (covers both standard portgroups
+	// and dvPortgroup). A flat container at the root captures all datacenters.
+	cv, err := m.CreateContainerView(ctx, c.vc.ServiceContent.RootFolder,
+		[]string{"Network", "DistributedVirtualPortgroup"}, true)
+	if err != nil {
+		return nil, fmt.Errorf("vcenter: create network container view: %w", err)
+	}
+	defer func() { _ = cv.Destroy(ctx) }()
+
+	// Retrieve standard Network objects.
+	var stdNets []mo.Network
+	if err := cv.Retrieve(ctx, []string{"Network"}, []string{"name"}, &stdNets); err != nil {
+		return nil, fmt.Errorf("vcenter: retrieve networks: %w", err)
+	}
+
+	// Retrieve dvPortgroup objects (includes parent DVS name via config.distributedVirtualSwitch).
+	var dvPGs []mo.DistributedVirtualPortgroup
+	if err := cv.Retrieve(ctx, []string{"DistributedVirtualPortgroup"},
+		[]string{"name", "config"}, &dvPGs); err != nil {
+		return nil, fmt.Errorf("vcenter: retrieve dvportgroups: %w", err)
+	}
+
+	out := make([]NetworkInfo, 0, len(stdNets)+len(dvPGs))
+	for _, n := range stdNets {
+		out = append(out, NetworkInfo{
+			Name: n.Name,
+			Path: n.Self.String(), // moref — the unambiguous, resolvable identifier
+			Type: "standard",
+		})
+	}
+	for _, pg := range dvPGs {
+		dvsName := ""
+		if pg.Config.DistributedVirtualSwitch != nil {
+			dvsName = pg.Config.DistributedVirtualSwitch.Value
+		}
+		out = append(out, NetworkInfo{
+			Name:    pg.Name,
+			Path:    pg.Self.String(), // moref — see standard case
+			Type:    "distributed",
+			DVSName: dvsName,
+		})
+	}
+	return out, nil
+}
+
+// buildNetworkDevice constructs a VirtualDeviceConfigSpec that replaces the
+// source template's first NIC with the requested network (standard portgroup or
+// dvPortgroup). Returns nil when the source VM has no NIC (no-op).
+func (c *Client) buildNetworkDevice(ctx context.Context, src *object.VirtualMachine, networkID string) (*types.VirtualDeviceConfigSpec, error) {
+	var mvm mo.VirtualMachine
+	if err := src.Properties(ctx, src.Reference(), []string{"config.hardware.device"}, &mvm); err != nil {
+		return nil, fmt.Errorf("vcenter: read source devices: %w", err)
+	}
+
+	// Find the first ethernet card in the source.
+	var srcNIC types.BaseVirtualEthernetCard
+	for _, dev := range mvm.Config.Hardware.Device {
+		if nic, ok := dev.(types.BaseVirtualEthernetCard); ok {
+			srcNIC = nic
+			break
+		}
+	}
+	if srcNIC == nil {
+		return nil, nil // no NIC to remap
+	}
+
+	// Resolve the target network by its managed-object reference (networkID is the
+	// moref string from ListNetworks). Resolving by moref is unambiguous; resolving
+	// by bare name would hit find.MultipleFoundError when same-named standard
+	// portgroups exist on multiple hosts, failing the clone mid-flight.
+	var ref types.ManagedObjectReference
+	if !ref.FromString(networkID) {
+		return nil, fmt.Errorf("vcenter: invalid network reference %q", networkID)
+	}
+	net, ok := object.NewReference(c.vc.Client, ref).(object.NetworkReference)
+	if !ok {
+		return nil, fmt.Errorf("vcenter: %q is not a network", networkID)
+	}
+	backing, err := net.EthernetCardBackingInfo(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("vcenter: network backing %q: %w", networkID, err)
+	}
+
+	// Clone the source NIC and swap its backing.
+	dev := srcNIC.GetVirtualEthernetCard()
+	dev.Backing = backing
+	dev.DeviceInfo = nil // clear label so vCenter auto-assigns
+
+	return &types.VirtualDeviceConfigSpec{
+		Operation: types.VirtualDeviceConfigSpecOperationEdit,
+		Device:    srcNIC.(types.BaseVirtualDevice),
+	}, nil
 }

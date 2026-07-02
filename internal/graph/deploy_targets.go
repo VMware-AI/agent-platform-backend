@@ -7,8 +7,10 @@ package graph
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
+	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
@@ -44,7 +46,8 @@ type deployTargets struct {
 // input. It writes nothing. The check order is preserved verbatim so the same
 // error fires first for the same input.
 func (r *mutationResolver) resolveDeployTargets(ctx context.Context, input model.DeployAgentInput) (*deployTargets, error) {
-	if r.Secrets == nil || r.VCenterConnect == nil {
+	devNoVC := os.Getenv("DEV_NO_VCENTER")
+	if r.Secrets == nil || (r.VCenterConnect == nil && devNoVC != "1" && devNoVC != "true") {
 		return nil, gqlerror.Errorf("deploy is not configured (secrets/vcenter required)")
 	}
 	if input.Name == "" {
@@ -152,5 +155,70 @@ func (r *mutationResolver) resolveDeployTargets(ctx context.Context, input model
 		pool:         pool,
 		cred:         cred,
 		tenantID:     tenantID,
+	}, nil
+}
+
+// devDeployAgent handles deployAgent in DEV_NO_VCENTER mode.
+// It issues a gateway key, persists the VirtualKey, marks the agent RUNNING,
+// and returns the frontend payload — all without touching vCenter.
+func (r *mutationResolver) devDeployAgent(ctx context.Context, ag *ent.Agent, t *deployTargets) (*model.DeployedAgent, error) {
+	cu := auth.FromContext(ctx)
+	key, err := t.gw.GenerateKey(ctx, gateway.GenerateKeyRequest{
+		UserID:   ag.OwnerUserID.String(),
+		TeamID:   t.deployTeamID,
+		Models:   []string{gateway.DefaultRouterModel},
+		Metadata: map[string]string{"agent": ag.Name},
+	})
+	if err != nil {
+		r.deleteAgentRow(ctx, ag)
+		return nil, fmt.Errorf("dev deploy: issue key: %w", err)
+	}
+
+	vkCreate := r.Ent.VirtualKey.Create().
+		SetLitellmKey(key.Key).
+		SetUserID(ag.OwnerUserID).
+		SetModels([]string{gateway.DefaultRouterModel}).
+		SetAlias(ag.Name)
+	if t.deployTeamID != "" {
+		vkCreate.SetTeamID(t.deployTeamID)
+	}
+	if key.Token != "" {
+		vkCreate.SetLitellmToken(key.Token)
+	}
+	vk, err := vkCreate.Save(ctx)
+	if err != nil {
+		_ = t.gw.DeleteKey(context.WithoutCancel(ctx), key.Key)
+		r.deleteAgentRow(ctx, ag)
+		return nil, fmt.Errorf("dev deploy: save key: %w", err)
+	}
+
+	updated, err := r.Ent.Agent.UpdateOne(ag).
+		SetStatus(agent.StatusRunning).
+		SetVirtualKeyID(vk.ID).
+		Save(ctx)
+	if err != nil {
+		_ = t.gw.DeleteKey(context.WithoutCancel(ctx), key.Key)
+		_ = r.Ent.VirtualKey.DeleteOne(vk).Exec(context.WithoutCancel(ctx))
+		r.deleteAgentRow(ctx, ag)
+		return nil, fmt.Errorf("dev deploy: set running: %w", err)
+	}
+
+	r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), true, cu.ID)
+	r.primeAgentRelations(ctx, []*ent.Agent{updated})
+
+	dag := toModelAgent(updated)
+	return &model.DeployedAgent{
+		Agent:            dag,
+		VirtualKeySecret: key.Key,
+		TemplateVersion: &model.OvaTemplateVersion{
+			ID:            t.versionID.String(),
+			FamilyID:      t.familyID.String(),
+			Version:       t.version.Version,
+			OvaIdentifier: t.version.OvaIdentifier,
+		},
+		ResourcePool: &model.ResourcePool{
+			ID:   t.poolID.String(),
+			Name: t.pool.Name,
+		},
 	}, nil
 }

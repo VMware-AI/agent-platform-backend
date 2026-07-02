@@ -193,6 +193,11 @@ type ComplexityRoot struct {
 		ResourcePools func(childComplexity int) int
 	}
 
+	ContentLibraryItem struct {
+		Name func(childComplexity int) int
+		Type func(childComplexity int) int
+	}
+
 	CreateOvaTemplateFamilyPayload struct {
 		Family func(childComplexity int) int
 	}
@@ -566,6 +571,7 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
+		Agent                   func(childComplexity int, id string) int
 		AgentConfigs            func(childComplexity int, agentType *string) int
 		AgentSnapshots          func(childComplexity int, agentID string) int
 		AgentTemplates          func(childComplexity int) int
@@ -573,6 +579,8 @@ type ComplexityRoot struct {
 		ArtifactVersions        func(childComplexity int, name string) int
 		Artifacts               func(childComplexity int, kind *model.ArtifactKind) int
 		AuditLogs               func(childComplexity int, filter *model.AuditFilter, page *model.PageInput) int
+		ContentLibraries        func(childComplexity int, resourcePoolID string) int
+		ContentLibraryItems     func(childComplexity int, resourcePoolID string, libraryName string) int
 		CustomRoles             func(childComplexity int) int
 		DashboardOverview       func(childComplexity int, recentLimit *int, noticeLimit *int) int
 		DepartmentMembers       func(childComplexity int, departmentID string) int
@@ -605,6 +613,7 @@ type ComplexityRoot struct {
 		Users                   func(childComplexity int, filter *model.UserFilter, pagination *model.Pagination, sort *model.UserSort) int
 		VMTemplates             func(childComplexity int, resourcePoolID string) int
 		VirtualKeys             func(childComplexity int, userID *string) int
+		VsphereNetworks         func(childComplexity int, resourcePoolID string) int
 		VsphereResourcePools    func(childComplexity int, resourcePoolID string) int
 	}
 
@@ -797,6 +806,13 @@ type ComplexityRoot struct {
 		UserID            func(childComplexity int) int
 	}
 
+	VsphereNetwork struct {
+		DvsName func(childComplexity int) int
+		Name    func(childComplexity int) int
+		Path    func(childComplexity int) int
+		Type    func(childComplexity int) int
+	}
+
 	VsphereResourcePool struct {
 		Name func(childComplexity int) int
 		Path func(childComplexity int) int
@@ -910,6 +926,7 @@ type QueryResolver interface {
 	AgentTemplates(ctx context.Context) ([]model.AgentTemplate, error)
 	AgentConfigs(ctx context.Context, agentType *string) ([]model.AgentConfig, error)
 	Agents(ctx context.Context, filter *model.AgentFilter, pagination *model.Pagination, sort *model.AgentSort) (*model.AgentConnection, error)
+	Agent(ctx context.Context, id string) (*model.Agent, error)
 	Artifacts(ctx context.Context, kind *model.ArtifactKind) ([]model.Artifact, error)
 	ArtifactVersions(ctx context.Context, name string) ([]model.Artifact, error)
 	Skills(ctx context.Context) ([]model.Skill, error)
@@ -919,6 +936,7 @@ type QueryResolver interface {
 	DepartmentMembers(ctx context.Context, departmentID string) ([]model.Membership, error)
 	VMTemplates(ctx context.Context, resourcePoolID string) ([]model.VMTemplate, error)
 	VsphereResourcePools(ctx context.Context, resourcePoolID string) ([]model.VsphereResourcePool, error)
+	VsphereNetworks(ctx context.Context, resourcePoolID string) ([]model.VsphereNetwork, error)
 	AgentSnapshots(ctx context.Context, agentID string) ([]model.AgentSnapshot, error)
 	GatewayConnections(ctx context.Context) ([]model.GatewayConnection, error)
 	Upstreams(ctx context.Context) ([]model.Upstream, error)
@@ -939,6 +957,8 @@ type QueryResolver interface {
 	UserRoles(ctx context.Context, userID string) ([]model.CustomRole, error)
 	ResourcePools(ctx context.Context, filter *model.ResourcePoolFilter, pagination *model.Pagination, sort *model.ResourcePoolSort) (*model.ResourcePoolConnection, error)
 	ResourcePool(ctx context.Context, id string) (*model.ResourcePool, error)
+	ContentLibraries(ctx context.Context, resourcePoolID string) ([]string, error)
+	ContentLibraryItems(ctx context.Context, resourcePoolID string, libraryName string) ([]model.ContentLibraryItem, error)
 	PlatformSettings(ctx context.Context) (*model.PlatformSettings, error)
 	VirtualKeys(ctx context.Context, userID *string) ([]model.VirtualKey, error)
 }
@@ -1553,6 +1573,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Cluster.ResourcePools(childComplexity), true
+
+	case "ContentLibraryItem.name":
+		if e.ComplexityRoot.ContentLibraryItem.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ContentLibraryItem.Name(childComplexity), true
+	case "ContentLibraryItem.type":
+		if e.ComplexityRoot.ContentLibraryItem.Type == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ContentLibraryItem.Type(childComplexity), true
 
 	case "CreateOvaTemplateFamilyPayload.family":
 		if e.ComplexityRoot.CreateOvaTemplateFamilyPayload.Family == nil {
@@ -3461,6 +3494,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.PlatformSettings.AgentUser(childComplexity), true
 
+	case "Query.agent":
+		if e.ComplexityRoot.Query.Agent == nil {
+			break
+		}
+
+		args, err := ec.field_Query_agent_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.Agent(childComplexity, args["id"].(string)), true
 	case "Query.agentConfigs":
 		if e.ComplexityRoot.Query.AgentConfigs == nil {
 			break
@@ -3533,6 +3577,28 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.AuditLogs(childComplexity, args["filter"].(*model.AuditFilter), args["page"].(*model.PageInput)), true
+	case "Query.contentLibraries":
+		if e.ComplexityRoot.Query.ContentLibraries == nil {
+			break
+		}
+
+		args, err := ec.field_Query_contentLibraries_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.ContentLibraries(childComplexity, args["resourcePoolId"].(string)), true
+	case "Query.contentLibraryItems":
+		if e.ComplexityRoot.Query.ContentLibraryItems == nil {
+			break
+		}
+
+		args, err := ec.field_Query_contentLibraryItems_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.ContentLibraryItems(childComplexity, args["resourcePoolId"].(string), args["libraryName"].(string)), true
 	case "Query.customRoles":
 		if e.ComplexityRoot.Query.CustomRoles == nil {
 			break
@@ -3821,6 +3887,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.VirtualKeys(childComplexity, args["userId"].(*string)), true
+	case "Query.vsphereNetworks":
+		if e.ComplexityRoot.Query.VsphereNetworks == nil {
+			break
+		}
+
+		args, err := ec.field_Query_vsphereNetworks_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.VsphereNetworks(childComplexity, args["resourcePoolId"].(string)), true
 	case "Query.vsphereResourcePools":
 		if e.ComplexityRoot.Query.VsphereResourcePools == nil {
 			break
@@ -4576,6 +4653,31 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.VirtualKey.UserID(childComplexity), true
 
+	case "VsphereNetwork.dvsName":
+		if e.ComplexityRoot.VsphereNetwork.DvsName == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VsphereNetwork.DvsName(childComplexity), true
+	case "VsphereNetwork.name":
+		if e.ComplexityRoot.VsphereNetwork.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VsphereNetwork.Name(childComplexity), true
+	case "VsphereNetwork.path":
+		if e.ComplexityRoot.VsphereNetwork.Path == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VsphereNetwork.Path(childComplexity), true
+	case "VsphereNetwork.type":
+		if e.ComplexityRoot.VsphereNetwork.Type == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VsphereNetwork.Type(childComplexity), true
+
 	case "VsphereResourcePool.name":
 		if e.ComplexityRoot.VsphereResourcePool.Name == nil {
 			break
@@ -5048,10 +5150,13 @@ extend type Query {
   # Catalog and configs are browsable by any authenticated user.
   agentTemplates: [AgentTemplate!]!
   agentConfigs(agentType: String): [AgentConfig!]!
-  # Admin + read_only see all agents; a regular user only their own (owner scope).
-  # Paged/filtered/sorted connection (前后端整合契约).
+  # Admin sees all agents; tenant-admin their tenant; a regular user only their own
+  # (owner scope). Paged/filtered/sorted connection (前后端整合契约).
   agents(filter: AgentFilter, pagination: Pagination, sort: AgentSort): AgentConnection!
     @hasRole(any: [admin, read_only, user])
+  # Single-agent detail. Owner or admin; follows the same three-track visibility as
+  # the agents list (admin→all, tenant-admin→their tenant, user→own agents only).
+  agent(id: ID!): Agent!
 }
 
 extend type Mutation {
@@ -5319,6 +5424,9 @@ input DeployAgentInput {
   hostname: String
   # Optional per-key spend cap handed to the gateway when issuing the agent's key.
   maxBudget: Float
+  # Optional target network/portgroup path for the agent VM's NIC.
+  # Matches VsphereNetwork.path. "" = keep the source template's NIC mapping.
+  targetNetwork: String
 }
 
 # An OVA template VM available to clone agents from.
@@ -5337,6 +5445,16 @@ type VsphereResourcePool {
   # (e.g. "/DC0/host/DC0_C0/Resources"). Full path so it stays unambiguous across
   # multiple datacenters. This is the value to send as targetResourcePool.
   path: String!
+}
+
+# A network/portgroup available to the deploy form's NIC picker.
+# type is "standard" (vSwitch portgroup) or "distributed" (dvPortgroup).
+# dvsName is the parent distributed switch name; empty for standard portgroups.
+type VsphereNetwork {
+  name: String!
+  path: String!
+  type: String!
+  dvsName: String!
 }
 
 input RecycleAgentInput {
@@ -5375,6 +5493,10 @@ extend type Query {
   # pool, so the deploy must pick one of these for targetResourcePool. Admin-only:
   # it dials the pool's vCenter with privileged credentials, like vmTemplates.
   vsphereResourcePools(resourcePoolId: ID!): [VsphereResourcePool!]!
+    @hasRole(any: [admin])
+  # List all networks/portgroups in a platform resource pool's vCenter.
+  # Powers the deploy form's NIC/portgroup picker. Admin-only.
+  vsphereNetworks(resourcePoolId: ID!): [VsphereNetwork!]!
     @hasRole(any: [admin])
   # List the agent VM's snapshots. Owner/admin (checked in resolver).
   agentSnapshots(agentId: ID!): [AgentSnapshot!]!
@@ -6251,6 +6373,13 @@ type ResourcePoolConnectionDetail {
   contentLibraries: [String!]!
 }
 
+# A single item (OVF/OVA package) inside a vCenter content library.
+# Name is used directly as ovaIdentifier when creating an OvaTemplateVersion.
+type ContentLibraryItem {
+  name: String!
+  type: String!
+}
+
 extend type Query {
   resourcePools(
     filter: ResourcePoolFilter
@@ -6258,6 +6387,12 @@ extend type Query {
     sort: ResourcePoolSort
   ): ResourcePoolConnection! @hasRole(any: [admin])
   resourcePool(id: ID!): ResourcePool @hasRole(any: [admin])
+  # List all content libraries available on the given resource pool's vCenter.
+  # Used by the Add OVA Template dialog to populate the library picker.
+  contentLibraries(resourcePoolId: ID!): [String!]! @hasRole(any: [admin])
+  # List OVA items in the named content library of the given resource pool.
+  # Used by the Add OVA Template dialog to populate the template picker.
+  contentLibraryItems(resourcePoolId: ID!, libraryName: String!): [ContentLibraryItem!]! @hasRole(any: [admin])
 }
 
 extend type Mutation {
@@ -6753,6 +6888,16 @@ func (ec *executionContext) childFields_Cluster(ctx context.Context, field graph
 		return ec.fieldContext_Cluster_resourcePools(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Cluster", field.Name)
+}
+
+func (ec *executionContext) childFields_ContentLibraryItem(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "name":
+		return ec.fieldContext_ContentLibraryItem_name(ctx, field)
+	case "type":
+		return ec.fieldContext_ContentLibraryItem_type(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type ContentLibraryItem", field.Name)
 }
 
 func (ec *executionContext) childFields_CreateOvaTemplateFamilyPayload(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -7725,6 +7870,20 @@ func (ec *executionContext) childFields_VirtualKey(ctx context.Context, field gr
 		return ec.fieldContext_VirtualKey_createdAt(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type VirtualKey", field.Name)
+}
+
+func (ec *executionContext) childFields_VsphereNetwork(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "name":
+		return ec.fieldContext_VsphereNetwork_name(ctx, field)
+	case "path":
+		return ec.fieldContext_VsphereNetwork_path(ctx, field)
+	case "type":
+		return ec.fieldContext_VsphereNetwork_type(ctx, field)
+	case "dvsName":
+		return ec.fieldContext_VsphereNetwork_dvsName(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type VsphereNetwork", field.Name)
 }
 
 func (ec *executionContext) childFields_VsphereResourcePool(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -9077,6 +9236,20 @@ func (ec *executionContext) field_Query_agentSnapshots_args(ctx context.Context,
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_agent_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_agents_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -9154,6 +9327,42 @@ func (ec *executionContext) field_Query_auditLogs_args(ctx context.Context, rawA
 		return nil, err
 	}
 	args["page"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_contentLibraries_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "resourcePoolId",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["resourcePoolId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_contentLibraryItems_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "resourcePoolId",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["resourcePoolId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "libraryName",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNString2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["libraryName"] = arg1
 	return args, nil
 }
 
@@ -9546,6 +9755,20 @@ func (ec *executionContext) field_Query_virtualKeys_args(ctx context.Context, ra
 }
 
 func (ec *executionContext) field_Query_vmTemplates_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "resourcePoolId",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["resourcePoolId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_vsphereNetworks_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "resourcePoolId",
@@ -11933,6 +12156,52 @@ func (ec *executionContext) fieldContext_Cluster_resourcePools(_ context.Context
 		},
 	}
 	return fc, nil
+}
+
+func (ec *executionContext) _ContentLibraryItem_name(ctx context.Context, field graphql.CollectedField, obj *model.ContentLibraryItem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ContentLibraryItem_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ContentLibraryItem_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ContentLibraryItem", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ContentLibraryItem_type(ctx context.Context, field graphql.CollectedField, obj *model.ContentLibraryItem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ContentLibraryItem_type(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Type, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ContentLibraryItem_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ContentLibraryItem", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _CreateOvaTemplateFamilyPayload_family(ctx context.Context, field graphql.CollectedField, obj *model.CreateOvaTemplateFamilyPayload) (ret graphql.Marshaler) {
@@ -21043,6 +21312,50 @@ func (ec *executionContext) fieldContext_Query_agents(ctx context.Context, field
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_agent(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_agent(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().Agent(ctx, fc.Args["id"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Agent) graphql.Marshaler {
+			return ec.marshalNAgent2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgent(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_agent(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Agent(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_agent_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_artifacts(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -21451,6 +21764,68 @@ func (ec *executionContext) fieldContext_Query_vsphereResourcePools(ctx context.
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_vsphereResourcePools_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_vsphereNetworks(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_vsphereNetworks(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().VsphereNetworks(ctx, fc.Args["resourcePoolId"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal []model.VsphereNetwork
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal []model.VsphereNetwork
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v []model.VsphereNetwork) graphql.Marshaler {
+			return ec.marshalNVsphereNetwork2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVsphereNetworkᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_vsphereNetworks(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_VsphereNetwork(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_vsphereNetworks_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -22577,6 +22952,130 @@ func (ec *executionContext) fieldContext_Query_resourcePool(ctx context.Context,
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_resourcePool_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_contentLibraries(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_contentLibraries(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().ContentLibraries(ctx, fc.Args["resourcePoolId"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal []string
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal []string
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v []string) graphql.Marshaler {
+			return ec.marshalNString2ᚕstringᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_contentLibraries(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_contentLibraries_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_contentLibraryItems(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_contentLibraryItems(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().ContentLibraryItems(ctx, fc.Args["resourcePoolId"].(string), fc.Args["libraryName"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal []model.ContentLibraryItem
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal []model.ContentLibraryItem
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v []model.ContentLibraryItem) graphql.Marshaler {
+			return ec.marshalNContentLibraryItem2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐContentLibraryItemᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_contentLibraryItems(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ContentLibraryItem(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_contentLibraryItems_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -25657,6 +26156,98 @@ func (ec *executionContext) fieldContext_VirtualKey_createdAt(_ context.Context,
 	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
+func (ec *executionContext) _VsphereNetwork_name(ctx context.Context, field graphql.CollectedField, obj *model.VsphereNetwork) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VsphereNetwork_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_VsphereNetwork_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VsphereNetwork", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _VsphereNetwork_path(ctx context.Context, field graphql.CollectedField, obj *model.VsphereNetwork) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VsphereNetwork_path(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Path, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_VsphereNetwork_path(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VsphereNetwork", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _VsphereNetwork_type(ctx context.Context, field graphql.CollectedField, obj *model.VsphereNetwork) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VsphereNetwork_type(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Type, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_VsphereNetwork_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VsphereNetwork", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _VsphereNetwork_dvsName(ctx context.Context, field graphql.CollectedField, obj *model.VsphereNetwork) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VsphereNetwork_dvsName(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DvsName, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_VsphereNetwork_dvsName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VsphereNetwork", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _VsphereResourcePool_name(ctx context.Context, field graphql.CollectedField, obj *model.VsphereResourcePool) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -27526,7 +28117,7 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "templateFamilyId", "templateVersionId", "resourcePoolId", "departmentId", "targetResourcePool", "hostname", "maxBudget"}
+	fieldsInOrder := [...]string{"name", "templateFamilyId", "templateVersionId", "resourcePoolId", "departmentId", "targetResourcePool", "hostname", "maxBudget", "targetNetwork"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -27589,6 +28180,13 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 				return it, err
 			}
 			it.MaxBudget = data
+		case "targetNetwork":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("targetNetwork"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.TargetNetwork = data
 		}
 	}
 	return it, nil
@@ -30652,6 +31250,50 @@ func (ec *executionContext) _Cluster(ctx context.Context, sel ast.SelectionSet, 
 			}
 		case "resourcePools":
 			out.Values[i] = ec._Cluster_resourcePools(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var contentLibraryItemImplementors = []string{"ContentLibraryItem"}
+
+func (ec *executionContext) _ContentLibraryItem(ctx context.Context, sel ast.SelectionSet, obj *model.ContentLibraryItem) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, contentLibraryItemImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ContentLibraryItem")
+		case "name":
+			out.Values[i] = ec._ContentLibraryItem_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "type":
+			out.Values[i] = ec._ContentLibraryItem_type(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -33760,6 +34402,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "agent":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_agent(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "artifacts":
 			field := field
 
@@ -33946,6 +34610,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_vsphereResourcePools(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "vsphereNetworks":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_vsphereNetworks(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -34387,6 +35073,50 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				}()
 				res = ec._Query_resourcePool(ctx, field)
 				if res == graphql.RequiredNull {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "contentLibraries":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_contentLibraries(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "contentLibraryItems":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_contentLibraryItems(ctx, field)
+				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
 				return res
@@ -35923,6 +36653,60 @@ func (ec *executionContext) _VirtualKey(ctx context.Context, sel ast.SelectionSe
 	return out
 }
 
+var vsphereNetworkImplementors = []string{"VsphereNetwork"}
+
+func (ec *executionContext) _VsphereNetwork(ctx context.Context, sel ast.SelectionSet, obj *model.VsphereNetwork) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, vsphereNetworkImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("VsphereNetwork")
+		case "name":
+			out.Values[i] = ec._VsphereNetwork_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "path":
+			out.Values[i] = ec._VsphereNetwork_path(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "type":
+			out.Values[i] = ec._VsphereNetwork_type(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "dvsName":
+			out.Values[i] = ec._VsphereNetwork_dvsName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var vsphereResourcePoolImplementors = []string{"VsphereResourcePool"}
 
 func (ec *executionContext) _VsphereResourcePool(ctx context.Context, sel ast.SelectionSet, obj *model.VsphereResourcePool) graphql.Marshaler {
@@ -36779,6 +37563,26 @@ func (ec *executionContext) unmarshalNConnectionStatus2githubᚗcomᚋVMwareᚑA
 
 func (ec *executionContext) marshalNConnectionStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐConnectionStatus(ctx context.Context, sel ast.SelectionSet, v model.ConnectionStatus) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) marshalNContentLibraryItem2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐContentLibraryItem(ctx context.Context, sel ast.SelectionSet, v model.ContentLibraryItem) graphql.Marshaler {
+	return ec._ContentLibraryItem(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNContentLibraryItem2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐContentLibraryItemᚄ(ctx context.Context, sel ast.SelectionSet, v []model.ContentLibraryItem) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNContentLibraryItem2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐContentLibraryItem(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalNCreateAgentConfigInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCreateAgentConfigInput(ctx context.Context, v any) (model.CreateAgentConfigInput, error) {
@@ -38562,6 +39366,26 @@ func (ec *executionContext) unmarshalNVirtualKeyStatus2githubᚗcomᚋVMwareᚑA
 
 func (ec *executionContext) marshalNVirtualKeyStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKeyStatus(ctx context.Context, sel ast.SelectionSet, v model.VirtualKeyStatus) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) marshalNVsphereNetwork2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVsphereNetwork(ctx context.Context, sel ast.SelectionSet, v model.VsphereNetwork) graphql.Marshaler {
+	return ec._VsphereNetwork(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNVsphereNetwork2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVsphereNetworkᚄ(ctx context.Context, sel ast.SelectionSet, v []model.VsphereNetwork) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNVsphereNetwork2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVsphereNetwork(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalNVsphereResourcePool2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVsphereResourcePool(ctx context.Context, sel ast.SelectionSet, v model.VsphereResourcePool) graphql.Marshaler {
