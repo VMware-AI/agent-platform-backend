@@ -132,9 +132,9 @@ func (r *Resolver) EnablePermissionCache(ttl time.Duration) {
 // / the background ticker all become no-ops.
 func (r *Resolver) EnablePoolSync(timeout time.Duration, maxRetries, threshold, openSec int) {
 	// gobreaker.ReadyToTrip expects uint32; we accept int from config and
-	// clamp to 0 (which gives the breaker an unreachable trip threshold —
-	// effectively a no-op, useful in tests that want a registered but
-	// passive breaker).
+	// clamp negatives to 0. The registry treats 0 as "breaker disabled"
+	// (ReadyToTrip never fires), matching the config doc and giving tests a
+	// registered-but-passive breaker.
 	var thr uint32
 	if threshold > 0 {
 		thr = uint32(threshold)

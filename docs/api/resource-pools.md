@@ -173,7 +173,7 @@ A single item (OVF/OVA package) inside a vCenter content library. Name is used d
 
 *Object*
 
-vSphere datacenter — top-level node of vCenter inventory. storagePolicies is nullable: null means PBM pull failed (frontend can distinguish "PBM not pulled" from "pulled but empty" via null vs []).
+vSphere datacenter — top-level node of vCenter inventory. storagePolicies is a non-null list: a failed PBM pull and "no profiles" both surface as [] (the null-vs-[] distinction was never wired through; make the field nullable in a dedicated contract change if the console ever needs to tell them apart — see #98).
 
 | Field | Type | Description |
 |-------|------|-------------|
