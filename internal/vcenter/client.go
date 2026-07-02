@@ -582,23 +582,39 @@ func (c *Client) ListNetworks(ctx context.Context) ([]NetworkInfo, error) {
 	// Create a container view over Network objects (covers both standard portgroups
 	// and dvPortgroup). A flat container at the root captures all datacenters.
 	cv, err := m.CreateContainerView(ctx, c.vc.ServiceContent.RootFolder,
-		[]string{"Network", "DistributedVirtualPortgroup"}, true)
+		[]string{"Network", "DistributedVirtualSwitch"}, true)
 	if err != nil {
 		return nil, fmt.Errorf("vcenter: create network container view: %w", err)
 	}
 	defer func() { _ = cv.Destroy(ctx) }()
 
-	// Retrieve standard Network objects.
+	// Retrieve standard Network objects. PropertyCollector's kind match is
+	// polymorphic — dvPortgroups ARE Networks — so filter to exact-type rows,
+	// or every dvPG would show once here (mislabeled "standard") and again in
+	// the distributed section below (#96).
 	var stdNets []mo.Network
 	if err := cv.Retrieve(ctx, []string{"Network"}, []string{"name"}, &stdNets); err != nil {
 		return nil, fmt.Errorf("vcenter: retrieve networks: %w", err)
 	}
+	stdNets = keepExactType(stdNets, "Network")
 
-	// Retrieve dvPortgroup objects (includes parent DVS name via config.distributedVirtualSwitch).
+	// Retrieve dvPortgroup objects (parent DVS ref via config.distributedVirtualSwitch).
 	var dvPGs []mo.DistributedVirtualPortgroup
 	if err := cv.Retrieve(ctx, []string{"DistributedVirtualPortgroup"},
 		[]string{"name", "config"}, &dvPGs); err != nil {
 		return nil, fmt.Errorf("vcenter: retrieve dvportgroups: %w", err)
+	}
+
+	// Resolve DVS display names so DVSName carries the switch's actual name,
+	// not its moref value ("dvs-21").
+	var dvss []mo.DistributedVirtualSwitch
+	if err := cv.Retrieve(ctx, []string{"DistributedVirtualSwitch"},
+		[]string{"name"}, &dvss); err != nil {
+		return nil, fmt.Errorf("vcenter: retrieve dvswitches: %w", err)
+	}
+	dvsNameByRef := make(map[string]string, len(dvss))
+	for _, sw := range dvss {
+		dvsNameByRef[sw.Self.Value] = sw.Name
 	}
 
 	out := make([]NetworkInfo, 0, len(stdNets)+len(dvPGs))
@@ -610,9 +626,19 @@ func (c *Client) ListNetworks(ctx context.Context) ([]NetworkInfo, error) {
 		})
 	}
 	for _, pg := range dvPGs {
+		// Uplink portgroups are physical trunks, never a valid NIC target for
+		// a deployed VM.
+		if pg.Config.Uplink != nil && *pg.Config.Uplink {
+			continue
+		}
 		dvsName := ""
 		if pg.Config.DistributedVirtualSwitch != nil {
-			dvsName = pg.Config.DistributedVirtualSwitch.Value
+			ref := pg.Config.DistributedVirtualSwitch.Value
+			if name, ok := dvsNameByRef[ref]; ok {
+				dvsName = name
+			} else {
+				dvsName = ref // fallback: still unambiguous, if ugly
+			}
 		}
 		out = append(out, NetworkInfo{
 			Name:    pg.Name,
