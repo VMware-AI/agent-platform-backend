@@ -148,6 +148,52 @@ func (r *ovaTemplateVersionResolver) FamilyID(ctx context.Context, obj *model.Ov
 	return fam.ID.String(), nil
 }
 
+// OvfProperties reads live vApp/OVF properties from the VM template in vCenter
+// by iterating all resource pools to find the template's vAppConfig.
+func (r *ovaTemplateVersionResolver) OvfProperties(ctx context.Context, obj *model.OvaTemplateVersion) ([]model.OVFProperty, error) {
+	if obj.OvaIdentifier == "" {
+		return []model.OVFProperty{}, nil
+	}
+	pools, err := r.Ent.ResourcePool.Query().All(ctx)
+	if err != nil {
+		return []model.OVFProperty{}, nil
+	}
+	for _, pool := range pools {
+		conn, err := r.connectPool(ctx, pool)
+		if err != nil {
+			continue
+		}
+		props, err := conn.GetTemplateVAppProperties(ctx, obj.OvaIdentifier)
+		_ = conn.Logout(ctx)
+		if err != nil || len(props) == 0 {
+			continue
+		}
+		out := make([]model.OVFProperty, len(props))
+		for i, p := range props {
+			out[i] = model.OVFProperty{
+				Key:          p.Key,
+				Label:        p.Label,
+				Type:         p.Type,
+				DefaultValue: strPtr(p.DefaultValue),
+				Description:  p.Description,
+				Required:     p.Required,
+				Password:     p.Password,
+				Values:       p.Values,
+				Category:     p.Category,
+			}
+		}
+		return out, nil
+	}
+	return []model.OVFProperty{}, nil
+}
+
+func strPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
 // OvaTemplateFamilies is a filtered/sorted/paged connection of marketplace
 // families (console 智能体市场 列表).
 func (r *queryResolver) OvaTemplateFamilies(ctx context.Context, filter *model.OvaTemplateFamilyFilter, pagination *model.Pagination, sort *model.OvaTemplateFamilySort) (*model.OvaTemplateFamilyConnection, error) {

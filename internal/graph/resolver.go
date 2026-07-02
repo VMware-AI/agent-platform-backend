@@ -39,6 +39,9 @@ type VCenterClient interface {
 	// ListNetworks returns all standard portgroups and dvPortgroups in the vCenter
 	// (deploy form NIC/portgroup picker).
 	ListNetworks(ctx context.Context) ([]vcenter.NetworkInfo, error)
+	// GetTemplateVAppProperties reads the vAppConfig from a deployed VM template
+	// and returns its user-configurable OVF properties for the deploy form.
+	GetTemplateVAppProperties(ctx context.Context, templateName string) ([]vcenter.OVFProperty, error)
 	// About returns the vCenter version/build identity (test-connection detail).
 	About() vcenter.AboutInfo
 	Logout(ctx context.Context) error

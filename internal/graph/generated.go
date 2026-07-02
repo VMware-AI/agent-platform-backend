@@ -495,6 +495,18 @@ type ComplexityRoot struct {
 		UpsertUpstream                func(childComplexity int, input model.UpsertUpstreamInput) int
 	}
 
+	OVFProperty struct {
+		Category     func(childComplexity int) int
+		DefaultValue func(childComplexity int) int
+		Description  func(childComplexity int) int
+		Key          func(childComplexity int) int
+		Label        func(childComplexity int) int
+		Password     func(childComplexity int) int
+		Required     func(childComplexity int) int
+		Type         func(childComplexity int) int
+		Values       func(childComplexity int) int
+	}
+
 	OvaTemplateFamily struct {
 		CreatedAt     func(childComplexity int) int
 		Description   func(childComplexity int) int
@@ -523,6 +535,7 @@ type ComplexityRoot struct {
 		ID            func(childComplexity int) int
 		Notes         func(childComplexity int) int
 		OvaIdentifier func(childComplexity int) int
+		OvfProperties func(childComplexity int) int
 		Version       func(childComplexity int) int
 	}
 
@@ -585,6 +598,7 @@ type ComplexityRoot struct {
 		RouterTiers             func(childComplexity int) int
 		Skills                  func(childComplexity int) int
 		TokenUsage              func(childComplexity int, userID *string, page *model.PageInput) int
+		UnboundKeys             func(childComplexity int) int
 		Upstreams               func(childComplexity int) int
 		UserExists              func(childComplexity int, username *string, email *string) int
 		UserRoles               func(childComplexity int, userID string) int
@@ -897,6 +911,8 @@ type OvaTemplateFamilyResolver interface {
 }
 type OvaTemplateVersionResolver interface {
 	FamilyID(ctx context.Context, obj *model.OvaTemplateVersion) (string, error)
+
+	OvfProperties(ctx context.Context, obj *model.OvaTemplateVersion) ([]model.OVFProperty, error)
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
@@ -920,6 +936,7 @@ type QueryResolver interface {
 	VsphereResourcePools(ctx context.Context, resourcePoolID string) ([]model.VsphereResourcePool, error)
 	VsphereNetworks(ctx context.Context, resourcePoolID string) ([]model.VsphereNetwork, error)
 	AgentSnapshots(ctx context.Context, agentID string) ([]model.AgentSnapshot, error)
+	UnboundKeys(ctx context.Context) ([]model.VirtualKey, error)
 	GatewayConnections(ctx context.Context) ([]model.GatewayConnection, error)
 	Upstreams(ctx context.Context) ([]model.Upstream, error)
 	ModelRoutes(ctx context.Context) ([]model.ModelRoute, error)
@@ -3196,6 +3213,61 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Mutation.UpsertUpstream(childComplexity, args["input"].(model.UpsertUpstreamInput)), true
 
+	case "OVFProperty.category":
+		if e.ComplexityRoot.OVFProperty.Category == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OVFProperty.Category(childComplexity), true
+	case "OVFProperty.defaultValue":
+		if e.ComplexityRoot.OVFProperty.DefaultValue == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OVFProperty.DefaultValue(childComplexity), true
+	case "OVFProperty.description":
+		if e.ComplexityRoot.OVFProperty.Description == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OVFProperty.Description(childComplexity), true
+	case "OVFProperty.key":
+		if e.ComplexityRoot.OVFProperty.Key == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OVFProperty.Key(childComplexity), true
+	case "OVFProperty.label":
+		if e.ComplexityRoot.OVFProperty.Label == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OVFProperty.Label(childComplexity), true
+	case "OVFProperty.password":
+		if e.ComplexityRoot.OVFProperty.Password == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OVFProperty.Password(childComplexity), true
+	case "OVFProperty.required":
+		if e.ComplexityRoot.OVFProperty.Required == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OVFProperty.Required(childComplexity), true
+	case "OVFProperty.type":
+		if e.ComplexityRoot.OVFProperty.Type == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OVFProperty.Type(childComplexity), true
+	case "OVFProperty.values":
+		if e.ComplexityRoot.OVFProperty.Values == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OVFProperty.Values(childComplexity), true
+
 	case "OvaTemplateFamily.createdAt":
 		if e.ComplexityRoot.OvaTemplateFamily.CreatedAt == nil {
 			break
@@ -3324,6 +3396,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.OvaTemplateVersion.OvaIdentifier(childComplexity), true
+	case "OvaTemplateVersion.ovfProperties":
+		if e.ComplexityRoot.OvaTemplateVersion.OvfProperties == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OvaTemplateVersion.OvfProperties(childComplexity), true
 	case "OvaTemplateVersion.version":
 		if e.ComplexityRoot.OvaTemplateVersion.Version == nil {
 			break
@@ -3727,6 +3805,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.TokenUsage(childComplexity, args["userId"].(*string), args["page"].(*model.PageInput)), true
+	case "Query.unboundKeys":
+		if e.ComplexityRoot.Query.UnboundKeys == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.UnboundKeys(childComplexity), true
 	case "Query.upstreams":
 		if e.ComplexityRoot.Query.Upstreams == nil {
 			break
@@ -4644,6 +4728,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputModelGatewayFilterInput,
 		ec.unmarshalInputModelGatewayInput,
 		ec.unmarshalInputModelGatewaySort,
+		ec.unmarshalInputOVFPropertyInput,
 		ec.unmarshalInputOvaTemplateFamilyFilter,
 		ec.unmarshalInputOvaTemplateFamilySort,
 		ec.unmarshalInputPageInput,
@@ -5352,6 +5437,26 @@ input DeployAgentInput {
   # Optional target network/portgroup path for the agent VM's NIC.
   # Matches VsphereNetwork.path. "" = keep the source template's NIC mapping.
   targetNetwork: String
+  # OVF/vApp properties from the template, keyed by property id.
+  ovfProperties: [OVFPropertyInput!]
+  # Key source: "new" issues a fresh gateway key; "existing" binds an unbound key.
+  keySource: KeySource! = new
+  # Required when keySource=existing — the id of an unbound virtual key to reuse.
+  existingKeyId: ID
+  # Optional free-text deploy notes.
+  notes: String
+}
+
+# A single OVF property value for the deploy mutation.
+input OVFPropertyInput {
+  key: String!
+  value: String!
+}
+
+# Whether to issue a new key or use an existing unbound one.
+enum KeySource {
+  new
+  existing
 }
 
 # An OVA template VM available to clone agents from.
@@ -5425,6 +5530,9 @@ extend type Query {
     @hasRole(any: [admin])
   # List the agent VM's snapshots. Owner/admin (checked in resolver).
   agentSnapshots(agentId: ID!): [AgentSnapshot!]!
+  # List virtual keys not yet bound to any agent, for the deploy form's
+  # "use existing key" flow. Admin-only.
+  unboundKeys: [VirtualKey!]! @hasRole(any: [admin])
 }
 
 extend type Mutation {
@@ -5984,6 +6092,22 @@ extend type Mutation {
 # block covers the CATALOG only; deploy + marketplace virtual-key ops are a later
 # phase (intentionally deferred). The catalog is platform-global (admin-gated).
 
+# A single vApp / OVF user-configurable property from a VM template's
+# vAppConfig. The deploy form renders these dynamically.
+type OVFProperty {
+  key: String!
+  label: String!
+  # "string" | "password" | "boolean" | "int" | "real" | "ip"
+  type: String!
+  defaultValue: String
+  description: String!
+  required: Boolean!
+  password: Boolean!
+  # enum choices, empty for non-enum types
+  values: [String!]!
+  category: String!
+}
+
 # Fixed marketplace card palette (console-defined).
 enum OvaTemplateColor {
   BLUE
@@ -6002,6 +6126,9 @@ type OvaTemplateVersion {
   ovaIdentifier: String!
   notes: String
   createdAt: Time!
+  # vApp / OVF user-configurable properties from the linked VM template.
+  # Populated live from vCenter's vAppConfig when available; empty otherwise.
+  ovfProperties: [OVFProperty!]! @goField(forceResolver: true)
 }
 
 type OvaTemplateFamily {
@@ -7258,6 +7385,30 @@ func (ec *executionContext) childFields_ModelUsageRow(ctx context.Context, field
 	return nil, fmt.Errorf("no field named %q was found under type ModelUsageRow", field.Name)
 }
 
+func (ec *executionContext) childFields_OVFProperty(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "key":
+		return ec.fieldContext_OVFProperty_key(ctx, field)
+	case "label":
+		return ec.fieldContext_OVFProperty_label(ctx, field)
+	case "type":
+		return ec.fieldContext_OVFProperty_type(ctx, field)
+	case "defaultValue":
+		return ec.fieldContext_OVFProperty_defaultValue(ctx, field)
+	case "description":
+		return ec.fieldContext_OVFProperty_description(ctx, field)
+	case "required":
+		return ec.fieldContext_OVFProperty_required(ctx, field)
+	case "password":
+		return ec.fieldContext_OVFProperty_password(ctx, field)
+	case "values":
+		return ec.fieldContext_OVFProperty_values(ctx, field)
+	case "category":
+		return ec.fieldContext_OVFProperty_category(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type OVFProperty", field.Name)
+}
+
 func (ec *executionContext) childFields_OvaTemplateFamily(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -7316,6 +7467,8 @@ func (ec *executionContext) childFields_OvaTemplateVersion(ctx context.Context, 
 		return ec.fieldContext_OvaTemplateVersion_notes(ctx, field)
 	case "createdAt":
 		return ec.fieldContext_OvaTemplateVersion_createdAt(ctx, field)
+	case "ovfProperties":
+		return ec.fieldContext_OvaTemplateVersion_ovfProperties(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type OvaTemplateVersion", field.Name)
 }
@@ -19567,6 +19720,213 @@ func (ec *executionContext) fieldContext_Mutation_setVirtualKeyEnabled(ctx conte
 	return fc, nil
 }
 
+func (ec *executionContext) _OVFProperty_key(ctx context.Context, field graphql.CollectedField, obj *model.OVFProperty) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OVFProperty_key(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Key, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OVFProperty_key(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OVFProperty", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _OVFProperty_label(ctx context.Context, field graphql.CollectedField, obj *model.OVFProperty) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OVFProperty_label(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Label, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OVFProperty_label(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OVFProperty", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _OVFProperty_type(ctx context.Context, field graphql.CollectedField, obj *model.OVFProperty) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OVFProperty_type(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Type, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OVFProperty_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OVFProperty", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _OVFProperty_defaultValue(ctx context.Context, field graphql.CollectedField, obj *model.OVFProperty) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OVFProperty_defaultValue(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DefaultValue, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_OVFProperty_defaultValue(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OVFProperty", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _OVFProperty_description(ctx context.Context, field graphql.CollectedField, obj *model.OVFProperty) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OVFProperty_description(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Description, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OVFProperty_description(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OVFProperty", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _OVFProperty_required(ctx context.Context, field graphql.CollectedField, obj *model.OVFProperty) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OVFProperty_required(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Required, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OVFProperty_required(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OVFProperty", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _OVFProperty_password(ctx context.Context, field graphql.CollectedField, obj *model.OVFProperty) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OVFProperty_password(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Password, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OVFProperty_password(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OVFProperty", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _OVFProperty_values(ctx context.Context, field graphql.CollectedField, obj *model.OVFProperty) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OVFProperty_values(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Values, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []string) graphql.Marshaler {
+			return ec.marshalNString2ᚕstringᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OVFProperty_values(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OVFProperty", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _OVFProperty_category(ctx context.Context, field graphql.CollectedField, obj *model.OVFProperty) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OVFProperty_category(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Category, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OVFProperty_category(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OVFProperty", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _OvaTemplateFamily_id(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateFamily) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -20098,6 +20458,38 @@ func (ec *executionContext) _OvaTemplateVersion_createdAt(ctx context.Context, f
 }
 func (ec *executionContext) fieldContext_OvaTemplateVersion_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("OvaTemplateVersion", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _OvaTemplateVersion_ovfProperties(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateVersion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OvaTemplateVersion_ovfProperties(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.OvaTemplateVersion().OvfProperties(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.OVFProperty) graphql.Marshaler {
+			return ec.marshalNOVFProperty2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOVFPropertyᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OvaTemplateVersion_ovfProperties(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "OvaTemplateVersion",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_OVFProperty(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _OvaTemplateVersionConnection_nodes(ctx context.Context, field graphql.CollectedField, obj *model.OvaTemplateVersionConnection) (ret graphql.Marshaler) {
@@ -21388,6 +21780,56 @@ func (ec *executionContext) fieldContext_Query_agentSnapshots(ctx context.Contex
 	if fc.Args, err = ec.field_Query_agentSnapshots_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_unboundKeys(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_unboundKeys(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().UnboundKeys(ctx)
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal []model.VirtualKey
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal []model.VirtualKey
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v []model.VirtualKey) graphql.Marshaler {
+			return ec.marshalNVirtualKey2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKeyᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_unboundKeys(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_VirtualKey(ctx, field)
+		},
 	}
 	return fc, nil
 }
@@ -27730,7 +28172,11 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "templateFamilyId", "templateVersionId", "resourcePoolId", "departmentId", "targetResourcePool", "hostname", "maxBudget", "targetNetwork"}
+	if _, present := asMap["keySource"]; !present {
+		asMap["keySource"] = "new"
+	}
+
+	fieldsInOrder := [...]string{"name", "templateFamilyId", "templateVersionId", "resourcePoolId", "departmentId", "targetResourcePool", "hostname", "maxBudget", "targetNetwork", "ovfProperties", "keySource", "existingKeyId", "notes"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -27800,6 +28246,34 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 				return it, err
 			}
 			it.TargetNetwork = data
+		case "ovfProperties":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ovfProperties"))
+			data, err := ec.unmarshalOOVFPropertyInput2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOVFPropertyInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.OvfProperties = data
+		case "keySource":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keySource"))
+			data, err := ec.unmarshalNKeySource2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐKeySource(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.KeySource = data
+		case "existingKeyId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("existingKeyId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ExistingKeyID = data
+		case "notes":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("notes"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Notes = data
 		}
 	}
 	return it, nil
@@ -28055,6 +28529,43 @@ func (ec *executionContext) unmarshalInputModelGatewaySort(ctx context.Context, 
 				return it, err
 			}
 			it.Direction = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputOVFPropertyInput(ctx context.Context, obj any) (model.OVFPropertyInput, error) {
+	var it model.OVFPropertyInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"key", "value"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "key":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("key"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Key = data
+		case "value":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("value"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Value = data
 		}
 	}
 	return it, nil
@@ -33154,6 +33665,85 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 	return out
 }
 
+var oVFPropertyImplementors = []string{"OVFProperty"}
+
+func (ec *executionContext) _OVFProperty(ctx context.Context, sel ast.SelectionSet, obj *model.OVFProperty) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, oVFPropertyImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("OVFProperty")
+		case "key":
+			out.Values[i] = ec._OVFProperty_key(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "label":
+			out.Values[i] = ec._OVFProperty_label(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "type":
+			out.Values[i] = ec._OVFProperty_type(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "defaultValue":
+			out.Values[i] = ec._OVFProperty_defaultValue(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "description":
+			out.Values[i] = ec._OVFProperty_description(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "required":
+			out.Values[i] = ec._OVFProperty_required(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "password":
+			out.Values[i] = ec._OVFProperty_password(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "values":
+			out.Values[i] = ec._OVFProperty_values(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "category":
+			out.Values[i] = ec._OVFProperty_category(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var ovaTemplateFamilyImplementors = []string{"OvaTemplateFamily"}
 
 func (ec *executionContext) _OvaTemplateFamily(ctx context.Context, sel ast.SelectionSet, obj *model.OvaTemplateFamily) graphql.Marshaler {
@@ -33436,6 +34026,42 @@ func (ec *executionContext) _OvaTemplateVersion(ctx context.Context, sel ast.Sel
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "ovfProperties":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._OvaTemplateVersion_ovfProperties(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -34114,6 +34740,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_agentSnapshots(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "unboundKeys":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_unboundKeys(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -37554,6 +38202,16 @@ func (ec *executionContext) marshalNIssuedVirtualKey2ᚖgithubᚗcomᚋVMwareᚑ
 	return ec._IssuedVirtualKey(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNKeySource2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐKeySource(ctx context.Context, v any) (model.KeySource, error) {
+	var res model.KeySource
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNKeySource2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐKeySource(ctx context.Context, sel ast.SelectionSet, v model.KeySource) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) unmarshalNLoadBalancingStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx context.Context, v any) (model.LoadBalancingStrategy, error) {
 	var res model.LoadBalancingStrategy
 	err := res.UnmarshalGQL(v)
@@ -37856,6 +38514,31 @@ func (ec *executionContext) marshalNModelUsageRow2ᚕgithubᚗcomᚋVMwareᚑAI�
 	}
 
 	return ret
+}
+
+func (ec *executionContext) marshalNOVFProperty2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOVFProperty(ctx context.Context, sel ast.SelectionSet, v model.OVFProperty) graphql.Marshaler {
+	return ec._OVFProperty(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNOVFProperty2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOVFPropertyᚄ(ctx context.Context, sel ast.SelectionSet, v []model.OVFProperty) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNOVFProperty2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOVFProperty(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNOVFPropertyInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOVFPropertyInput(ctx context.Context, v any) (model.OVFPropertyInput, error) {
+	res, err := ec.unmarshalInputOVFPropertyInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNOvaTemplateColor2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateColor(ctx context.Context, v any) (model.OvaTemplateColor, error) {
@@ -39244,6 +39927,24 @@ func (ec *executionContext) marshalOModelRouteStrategy2ᚖgithubᚗcomᚋVMware�
 		return graphql.Null
 	}
 	return v
+}
+
+func (ec *executionContext) unmarshalOOVFPropertyInput2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOVFPropertyInputᚄ(ctx context.Context, v any) ([]model.OVFPropertyInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]model.OVFPropertyInput, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNOVFPropertyInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOVFPropertyInput(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
 }
 
 func (ec *executionContext) unmarshalOOvaTemplateFamilyFilter2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOvaTemplateFamilyFilter(ctx context.Context, v any) (*model.OvaTemplateFamilyFilter, error) {

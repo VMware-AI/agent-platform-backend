@@ -122,6 +122,17 @@ type CloneSpec struct {
 	// Network is the inventory path of the target portgroup (standard or dvPort).
 	// "" = keep the source template's NIC mapping unchanged.
 	Network string
+	// ExtraConfig is guestinfo.* key-value pairs injected as VM ExtraConfig at
+	// clone time. Typically carries OVF/vApp properties set by the deploy form
+	// (ip, netmask, gateway, dns, password, etc.) so they are available when
+	// cloud-init / VMwareGuestInfo datasource runs at first boot.
+	ExtraConfig map[string]string
+	// VAppProperties carries OVF user-configurable property key->value pairs
+	// injected into the clone's VAppConfig so the guest receives them via the
+	// OVF environment transport (iso / com.vmware.guestInfo).
+	VAppProperties map[string]string
+	// VAppTransport overrides the source template's OVF environment transport.
+	VAppTransport []string
 }
 
 // CloneFromTemplate clones a template VM into a new agent VM and returns its
@@ -185,10 +196,37 @@ func (c *Client) CloneFromTemplate(ctx context.Context, spec CloneSpec) (*VMInfo
 	if err != nil {
 		return nil, err
 	}
+	// Build ConfigSpec: ExtraConfig for guestinfo.* keys + VAppConfig for
+	// OVF properties (the VMware-native way for guests to consume deploy params).
+	var config *types.VirtualMachineConfigSpec
+	needsConfig := len(spec.ExtraConfig) > 0
+	needsVApp := len(spec.VAppProperties) > 0
+	if needsConfig || needsVApp {
+		cs := &types.VirtualMachineConfigSpec{}
+		if needsConfig {
+			opts := make([]types.BaseOptionValue, 0, len(spec.ExtraConfig))
+			for k, v := range spec.ExtraConfig {
+				opts = append(opts, &types.OptionValue{Key: k, Value: v})
+			}
+			cs.ExtraConfig = opts
+		}
+		if needsVApp {
+			if vci := c.readVAppConfig(ctx, src); vci != nil {
+				transport := spec.VAppTransport
+				if len(transport) == 0 {
+					transport = vci.OvfEnvironmentTransport
+				}
+				cs.VAppConfig = buildVAppPropertySpec(vci, spec.VAppProperties, transport)
+			}
+		}
+		config = cs
+	}
+
 	task, err := src.Clone(ctx, folder, spec.Name, types.VirtualMachineCloneSpec{
 		Location: relocate,
 		PowerOn:  spec.PowerOn,
 		Template: false,
+		Config:   config,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("vcenter: clone %s→%s: %w", spec.Template, spec.Name, err)
@@ -361,6 +399,50 @@ func (c *Client) MarkAsTemplate(ctx context.Context, vmName string) error {
 // Destroy powers a VM off (if needed) and permanently deletes it. This is
 // destructive — the resolver layer gates it with dry-run + confirmation + audit
 // (LLD-03 §4 回收, 沿用旧平台 @vmware_tool 约束精神).
+
+// readVAppConfig reads the source VM's VmConfigInfo (vApp properties and transport).
+func (c *Client) readVAppConfig(ctx context.Context, vm *object.VirtualMachine) *types.VmConfigInfo {
+	var mvm mo.VirtualMachine
+	if err := vm.Properties(ctx, vm.Reference(), []string{"config.vAppConfig"}, &mvm); err != nil {
+		return nil
+	}
+	if mvm.Config == nil || mvm.Config.VAppConfig == nil {
+		return nil
+	}
+	vci, _ := mvm.Config.VAppConfig.(*types.VmConfigInfo)
+	return vci
+}
+
+// buildVAppPropertySpec creates a VmConfigSpec that sets OVF property values
+// via the OVF environment transport mechanism. The guest reads these from the
+// OVF environment (ISO or com.vmware.guestInfo) — the VMware-native way.
+// buildVAppPropertySpec creates a VmConfigSpec that sets OVF property values
+// by matching property Ids to their int32 Keys from the source template.
+func buildVAppPropertySpec(src *types.VmConfigInfo, values map[string]string, transport []string) *types.VmConfigSpec {
+	// Build a lookup of Id→Key from the source template so we correctly
+	// reference each property by its int32 key when setting the value.
+	srcKeys := make(map[string]int32, len(src.Property))
+	for _, p := range src.Property {
+		srcKeys[p.Id] = p.Key
+	}
+	specs := make([]types.VAppPropertySpec, 0, len(values))
+	for k, v := range values {
+		key, ok := srcKeys[k]
+		if !ok { continue } // skip properties not in the template
+		specs = append(specs, types.VAppPropertySpec{
+			ArrayUpdateSpec: types.ArrayUpdateSpec{Operation: "edit"},
+			Info:            &types.VAppPropertyInfo{Key: key, Id: k, Value: v},
+		})
+	}
+	if len(transport) == 0 {
+		transport = []string{"com.vmware.guestInfo"}
+	}
+	return &types.VmConfigSpec{
+		Property:                specs,
+		OvfEnvironmentTransport: transport,
+	}
+}
+
 func (c *Client) Destroy(ctx context.Context, vmName string) error {
 	vm, err := c.findVM(ctx, vmName)
 	if err != nil {

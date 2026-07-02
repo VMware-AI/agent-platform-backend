@@ -56,6 +56,10 @@ func (f *fakeVCenter) ListSnapshots(_ context.Context, vmName string) ([]vcenter
 func (f *fakeVCenter) ListContentLibraries(context.Context) ([]string, error) {
 	return []string{"tkg", "iso"}, nil
 }
+func (f *fakeVCenter) GetTemplateVAppProperties(ctx context.Context, templateName string) ([]vcenter.OVFProperty, error) {
+	return []vcenter.OVFProperty{}, nil
+}
+
 func (f *fakeVCenter) ListContentLibraryItems(_ context.Context, _ string) ([]vcenter.LibraryItem, error) {
 	return nil, nil
 }

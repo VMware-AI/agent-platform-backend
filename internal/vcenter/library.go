@@ -3,10 +3,86 @@ package vcenter
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/vapi/library"
 	"github.com/vmware/govmomi/vapi/rest"
+	"github.com/vmware/govmomi/vim25/mo"
+	"github.com/vmware/govmomi/vim25/types"
 )
+
+// OVFProperty represents a single user-configurable vApp/OVF property from a
+// VM template's vAppConfig. It mirrors the OVF PropertySection element, decoupled
+// from govmomi's types so the GraphQL layer does not import vCenter internals.
+type OVFProperty struct {
+	Key          string   `json:"key"`          // e.g. "guestinfo.hostname"
+	Label        string   `json:"label"`        // Display name
+	Type         string   `json:"type"`         // "string" | "password" | "boolean" | "int" | "real" | "enum"
+	DefaultValue string   `json:"defaultValue"` // Pre-filled value
+	Description  string   `json:"description"`
+	Required     bool     `json:"required"`     // userConfigurable==false → read-only, not surfaced in UI
+	Password     bool     `json:"password"`     // Mask in UI
+	Values       []string `json:"values"`       // enum choices, empty for non-enum
+	Category     string   `json:"category"`     // OVF category grouping
+}
+
+// GetTemplateVAppProperties reads the vAppConfig from a deployed VM template and
+// returns its user-configurable OVF properties. Returns an empty slice (not error)
+// when the template has no vAppConfig or no properties.
+func (c *Client) GetTemplateVAppProperties(ctx context.Context, templateName string) ([]OVFProperty, error) {
+	finder := find.NewFinder(c.vc.Client, true)
+	dc, err := finder.DefaultDatacenter(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("vcenter: default datacenter: %w", err)
+	}
+	finder.SetDatacenter(dc)
+
+	vm, err := finder.VirtualMachine(ctx, templateName)
+	if err != nil {
+		return nil, fmt.Errorf("vcenter: find template %q: %w", templateName, err)
+	}
+
+	var mvm mo.VirtualMachine
+	if err := vm.Properties(ctx, vm.Reference(), []string{"config.vAppConfig"}, &mvm); err != nil {
+		return nil, fmt.Errorf("vcenter: read vAppConfig for %q: %w", templateName, err)
+	}
+
+	vapp := mvm.Config.VAppConfig
+	if vapp == nil {
+		return []OVFProperty{}, nil
+	}
+	vci, ok := vapp.(*types.VmConfigInfo)
+	if !ok || len(vci.Property) == 0 {
+		return []OVFProperty{}, nil
+	}
+
+	out := make([]OVFProperty, 0, len(vci.Property))
+	for _, p := range vci.Property {
+		userCfg := p.UserConfigurable != nil && *p.UserConfigurable
+		required := !userCfg
+		def := p.DefaultValue
+		label := p.Label
+		if label == "" {
+			label = p.Id
+		}
+
+		isPassword := strings.HasPrefix(p.Type, "password")
+
+		out = append(out, OVFProperty{
+			Key:          p.Id,
+			Label:        label,
+			Type:         p.Type,
+			DefaultValue: def,
+			Description:  p.Description,
+			Required:     required,
+			Password:     isPassword,
+			Values:       nil,
+			Category:     p.Category,
+		})
+	}
+	return out, nil
+}
 
 // ListContentLibraries returns the names of all content libraries on the
 // vCenter. The REST session is opened and closed within this call; the caller

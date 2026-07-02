@@ -63,6 +63,9 @@ type Request struct {
 	// KnowledgeRoot is the VM dir the daemon unpacks knowledge packs to (LLD-11 K4,
 	// per-kind via AgentTemplate). Only injected when packs are present.
 	KnowledgeRoot string
+	// OVFProperties carries user-provided vApp/OVF property values from the deploy
+	// form. guestinfo.* keys are injected as VM ExtraConfig at clone time.
+	OVFProperties map[string]string
 }
 
 // Result carries the issued secret (returned once), the rendered userdata, and
@@ -119,21 +122,34 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 	}
 
 	// 2) Clone the agent VM from the OVA template, powered off so guestinfo is
-	//    set before first boot.
+	//    set before first boot. OVF properties with guestinfo.* keys are injected
+	//    as ExtraConfig at clone time; the template's vApp/OVF reads them on boot.
 	if _, err := s.VCenter.CloneFromTemplate(ctx, vcenter.CloneSpec{
 		Template:     req.Template,
 		Name:         req.VMName,
 		ResourcePool: req.ResourcePool,
 		Network:      req.Network,
 		PowerOn:      false,
+		ExtraConfig:  req.OVFProperties,
+			VAppProperties: req.OVFProperties,
 	}); err != nil {
 		s.revokeKey(ctx, key.Key) // no VM to clean up yet
 		return nil, fmt.Errorf("deploy: clone template: %w", err)
 	}
 
 	// 3) Inject per-VM cloud-init via guestinfo.
-	userdata := buildUserdata(s.GatewayURL, key.Key, req.Hostname, req.DefaultConfig, req.ConfigPath)
+	userdata := buildUserdata(s.GatewayURL, key.Key, req.Hostname, req.DefaultConfig, req.ConfigPath, req.OVFProperties)
 	gi := map[string]string{"userdata": userdata}
+	// Static IP: inject network-config so VMware's cloud-init datasource
+	// picks it up. Also set a fresh instance-id to force cloud-init to run.
+	if req.OVFProperties != nil && req.OVFProperties["guestinfo.ip_mode"] == "static" {
+		nc := buildNetplanConfig(req.OVFProperties)
+		if nc != "" {
+			gi["network-config"] = nc
+		}
+		// Fresh instance-id forces cloud-init to treat this as a new instance.
+		gi["instance-id"] = req.VMName
+	}
 	if req.Hostname != "" {
 		gi["metadata"] = buildMetadata(req.Hostname)
 	}
@@ -192,12 +208,88 @@ func (s *Service) revokeKey(ctx context.Context, key string) {
 // buildUserdata renders the cloud-init that drops the gateway env (LLD-05 §3)
 // and, when an inline default_config is present, embeds it as a second
 // write_files entry so the VM gets its config without any network fetch (LLD-09).
-func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string) string {
+// buildNetplanConfig renders a netplan YAML for static IP configuration.
+// validIP returns true for dotted-quad IPv4 addresses.
+func validIP(s string) bool {
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c >= '0' && c <= '9' { continue }
+		if c == '.' { continue }
+		return false
+	}
+	return len(s) >= 7 && len(s) <= 15
+}
+
+func buildNetplanConfig(props map[string]string) string {
+	ip := props["guestinfo.static_ip"]
+	if ip == "" || !validIP(ip) { return "" }
+	mask := props["guestinfo.netmask"]
+	if mask == "" { mask = "255.255.255.0" }
+	cidr := toCIDR(ip, mask)
+	gw := props["guestinfo.gateway"]
+	if gw != "" && !validIP(gw) { gw = "" }
+	dns := props["guestinfo.dns"]
+	if dns != "" && !validIP(dns) { dns = "" }
+
+	var b strings.Builder
+	b.WriteString("network: {version: 2, renderer: networkd}\n")
+	b.WriteString("ethernets:\n")
+	b.WriteString("  id0:\n")
+	b.WriteString("    match:\n")
+	b.WriteString("      name: e*\n")
+	b.WriteString("    dhcp4: false\n")
+	b.WriteString(fmt.Sprintf("    addresses: [%s]\n", cidr))
+	if gw != "" {
+		b.WriteString(fmt.Sprintf("    routes: [{to: default, via: %s}]\n", gw))
+	}
+	if dns != "" {
+		b.WriteString(fmt.Sprintf("    nameservers: {addresses: [%s]}\n", dns))
+	}
+	return b.String()
+}
+
+func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, ovfProps map[string]string) string {
 	base := strings.TrimRight(gatewayURL, "/")
 	var b strings.Builder
 	b.WriteString("#cloud-config\n")
 	if hostname != "" {
 		fmt.Fprintf(&b, "hostname: %s\n", hostname)
+	}
+	
+	// Static IP: write a netplan YAML file so systemd-networkd picks it up.
+	// The network: section in cloud-init userdata is not reliably processed by
+	// the VMware GuestInfo datasource, so we drop a file into /etc/netplan instead.
+	if ovfProps != nil && ovfProps["guestinfo.ip_mode"] == "static" {
+		ip := ovfProps["guestinfo.static_ip"]
+		mask := ovfProps["guestinfo.netmask"]
+		if mask == "" { mask = "255.255.255.0" }
+		cidr := toCIDR(ip, mask)
+		gw := ovfProps["guestinfo.gateway"]
+		dns := ovfProps["guestinfo.dns"]
+
+		b.WriteString("  - path: /etc/netplan/01-static.yaml\n")
+		b.WriteString("    permissions: \"0644\"\n")
+		b.WriteString("    content: |\n")
+		b.WriteString("      network: {version: 2, renderer: networkd}\n")
+		b.WriteString("      ethernets:\n")
+		b.WriteString("        eth0:\n")
+		b.WriteString("          dhcp4: false\n")
+		b.WriteString("          addresses: [")
+		b.WriteString(cidr)
+		b.WriteString("]\n")
+		if gw != "" {
+			b.WriteString("          routes: [{to: default, via: ")
+			b.WriteString(gw)
+			b.WriteString("}]\n")
+		}
+		if dns != "" {
+			b.WriteString("          nameservers: {addresses: [")
+			b.WriteString(dns)
+			b.WriteString("]}\n")
+		}
+		b.WriteString("  - path: /etc/netplan/01-static.yaml.license\n")
+		b.WriteString("    permissions: \"0644\"\n")
+		b.WriteString("    content: auto-deployed by agent platform\n")
 	}
 	b.WriteString("write_files:\n")
 	b.WriteString("  - path: /etc/agent/llm-gateway.env\n")
@@ -220,7 +312,30 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string) 
 			b.WriteString("\n")
 		}
 	}
+	
+	// Apply netplan if static IP netplan file was written.
+	if ovfProps != nil && ovfProps["guestinfo.ip_mode"] == "static" {
+		b.WriteString("runcmd:\n")
+		b.WriteString("  - [netplan, apply]\n")
+	}
 	return b.String()
+}
+
+// toCIDR converts an IP and netmask to CIDR notation (e.g. 172.16.85.199 + 255.255.255.0 → 172.16.85.199/24).
+func toCIDR(ip, mask string) string {
+	parts := strings.Split(mask, ".")
+	if len(parts) != 4 {
+		return ip + "/24"
+	}
+	ones := 0
+	for _, p := range parts {
+		var b int
+		fmt.Sscanf(p, "%d", &b)
+		for i := 7; i >= 0; i-- {
+			if b&(1<<uint(i)) != 0 { ones++ }
+		}
+	}
+	return fmt.Sprintf("%s/%d", ip, ones)
 }
 
 func buildMetadata(hostname string) string {

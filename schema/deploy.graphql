@@ -43,6 +43,26 @@ input DeployAgentInput {
   # Optional target network/portgroup path for the agent VM's NIC.
   # Matches VsphereNetwork.path. "" = keep the source template's NIC mapping.
   targetNetwork: String
+  # OVF/vApp properties from the template, keyed by property id.
+  ovfProperties: [OVFPropertyInput!]
+  # Key source: "new" issues a fresh gateway key; "existing" binds an unbound key.
+  keySource: KeySource! = new
+  # Required when keySource=existing — the id of an unbound virtual key to reuse.
+  existingKeyId: ID
+  # Optional free-text deploy notes.
+  notes: String
+}
+
+# A single OVF property value for the deploy mutation.
+input OVFPropertyInput {
+  key: String!
+  value: String!
+}
+
+# Whether to issue a new key or use an existing unbound one.
+enum KeySource {
+  new
+  existing
 }
 
 # An OVA template VM available to clone agents from.
@@ -116,6 +136,9 @@ extend type Query {
     @hasRole(any: [admin])
   # List the agent VM's snapshots. Owner/admin (checked in resolver).
   agentSnapshots(agentId: ID!): [AgentSnapshot!]!
+  # List virtual keys not yet bound to any agent, for the deploy form's
+  # "use existing key" flow. Admin-only.
+  unboundKeys: [VirtualKey!]! @hasRole(any: [admin])
 }
 
 extend type Mutation {

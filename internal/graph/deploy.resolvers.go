@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"os"
 
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
@@ -125,7 +126,8 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		EnrollToken:      enrollToken,
 		ControlPlaneURL:  r.ControlPlaneURL,
 		KnowledgePackIDs: r.resolveAgentKnowledge(ctx, ag), // LLD-11 K2: 下发知识包引用
-		KnowledgeRoot:    r.resolveKnowledgeRoot(ctx, ag),  // LLD-11 K4: 按 kind 的解包根
+		KnowledgeRoot:    r.resolveKnowledgeRoot(ctx, ag),  // LLD-11 K4
+			OVFProperties:    mapOVFProperties(input.OvfProperties),
 	})
 	if err != nil {
 		// Provision rolls back its own partial work (VM+key); the agent row is ours.
@@ -368,6 +370,30 @@ func (r *mutationResolver) RevokeAgentEnrollment(ctx context.Context, agentID st
 	}
 	return true, nil
 }
+// mapOVFProperties converts deploy-input OVF property pairs to a map for
+// the deploy service (guestinfo.* keys become VM ExtraConfig). Only keys
+// starting with "guestinfo." are forwarded; anything else is logged and
+// dropped to prevent arbitrary ExtraConfig injection. This is a defense-
+// in-depth check: the deploy mutation is already admin-gated, but a
+// misconfigured client should not be able to inject arbitrary VM config.
+func mapOVFProperties(props []model.OVFPropertyInput) map[string]string {
+	if len(props) == 0 {
+		return nil
+	}
+	m := make(map[string]string, len(props))
+	for _, p := range props {
+		if !strings.HasPrefix(p.Key, "guestinfo.") {
+			log.Printf("deploy: ignoring ovf property %q — key must start with guestinfo.", p.Key)
+			continue
+		}
+		m[p.Key] = p.Value
+	}
+	if len(m) == 0 {
+		return nil
+	}
+	return m
+}
+
 
 // VMTemplates lists the OVA templates available in a resource pool's vCenter,
 // powering the deploy form's template picker.
@@ -506,3 +532,22 @@ func (r *queryResolver) AgentSnapshots(ctx context.Context, agentID string) ([]m
 	return out, nil
 }
 
+// UnboundKeys is the resolver for the unboundKeys field.
+func (r *queryResolver) UnboundKeys(ctx context.Context) ([]model.VirtualKey, error) {
+	// UnboundKeys lists virtual keys not yet assigned to any agent.
+	cu := auth.FromContext(ctx)
+	if cu == nil || cu.Role != auth.RoleAdmin {
+		return nil, gqlerror.Errorf("forbidden: admin only")
+	}
+	keys, err := r.Ent.VirtualKey.Query().
+		Where(virtualkey.AgentIDIsNil()).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list unbound keys: %w", err)
+	}
+	out := make([]model.VirtualKey, len(keys))
+	for i, k := range keys {
+		out[i] = *toModelVirtualKey(k)
+	}
+	return out, nil
+}

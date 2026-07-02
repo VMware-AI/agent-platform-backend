@@ -3,6 +3,22 @@
 # block covers the CATALOG only; deploy + marketplace virtual-key ops are a later
 # phase (intentionally deferred). The catalog is platform-global (admin-gated).
 
+# A single vApp / OVF user-configurable property from a VM template's
+# vAppConfig. The deploy form renders these dynamically.
+type OVFProperty {
+  key: String!
+  label: String!
+  # "string" | "password" | "boolean" | "int" | "real" | "ip"
+  type: String!
+  defaultValue: String
+  description: String!
+  required: Boolean!
+  password: Boolean!
+  # enum choices, empty for non-enum types
+  values: [String!]!
+  category: String!
+}
+
 # Fixed marketplace card palette (console-defined).
 enum OvaTemplateColor {
   BLUE
@@ -21,6 +37,9 @@ type OvaTemplateVersion {
   ovaIdentifier: String!
   notes: String
   createdAt: Time!
+  # vApp / OVF user-configurable properties from the linked VM template.
+  # Populated live from vCenter's vAppConfig when available; empty otherwise.
+  ovfProperties: [OVFProperty!]! @goField(forceResolver: true)
 }
 
 type OvaTemplateFamily {
