@@ -200,7 +200,7 @@ func (c *Client) inventoryForDC(ctx context.Context, dc *object.Datacenter) (Dat
 		return DataCenter{}, err
 	}
 	if err := each("DistributedVirtualPortgroup",
-		[]string{"name", "parent", "config.distributedVirtualSwitch"}, &dvpgs); err != nil {
+		[]string{"name", "parent", "config.distributedVirtualSwitch", "config.uplink"}, &dvpgs); err != nil {
 		return DataCenter{}, err
 	}
 	if err := each("OpaqueNetwork", []string{"name", "parent"}, &opaques); err != nil {
@@ -209,6 +209,14 @@ func (c *Client) inventoryForDC(ctx context.Context, dc *object.Datacenter) (Dat
 	if err := each("Folder", []string{"name", "parent"}, &folders); err != nil {
 		return DataCenter{}, err
 	}
+
+	// PropertyCollector's kind match is polymorphic: a ClusterComputeResource
+	// IS a ComputeResource, and DVPortgroups/OpaqueNetworks ARE Networks.
+	// Unfiltered, every cluster reappears as a synthetic "Standalone" entry
+	// (its hosts listed twice) and every dvPG/opaque shows once as a plain
+	// network and again in its own section (#96). Keep exact-type rows only.
+	standalone = keepExactType(standalone, "ComputeResource")
+	networks = keepExactType(networks, "Network")
 
 	dcFolders, err := dc.Folders(ctx)
 	if err != nil {
@@ -225,13 +233,13 @@ func (c *Client) inventoryForDC(ctx context.Context, dc *object.Datacenter) (Dat
 		cl := &clusters[i]
 		entry := Cluster{
 			Name: cl.Name,
-			Path: inventoryPathOf(c.vc.Client, cl.Reference()),
+			Path: inventoryPathOf(ctx, c.vc.Client, cl.Reference()),
 		}
 		for j := range hosts {
 			if hosts[j].Parent != nil && hosts[j].Parent.Value == cl.Reference().Value {
 				entry.EsxiHosts = append(entry.EsxiHosts, PlacementRef{
 					Name: hosts[j].Name,
-					Path: inventoryPathOf(c.vc.Client, hosts[j].Reference()),
+					Path: inventoryPathOf(ctx, c.vc.Client, hosts[j].Reference()),
 				})
 			}
 		}
@@ -243,7 +251,7 @@ func (c *Client) inventoryForDC(ctx context.Context, dc *object.Datacenter) (Dat
 			if rps[j].Parent != nil && rps[j].Parent.Value == cl.Reference().Value {
 				entry.ResourcePools = append(entry.ResourcePools, PlacementRef{
 					Name: rps[j].Name,
-					Path: inventoryPathOf(c.vc.Client, rps[j].Reference()),
+					Path: inventoryPathOf(ctx, c.vc.Client, rps[j].Reference()),
 				})
 			}
 		}
@@ -261,7 +269,7 @@ func (c *Client) inventoryForDC(ctx context.Context, dc *object.Datacenter) (Dat
 				if hosts[j].Parent != nil && hosts[j].Parent.Value == cr.Reference().Value {
 					entry.EsxiHosts = append(entry.EsxiHosts, PlacementRef{
 						Name: hosts[j].Name,
-						Path: inventoryPathOf(c.vc.Client, hosts[j].Reference()),
+						Path: inventoryPathOf(ctx, c.vc.Client, hosts[j].Reference()),
 					})
 				}
 			}
@@ -276,13 +284,13 @@ func (c *Client) inventoryForDC(ctx context.Context, dc *object.Datacenter) (Dat
 	for i := range datastores {
 		node.Datastores = append(node.Datastores, PlacementRef{
 			Name: datastores[i].Name,
-			Path: inventoryPathOf(c.vc.Client, datastores[i].Reference()),
+			Path: inventoryPathOf(ctx, c.vc.Client, datastores[i].Reference()),
 		})
 	}
 	for i := range storagePods {
 		node.Datastores = append(node.Datastores, PlacementRef{
 			Name: storagePods[i].Name,
-			Path: inventoryPathOf(c.vc.Client, storagePods[i].Reference()),
+			Path: inventoryPathOf(ctx, c.vc.Client, storagePods[i].Reference()),
 		})
 	}
 
@@ -292,20 +300,25 @@ func (c *Client) inventoryForDC(ctx context.Context, dc *object.Datacenter) (Dat
 	for i := range networks {
 		node.Networks = append(node.Networks, PlacementRef{
 			Name: networks[i].Name,
-			Path: inventoryPathOf(c.vc.Client, networks[i].Reference()),
+			Path: inventoryPathOf(ctx, c.vc.Client, networks[i].Reference()),
 		})
 	}
 	for i := range dvss {
 		node.Networks = append(node.Networks, PlacementRef{
 			Name: dvss[i].Name,
-			Path: inventoryPathOf(c.vc.Client, dvss[i].Reference()),
+			Path: inventoryPathOf(ctx, c.vc.Client, dvss[i].Reference()),
 		})
 		for j := range dvpgs {
+			// Uplink portgroups are physical trunks, never a valid NIC target
+			// for a deployed VM — listing them invites broken deploy picks.
+			if dvpgs[j].Config.Uplink != nil && *dvpgs[j].Config.Uplink {
+				continue
+			}
 			if dvpgs[j].Config.DistributedVirtualSwitch != nil &&
 				dvpgs[j].Config.DistributedVirtualSwitch.Value == dvss[i].Reference().Value {
 				node.Networks = append(node.Networks, PlacementRef{
 					Name: dvss[i].Name + "/" + dvpgs[j].Name,
-					Path: inventoryPathOf(c.vc.Client, dvpgs[j].Reference()),
+					Path: inventoryPathOf(ctx, c.vc.Client, dvpgs[j].Reference()),
 				})
 			}
 		}
@@ -313,7 +326,7 @@ func (c *Client) inventoryForDC(ctx context.Context, dc *object.Datacenter) (Dat
 	for i := range opaques {
 		node.Networks = append(node.Networks, PlacementRef{
 			Name: opaques[i].Name,
-			Path: inventoryPathOf(c.vc.Client, opaques[i].Reference()),
+			Path: inventoryPathOf(ctx, c.vc.Client, opaques[i].Reference()),
 		})
 	}
 
@@ -338,7 +351,7 @@ func (c *Client) inventoryForDC(ctx context.Context, dc *object.Datacenter) (Dat
 		if f.Parent != nil && f.Parent.Value == dcFolders.VmFolder.Reference().Value {
 			node.Folders = append(node.Folders, PlacementRef{
 				Name: f.Name,
-				Path: inventoryPathOf(c.vc.Client, f.Reference()),
+				Path: inventoryPathOf(ctx, c.vc.Client, f.Reference()),
 			})
 		}
 	}
@@ -367,15 +380,35 @@ func isFixedSubFolder(ref string, fixed map[string]struct{}) bool {
 	return ok
 }
 
+// keepExactType drops rows whose managed-object type is a SUBTYPE of the
+// requested kind — PropertyCollector's polymorphic match hands those back
+// too, and the caller retrieves each subtype separately.
+func keepExactType[T interface {
+	Reference() types.ManagedObjectReference
+}](rows []T, kind string) []T {
+	out := rows[:0]
+	for _, r := range rows {
+		if r.Reference().Type == kind {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
 // inventoryPathOf returns the human-readable inventory path for a managed
 // object. On error it falls back to the ref value, so callers still get a
 // non-empty (if ugly) path. The c.vc.Client field is the underlying
 // *vim25.Client, which is what find.InventoryPath needs.
-func inventoryPathOf(client *vim25.Client, ref types.ManagedObjectReference) string {
+//
+// The caller's ctx (the sync budget) MUST be threaded through: this issues one
+// SOAP call per entity, and with context.Background() a half-dead vCenter
+// would hang the goroutine forever, bypassing the pool-sync timeout/breaker
+// entirely (#96).
+func inventoryPathOf(ctx context.Context, client *vim25.Client, ref types.ManagedObjectReference) string {
 	if client == nil {
 		return ref.Value
 	}
-	if p, err := find.InventoryPath(context.Background(), client, ref); err == nil && p != "" {
+	if p, err := find.InventoryPath(ctx, client, ref); err == nil && p != "" {
 		return p
 	}
 	return ref.Value
