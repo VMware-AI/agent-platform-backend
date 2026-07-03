@@ -21,8 +21,9 @@ func TestRolePermissionMatrix(t *testing.T) {
 		// read_only: NO permissions in the matrix. Read access flows through
 		// @hasRole(any: [admin, read_only]) gates on the read-only fields,
 		// NOT through this matrix (so writes stay admin-only by construction).
-		{RoleReadOnly, PermAuditView, false},
-		{RoleReadOnly, PermMeteringView, false},
+		// read_only is the observability seat (LLD-15 T7): audit + metering view.
+		{RoleReadOnly, PermAuditView, true},
+		{RoleReadOnly, PermMeteringView, true},
 		{RoleReadOnly, PermUserManage, false},
 		{RoleReadOnly, PermKeyManage, false},
 		{RoleReadOnly, PermAgentManage, false},

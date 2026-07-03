@@ -35,7 +35,11 @@ var rolePermissions = map[Role]map[string]bool{
 		PermAgentManage: true, PermKeyManage: true, PermRouteManage: true,
 		PermAuditView: true, PermMeteringView: true, PermUserManage: true,
 	},
-	RoleReadOnly: {},
+	// read_only is the observability seat: it may VIEW audit + metering (and the
+	// request-log / request-metrics pages gated by audit:view), never write. This
+	// matches the RoleReadOnly doc above; an empty map silently locked it out of
+	// the four observability pages (LLD-15 T7).
+	RoleReadOnly: {PermAuditView: true, PermMeteringView: true},
 	RoleUser:     {},
 }
 
