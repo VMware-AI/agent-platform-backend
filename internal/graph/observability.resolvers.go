@@ -165,7 +165,7 @@ func (r *mutationResolver) DeleteRateLimitPolicy(ctx context.Context, id string)
 }
 
 // RequestLogs lists gateway request logs with optional filters (0619 第11页).
-func (r *queryResolver) RequestLogs(ctx context.Context, filter *model.RequestLogFilter, page *model.PageInput) ([]model.RequestLog, error) {
+func (r *queryResolver) RequestLogs(ctx context.Context, filter *model.RequestLogFilter, page *model.PageInput) (*model.RequestLogConnection, error) {
 	q := r.Ent.RequestLog.Query()
 	if filter != nil {
 		if filter.StatusCode != nil {
@@ -180,6 +180,28 @@ func (r *queryResolver) RequestLogs(ctx context.Context, filter *model.RequestLo
 		if filter.AgentID != nil {
 			if aid, err := uuid.Parse(*filter.AgentID); err == nil {
 				q = q.Where(requestlog.AgentID(aid))
+			}
+		}
+		if filter.UserID != nil {
+			if uid, err := uuid.Parse(*filter.UserID); err == nil {
+				q = q.Where(requestlog.UserID(uid))
+			}
+		}
+		if filter.From != nil {
+			q = q.Where(requestlog.CreatedAtGTE(*filter.From))
+		}
+		if filter.To != nil {
+			q = q.Where(requestlog.CreatedAtLTE(*filter.To))
+		}
+		if filter.StatusClass != nil {
+			// Translate the band to a code range; keeps the raw range server-side.
+			switch *filter.StatusClass {
+			case model.RequestStatusClassSuccess:
+				q = q.Where(requestlog.StatusCodeGTE(200), requestlog.StatusCodeLT(300))
+			case model.RequestStatusClassClientError:
+				q = q.Where(requestlog.StatusCodeGTE(400), requestlog.StatusCodeLT(500))
+			case model.RequestStatusClassServerError:
+				q = q.Where(requestlog.StatusCodeGTE(500), requestlog.StatusCodeLT(600))
 			}
 		}
 	}
@@ -200,12 +222,16 @@ func (r *queryResolver) RequestLogs(ctx context.Context, filter *model.RequestLo
 			q = q.Where(requestlog.Or(requestlog.UserIDIn(uids...), requestlog.AgentIDIn(aids...)))
 		}
 	}
+	total, err := q.Clone().Count(ctx)
+	if err != nil {
+		return nil, err
+	}
 	limit, offset := pageBounds(page)
 	rows, err := q.Order(orderNewest).Limit(limit).Offset(offset).All(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return mapSlice(rows, toModelRequestLog), nil
+	return &model.RequestLogConnection{Items: mapSlice(rows, toModelRequestLog), Total: total}, nil
 }
 
 // RateLimitPolicies lists all policies.

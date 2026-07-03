@@ -30,11 +30,11 @@ func TestRequestLogs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RequestLogs: %v", err)
 	}
-	if len(all) != 3 {
-		t.Fatalf("expected 3 logs, got %d", len(all))
+	if len(all.Items) != 3 {
+		t.Fatalf("expected 3 logs, got %d", len(all.Items))
 	}
-	if all[0].Detail == nil || *all[0].Detail != detail {
-		t.Fatalf("detail not stored/returned: %+v", all[0].Detail)
+	if all.Items[0].Detail == nil || *all.Items[0].Detail != detail {
+		t.Fatalf("detail not stored/returned: %+v", all.Items[0].Detail)
 	}
 
 	code := 401
@@ -42,15 +42,15 @@ func TestRequestLogs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RequestLogs filtered: %v", err)
 	}
-	if len(errs) != 1 || errs[0].StatusCode != 401 {
+	if len(errs.Items) != 1 || errs.Items[0].StatusCode != 401 {
 		t.Fatalf("status filter failed: %+v", errs)
 	}
 
 	// filter by requestId
 	rid := "req-x"
 	byReq, _ := qr.RequestLogs(ctx, &model.RequestLogFilter{RequestID: &rid}, nil)
-	if len(byReq) != 3 {
-		t.Fatalf("requestId filter: got %d", len(byReq))
+	if len(byReq.Items) != 3 {
+		t.Fatalf("requestId filter: got %d", len(byReq.Items))
 	}
 }
 
