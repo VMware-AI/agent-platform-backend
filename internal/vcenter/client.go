@@ -88,8 +88,14 @@ func (c *Client) ListVMs(ctx context.Context) ([]VMInfo, error) {
 	return out, nil
 }
 
-// SetGuestinfo writes guestinfo.* extraConfig onto a VM (base64-encoded), the
-// per-VM config channel consumed by cloud-init at first boot (LLD-03 §2).
+// SetGuestinfo writes guestinfo.* extraConfig onto a VM, the per-VM config
+// channel consumed at first boot (LLD-03 §2). Only cloud-init's own keys
+// (userdata/metadata) are base64-wrapped with an `.encoding` companion — that
+// convention is honored solely by cloud-init's VMware datasource. Every other
+// key (the agentmgr.* deploy-time contract) is read on the VM via
+// vmware-rpctool, which returns values verbatim and never decodes, so those
+// are written raw — base64 there would hand the daemon garbage (and, e.g.,
+// seed a base64 string as the initial credential).
 func (c *Client) SetGuestinfo(ctx context.Context, vmName string, kv map[string]string) error {
 	vm, err := c.findVM(ctx, vmName)
 	if err != nil {
@@ -97,11 +103,15 @@ func (c *Client) SetGuestinfo(ctx context.Context, vmName string, kv map[string]
 	}
 	opts := make([]types.BaseOptionValue, 0, len(kv)*2)
 	for k, val := range kv {
-		enc := base64.StdEncoding.EncodeToString([]byte(val))
-		opts = append(opts,
-			&types.OptionValue{Key: "guestinfo." + k, Value: enc},
-			&types.OptionValue{Key: "guestinfo." + k + ".encoding", Value: "base64"},
-		)
+		if k == "userdata" || k == "metadata" {
+			enc := base64.StdEncoding.EncodeToString([]byte(val))
+			opts = append(opts,
+				&types.OptionValue{Key: "guestinfo." + k, Value: enc},
+				&types.OptionValue{Key: "guestinfo." + k + ".encoding", Value: "base64"},
+			)
+			continue
+		}
+		opts = append(opts, &types.OptionValue{Key: "guestinfo." + k, Value: val})
 	}
 	task, err := vm.Reconfigure(ctx, types.VirtualMachineConfigSpec{ExtraConfig: opts})
 	if err != nil {

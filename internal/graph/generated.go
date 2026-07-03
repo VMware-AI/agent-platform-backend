@@ -5834,6 +5834,15 @@ input DeployAgentInput {
   # Optional target network/portgroup path for the agent VM's NIC.
   # Matches VsphereNetwork.path. "" = keep the source template's NIC mapping.
   targetNetwork: String
+  # One-time initial credential for the agent VM's UI + OS accounts. deployAgent
+  # stamps it into guestinfo.agentmgr.initial_password; the VM's webadmin seeds
+  # it into the nginx htpasswd + the OS user at first boot, and the user should
+  # change it right after first login (via /manage/). Policy mirrors the VM
+  # webadmin's: at least 12 characters, at most 72 bytes (bcrypt cap), no
+  # leading/trailing whitespace, no control characters, no ':'. SENSITIVE:
+  # never logged, audited or persisted by the platform. Optional for contract
+  # backward-compatibility — omitted = no credential is seeded.
+  initialPassword: String
 }
 
 # An OVA template VM available to clone agents from.
@@ -30216,7 +30225,7 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "templateFamilyId", "templateVersionId", "resourcePoolId", "departmentId", "targetResourcePool", "hostname", "maxBudget", "targetNetwork"}
+	fieldsInOrder := [...]string{"name", "templateFamilyId", "templateVersionId", "resourcePoolId", "departmentId", "targetResourcePool", "hostname", "maxBudget", "targetNetwork", "initialPassword"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -30286,6 +30295,13 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 				return it, err
 			}
 			it.TargetNetwork = data
+		case "initialPassword":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("initialPassword"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.InitialPassword = data
 		}
 	}
 	return it, nil

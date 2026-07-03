@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
@@ -63,6 +64,32 @@ type Request struct {
 	// KnowledgeRoot is the VM dir the daemon unpacks knowledge packs to (LLD-11 K4,
 	// per-kind via AgentTemplate). Only injected when packs are present.
 	KnowledgeRoot string
+	// webadmin self-service contract (agent-manager-daemon deploy/ova README
+	// "Deploy-time contract"): a one-time credential seed + the in-VM upgrade
+	// wiring, stamped as guestinfo.agentmgr.* for cloud-init's bootstrap.json.
+	// All optional — the daemon applies its own defaults for absent keys — and
+	// consumed by the VM-local webadmin, so none require the enroll channel.
+	//
+	// InitialPassword is SENSITIVE (never log, never persist): the webadmin
+	// seeds it into the VM's UI + OS credentials at first boot, one-time.
+	InitialPassword string
+	// AgentPkgName is the agent package base name (guestinfo agent_name; the
+	// daemon resolves {pkg_base_url}/{name}-{version}.tar.gz). NOT the display
+	// name in AgentName above.
+	AgentPkgName string
+	// AgentService is the systemd unit the daemon restarts on upgrade (daemon
+	// default agent.service).
+	AgentService string
+	// AgentInstallRoot is the versioned install tree root holding versions/<v>
+	// + current (daemon default /opt/agent).
+	AgentInstallRoot string
+	// AgentPkgBaseURL is the internal artifact mirror base for upgrades
+	// (AGENT_PKG_BASE_URL). May embed read-only mirror credentials
+	// (ftp://user:pass@...) — never log it.
+	AgentPkgBaseURL string
+	// AgentKeepVersions is how many installed versions the VM retains when
+	// pruning after an upgrade (daemon default 3). 0 = don't stamp.
+	AgentKeepVersions int
 }
 
 // Result carries the issued secret (returned once), the rendered userdata, and
@@ -139,7 +166,9 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 	}
 	// agent-manager enrollment (LLD-08 §4.2/§10): hand the daemon a one-time
 	// enroll token + its stable id + the control-plane URL via guestinfo. The
-	// token is short-lived and single-use; SetGuestinfo base64-encodes values.
+	// token is short-lived and single-use. The daemon's rpctool reads consume
+	// guestinfo verbatim, so SetGuestinfo writes these raw (only cloud-init's
+	// userdata/metadata are base64-wrapped).
 	if req.EnrollToken != "" {
 		gi["agentmgr.enroll_token"] = req.EnrollToken
 		gi["agentmgr.vm_id"] = req.VMID
@@ -154,6 +183,31 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 				gi["agentmgr.knowledge_root"] = req.KnowledgeRoot // LLD-11 K4 per-kind unpack dir
 			}
 		}
+	}
+	// webadmin deploy-time contract: credential seed + in-VM upgrade wiring.
+	// Stamped independent of the enroll channel — the VM-local webadmin consumes
+	// these at first boot; absent keys fall back to the daemon's defaults.
+	// initial_password is one-time by design and agent_pkg_base_url may embed
+	// read-only mirror credentials: neither value may ever be logged (guestinfo
+	// itself is a VM-readable, low-trust channel — the UI prompts the user to
+	// change the seeded password right after first login).
+	if req.InitialPassword != "" {
+		gi["agentmgr.initial_password"] = req.InitialPassword
+	}
+	if req.AgentPkgName != "" {
+		gi["agentmgr.agent_name"] = req.AgentPkgName
+	}
+	if req.AgentService != "" {
+		gi["agentmgr.agent_service"] = req.AgentService
+	}
+	if req.AgentInstallRoot != "" {
+		gi["agentmgr.agent_install_root"] = req.AgentInstallRoot
+	}
+	if req.AgentPkgBaseURL != "" {
+		gi["agentmgr.agent_pkg_base_url"] = req.AgentPkgBaseURL
+	}
+	if req.AgentKeepVersions > 0 {
+		gi["agentmgr.agent_keep_versions"] = strconv.Itoa(req.AgentKeepVersions)
 	}
 	if err := s.VCenter.SetGuestinfo(ctx, req.VMName, gi); err != nil {
 		s.rollback(ctx, key.Key, req.VMName)

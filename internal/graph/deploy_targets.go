@@ -8,6 +8,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
@@ -52,6 +55,9 @@ func (r *mutationResolver) resolveDeployTargets(ctx context.Context, input model
 	}
 	if input.Name == "" {
 		return nil, gqlerror.Errorf("name is required")
+	}
+	if err := validateInitialPassword(input.InitialPassword); err != nil {
+		return nil, err
 	}
 	// Resolve the gateway that issues this agent's key + whose public URL the VM
 	// will call (LLD-13 §3.3): the chosen department's gateway, or the default.
@@ -156,6 +162,56 @@ func (r *mutationResolver) resolveDeployTargets(ctx context.Context, input model
 		cred:         cred,
 		tenantID:     tenantID,
 	}, nil
+}
+
+// Initial-password seed policy, mirroring the VM webadmin's PasswordPolicy +
+// validate_new_password (agent-manager-daemon webadmin/config.py +
+// webadmin/passwords.py): bcrypt silently truncates past 72 bytes, the webadmin
+// rejects seeds shorter than 12 characters, and ':' / control characters break
+// the htpasswd/chpasswd line format. Enforced here at the API boundary because
+// the VM's SEED path applies the value without re-validating: a policy
+// violation either strands the user without a first login or — worse — an
+// interior newline would smuggle a second "user:password" line into chpasswd
+// stdin (root credential injection).
+const (
+	initialPasswordMinChars = 12
+	initialPasswordMaxBytes = 72
+)
+
+// validateInitialPassword checks an optional DeployAgentInput.initialPassword
+// against the VM webadmin's seed policy. The value itself must never appear in
+// the returned error (it has to stay out of logs, audit entries and GraphQL
+// responses).
+func validateInitialPassword(p *string) error {
+	if p == nil || *p == "" {
+		return nil // optional: no seed — the VM boots without an initial credential
+	}
+	pw := *p
+	if strings.TrimSpace(pw) != pw {
+		// The VM-side seeder strips surrounding whitespace before applying, so a
+		// padded value would silently seed a DIFFERENT credential than typed.
+		return gqlerror.Errorf("initialPassword must not start or end with whitespace")
+	}
+	if utf8.RuneCountInString(pw) < initialPasswordMinChars {
+		return gqlerror.Errorf("initialPassword must be at least %d characters", initialPasswordMinChars)
+	}
+	if len(pw) > initialPasswordMaxBytes {
+		return gqlerror.Errorf("initialPassword must be at most %d bytes", initialPasswordMaxBytes)
+	}
+	if strings.ContainsRune(pw, ':') {
+		// ':' is the htpasswd/chpasswd field delimiter on the VM.
+		return gqlerror.Errorf("initialPassword must not contain ':'")
+	}
+	for _, r := range pw {
+		if unicode.IsControl(r) {
+			// The VM seed feeds "user:password\n" to chpasswd stdin; an interior
+			// newline would set a second, attacker-chosen account's password (root).
+			// unicode.IsControl is a superset of the daemon's ASCII check — stricter
+			// here only rejects earlier, never strands a seeded VM.
+			return gqlerror.Errorf("initialPassword must not contain control characters")
+		}
+	}
+	return nil
 }
 
 // devDeployAgent handles deployAgent in DEV_NO_VCENTER mode.

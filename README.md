@@ -108,7 +108,8 @@ dev/prod 行为不同的用 ✅ / ⚠️ 标注。
 | `DB_MAX_OPEN_CONNS` | `20` | 否 | postgres 连接池上限；`0`=Go 默认无上限（多副本下可打爆 `max_connections`），按 `max_connections / 副本数` 调；仅 postgres |
 | `DB_MAX_IDLE_CONNS` | `10` | 否 | 连接池空闲连接上限（Go 默认 2，高并发下连接抖动）；仅 postgres |
 | `DB_CONN_MAX_LIFETIME_MINUTES` | `30` | 否 | 连接最大存活分钟数，`0`=不回收；配合故障转移 / PgBouncer；仅 postgres |
-| `AGENT_PKG_BASE_URL` | `https://mirror.example.com/agent-pkgs` | 否 | 离线镜像基址，替换 catalog 安装命令里的 `{{AGENT_PKG_BASE_URL}}`；空 → 占位符保留 |
+| `AGENT_PKG_BASE_URL` | `https://mirror.example.com/agent-pkgs` | 否 | 离线镜像基址：替换 catalog 安装命令里的 `{{AGENT_PKG_BASE_URL}}`，并在部署时以 `guestinfo.agentmgr.agent_pkg_base_url` 下发给 VM 供 webadmin 升级拉包（daemon 侧拼 `{base}/{name}-{version}.tar.gz`；可含只读 FTP 凭据，勿入日志）；空 → 占位符保留、不下发 |
+| `AGENT_KEEP_VERSIONS` | `3` | 否 | 部署时以 `guestinfo.agentmgr.agent_keep_versions` 下发：VM 升级后保留的历史版本数。`0`（默认）= 不下发（与未设置等价），走 daemon 默认 `3`；daemon 侧拒绝 `<1`，最小有效值为 `1` |
 | `ENV_SCOPE_ENABLED` | `false` | 否 | LLD-10 环境隔离；前端 `X-Environment` 契约未就绪前保持关 |
 | `ATLAS_DEV_URL` | `postgres://localhost:5432/atlas_dev` | 仅 `make migrate-diff` 时 | Atlas diff 的 dev DB；运行 backend 不读 |
 | `*` (任意) | — | — | 凭据引用：模型网关 / vCenter 等凭据在 console 配置后由 `internal/secrets` 解析到 `platform_secrets` 表里的密文（不需要 `vaultwarden://` 这类特殊 scheme——旧方案已删除） |

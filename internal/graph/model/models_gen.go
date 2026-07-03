@@ -400,6 +400,7 @@ type DeployAgentInput struct {
 	Hostname           *string  `json:"hostname,omitempty"`
 	MaxBudget          *float64 `json:"maxBudget,omitempty"`
 	TargetNetwork      *string  `json:"targetNetwork,omitempty"`
+	InitialPassword    *string  `json:"initialPassword,omitempty"`
 }
 
 type DeployedAgent struct {

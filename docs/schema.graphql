@@ -387,6 +387,7 @@ input DeployAgentInput {
 	hostname: String
 	maxBudget: Float
 	targetNetwork: String
+	initialPassword: String
 }
 type DeployedAgent {
 	agent: Agent!
