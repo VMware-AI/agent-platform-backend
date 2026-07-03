@@ -11,10 +11,10 @@
 ### `requestLogs`
 
 ```graphql
-requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]!
+requestLogs(filter: RequestLogFilter, page: PageInput): RequestLogConnection!
 ```
 
-- **Returns:** `[RequestLog!]!`
+- **Returns:** `RequestLogConnection!`
 - **Auth:** `@hasPermission(perm: "audit:view")`
 
 | Argument | Type | Required | Default |
@@ -176,6 +176,17 @@ A gateway's health, aggregated by the backend fanning out to litellm's /health (
 | `detail` | `String` | — |
 | `createdAt` | `Time!` | — |
 
+### RequestLogConnection
+
+*Object*
+
+Paged request logs with a real total for offset/limit pagination.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `items` | `[RequestLog!]!` | — |
+| `total` | `Int!` | — |
+
 ### RequestMetrics
 
 *Object*
@@ -244,6 +255,10 @@ A gateway's health, aggregated by the backend fanning out to litellm's /health (
 | `agentId` | `ID` | — |
 | `model` | `String` | — |
 | `requestId` | `String` | — |
+| `userId` | `ID` | — |
+| `from` | `Time` | createdAt window (inclusive); either bound may be omitted. |
+| `to` | `Time` | — |
+| `statusClass` | `RequestStatusClass` | status band, translated to a code range server-side (2xx/4xx/5xx). |
 
 ### RequestMetricsFilter
 
@@ -275,3 +290,15 @@ A gateway's health, aggregated by the backend fanning out to litellm's /health (
 | `MINUTE` | — |
 | `HOUR` | — |
 | `DAY` | — |
+
+### RequestStatusClass
+
+*Enum*
+
+HTTP status band for filtering (avoids exposing raw code ranges to the client).
+
+| Value | Description |
+|-------|-------------|
+| `SUCCESS` | 2xx |
+| `CLIENT_ERROR` | 4xx |
+| `SERVER_ERROR` | 5xx |

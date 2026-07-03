@@ -31,6 +31,25 @@ input RequestLogFilter {
   agentId: ID
   model: String
   requestId: String
+  userId: ID
+  # createdAt window (inclusive); either bound may be omitted.
+  from: Time
+  to: Time
+  # status band, translated to a code range server-side (2xx/4xx/5xx).
+  statusClass: RequestStatusClass
+}
+
+# HTTP status band for filtering (avoids exposing raw code ranges to the client).
+enum RequestStatusClass {
+  SUCCESS # 2xx
+  CLIENT_ERROR # 4xx
+  SERVER_ERROR # 5xx
+}
+
+# Paged request logs with a real total for offset/limit pagination.
+type RequestLogConnection {
+  items: [RequestLog!]!
+  total: Int!
 }
 
 enum RequestMetricsBucketGranularity { MINUTE HOUR DAY }
@@ -108,7 +127,7 @@ input UpsertRateLimitPolicyInput {
 }
 
 extend type Query {
-  requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
+  requestLogs(filter: RequestLogFilter, page: PageInput): RequestLogConnection! @hasPermission(perm: "audit:view")
   rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin])
   requestMetrics(from: Time!, to: Time!, granularity: RequestMetricsBucketGranularity!, filter: RequestMetricsFilter): RequestMetrics! @hasPermission(perm: "audit:view")
   # Upstream health across every configured gateway (fan-out to litellm /health).

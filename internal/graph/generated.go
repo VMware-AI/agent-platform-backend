@@ -677,6 +677,11 @@ type ComplexityRoot struct {
 		UserID       func(childComplexity int) int
 	}
 
+	RequestLogConnection struct {
+		Items func(childComplexity int) int
+		Total func(childComplexity int) int
+	}
+
 	RequestMetrics struct {
 		Buckets     func(childComplexity int) int
 		Granularity func(childComplexity int) int
@@ -1022,7 +1027,7 @@ type QueryResolver interface {
 	ModelGatewaySyncSummary(ctx context.Context) (*model.ModelGatewaySyncSummary, error)
 	SpendReport(ctx context.Context, input model.SpendReportInput) (*model.SpendReport, error)
 	Budgets(ctx context.Context, scope model.BudgetScope) ([]model.Budget, error)
-	RequestLogs(ctx context.Context, filter *model.RequestLogFilter, page *model.PageInput) ([]model.RequestLog, error)
+	RequestLogs(ctx context.Context, filter *model.RequestLogFilter, page *model.PageInput) (*model.RequestLogConnection, error)
 	RateLimitPolicies(ctx context.Context) ([]model.RateLimitPolicy, error)
 	RequestMetrics(ctx context.Context, from time.Time, to time.Time, granularity model.RequestMetricsBucketGranularity, filter *model.RequestMetricsFilter) (*model.RequestMetrics, error)
 	GatewayHealth(ctx context.Context) ([]model.GatewayHealth, error)
@@ -4254,6 +4259,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.RequestLog.UserID(childComplexity), true
 
+	case "RequestLogConnection.items":
+		if e.ComplexityRoot.RequestLogConnection.Items == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestLogConnection.Items(childComplexity), true
+	case "RequestLogConnection.total":
+		if e.ComplexityRoot.RequestLogConnection.Total == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestLogConnection.Total(childComplexity), true
+
 	case "RequestMetrics.buckets":
 		if e.ComplexityRoot.RequestMetrics.Buckets == nil {
 			break
@@ -6464,6 +6482,25 @@ input RequestLogFilter {
   agentId: ID
   model: String
   requestId: String
+  userId: ID
+  # createdAt window (inclusive); either bound may be omitted.
+  from: Time
+  to: Time
+  # status band, translated to a code range server-side (2xx/4xx/5xx).
+  statusClass: RequestStatusClass
+}
+
+# HTTP status band for filtering (avoids exposing raw code ranges to the client).
+enum RequestStatusClass {
+  SUCCESS # 2xx
+  CLIENT_ERROR # 4xx
+  SERVER_ERROR # 5xx
+}
+
+# Paged request logs with a real total for offset/limit pagination.
+type RequestLogConnection {
+  items: [RequestLog!]!
+  total: Int!
 }
 
 enum RequestMetricsBucketGranularity { MINUTE HOUR DAY }
@@ -6541,7 +6578,7 @@ input UpsertRateLimitPolicyInput {
 }
 
 extend type Query {
-  requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
+  requestLogs(filter: RequestLogFilter, page: PageInput): RequestLogConnection! @hasPermission(perm: "audit:view")
   rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin])
   requestMetrics(from: Time!, to: Time!, granularity: RequestMetricsBucketGranularity!, filter: RequestMetricsFilter): RequestMetrics! @hasPermission(perm: "audit:view")
   # Upstream health across every configured gateway (fan-out to litellm /health).
@@ -8121,6 +8158,16 @@ func (ec *executionContext) childFields_RequestLog(ctx context.Context, field gr
 		return ec.fieldContext_RequestLog_createdAt(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type RequestLog", field.Name)
+}
+
+func (ec *executionContext) childFields_RequestLogConnection(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "items":
+		return ec.fieldContext_RequestLogConnection_items(ctx, field)
+	case "total":
+		return ec.fieldContext_RequestLogConnection_total(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type RequestLogConnection", field.Name)
 }
 
 func (ec *executionContext) childFields_RequestMetrics(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -23723,11 +23770,11 @@ func (ec *executionContext) _Query_requestLogs(ctx context.Context, field graphq
 			directive1 := func(ctx context.Context) (any, error) {
 				perm, err := ec.unmarshalNString2string(ctx, "audit:view")
 				if err != nil {
-					var zeroVal []model.RequestLog
+					var zeroVal *model.RequestLogConnection
 					return zeroVal, err
 				}
 				if ec.Directives.HasPermission == nil {
-					var zeroVal []model.RequestLog
+					var zeroVal *model.RequestLogConnection
 					return zeroVal, errors.New("directive hasPermission is not implemented")
 				}
 				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
@@ -23736,8 +23783,8 @@ func (ec *executionContext) _Query_requestLogs(ctx context.Context, field graphq
 			next = directive1
 			return next
 		},
-		func(ctx context.Context, selections ast.SelectionSet, v []model.RequestLog) graphql.Marshaler {
-			return ec.marshalNRequestLog2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestLogᚄ(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.RequestLogConnection) graphql.Marshaler {
+			return ec.marshalNRequestLogConnection2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestLogConnection(ctx, selections, v)
 		},
 		true,
 		true,
@@ -23750,7 +23797,7 @@ func (ec *executionContext) fieldContext_Query_requestLogs(ctx context.Context, 
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_RequestLog(ctx, field)
+			return ec.childFields_RequestLogConnection(ctx, field)
 		},
 	}
 	defer func() {
@@ -25040,6 +25087,61 @@ func (ec *executionContext) _RequestLog_createdAt(ctx context.Context, field gra
 }
 func (ec *executionContext) fieldContext_RequestLog_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("RequestLog", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _RequestLogConnection_items(ctx context.Context, field graphql.CollectedField, obj *model.RequestLogConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestLogConnection_items(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Items, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.RequestLog) graphql.Marshaler {
+			return ec.marshalNRequestLog2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestLogᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestLogConnection_items(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RequestLogConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_RequestLog(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RequestLogConnection_total(ctx context.Context, field graphql.CollectedField, obj *model.RequestLogConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestLogConnection_total(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Total, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestLogConnection_total(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestLogConnection", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
 func (ec *executionContext) _RequestMetrics_rangeStart(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetrics) (ret graphql.Marshaler) {
@@ -30877,7 +30979,7 @@ func (ec *executionContext) unmarshalInputRequestLogFilter(ctx context.Context, 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"statusCode", "agentId", "model", "requestId"}
+	fieldsInOrder := [...]string{"statusCode", "agentId", "model", "requestId", "userId", "from", "to", "statusClass"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -30912,6 +31014,34 @@ func (ec *executionContext) unmarshalInputRequestLogFilter(ctx context.Context, 
 				return it, err
 			}
 			it.RequestID = data
+		case "userId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UserID = data
+		case "from":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("from"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.From = data
+		case "to":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("to"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.To = data
+		case "statusClass":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("statusClass"))
+			data, err := ec.unmarshalORequestStatusClass2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestStatusClass(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.StatusClass = data
 		}
 	}
 	return it, nil
@@ -37715,6 +37845,50 @@ func (ec *executionContext) _RequestLog(ctx context.Context, sel ast.SelectionSe
 	return out
 }
 
+var requestLogConnectionImplementors = []string{"RequestLogConnection"}
+
+func (ec *executionContext) _RequestLogConnection(ctx context.Context, sel ast.SelectionSet, obj *model.RequestLogConnection) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, requestLogConnectionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RequestLogConnection")
+		case "items":
+			out.Values[i] = ec._RequestLogConnection_items(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "total":
+			out.Values[i] = ec._RequestLogConnection_total(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var requestMetricsImplementors = []string{"RequestMetrics"}
 
 func (ec *executionContext) _RequestMetrics(ctx context.Context, sel ast.SelectionSet, obj *model.RequestMetrics) graphql.Marshaler {
@@ -41394,6 +41568,20 @@ func (ec *executionContext) marshalNRequestLog2ᚖgithubᚗcomᚋVMwareᚑAIᚋa
 	return ec._RequestLog(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNRequestLogConnection2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestLogConnection(ctx context.Context, sel ast.SelectionSet, v model.RequestLogConnection) graphql.Marshaler {
+	return ec._RequestLogConnection(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNRequestLogConnection2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestLogConnection(ctx context.Context, sel ast.SelectionSet, v *model.RequestLogConnection) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._RequestLogConnection(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNRequestMetrics2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestMetrics(ctx context.Context, sel ast.SelectionSet, v model.RequestMetrics) graphql.Marshaler {
 	return ec._RequestMetrics(ctx, sel, &v)
 }
@@ -42640,6 +42828,22 @@ func (ec *executionContext) unmarshalORequestMetricsFilter2ᚖgithubᚗcomᚋVMw
 	}
 	res, err := ec.unmarshalInputRequestMetricsFilter(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalORequestStatusClass2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestStatusClass(ctx context.Context, v any) (*model.RequestStatusClass, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.RequestStatusClass)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalORequestStatusClass2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRequestStatusClass(ctx context.Context, sel ast.SelectionSet, v *model.RequestStatusClass) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) marshalOResourcePool2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐResourcePool(ctx context.Context, sel ast.SelectionSet, v *model.ResourcePool) graphql.Marshaler {

@@ -738,11 +738,20 @@ type RequestLog struct {
 	CreatedAt    time.Time `json:"createdAt"`
 }
 
+type RequestLogConnection struct {
+	Items []RequestLog `json:"items"`
+	Total int          `json:"total"`
+}
+
 type RequestLogFilter struct {
-	StatusCode *int    `json:"statusCode,omitempty"`
-	AgentID    *string `json:"agentId,omitempty"`
-	Model      *string `json:"model,omitempty"`
-	RequestID  *string `json:"requestId,omitempty"`
+	StatusCode  *int                `json:"statusCode,omitempty"`
+	AgentID     *string             `json:"agentId,omitempty"`
+	Model       *string             `json:"model,omitempty"`
+	RequestID   *string             `json:"requestId,omitempty"`
+	UserID      *string             `json:"userId,omitempty"`
+	From        *time.Time          `json:"from,omitempty"`
+	To          *time.Time          `json:"to,omitempty"`
+	StatusClass *RequestStatusClass `json:"statusClass,omitempty"`
 }
 
 type RequestMetrics struct {
@@ -2327,6 +2336,63 @@ func (e *RequestMetricsBucketGranularity) UnmarshalJSON(b []byte) error {
 }
 
 func (e RequestMetricsBucketGranularity) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type RequestStatusClass string
+
+const (
+	RequestStatusClassSuccess     RequestStatusClass = "SUCCESS"
+	RequestStatusClassClientError RequestStatusClass = "CLIENT_ERROR"
+	RequestStatusClassServerError RequestStatusClass = "SERVER_ERROR"
+)
+
+var AllRequestStatusClass = []RequestStatusClass{
+	RequestStatusClassSuccess,
+	RequestStatusClassClientError,
+	RequestStatusClassServerError,
+}
+
+func (e RequestStatusClass) IsValid() bool {
+	switch e {
+	case RequestStatusClassSuccess, RequestStatusClassClientError, RequestStatusClassServerError:
+		return true
+	}
+	return false
+}
+
+func (e RequestStatusClass) String() string {
+	return string(e)
+}
+
+func (e *RequestStatusClass) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = RequestStatusClass(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid RequestStatusClass", str)
+	}
+	return nil
+}
+
+func (e RequestStatusClass) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *RequestStatusClass) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e RequestStatusClass) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil
