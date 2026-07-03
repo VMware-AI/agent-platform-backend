@@ -170,6 +170,7 @@ type ComplexityRoot struct {
 
 	AuditLog struct {
 		Action       func(childComplexity int) int
+		ActorName    func(childComplexity int) int
 		ActorUserID  func(childComplexity int) int
 		CreatedAt    func(childComplexity int) int
 		Detail       func(childComplexity int) int
@@ -1536,6 +1537,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.AuditLog.Action(childComplexity), true
+	case "AuditLog.actorName":
+		if e.ComplexityRoot.AuditLog.ActorName == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AuditLog.ActorName(childComplexity), true
 	case "AuditLog.actorUserId":
 		if e.ComplexityRoot.AuditLog.ActorUserID == nil {
 			break
@@ -6832,6 +6839,9 @@ input LoginInput {
 type AuditLog {
   id: ID!
   actorUserId: ID
+  # Human-friendly actor name (resolved from actorUserId); null for
+  # platform/system actions or deleted users.
+  actorName: String
   action: String!
   resourceType: String
   resourceId: String
@@ -6847,6 +6857,13 @@ input AuditFilter {
   actionPrefix: String
   # substring match across action + resourceId
   search: String
+  # createdAt window (inclusive); either bound may be omitted.
+  from: Time
+  to: Time
+  # exact result: "success" | "fail".
+  result: String
+  # exact resource type, e.g. "user" / "gateway_connection" / "virtual_key".
+  resourceType: String
 }
 
 input PageInput {
@@ -7220,6 +7237,8 @@ func (ec *executionContext) childFields_AuditLog(ctx context.Context, field grap
 		return ec.fieldContext_AuditLog_id(ctx, field)
 	case "actorUserId":
 		return ec.fieldContext_AuditLog_actorUserId(ctx, field)
+	case "actorName":
+		return ec.fieldContext_AuditLog_actorName(ctx, field)
 	case "action":
 		return ec.fieldContext_AuditLog_action(ctx, field)
 	case "resourceType":
@@ -12311,6 +12330,29 @@ func (ec *executionContext) _AuditLog_actorUserId(ctx context.Context, field gra
 }
 func (ec *executionContext) fieldContext_AuditLog_actorUserId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("AuditLog", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _AuditLog_actorName(ctx context.Context, field graphql.CollectedField, obj *model.AuditLog) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_AuditLog_actorName(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ActorName, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_AuditLog_actorName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("AuditLog", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _AuditLog_action(ctx context.Context, field graphql.CollectedField, obj *model.AuditLog) (ret graphql.Marshaler) {
@@ -28970,7 +29012,7 @@ func (ec *executionContext) unmarshalInputAuditFilter(ctx context.Context, obj a
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"actorUserId", "actionPrefix", "search"}
+	fieldsInOrder := [...]string{"actorUserId", "actionPrefix", "search", "from", "to", "result", "resourceType"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -28998,6 +29040,34 @@ func (ec *executionContext) unmarshalInputAuditFilter(ctx context.Context, obj a
 				return it, err
 			}
 			it.Search = data
+		case "from":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("from"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.From = data
+		case "to":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("to"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.To = data
+		case "result":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("result"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Result = data
+		case "resourceType":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceType"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceType = data
 		}
 	}
 	return it, nil
@@ -32579,6 +32649,11 @@ func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet,
 			}
 		case "actorUserId":
 			out.Values[i] = ec._AuditLog_actorUserId(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "actorName":
+			out.Values[i] = ec._AuditLog_actorName(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}

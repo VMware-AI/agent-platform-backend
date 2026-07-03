@@ -164,14 +164,19 @@ type AuditConnection struct {
 }
 
 type AuditFilter struct {
-	ActorUserID  *string `json:"actorUserId,omitempty"`
-	ActionPrefix *string `json:"actionPrefix,omitempty"`
-	Search       *string `json:"search,omitempty"`
+	ActorUserID  *string    `json:"actorUserId,omitempty"`
+	ActionPrefix *string    `json:"actionPrefix,omitempty"`
+	Search       *string    `json:"search,omitempty"`
+	From         *time.Time `json:"from,omitempty"`
+	To           *time.Time `json:"to,omitempty"`
+	Result       *string    `json:"result,omitempty"`
+	ResourceType *string    `json:"resourceType,omitempty"`
 }
 
 type AuditLog struct {
 	ID           string    `json:"id"`
 	ActorUserID  *string   `json:"actorUserId,omitempty"`
+	ActorName    *string   `json:"actorName,omitempty"`
 	Action       string    `json:"action"`
 	ResourceType *string   `json:"resourceType,omitempty"`
 	ResourceID   *string   `json:"resourceId,omitempty"`

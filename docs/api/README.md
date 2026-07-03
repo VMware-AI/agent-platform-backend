@@ -173,6 +173,7 @@ changePassword(oldPassword: String!, newPassword: String!): Boolean!
 |-------|------|-------------|
 | `id` | `ID!` | — |
 | `actorUserId` | `ID` | — |
+| `actorName` | `String` | Human-friendly actor name (resolved from actorUserId); null for platform/system actions or deleted users. |
 | `action` | `String!` | — |
 | `resourceType` | `String` | — |
 | `resourceId` | `String` | — |
@@ -218,6 +219,10 @@ changePassword(oldPassword: String!, newPassword: String!): Boolean!
 | `actorUserId` | `ID` | — |
 | `actionPrefix` | `String` | action category prefix, e.g. "user." / "router." / "key." / "rate_limit." |
 | `search` | `String` | substring match across action + resourceId |
+| `from` | `Time` | createdAt window (inclusive); either bound may be omitted. |
+| `to` | `Time` | — |
+| `result` | `String` | exact result: "success" \| "fail". |
+| `resourceType` | `String` | exact resource type, e.g. "user" / "gateway_connection" / "virtual_key". |
 
 ### LoginInput
 
