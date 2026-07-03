@@ -17,6 +17,63 @@ type SpendReader interface {
 	GlobalSpendReport(ctx context.Context, start, end, litellmGroupBy string) ([]SpendReportDay, error)
 	// BudgetInfo reads GET /team/info | /user/info | /key/info for one id.
 	BudgetInfo(ctx context.Context, scope BudgetInfoScope, id string) (*BudgetInfo, error)
+	// Health reads GET /health (litellm probes its upstreams) + a readiness
+	// check, returning the reachable flag and healthy/unhealthy endpoint lists.
+	Health(ctx context.Context) (*GatewayHealth, error)
+}
+
+// GatewayHealth is one gateway's upstream health, normalized from litellm's
+// /health response (+ /health/readiness for reachability).
+type GatewayHealth struct {
+	Reachable      bool
+	HealthyCount   int
+	UnhealthyCount int
+	Healthy        []EndpointHealth
+	Unhealthy      []EndpointHealth
+}
+
+// EndpointHealth is one upstream deployment's health.
+type EndpointHealth struct {
+	Model   string
+	APIBase string
+}
+
+type llmHealth struct {
+	HealthyEndpoints   []llmEndpoint `json:"healthy_endpoints"`
+	UnhealthyEndpoints []llmEndpoint `json:"unhealthy_endpoints"`
+	HealthyCount       int           `json:"healthy_count"`
+	UnhealthyCount     int           `json:"unhealthy_count"`
+}
+
+type llmEndpoint struct {
+	Model   string `json:"model"`
+	APIBase string `json:"api_base"`
+}
+
+func (c *HTTPClient) Health(ctx context.Context) (*GatewayHealth, error) {
+	var raw llmHealth
+	if err := c.get(ctx, "/health", &raw); err != nil {
+		return nil, err
+	}
+	out := &GatewayHealth{
+		Reachable:      true, // a successful /health means the proxy answered
+		HealthyCount:   raw.HealthyCount,
+		UnhealthyCount: raw.UnhealthyCount,
+	}
+	for _, e := range raw.HealthyEndpoints {
+		out.Healthy = append(out.Healthy, EndpointHealth{Model: e.Model, APIBase: e.APIBase})
+	}
+	for _, e := range raw.UnhealthyEndpoints {
+		out.Unhealthy = append(out.Unhealthy, EndpointHealth{Model: e.Model, APIBase: e.APIBase})
+	}
+	// litellm may omit the counts; derive from the lists when zero.
+	if out.HealthyCount == 0 {
+		out.HealthyCount = len(out.Healthy)
+	}
+	if out.UnhealthyCount == 0 {
+		out.UnhealthyCount = len(out.Unhealthy)
+	}
+	return out, nil
 }
 
 // BudgetInfoScope selects which litellm *_info endpoint to hit.

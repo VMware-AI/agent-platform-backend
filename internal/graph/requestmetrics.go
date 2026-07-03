@@ -173,14 +173,17 @@ func errorFilterExpr(s *sql.Selector) string {
 	return fmt.Sprintf("count(case when %s >= 400 then 1 end)", col)
 }
 
-// p95Expr returns the 95th-percentile latency expression. Postgres uses
-// percentile_cont within group (exact). sqlite has no percentile aggregate, so
-// it falls back to max(latency_ms) as a conservative upper-bound stand-in (tests
-// assert presence/ordering, not the exact percentile value on sqlite).
-func p95Expr(s *sql.Selector) string {
+// p95Expr returns the 95th-percentile latency expression.
+func p95Expr(s *sql.Selector) string { return percentileExpr(s, 0.95) }
+
+// percentileExpr returns the fractional-percentile latency expression. Postgres
+// uses percentile_cont within group (exact). sqlite has no percentile aggregate,
+// so it falls back to max(latency_ms) as a conservative upper-bound stand-in
+// (tests assert presence/ordering, not the exact percentile value on sqlite).
+func percentileExpr(s *sql.Selector, frac float64) string {
 	col := s.C(requestlog.FieldLatencyMs)
 	if s.Dialect() == dialect.Postgres {
-		return fmt.Sprintf("coalesce(percentile_cont(0.95) within group (order by %s),0)::int", col)
+		return fmt.Sprintf("coalesce(percentile_cont(%g) within group (order by %s),0)::int", frac, col)
 	}
 	return fmt.Sprintf("cast(coalesce(max(%s),0) as integer)", col)
 }
@@ -222,7 +225,9 @@ func scanSummaryMetrics(ctx context.Context, q *ent.RequestLogQuery) (*model.Req
 		Requests   int `json:"requests"`
 		Errors     int `json:"errors"`
 		AvgLatency int `json:"avg_latency"`
+		P50Latency int `json:"p50_latency"`
 		P95Latency int `json:"p95_latency"`
+		P99Latency int `json:"p99_latency"`
 		InTokens   int `json:"in_tokens"`
 		OutTokens  int `json:"out_tokens"`
 	}
@@ -231,7 +236,9 @@ func scanSummaryMetrics(ctx context.Context, q *ent.RequestLogQuery) (*model.Req
 			sql.As("count(*)", "requests"),
 			sql.As(errorFilterExpr(s), "errors"),
 			sql.As(avgExpr(s), "avg_latency"),
+			sql.As(percentileExpr(s, 0.50), "p50_latency"),
 			sql.As(p95Expr(s), "p95_latency"),
+			sql.As(percentileExpr(s, 0.99), "p99_latency"),
 			sql.As(fmt.Sprintf("coalesce(sum(%s),0)", s.C(requestlog.FieldInputTokens)), "in_tokens"),
 			sql.As(fmt.Sprintf("coalesce(sum(%s),0)", s.C(requestlog.FieldOutputTokens)), "out_tokens"),
 		)
@@ -245,7 +252,9 @@ func scanSummaryMetrics(ctx context.Context, q *ent.RequestLogQuery) (*model.Req
 		out.TotalRequests = a.Requests
 		out.TotalErrors = a.Errors
 		out.AvgLatencyMs = a.AvgLatency
+		out.P50LatencyMs = a.P50Latency
 		out.P95LatencyMs = a.P95Latency
+		out.P99LatencyMs = a.P99Latency
 		out.TotalInputTokens = a.InTokens
 		out.TotalOutputTokens = a.OutTokens
 	}

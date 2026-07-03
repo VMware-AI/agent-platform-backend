@@ -236,3 +236,8 @@ func (r *queryResolver) RateLimitPolicies(ctx context.Context) ([]model.RateLimi
 func (r *queryResolver) RequestMetrics(ctx context.Context, from time.Time, to time.Time, granularity model.RequestMetricsBucketGranularity, filter *model.RequestMetricsFilter) (*model.RequestMetrics, error) {
 	return r.requestMetrics(ctx, from, to, granularity, filter)
 }
+
+// GatewayHealth is the resolver for the gatewayHealth field.
+func (r *queryResolver) GatewayHealth(ctx context.Context) ([]model.GatewayHealth, error) {
+	return r.Resolver.gatewayHealth(ctx)
+}
