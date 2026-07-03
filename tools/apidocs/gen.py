@@ -31,7 +31,7 @@ DOMAINS = [
     ("model-gateway", "Model Gateway & Routing", ["modelgateway", "gateway-routing"]),
     ("virtual-keys", "Virtual Keys & Rate Limits", ["virtualkey"]),
     ("observability", "Observability (Request Logs, Audit Logs, Metrics)", ["observability"]),
-    ("metering", "Metering", ["metering"]),
+    ("metering", "Metering", ["metering", "observability-spend"]),
     ("platform", "Platform (Users, Roles, Permissions, Departments, Settings)",
      ["account", "rbac", "department", "settings"]),
     ("resource-pools", "Resource Pools & vSphere", ["resourcepool"]),

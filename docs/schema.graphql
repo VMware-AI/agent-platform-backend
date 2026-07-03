@@ -182,6 +182,20 @@ type AuthPayload {
 	user: User!
 	mustChangePassword: Boolean!
 }
+type Budget {
+	scope: String!
+	label: String!
+	spend: Float!
+	maxBudget: Float
+	remaining: Float
+	budgetResetAt: Time
+	utilizationPct: Float
+}
+enum BudgetScope {
+	TEAMS
+	USERS
+	KEYS
+}
 type Cluster {
 	name: String!
 	path: String!
@@ -384,6 +398,12 @@ type GatewayConnection {
 	status: GatewayStatus!
 	loadBalanceStrategy: LoadBalancingStrategy!
 	createdAt: Time!
+}
+type GatewaySpendStatus {
+	gatewayId: ID!
+	gatewayName: String!
+	ok: Boolean!
+	error: String
 }
 enum GatewayStatus {
 	connected
@@ -755,6 +775,8 @@ type Query {
 	meteringOverview(range: MeteringTimeRange = LAST_7_DAYS, userId: ID): MeteringOverview! @hasPermission(perm: "metering:view")
 	modelGateways(filter: ModelGatewayFilterInput, page: PageInput!, sort: ModelGatewaySort): ModelGatewayConnection! @hasRole(any: [admin])
 	modelGatewaySyncSummary: ModelGatewaySyncSummary! @hasRole(any: [admin])
+	spendReport(input: SpendReportInput!): SpendReport! @hasPermission(perm: "metering:view")
+	budgets(scope: BudgetScope!): [Budget!]! @hasPermission(perm: "metering:view")
 	requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
 	rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin])
 	requestMetrics(from: Time!, to: Time!, granularity: RequestMetricsBucketGranularity!, filter: RequestMetricsFilter): RequestMetrics! @hasPermission(perm: "audit:view")
@@ -971,6 +993,47 @@ input SnapshotAgentInput {
 enum SortDirection {
 	ASC
 	DESC
+}
+type SpendDailyPoint {
+	date: String!
+	spend: Float!
+	totalTokens: Int!
+}
+enum SpendGroupBy {
+	TEAM
+	USER
+	API_KEY
+	MODEL
+}
+type SpendReport {
+	from: Time!
+	to: Time!
+	groupBy: SpendGroupBy!
+	rows: [SpendRow!]!
+	totals: SpendTotals!
+	byDay: [SpendDailyPoint!]!
+	gateways: [GatewaySpendStatus!]!
+}
+input SpendReportInput {
+	from: Time!
+	to: Time!
+	groupBy: SpendGroupBy!
+}
+type SpendRow {
+	key: String!
+	label: String!
+	spend: Float!
+	promptTokens: Int!
+	completionTokens: Int!
+	totalTokens: Int!
+	requests: Int!
+}
+type SpendTotals {
+	spend: Float!
+	promptTokens: Int!
+	completionTokens: Int!
+	totalTokens: Int!
+	requests: Int!
 }
 type SyncResourcePoolPayload {
 	pool: ResourcePool!

@@ -187,6 +187,16 @@ type AuthPayload struct {
 	MustChangePassword bool   `json:"mustChangePassword"`
 }
 
+type Budget struct {
+	Scope          string     `json:"scope"`
+	Label          string     `json:"label"`
+	Spend          float64    `json:"spend"`
+	MaxBudget      *float64   `json:"maxBudget,omitempty"`
+	Remaining      *float64   `json:"remaining,omitempty"`
+	BudgetResetAt  *time.Time `json:"budgetResetAt,omitempty"`
+	UtilizationPct *float64   `json:"utilizationPct,omitempty"`
+}
+
 type Cluster struct {
 	Name          string         `json:"name"`
 	Path          string         `json:"path"`
@@ -403,6 +413,13 @@ type GatewayConnection struct {
 	Status              GatewayStatus         `json:"status"`
 	LoadBalanceStrategy LoadBalancingStrategy `json:"loadBalanceStrategy"`
 	CreatedAt           time.Time             `json:"createdAt"`
+}
+
+type GatewaySpendStatus struct {
+	GatewayID   string  `json:"gatewayId"`
+	GatewayName string  `json:"gatewayName"`
+	Ok          bool    `json:"ok"`
+	Error       *string `json:"error,omitempty"`
 }
 
 type Image struct {
@@ -827,6 +844,46 @@ type SnapshotAgentInput struct {
 	AgentID     string  `json:"agentId"`
 	Name        string  `json:"name"`
 	Description *string `json:"description,omitempty"`
+}
+
+type SpendDailyPoint struct {
+	Date        string  `json:"date"`
+	Spend       float64 `json:"spend"`
+	TotalTokens int     `json:"totalTokens"`
+}
+
+type SpendReport struct {
+	From     time.Time            `json:"from"`
+	To       time.Time            `json:"to"`
+	GroupBy  SpendGroupBy         `json:"groupBy"`
+	Rows     []SpendRow           `json:"rows"`
+	Totals   *SpendTotals         `json:"totals"`
+	ByDay    []SpendDailyPoint    `json:"byDay"`
+	Gateways []GatewaySpendStatus `json:"gateways"`
+}
+
+type SpendReportInput struct {
+	From    time.Time    `json:"from"`
+	To      time.Time    `json:"to"`
+	GroupBy SpendGroupBy `json:"groupBy"`
+}
+
+type SpendRow struct {
+	Key              string  `json:"key"`
+	Label            string  `json:"label"`
+	Spend            float64 `json:"spend"`
+	PromptTokens     int     `json:"promptTokens"`
+	CompletionTokens int     `json:"completionTokens"`
+	TotalTokens      int     `json:"totalTokens"`
+	Requests         int     `json:"requests"`
+}
+
+type SpendTotals struct {
+	Spend            float64 `json:"spend"`
+	PromptTokens     int     `json:"promptTokens"`
+	CompletionTokens int     `json:"completionTokens"`
+	TotalTokens      int     `json:"totalTokens"`
+	Requests         int     `json:"requests"`
 }
 
 type SyncResourcePoolPayload struct {
@@ -1270,6 +1327,63 @@ func (e *ArtifactKind) UnmarshalJSON(b []byte) error {
 }
 
 func (e ArtifactKind) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type BudgetScope string
+
+const (
+	BudgetScopeTeams BudgetScope = "TEAMS"
+	BudgetScopeUsers BudgetScope = "USERS"
+	BudgetScopeKeys  BudgetScope = "KEYS"
+)
+
+var AllBudgetScope = []BudgetScope{
+	BudgetScopeTeams,
+	BudgetScopeUsers,
+	BudgetScopeKeys,
+}
+
+func (e BudgetScope) IsValid() bool {
+	switch e {
+	case BudgetScopeTeams, BudgetScopeUsers, BudgetScopeKeys:
+		return true
+	}
+	return false
+}
+
+func (e BudgetScope) String() string {
+	return string(e)
+}
+
+func (e *BudgetScope) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = BudgetScope(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid BudgetScope", str)
+	}
+	return nil
+}
+
+func (e BudgetScope) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *BudgetScope) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e BudgetScope) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil
@@ -2538,6 +2652,65 @@ func (e *SortDirection) UnmarshalJSON(b []byte) error {
 }
 
 func (e SortDirection) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type SpendGroupBy string
+
+const (
+	SpendGroupByTeam   SpendGroupBy = "TEAM"
+	SpendGroupByUser   SpendGroupBy = "USER"
+	SpendGroupByAPIKey SpendGroupBy = "API_KEY"
+	SpendGroupByModel  SpendGroupBy = "MODEL"
+)
+
+var AllSpendGroupBy = []SpendGroupBy{
+	SpendGroupByTeam,
+	SpendGroupByUser,
+	SpendGroupByAPIKey,
+	SpendGroupByModel,
+}
+
+func (e SpendGroupBy) IsValid() bool {
+	switch e {
+	case SpendGroupByTeam, SpendGroupByUser, SpendGroupByAPIKey, SpendGroupByModel:
+		return true
+	}
+	return false
+}
+
+func (e SpendGroupBy) String() string {
+	return string(e)
+}
+
+func (e *SpendGroupBy) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = SpendGroupBy(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid SpendGroupBy", str)
+	}
+	return nil
+}
+
+func (e SpendGroupBy) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *SpendGroupBy) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e SpendGroupBy) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

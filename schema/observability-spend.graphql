@@ -1,0 +1,89 @@
+# Gateway-authoritative spend (LLD-15). The platform holds each gateway's master
+# key and fans out to litellm's /global/spend/report + /*/info endpoints, merges
+# across gateways, and serves the console 计量中心's "网关账" view. Distinct from
+# metering.graphql's meteringOverview, which aggregates the platform's own
+# TokenUsage table ("平台记录"). The frontend never talks to litellm directly.
+
+enum SpendGroupBy {
+  TEAM
+  USER
+  API_KEY
+  MODEL
+}
+
+input SpendReportInput {
+  # Custom window (lifts the LAST_7/30_DAYS/THIS_MONTH restriction of meteringOverview).
+  from: Time!
+  to: Time!
+  groupBy: SpendGroupBy!
+}
+
+# One aggregated row for the selected dimension, summed across all gateways.
+type SpendRow {
+  # team_id / hashed api_key / model name (user_id is deferred to the copy phase).
+  key: String!
+  # Resolved display name: department name / key alias / model — falls back to key.
+  label: String!
+  spend: Float!
+  promptTokens: Int!
+  completionTokens: Int!
+  totalTokens: Int!
+  requests: Int!
+}
+
+type SpendTotals {
+  spend: Float!
+  promptTokens: Int!
+  completionTokens: Int!
+  totalTokens: Int!
+  requests: Int!
+}
+
+# Cost trend point (all gateways merged), date is YYYY-MM-DD.
+type SpendDailyPoint {
+  date: String!
+  spend: Float!
+  totalTokens: Int!
+}
+
+# Per-gateway fetch outcome so a single unreachable gateway degrades gracefully
+# (partial data visible) instead of failing the whole report.
+type GatewaySpendStatus {
+  gatewayId: ID!
+  gatewayName: String!
+  ok: Boolean!
+  error: String
+}
+
+type SpendReport {
+  from: Time!
+  to: Time!
+  groupBy: SpendGroupBy!
+  rows: [SpendRow!]!
+  totals: SpendTotals!
+  byDay: [SpendDailyPoint!]!
+  gateways: [GatewaySpendStatus!]!
+}
+
+enum BudgetScope {
+  TEAMS
+  USERS
+  KEYS
+}
+
+# A budget card: current spend vs the configured max, with reset timing.
+type Budget {
+  scope: String! # team/user/key identifier
+  label: String!
+  spend: Float!
+  maxBudget: Float # null = no cap
+  remaining: Float
+  budgetResetAt: Time
+  utilizationPct: Float # spend/maxBudget*100; null when maxBudget is null
+}
+
+extend type Query {
+  # litellm-authoritative spend, fanned out across gateways (pull + short cache).
+  spendReport(input: SpendReportInput!): SpendReport! @hasPermission(perm: "metering:view")
+  budgets(scope: BudgetScope!): [Budget!]! @hasPermission(perm: "metering:view")
+}
