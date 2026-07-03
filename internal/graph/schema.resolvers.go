@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/auditlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
@@ -221,6 +222,18 @@ func (r *queryResolver) AuditLogs(ctx context.Context, filter *model.AuditFilter
 				auditlog.ResourceIDContainsFold(*filter.Search),
 			))
 		}
+		if filter.From != nil {
+			q = q.Where(auditlog.CreatedAtGTE(*filter.From))
+		}
+		if filter.To != nil {
+			q = q.Where(auditlog.CreatedAtLTE(*filter.To))
+		}
+		if filter.Result != nil && *filter.Result != "" {
+			q = q.Where(auditlog.ResultEQ(auditlog.Result(*filter.Result)))
+		}
+		if filter.ResourceType != nil && *filter.ResourceType != "" {
+			q = q.Where(auditlog.ResourceTypeEQ(*filter.ResourceType))
+		}
 	}
 	// Tenant isolation (LLD-10 §1.4 D-class): a tenant-admin sees only audit rows
 	// whose actor belongs to their tenant; platform-level actions (no actor tenant)
@@ -245,6 +258,7 @@ func (r *queryResolver) AuditLogs(ctx context.Context, filter *model.AuditFilter
 	if err != nil {
 		return nil, err
 	}
+	actorNames := r.resolveActorNames(ctx, logs)
 	items := make([]model.AuditLog, 0, len(logs))
 	for _, l := range logs {
 		item := model.AuditLog{
@@ -256,6 +270,10 @@ func (r *queryResolver) AuditLogs(ctx context.Context, filter *model.AuditFilter
 		if l.ActorUserID != nil {
 			s := l.ActorUserID.String()
 			item.ActorUserID = &s
+			if name, ok := actorNames[*l.ActorUserID]; ok {
+				n := name
+				item.ActorName = &n
+			}
 		}
 		if l.ResourceType != "" {
 			rt := l.ResourceType
@@ -278,6 +296,37 @@ func (r *queryResolver) AuditLogs(ctx context.Context, filter *model.AuditFilter
 		items = append(items, item)
 	}
 	return &model.AuditConnection{Items: items, Total: total}, nil
+}
+
+// resolveActorNames batch-loads usernames for the distinct actor ids on a page
+// of audit rows (actor_user_id is a soft ref with no FK edge). Missing/deleted
+// users don't appear, so the caller leaves ActorName nil (console falls back to
+// the short id).
+func (r *queryResolver) resolveActorNames(ctx context.Context, logs []*ent.AuditLog) map[uuid.UUID]string {
+	ids := make([]uuid.UUID, 0, len(logs))
+	seen := map[uuid.UUID]struct{}{}
+	for _, l := range logs {
+		if l.ActorUserID == nil {
+			continue
+		}
+		if _, ok := seen[*l.ActorUserID]; ok {
+			continue
+		}
+		seen[*l.ActorUserID] = struct{}{}
+		ids = append(ids, *l.ActorUserID)
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	users, err := r.Ent.User.Query().Where(user.IDIn(ids...)).All(ctx)
+	if err != nil {
+		return nil
+	}
+	names := make(map[uuid.UUID]string, len(users))
+	for _, u := range users {
+		names[u.ID] = u.Username
+	}
+	return names
 }
 
 // DisplayName resolves a human-friendly name. No dedicated column yet, so it

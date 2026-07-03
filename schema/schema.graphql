@@ -51,6 +51,9 @@ input LoginInput {
 type AuditLog {
   id: ID!
   actorUserId: ID
+  # Human-friendly actor name (resolved from actorUserId); null for
+  # platform/system actions or deleted users.
+  actorName: String
   action: String!
   resourceType: String
   resourceId: String
@@ -66,6 +69,13 @@ input AuditFilter {
   actionPrefix: String
   # substring match across action + resourceId
   search: String
+  # createdAt window (inclusive); either bound may be omitted.
+  from: Time
+  to: Time
+  # exact result: "success" | "fail".
+  result: String
+  # exact resource type, e.g. "user" / "gateway_connection" / "virtual_key".
+  resourceType: String
 }
 
 input PageInput {
