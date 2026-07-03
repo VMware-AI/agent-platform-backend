@@ -87,33 +87,6 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		req.TeamID = *input.TeamID
 	}
 
-	// Apply an associated rate-limit policy: its rpm/tpm become the key's
-	// request-time limits at the gateway (0619 第8页「应用至」, G-5 真生效).
-	var policyID *uuid.UUID
-	if input.RateLimitPolicyID != nil {
-		pid, err := uuid.Parse(*input.RateLimitPolicyID)
-		if err != nil {
-			return nil, gqlerror.Errorf("invalid rateLimitPolicyId")
-		}
-		pol, err := r.Ent.RateLimitPolicy.Get(ctx, pid)
-		if err != nil {
-			return nil, gqlerror.Errorf("rate-limit policy not found")
-		}
-		// Owner-tenant guard: a tenant-admin may apply only their own tenant's
-		// policy; another tenant's reads as missing, so its rpm/tpm never leak into a
-		// foreign key (and a missing id is not a cross-tenant existence oracle).
-		if err := r.assertRateLimitPolicyReadable(ctx, pol); err != nil {
-			return nil, err
-		}
-		if pol.Rpm != nil {
-			req.RPMLimit = pol.Rpm
-		}
-		if pol.Tpm != nil {
-			req.TPMLimit = pol.Tpm
-		}
-		policyID = &pid
-	}
-
 	resp, err := gw.GenerateKey(ctx, req)
 	if err != nil {
 		r.audit(ctx, "key.issue", "virtual_key", input.UserID, false, actorID(auth.FromContext(ctx)))
@@ -145,9 +118,6 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		if aid, err := uuid.Parse(*input.AgentID); err == nil {
 			create.SetAgentID(aid)
 		}
-	}
-	if policyID != nil {
-		create.SetRateLimitPolicyID(*policyID)
 	}
 	vk, err := create.Save(ctx)
 	if err != nil {

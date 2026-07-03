@@ -4,8 +4,6 @@ ALTER TABLE "agent_configs" ADD COLUMN "environment_id" uuid NULL;
 ALTER TABLE "agents" ADD COLUMN "environment_id" uuid NULL;
 -- Modify "artifacts" table
 ALTER TABLE "artifacts" ADD COLUMN "environment_id" uuid NULL;
--- Modify "rate_limit_policies" table
-ALTER TABLE "rate_limit_policies" ADD COLUMN "environment_id" uuid NULL;
 -- Modify "resource_pools" table
 ALTER TABLE "resource_pools" ADD COLUMN "environment_id" uuid NULL;
 -- Modify "token_usages" table

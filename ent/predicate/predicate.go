@@ -57,9 +57,6 @@ type Permission func(*sql.Selector)
 // PlatformSecret is the predicate function for platformsecret builders.
 type PlatformSecret func(*sql.Selector)
 
-// RateLimitPolicy is the predicate function for ratelimitpolicy builders.
-type RateLimitPolicy func(*sql.Selector)
-
 // RequestLog is the predicate function for requestlog builders.
 type RequestLog func(*sql.Selector)
 

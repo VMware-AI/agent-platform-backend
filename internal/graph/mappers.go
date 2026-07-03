@@ -131,10 +131,6 @@ func toModelVirtualKey(k *ent.VirtualKey) *model.VirtualKey {
 		a := k.AgentID.String()
 		m.AgentID = &a
 	}
-	if k.RateLimitPolicyID != nil {
-		p := k.RateLimitPolicyID.String()
-		m.RateLimitPolicyID = &p
-	}
 	if k.TeamID != "" {
 		tid := k.TeamID
 		m.TeamID = &tid
@@ -324,17 +320,6 @@ func toModelRequestLog(l *ent.RequestLog) *model.RequestLog {
 		m.Detail = &d
 	}
 	return m
-}
-
-func toModelRateLimitPolicy(p *ent.RateLimitPolicy) *model.RateLimitPolicy {
-	return &model.RateLimitPolicy{
-		ID:        p.ID.String(),
-		Name:      p.Name,
-		Rpm:       p.Rpm,
-		Tpm:       p.Tpm,
-		Enabled:   p.Enabled,
-		CreatedAt: p.CreatedAt,
-	}
 }
 
 func toModelUpstream(u *ent.Upstream) *model.Upstream {

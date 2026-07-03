@@ -494,7 +494,6 @@ type ComplexityRoot struct {
 		DeleteImage                   func(childComplexity int, id string) int
 		DeleteModelGateway            func(childComplexity int, id string) int
 		DeleteModelRoute              func(childComplexity int, id string) int
-		DeleteRateLimitPolicy         func(childComplexity int, id string) int
 		DeleteResourcePool            func(childComplexity int, id string) int
 		DeleteSkill                   func(childComplexity int, id string) int
 		DeleteUpstream                func(childComplexity int, id string) int
@@ -519,7 +518,6 @@ type ComplexityRoot struct {
 		SetAgentStatus                func(childComplexity int, id string, status model.AgentStatus) int
 		SetDefaultAgentConfig         func(childComplexity int, id string) int
 		SetModelRouteEnabled          func(childComplexity int, id string, enabled bool) int
-		SetRateLimitPolicyEnabled     func(childComplexity int, id string, enabled bool) int
 		SetRolePermissions            func(childComplexity int, roleID string, permissionKeys []string) int
 		SetRouterTier                 func(childComplexity int, tier model.RouterTierLevel, modelAlias string) int
 		SetVirtualKeyEnabled          func(childComplexity int, id string, enabled bool) int
@@ -541,7 +539,6 @@ type ComplexityRoot struct {
 		UpsertImage                   func(childComplexity int, input model.UpsertImageInput) int
 		UpsertModelRoute              func(childComplexity int, input model.UpsertModelRouteInput) int
 		UpsertPermission              func(childComplexity int, key string, description *string) int
-		UpsertRateLimitPolicy         func(childComplexity int, input model.UpsertRateLimitPolicyInput) int
 		UpsertSkill                   func(childComplexity int, input model.UpsertSkillInput) int
 		UpsertUpstream                func(childComplexity int, input model.UpsertUpstreamInput) int
 	}
@@ -633,7 +630,6 @@ type ComplexityRoot struct {
 		OvaTemplateVersions     func(childComplexity int, familyID *string, pagination *model.Pagination) int
 		Permissions             func(childComplexity int) int
 		PlatformSettings        func(childComplexity int) int
-		RateLimitPolicies       func(childComplexity int) int
 		RequestLogs             func(childComplexity int, filter *model.RequestLogFilter, page *model.PageInput) int
 		RequestMetrics          func(childComplexity int, from time.Time, to time.Time, granularity model.RequestMetricsBucketGranularity, filter *model.RequestMetricsFilter) int
 		ResourcePool            func(childComplexity int, id string) int
@@ -652,15 +648,6 @@ type ComplexityRoot struct {
 		VirtualKeys             func(childComplexity int, userID *string) int
 		VsphereNetworks         func(childComplexity int, resourcePoolID string) int
 		VsphereResourcePools    func(childComplexity int, resourcePoolID string) int
-	}
-
-	RateLimitPolicy struct {
-		CreatedAt func(childComplexity int) int
-		Enabled   func(childComplexity int) int
-		ID        func(childComplexity int) int
-		Name      func(childComplexity int) int
-		Rpm       func(childComplexity int) int
-		Tpm       func(childComplexity int) int
 	}
 
 	RequestLog struct {
@@ -871,17 +858,16 @@ type ComplexityRoot struct {
 	}
 
 	VirtualKey struct {
-		AgentID           func(childComplexity int) int
-		Alias             func(childComplexity int) int
-		CreatedAt         func(childComplexity int) int
-		ExpiresAt         func(childComplexity int) int
-		ID                func(childComplexity int) int
-		MaxBudget         func(childComplexity int) int
-		Models            func(childComplexity int) int
-		RateLimitPolicyID func(childComplexity int) int
-		Status            func(childComplexity int) int
-		TeamID            func(childComplexity int) int
-		UserID            func(childComplexity int) int
+		AgentID   func(childComplexity int) int
+		Alias     func(childComplexity int) int
+		CreatedAt func(childComplexity int) int
+		ExpiresAt func(childComplexity int) int
+		ID        func(childComplexity int) int
+		MaxBudget func(childComplexity int) int
+		Models    func(childComplexity int) int
+		Status    func(childComplexity int) int
+		TeamID    func(childComplexity int) int
+		UserID    func(childComplexity int) int
 	}
 
 	VsphereNetwork struct {
@@ -964,9 +950,6 @@ type MutationResolver interface {
 	SyncModelGatewayConnection(ctx context.Context, id string) (*model.ModelGatewaySyncResult, error)
 	TestNewModelGatewayConnection(ctx context.Context, input model.TestModelGatewayConnectionInput) (*model.ModelGatewayTestResult, error)
 	RecordRequestLog(ctx context.Context, input model.RecordRequestLogInput) (*model.RequestLog, error)
-	UpsertRateLimitPolicy(ctx context.Context, input model.UpsertRateLimitPolicyInput) (*model.RateLimitPolicy, error)
-	SetRateLimitPolicyEnabled(ctx context.Context, id string, enabled bool) (*model.RateLimitPolicy, error)
-	DeleteRateLimitPolicy(ctx context.Context, id string) (bool, error)
 	CreateOvaTemplateFamily(ctx context.Context, input model.CreateOvaTemplateFamilyInput) (*model.CreateOvaTemplateFamilyPayload, error)
 	AddOvaTemplateVersion(ctx context.Context, input model.AddOvaTemplateVersionInput) (*model.AddOvaTemplateVersionPayload, error)
 	CreateCustomRole(ctx context.Context, input model.CreateCustomRoleInput) (*model.CustomRole, error)
@@ -1028,7 +1011,6 @@ type QueryResolver interface {
 	SpendReport(ctx context.Context, input model.SpendReportInput) (*model.SpendReport, error)
 	Budgets(ctx context.Context, scope model.BudgetScope) ([]model.Budget, error)
 	RequestLogs(ctx context.Context, filter *model.RequestLogFilter, page *model.PageInput) (*model.RequestLogConnection, error)
-	RateLimitPolicies(ctx context.Context) ([]model.RateLimitPolicy, error)
 	RequestMetrics(ctx context.Context, from time.Time, to time.Time, granularity model.RequestMetricsBucketGranularity, filter *model.RequestMetricsFilter) (*model.RequestMetrics, error)
 	GatewayHealth(ctx context.Context) ([]model.GatewayHealth, error)
 	OvaTemplateFamilies(ctx context.Context, filter *model.OvaTemplateFamilyFilter, pagination *model.Pagination, sort *model.OvaTemplateFamilySort) (*model.OvaTemplateFamilyConnection, error)
@@ -2953,17 +2935,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.DeleteModelRoute(childComplexity, args["id"].(string)), true
-	case "Mutation.deleteRateLimitPolicy":
-		if e.ComplexityRoot.Mutation.DeleteRateLimitPolicy == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_deleteRateLimitPolicy_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.Mutation.DeleteRateLimitPolicy(childComplexity, args["id"].(string)), true
 	case "Mutation.deleteResourcePool":
 		if e.ComplexityRoot.Mutation.DeleteResourcePool == nil {
 			break
@@ -3223,17 +3194,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.SetModelRouteEnabled(childComplexity, args["id"].(string), args["enabled"].(bool)), true
-	case "Mutation.setRateLimitPolicyEnabled":
-		if e.ComplexityRoot.Mutation.SetRateLimitPolicyEnabled == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_setRateLimitPolicyEnabled_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.Mutation.SetRateLimitPolicyEnabled(childComplexity, args["id"].(string), args["enabled"].(bool)), true
 	case "Mutation.setRolePermissions":
 		if e.ComplexityRoot.Mutation.SetRolePermissions == nil {
 			break
@@ -3465,17 +3425,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.UpsertPermission(childComplexity, args["key"].(string), args["description"].(*string)), true
-	case "Mutation.upsertRateLimitPolicy":
-		if e.ComplexityRoot.Mutation.UpsertRateLimitPolicy == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_upsertRateLimitPolicy_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.Mutation.UpsertRateLimitPolicy(childComplexity, args["input"].(model.UpsertRateLimitPolicyInput)), true
 	case "Mutation.upsertSkill":
 		if e.ComplexityRoot.Mutation.UpsertSkill == nil {
 			break
@@ -3965,12 +3914,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.PlatformSettings(childComplexity), true
-	case "Query.rateLimitPolicies":
-		if e.ComplexityRoot.Query.RateLimitPolicies == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Query.RateLimitPolicies(childComplexity), true
 	case "Query.requestLogs":
 		if e.ComplexityRoot.Query.RequestLogs == nil {
 			break
@@ -4154,43 +4097,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.VsphereResourcePools(childComplexity, args["resourcePoolId"].(string)), true
-
-	case "RateLimitPolicy.createdAt":
-		if e.ComplexityRoot.RateLimitPolicy.CreatedAt == nil {
-			break
-		}
-
-		return e.ComplexityRoot.RateLimitPolicy.CreatedAt(childComplexity), true
-	case "RateLimitPolicy.enabled":
-		if e.ComplexityRoot.RateLimitPolicy.Enabled == nil {
-			break
-		}
-
-		return e.ComplexityRoot.RateLimitPolicy.Enabled(childComplexity), true
-	case "RateLimitPolicy.id":
-		if e.ComplexityRoot.RateLimitPolicy.ID == nil {
-			break
-		}
-
-		return e.ComplexityRoot.RateLimitPolicy.ID(childComplexity), true
-	case "RateLimitPolicy.name":
-		if e.ComplexityRoot.RateLimitPolicy.Name == nil {
-			break
-		}
-
-		return e.ComplexityRoot.RateLimitPolicy.Name(childComplexity), true
-	case "RateLimitPolicy.rpm":
-		if e.ComplexityRoot.RateLimitPolicy.Rpm == nil {
-			break
-		}
-
-		return e.ComplexityRoot.RateLimitPolicy.Rpm(childComplexity), true
-	case "RateLimitPolicy.tpm":
-		if e.ComplexityRoot.RateLimitPolicy.Tpm == nil {
-			break
-		}
-
-		return e.ComplexityRoot.RateLimitPolicy.Tpm(childComplexity), true
 
 	case "RequestLog.agentId":
 		if e.ComplexityRoot.RequestLog.AgentID == nil {
@@ -5034,12 +4940,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.VirtualKey.Models(childComplexity), true
-	case "VirtualKey.rateLimitPolicyId":
-		if e.ComplexityRoot.VirtualKey.RateLimitPolicyID == nil {
-			break
-		}
-
-		return e.ComplexityRoot.VirtualKey.RateLimitPolicyID(childComplexity), true
 	case "VirtualKey.status":
 		if e.ComplexityRoot.VirtualKey.Status == nil {
 			break
@@ -5151,7 +5051,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputUpsertArtifactInput,
 		ec.unmarshalInputUpsertImageInput,
 		ec.unmarshalInputUpsertModelRouteInput,
-		ec.unmarshalInputUpsertRateLimitPolicyInput,
 		ec.unmarshalInputUpsertSkillInput,
 		ec.unmarshalInputUpsertUpstreamInput,
 		ec.unmarshalInputUserFilter,
@@ -6449,7 +6348,7 @@ extend type Query {
   budgets(scope: BudgetScope!): [Budget!]! @hasPermission(perm: "metering:view")
 }
 `, BuiltIn: false},
-	{Name: "../../schema/observability.graphql", Input: `# Request logs (请求日志) + rate-limit policies (限流策略). 0619.
+	{Name: "../../schema/observability.graphql", Input: `# Request logs (请求日志). 0619.
 
 type RequestLog {
   id: ID!
@@ -6561,25 +6460,8 @@ input RequestMetricsFilter {
   model: String
 }
 
-type RateLimitPolicy {
-  id: ID!
-  name: String!
-  rpm: Int
-  tpm: Int
-  enabled: Boolean!
-  createdAt: Time!
-}
-
-input UpsertRateLimitPolicyInput {
-  name: String!
-  rpm: Int
-  tpm: Int
-  enabled: Boolean
-}
-
 extend type Query {
   requestLogs(filter: RequestLogFilter, page: PageInput): RequestLogConnection! @hasPermission(perm: "audit:view")
-  rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin])
   requestMetrics(from: Time!, to: Time!, granularity: RequestMetricsBucketGranularity!, filter: RequestMetricsFilter): RequestMetrics! @hasPermission(perm: "audit:view")
   # Upstream health across every configured gateway (fan-out to litellm /health).
   gatewayHealth: [GatewayHealth!]! @hasPermission(perm: "audit:view")
@@ -6587,11 +6469,6 @@ extend type Query {
 
 extend type Mutation {
   recordRequestLog(input: RecordRequestLogInput!): RequestLog! @hasRole(any: [admin])
-  upsertRateLimitPolicy(input: UpsertRateLimitPolicyInput!): RateLimitPolicy! @hasPermission(perm: "route:manage")
-  setRateLimitPolicyEnabled(id: ID!, enabled: Boolean!): RateLimitPolicy! @hasPermission(perm: "route:manage")
-  # Delete a policy. Refused while any non-revoked virtual key still references it
-  # (reassign/revoke those keys first) so bound keys never silently lose their limits.
-  deleteRateLimitPolicy(id: ID!): Boolean! @hasPermission(perm: "route:manage")
 }
 `, BuiltIn: false},
 	{Name: "../../schema/ova.graphql", Input: `# Agent Marketplace — OVA template catalog (Block 6a). The console 智能体市场
@@ -7014,7 +6891,7 @@ type AuditLog {
 
 input AuditFilter {
   actorUserId: ID
-  # action category prefix, e.g. "user." / "router." / "key." / "rate_limit."
+  # action category prefix, e.g. "user." / "router." / "key."
   actionPrefix: String
   # substring match across action + resourceId
   search: String
@@ -7093,7 +6970,6 @@ type VirtualKey {
   alias: String
   userId: ID!
   agentId: ID
-  rateLimitPolicyId: ID
   teamId: String
   models: [String!]!
   maxBudget: Float
@@ -7111,8 +6987,6 @@ type IssuedVirtualKey {
 input IssueVirtualKeyInput {
   userId: ID!
   agentId: ID
-  # Associated rate-limit policy; its rpm/tpm are applied to the litellm key.
-  rateLimitPolicyId: ID
   teamId: String
   models: [String!]
   maxBudget: Float
@@ -8114,24 +7988,6 @@ func (ec *executionContext) childFields_PlatformSettings(ctx context.Context, fi
 	return nil, fmt.Errorf("no field named %q was found under type PlatformSettings", field.Name)
 }
 
-func (ec *executionContext) childFields_RateLimitPolicy(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-	switch field.Name {
-	case "id":
-		return ec.fieldContext_RateLimitPolicy_id(ctx, field)
-	case "name":
-		return ec.fieldContext_RateLimitPolicy_name(ctx, field)
-	case "rpm":
-		return ec.fieldContext_RateLimitPolicy_rpm(ctx, field)
-	case "tpm":
-		return ec.fieldContext_RateLimitPolicy_tpm(ctx, field)
-	case "enabled":
-		return ec.fieldContext_RateLimitPolicy_enabled(ctx, field)
-	case "createdAt":
-		return ec.fieldContext_RateLimitPolicy_createdAt(ctx, field)
-	}
-	return nil, fmt.Errorf("no field named %q was found under type RateLimitPolicy", field.Name)
-}
-
 func (ec *executionContext) childFields_RequestLog(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -8556,8 +8412,6 @@ func (ec *executionContext) childFields_VirtualKey(ctx context.Context, field gr
 		return ec.fieldContext_VirtualKey_userId(ctx, field)
 	case "agentId":
 		return ec.fieldContext_VirtualKey_agentId(ctx, field)
-	case "rateLimitPolicyId":
-		return ec.fieldContext_VirtualKey_rateLimitPolicyId(ctx, field)
 	case "teamId":
 		return ec.fieldContext_VirtualKey_teamId(ctx, field)
 	case "models":
@@ -9082,20 +8936,6 @@ func (ec *executionContext) field_Mutation_deleteModelRoute_args(ctx context.Con
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_deleteRateLimitPolicy_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
-		func(ctx context.Context, v any) (string, error) {
-			return ec.unmarshalNID2string(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["id"] = arg0
-	return args, nil
-}
-
 func (ec *executionContext) field_Mutation_deleteResourcePool_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -9445,28 +9285,6 @@ func (ec *executionContext) field_Mutation_setDefaultAgentConfig_args(ctx contex
 }
 
 func (ec *executionContext) field_Mutation_setModelRouteEnabled_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
-		func(ctx context.Context, v any) (string, error) {
-			return ec.unmarshalNID2string(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["id"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "enabled",
-		func(ctx context.Context, v any) (bool, error) {
-			return ec.unmarshalNBoolean2bool(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["enabled"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_setRateLimitPolicyEnabled_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
@@ -9851,20 +9669,6 @@ func (ec *executionContext) field_Mutation_upsertPermission_args(ctx context.Con
 		return nil, err
 	}
 	args["description"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_upsertRateLimitPolicy_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
-		func(ctx context.Context, v any) (model.UpsertRateLimitPolicyInput, error) {
-			return ec.unmarshalNUpsertRateLimitPolicyInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUpsertRateLimitPolicyInput(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["input"] = arg0
 	return args, nil
 }
 
@@ -19957,192 +19761,6 @@ func (ec *executionContext) fieldContext_Mutation_recordRequestLog(ctx context.C
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_upsertRateLimitPolicy(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Mutation_upsertRateLimitPolicy(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().UpsertRateLimitPolicy(ctx, fc.Args["input"].(model.UpsertRateLimitPolicyInput))
-		},
-		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
-			directive0 := next
-
-			directive1 := func(ctx context.Context) (any, error) {
-				perm, err := ec.unmarshalNString2string(ctx, "route:manage")
-				if err != nil {
-					var zeroVal *model.RateLimitPolicy
-					return zeroVal, err
-				}
-				if ec.Directives.HasPermission == nil {
-					var zeroVal *model.RateLimitPolicy
-					return zeroVal, errors.New("directive hasPermission is not implemented")
-				}
-				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
-			}
-
-			next = directive1
-			return next
-		},
-		func(ctx context.Context, selections ast.SelectionSet, v *model.RateLimitPolicy) graphql.Marshaler {
-			return ec.marshalNRateLimitPolicy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRateLimitPolicy(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Mutation_upsertRateLimitPolicy(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_RateLimitPolicy(ctx, field)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_upsertRateLimitPolicy_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_setRateLimitPolicyEnabled(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Mutation_setRateLimitPolicyEnabled(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().SetRateLimitPolicyEnabled(ctx, fc.Args["id"].(string), fc.Args["enabled"].(bool))
-		},
-		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
-			directive0 := next
-
-			directive1 := func(ctx context.Context) (any, error) {
-				perm, err := ec.unmarshalNString2string(ctx, "route:manage")
-				if err != nil {
-					var zeroVal *model.RateLimitPolicy
-					return zeroVal, err
-				}
-				if ec.Directives.HasPermission == nil {
-					var zeroVal *model.RateLimitPolicy
-					return zeroVal, errors.New("directive hasPermission is not implemented")
-				}
-				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
-			}
-
-			next = directive1
-			return next
-		},
-		func(ctx context.Context, selections ast.SelectionSet, v *model.RateLimitPolicy) graphql.Marshaler {
-			return ec.marshalNRateLimitPolicy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRateLimitPolicy(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Mutation_setRateLimitPolicyEnabled(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_RateLimitPolicy(ctx, field)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_setRateLimitPolicyEnabled_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_deleteRateLimitPolicy(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Mutation_deleteRateLimitPolicy(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().DeleteRateLimitPolicy(ctx, fc.Args["id"].(string))
-		},
-		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
-			directive0 := next
-
-			directive1 := func(ctx context.Context) (any, error) {
-				perm, err := ec.unmarshalNString2string(ctx, "route:manage")
-				if err != nil {
-					var zeroVal bool
-					return zeroVal, err
-				}
-				if ec.Directives.HasPermission == nil {
-					var zeroVal bool
-					return zeroVal, errors.New("directive hasPermission is not implemented")
-				}
-				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
-			}
-
-			next = directive1
-			return next
-		},
-		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
-			return ec.marshalNBoolean2bool(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Mutation_deleteRateLimitPolicy(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_deleteRateLimitPolicy_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Mutation_createOvaTemplateFamily(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -23814,56 +23432,6 @@ func (ec *executionContext) fieldContext_Query_requestLogs(ctx context.Context, 
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_rateLimitPolicies(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Query_rateLimitPolicies(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Query().RateLimitPolicies(ctx)
-		},
-		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
-			directive0 := next
-
-			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
-				if err != nil {
-					var zeroVal []model.RateLimitPolicy
-					return zeroVal, err
-				}
-				if ec.Directives.HasRole == nil {
-					var zeroVal []model.RateLimitPolicy
-					return zeroVal, errors.New("directive hasRole is not implemented")
-				}
-				return ec.Directives.HasRole(ctx, nil, directive0, any)
-			}
-
-			next = directive1
-			return next
-		},
-		func(ctx context.Context, selections ast.SelectionSet, v []model.RateLimitPolicy) graphql.Marshaler {
-			return ec.marshalNRateLimitPolicy2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRateLimitPolicyᚄ(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Query_rateLimitPolicies(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_RateLimitPolicy(ctx, field)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Query_requestMetrics(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -24696,144 +24264,6 @@ func (ec *executionContext) fieldContext_Query___schema(_ context.Context, field
 		},
 	}
 	return fc, nil
-}
-
-func (ec *executionContext) _RateLimitPolicy_id(ctx context.Context, field graphql.CollectedField, obj *model.RateLimitPolicy) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_RateLimitPolicy_id(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.ID, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNID2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_RateLimitPolicy_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("RateLimitPolicy", field, false, false, errors.New("field of type ID does not have child fields"))
-}
-
-func (ec *executionContext) _RateLimitPolicy_name(ctx context.Context, field graphql.CollectedField, obj *model.RateLimitPolicy) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_RateLimitPolicy_name(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Name, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_RateLimitPolicy_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("RateLimitPolicy", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _RateLimitPolicy_rpm(ctx context.Context, field graphql.CollectedField, obj *model.RateLimitPolicy) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_RateLimitPolicy_rpm(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Rpm, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
-			return ec.marshalOInt2ᚖint(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_RateLimitPolicy_rpm(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("RateLimitPolicy", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _RateLimitPolicy_tpm(ctx context.Context, field graphql.CollectedField, obj *model.RateLimitPolicy) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_RateLimitPolicy_tpm(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Tpm, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
-			return ec.marshalOInt2ᚖint(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_RateLimitPolicy_tpm(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("RateLimitPolicy", field, false, false, errors.New("field of type Int does not have child fields"))
-}
-
-func (ec *executionContext) _RateLimitPolicy_enabled(ctx context.Context, field graphql.CollectedField, obj *model.RateLimitPolicy) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_RateLimitPolicy_enabled(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Enabled, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
-			return ec.marshalNBoolean2bool(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_RateLimitPolicy_enabled(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("RateLimitPolicy", field, false, false, errors.New("field of type Boolean does not have child fields"))
-}
-
-func (ec *executionContext) _RateLimitPolicy_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.RateLimitPolicy) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_RateLimitPolicy_createdAt(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.CreatedAt, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
-			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_RateLimitPolicy_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("RateLimitPolicy", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
 func (ec *executionContext) _RequestLog_id(ctx context.Context, field graphql.CollectedField, obj *model.RequestLog) (ret graphql.Marshaler) {
@@ -28066,29 +27496,6 @@ func (ec *executionContext) fieldContext_VirtualKey_agentId(_ context.Context, f
 	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type ID does not have child fields"))
 }
 
-func (ec *executionContext) _VirtualKey_rateLimitPolicyId(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_VirtualKey_rateLimitPolicyId(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.RateLimitPolicyID, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
-			return ec.marshalOID2ᚖstring(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_VirtualKey_rateLimitPolicyId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type ID does not have child fields"))
-}
-
 func (ec *executionContext) _VirtualKey_teamId(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -30302,7 +29709,7 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"userId", "agentId", "rateLimitPolicyId", "teamId", "models", "maxBudget", "rpmLimit", "tpmLimit", "alias", "expiresAt"}
+	fieldsInOrder := [...]string{"userId", "agentId", "teamId", "models", "maxBudget", "rpmLimit", "tpmLimit", "alias", "expiresAt"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -30323,13 +29730,6 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 				return it, err
 			}
 			it.AgentID = data
-		case "rateLimitPolicyId":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("rateLimitPolicyId"))
-			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.RateLimitPolicyID = data
 		case "teamId":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -31916,57 +31316,6 @@ func (ec *executionContext) unmarshalInputUpsertModelRouteInput(ctx context.Cont
 				return it, err
 			}
 			it.Strategy = data
-		case "enabled":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("enabled"))
-			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Enabled = data
-		}
-	}
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputUpsertRateLimitPolicyInput(ctx context.Context, obj any) (model.UpsertRateLimitPolicyInput, error) {
-	var it model.UpsertRateLimitPolicyInput
-	if obj == nil {
-		return it, nil
-	}
-
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"name", "rpm", "tpm", "enabled"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "name":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Name = data
-		case "rpm":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("rpm"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Rpm = data
-		case "tpm":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("tpm"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Tpm = data
 		case "enabled":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("enabled"))
 			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
@@ -35897,27 +35246,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "upsertRateLimitPolicy":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_upsertRateLimitPolicy(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "setRateLimitPolicyEnabled":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_setRateLimitPolicyEnabled(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "deleteRateLimitPolicy":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_deleteRateLimitPolicy(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "createOvaTemplateFamily":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createOvaTemplateFamily(ctx, field)
@@ -37347,28 +36675,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "rateLimitPolicies":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_rateLimitPolicies(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "requestMetrics":
 			field := field
 
@@ -37668,70 +36974,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			})
 			if out.Values[i] == graphql.RequiredNull {
 				atomic.AddUint32(&out.Invalids, 1)
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
-
-	for label, dfs := range deferred {
-		ec.ProcessDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
-var rateLimitPolicyImplementors = []string{"RateLimitPolicy"}
-
-func (ec *executionContext) _RateLimitPolicy(ctx context.Context, sel ast.SelectionSet, obj *model.RateLimitPolicy) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, rateLimitPolicyImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("RateLimitPolicy")
-		case "id":
-			out.Values[i] = ec._RateLimitPolicy_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "name":
-			out.Values[i] = ec._RateLimitPolicy_name(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "rpm":
-			out.Values[i] = ec._RateLimitPolicy_rpm(ctx, field, obj)
-			if out.Values[i] == graphql.RequiredNull {
-				out.Invalids++
-			}
-		case "tpm":
-			out.Values[i] = ec._RateLimitPolicy_tpm(ctx, field, obj)
-			if out.Values[i] == graphql.RequiredNull {
-				out.Invalids++
-			}
-		case "enabled":
-			out.Values[i] = ec._RateLimitPolicy_enabled(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "createdAt":
-			out.Values[i] = ec._RateLimitPolicy_createdAt(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -39375,11 +38617,6 @@ func (ec *executionContext) _VirtualKey(ctx context.Context, sel ast.SelectionSe
 			}
 		case "agentId":
 			out.Values[i] = ec._VirtualKey_agentId(ctx, field, obj)
-			if out.Values[i] == graphql.RequiredNull {
-				out.Invalids++
-			}
-		case "rateLimitPolicyId":
-			out.Values[i] = ec._VirtualKey_rateLimitPolicyId(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
@@ -41488,36 +40725,6 @@ func (ec *executionContext) marshalNPlatformSettings2ᚖgithubᚗcomᚋVMwareᚑ
 	return ec._PlatformSettings(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNRateLimitPolicy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRateLimitPolicy(ctx context.Context, sel ast.SelectionSet, v model.RateLimitPolicy) graphql.Marshaler {
-	return ec._RateLimitPolicy(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNRateLimitPolicy2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRateLimitPolicyᚄ(ctx context.Context, sel ast.SelectionSet, v []model.RateLimitPolicy) graphql.Marshaler {
-	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
-		fc := graphql.GetFieldContext(ctx)
-		fc.Result = &v[i]
-		return ec.marshalNRateLimitPolicy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRateLimitPolicy(ctx, sel, v[i])
-	})
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNRateLimitPolicy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRateLimitPolicy(ctx context.Context, sel ast.SelectionSet, v *model.RateLimitPolicy) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._RateLimitPolicy(ctx, sel, v)
-}
-
 func (ec *executionContext) unmarshalNRecordRequestLogInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRecordRequestLogInput(ctx context.Context, v any) (model.RecordRequestLogInput, error) {
 	res, err := ec.unmarshalInputRecordRequestLogInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -42178,11 +41385,6 @@ func (ec *executionContext) unmarshalNUpsertImageInput2githubᚗcomᚋVMwareᚑA
 
 func (ec *executionContext) unmarshalNUpsertModelRouteInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUpsertModelRouteInput(ctx context.Context, v any) (model.UpsertModelRouteInput, error) {
 	res, err := ec.unmarshalInputUpsertModelRouteInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNUpsertRateLimitPolicyInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUpsertRateLimitPolicyInput(ctx context.Context, v any) (model.UpsertRateLimitPolicyInput, error) {
-	res, err := ec.unmarshalInputUpsertRateLimitPolicyInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 

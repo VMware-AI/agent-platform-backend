@@ -11,7 +11,6 @@ type VirtualKey {
   alias: String
   userId: ID!
   agentId: ID
-  rateLimitPolicyId: ID
   teamId: String
   models: [String!]!
   maxBudget: Float
@@ -29,8 +28,6 @@ type IssuedVirtualKey {
 input IssueVirtualKeyInput {
   userId: ID!
   agentId: ID
-  # Associated rate-limit policy; its rpm/tpm are applied to the litellm key.
-  rateLimitPolicyId: ID
   teamId: String
   models: [String!]
   maxBudget: Float

@@ -43,29 +43,12 @@ DOMAINS = [
 # their own home (README + the cross-cutting "core" handling below).
 CORE_MODULE = "schema"
 
-# rate-limit policies + request metrics share observability.graphql, which also
-# holds the rate-limit *policy* type used by virtual-keys. We surface
-# RateLimitPolicy on the virtual-keys page too via cross-references (it stays
-# defined in observability per the file).
+# request metrics live in observability.graphql.
 
 
 # Optional per-page leading notes (cross-references where a related type lives in
 # another module's file).
-DOMAIN_NOTES = {
-    "virtual-keys": (
-        "> **Rate-limit policies** (the `RateLimitPolicy` type, the "
-        "`rateLimitPolicies` query, and the `upsertRateLimitPolicy` / "
-        "`setRateLimitPolicyEnabled` / `deleteRateLimitPolicy` mutations) are "
-        "defined in `schema/observability.graphql` and documented on the "
-        "[Observability page](./observability.md). A virtual key references a "
-        "policy via `IssueVirtualKeyInput.rateLimitPolicyId`."
-    ),
-    "observability": (
-        "> Rate-limit policies are co-located here (same source file) but are "
-        "conceptually paired with [virtual keys](./virtual-keys.md), which bind "
-        "to them via `rateLimitPolicyId`."
-    ),
-}
+DOMAIN_NOTES: dict[str, str] = {}
 
 
 @dataclass

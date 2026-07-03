@@ -12,7 +12,6 @@ mutation RegenerateVirtualKey($id: ID!) {
     alias
     userId
     agentId
-    rateLimitPolicyId
     status
     expiresAt
     createdAt

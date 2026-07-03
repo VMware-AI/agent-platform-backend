@@ -453,16 +453,15 @@ type Image struct {
 }
 
 type IssueVirtualKeyInput struct {
-	UserID            string     `json:"userId"`
-	AgentID           *string    `json:"agentId,omitempty"`
-	RateLimitPolicyID *string    `json:"rateLimitPolicyId,omitempty"`
-	TeamID            *string    `json:"teamId,omitempty"`
-	Models            []string   `json:"models,omitempty"`
-	MaxBudget         *float64   `json:"maxBudget,omitempty"`
-	RpmLimit          *int       `json:"rpmLimit,omitempty"`
-	TpmLimit          *int       `json:"tpmLimit,omitempty"`
-	Alias             *string    `json:"alias,omitempty"`
-	ExpiresAt         *time.Time `json:"expiresAt,omitempty"`
+	UserID    string     `json:"userId"`
+	AgentID   *string    `json:"agentId,omitempty"`
+	TeamID    *string    `json:"teamId,omitempty"`
+	Models    []string   `json:"models,omitempty"`
+	MaxBudget *float64   `json:"maxBudget,omitempty"`
+	RpmLimit  *int       `json:"rpmLimit,omitempty"`
+	TpmLimit  *int       `json:"tpmLimit,omitempty"`
+	Alias     *string    `json:"alias,omitempty"`
+	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
 }
 
 type IssuedVirtualKey struct {
@@ -677,15 +676,6 @@ type PlatformSettings struct {
 }
 
 type Query struct {
-}
-
-type RateLimitPolicy struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Rpm       *int      `json:"rpm,omitempty"`
-	Tpm       *int      `json:"tpm,omitempty"`
-	Enabled   bool      `json:"enabled"`
-	CreatedAt time.Time `json:"createdAt"`
 }
 
 type RecordRequestLogInput struct {
@@ -1028,13 +1018,6 @@ type UpsertModelRouteInput struct {
 	Enabled          *bool                  `json:"enabled,omitempty"`
 }
 
-type UpsertRateLimitPolicyInput struct {
-	Name    string `json:"name"`
-	Rpm     *int   `json:"rpm,omitempty"`
-	Tpm     *int   `json:"tpm,omitempty"`
-	Enabled *bool  `json:"enabled,omitempty"`
-}
-
 type UpsertSkillInput struct {
 	Name        string  `json:"name"`
 	Version     string  `json:"version"`
@@ -1101,17 +1084,16 @@ type VMTemplate struct {
 }
 
 type VirtualKey struct {
-	ID                string           `json:"id"`
-	Alias             *string          `json:"alias,omitempty"`
-	UserID            string           `json:"userId"`
-	AgentID           *string          `json:"agentId,omitempty"`
-	RateLimitPolicyID *string          `json:"rateLimitPolicyId,omitempty"`
-	TeamID            *string          `json:"teamId,omitempty"`
-	Models            []string         `json:"models"`
-	MaxBudget         *float64         `json:"maxBudget,omitempty"`
-	Status            VirtualKeyStatus `json:"status"`
-	ExpiresAt         *time.Time       `json:"expiresAt,omitempty"`
-	CreatedAt         time.Time        `json:"createdAt"`
+	ID        string           `json:"id"`
+	Alias     *string          `json:"alias,omitempty"`
+	UserID    string           `json:"userId"`
+	AgentID   *string          `json:"agentId,omitempty"`
+	TeamID    *string          `json:"teamId,omitempty"`
+	Models    []string         `json:"models"`
+	MaxBudget *float64         `json:"maxBudget,omitempty"`
+	Status    VirtualKeyStatus `json:"status"`
+	ExpiresAt *time.Time       `json:"expiresAt,omitempty"`
+	CreatedAt time.Time        `json:"createdAt"`
 }
 
 type VsphereNetwork struct {

@@ -9,15 +9,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
-	"github.com/VMware-AI/agent-platform-backend/ent/ratelimitpolicy"
 	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
-	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
-	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/google/uuid"
-	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 // RecordRequestLog ingests a gateway request-log record.
@@ -49,119 +44,6 @@ func (r *mutationResolver) RecordRequestLog(ctx context.Context, input model.Rec
 		return nil, err
 	}
 	return toModelRequestLog(l), nil
-}
-
-// UpsertRateLimitPolicy creates or updates a policy keyed by name.
-func (r *mutationResolver) UpsertRateLimitPolicy(ctx context.Context, input model.UpsertRateLimitPolicyInput) (*model.RateLimitPolicy, error) {
-	tenantID, err := writeTenant(ctx)
-	if err != nil {
-		return nil, err
-	}
-	// Find-or-create within the caller's tenant namespace (LLD-10 §1.7).
-	lookup := r.Ent.RateLimitPolicy.Query().Where(ratelimitpolicy.Name(input.Name))
-	if tenantID != nil {
-		lookup = lookup.Where(ratelimitpolicy.TenantID(*tenantID))
-	} else {
-		lookup = lookup.Where(ratelimitpolicy.TenantIDIsNil())
-	}
-	existing, err := lookup.Only(ctx)
-	enabled := false
-	if input.Enabled != nil {
-		enabled = *input.Enabled
-	}
-	switch {
-	case ent.IsNotFound(err):
-		c := r.Ent.RateLimitPolicy.Create().SetName(input.Name).SetEnabled(enabled).
-			SetNillableTenantID(tenantID)
-		if input.Rpm != nil {
-			c.SetRpm(*input.Rpm)
-		}
-		if input.Tpm != nil {
-			c.SetTpm(*input.Tpm)
-		}
-		p, err := c.Save(ctx)
-		if err != nil {
-			return nil, err
-		}
-		r.audit(ctx, "rate_limit.upsert", "rate_limit_policy", p.ID.String(), true, actorID(auth.FromContext(ctx)))
-		return toModelRateLimitPolicy(p), nil
-	case err != nil:
-		return nil, err
-	default:
-		u := r.Ent.RateLimitPolicy.UpdateOne(existing).SetEnabled(enabled)
-		if input.Rpm != nil {
-			u.SetRpm(*input.Rpm)
-		}
-		if input.Tpm != nil {
-			u.SetTpm(*input.Tpm)
-		}
-		p, err := u.Save(ctx)
-		if err != nil {
-			return nil, err
-		}
-		r.audit(ctx, "rate_limit.upsert", "rate_limit_policy", p.ID.String(), true, actorID(auth.FromContext(ctx)))
-		return toModelRateLimitPolicy(p), nil
-	}
-}
-
-// SetRateLimitPolicyEnabled toggles a policy.
-func (r *mutationResolver) SetRateLimitPolicyEnabled(ctx context.Context, id string, enabled bool) (*model.RateLimitPolicy, error) {
-	pid, err := uuid.Parse(id)
-	if err != nil {
-		return nil, gqlerror.Errorf("invalid id")
-	}
-	// Tenant 404 oracle, mirroring DeleteRateLimitPolicy: a tenant-admin may toggle
-	// only their own tenant's policy; another tenant's reads as missing.
-	pol, err := r.Ent.RateLimitPolicy.Get(ctx, pid)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, notFoundErr("rate-limit policy")
-		}
-		return nil, err
-	}
-	if !writeAllowed(ctx, pol.TenantID) {
-		return nil, notFoundErr("rate-limit policy")
-	}
-	p, err := r.Ent.RateLimitPolicy.UpdateOneID(pid).SetEnabled(enabled).Save(ctx)
-	if err != nil {
-		return nil, err
-	}
-	r.audit(ctx, "rate_limit.set_enabled", "rate_limit_policy", id, true, actorID(auth.FromContext(ctx)))
-	return toModelRateLimitPolicy(p), nil
-}
-
-// DeleteRateLimitPolicy deletes a policy (模块⑤ 限流). Tenant-safe (a tenant-admin
-// can only delete their own tenant's policy) and refused while any non-revoked
-// virtual key still references it, so bound keys never silently lose their limits.
-func (r *mutationResolver) DeleteRateLimitPolicy(ctx context.Context, id string) (bool, error) {
-	pid, err := uuid.Parse(id)
-	if err != nil {
-		return false, gqlerror.Errorf("invalid id")
-	}
-	pol, err := r.Ent.RateLimitPolicy.Get(ctx, pid)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return false, notFoundErr("rate-limit policy")
-		}
-		return false, err
-	}
-	if !writeAllowed(ctx, pol.TenantID) {
-		return false, notFoundErr("rate-limit policy") // no cross-tenant oracle
-	}
-	inUse, err := r.Ent.VirtualKey.Query().
-		Where(virtualkey.RateLimitPolicyID(pid), virtualkey.StatusNEQ(virtualkey.StatusRevoked)).
-		Count(ctx)
-	if err != nil {
-		return false, err
-	}
-	if inUse > 0 {
-		return false, gqlerror.Errorf("policy is in use by %d virtual key(s); reassign or revoke them first", inUse)
-	}
-	if err := r.Ent.RateLimitPolicy.DeleteOneID(pid).Exec(ctx); err != nil {
-		return false, err
-	}
-	r.audit(ctx, "rate_limit.delete", "rate_limit_policy", id, true, actorID(auth.FromContext(ctx)))
-	return true, nil
 }
 
 // RequestLogs lists gateway request logs with optional filters (0619 第11页).
@@ -232,27 +114,6 @@ func (r *queryResolver) RequestLogs(ctx context.Context, filter *model.RequestLo
 		return nil, err
 	}
 	return &model.RequestLogConnection{Items: mapSlice(rows, toModelRequestLog), Total: total}, nil
-}
-
-// RateLimitPolicies lists all policies.
-func (r *queryResolver) RateLimitPolicies(ctx context.Context) ([]model.RateLimitPolicy, error) {
-	q := r.Ent.RateLimitPolicy.Query()
-	// Tenant isolation (LLD-10): tenant-admin confined to own tenant.
-	if d := tenantScopeFor(ctx); d.apply {
-		if d.denyAll {
-			q = q.Where(ratelimitpolicy.IDEQ(uuid.Nil))
-		} else {
-			q = q.Where(ratelimitpolicy.TenantID(d.tenant))
-		}
-	}
-	if env, ok := r.envScopeFor(ctx); ok {
-		q = q.Where(ratelimitpolicy.Or(ratelimitpolicy.EnvironmentID(env), ratelimitpolicy.EnvironmentIDIsNil()))
-	}
-	ps, err := q.Order(orderNewest).All(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return mapSlice(ps, toModelRateLimitPolicy), nil
 }
 
 // RequestMetrics returns windowed, gap-filled request-traffic metrics bucketed

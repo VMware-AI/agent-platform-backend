@@ -223,23 +223,6 @@ func (r *Resolver) assertDepartmentReferenceManageable(ctx context.Context, did 
 	return nil
 }
 
-// assertRateLimitPolicyReadable enforces the tenant 404 oracle for a by-id
-// rate-limit-policy REFERENCE supplied to a mutation (IssueVirtualKey's
-// rateLimitPolicyId): a tenant-admin may apply only their own tenant's policy;
-// another tenant's policy reads as missing, so its rpm/tpm are never copied into a
-// foreign key and a missing id is not an existence oracle. Mirrors
-// DeleteRateLimitPolicy / SetRateLimitPolicyEnabled. Only constrains an authed
-// caller (no-auth ctx = resolver-level tests).
-func (r *Resolver) assertRateLimitPolicyReadable(ctx context.Context, pol *ent.RateLimitPolicy) error {
-	if auth.FromContext(ctx) == nil {
-		return nil
-	}
-	if !writeAllowed(ctx, pol.TenantID) {
-		return notFoundErr("rate-limit policy")
-	}
-	return nil
-}
-
 // writeTenant decides which tenant a newly created tenant-scoped resource should
 // be stamped with (LLD-10 §1.6 STAMP). A caller with a tenant (tenant-admin or a
 // regular user) always stamps their own tenant — they cannot create cross-tenant

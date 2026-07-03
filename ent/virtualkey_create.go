@@ -103,20 +103,6 @@ func (_c *VirtualKeyCreate) SetNillableAgentID(v *uuid.UUID) *VirtualKeyCreate {
 	return _c
 }
 
-// SetRateLimitPolicyID sets the "rate_limit_policy_id" field.
-func (_c *VirtualKeyCreate) SetRateLimitPolicyID(v uuid.UUID) *VirtualKeyCreate {
-	_c.mutation.SetRateLimitPolicyID(v)
-	return _c
-}
-
-// SetNillableRateLimitPolicyID sets the "rate_limit_policy_id" field if the given value is not nil.
-func (_c *VirtualKeyCreate) SetNillableRateLimitPolicyID(v *uuid.UUID) *VirtualKeyCreate {
-	if v != nil {
-		_c.SetRateLimitPolicyID(*v)
-	}
-	return _c
-}
-
 // SetTeamID sets the "team_id" field.
 func (_c *VirtualKeyCreate) SetTeamID(v string) *VirtualKeyCreate {
 	_c.mutation.SetTeamID(v)
@@ -349,10 +335,6 @@ func (_c *VirtualKeyCreate) createSpec() (*VirtualKey, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.AgentID(); ok {
 		_spec.SetField(virtualkey.FieldAgentID, field.TypeUUID, value)
 		_node.AgentID = &value
-	}
-	if value, ok := _c.mutation.RateLimitPolicyID(); ok {
-		_spec.SetField(virtualkey.FieldRateLimitPolicyID, field.TypeUUID, value)
-		_node.RateLimitPolicyID = &value
 	}
 	if value, ok := _c.mutation.TeamID(); ok {
 		_spec.SetField(virtualkey.FieldTeamID, field.TypeString, value)

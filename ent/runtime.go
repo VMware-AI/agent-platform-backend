@@ -22,7 +22,6 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplateversion"
 	"github.com/VMware-AI/agent-platform-backend/ent/permission"
 	"github.com/VMware-AI/agent-platform-backend/ent/platformsecret"
-	"github.com/VMware-AI/agent-platform-backend/ent/ratelimitpolicy"
 	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/ent/role"
@@ -476,33 +475,6 @@ func init() {
 	platformsecretDescAPIKey := platformsecretFields[3].Descriptor()
 	// platformsecret.DefaultAPIKey holds the default value on creation for the api_key field.
 	platformsecret.DefaultAPIKey = platformsecretDescAPIKey.Default.(string)
-	ratelimitpolicyMixin := schema.RateLimitPolicy{}.Mixin()
-	ratelimitpolicyMixinFields0 := ratelimitpolicyMixin[0].Fields()
-	_ = ratelimitpolicyMixinFields0
-	ratelimitpolicyFields := schema.RateLimitPolicy{}.Fields()
-	_ = ratelimitpolicyFields
-	// ratelimitpolicyDescCreatedAt is the schema descriptor for created_at field.
-	ratelimitpolicyDescCreatedAt := ratelimitpolicyMixinFields0[0].Descriptor()
-	// ratelimitpolicy.DefaultCreatedAt holds the default value on creation for the created_at field.
-	ratelimitpolicy.DefaultCreatedAt = ratelimitpolicyDescCreatedAt.Default.(func() time.Time)
-	// ratelimitpolicyDescUpdatedAt is the schema descriptor for updated_at field.
-	ratelimitpolicyDescUpdatedAt := ratelimitpolicyMixinFields0[1].Descriptor()
-	// ratelimitpolicy.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	ratelimitpolicy.DefaultUpdatedAt = ratelimitpolicyDescUpdatedAt.Default.(func() time.Time)
-	// ratelimitpolicy.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	ratelimitpolicy.UpdateDefaultUpdatedAt = ratelimitpolicyDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// ratelimitpolicyDescName is the schema descriptor for name field.
-	ratelimitpolicyDescName := ratelimitpolicyFields[1].Descriptor()
-	// ratelimitpolicy.NameValidator is a validator for the "name" field. It is called by the builders before save.
-	ratelimitpolicy.NameValidator = ratelimitpolicyDescName.Validators[0].(func(string) error)
-	// ratelimitpolicyDescEnabled is the schema descriptor for enabled field.
-	ratelimitpolicyDescEnabled := ratelimitpolicyFields[4].Descriptor()
-	// ratelimitpolicy.DefaultEnabled holds the default value on creation for the enabled field.
-	ratelimitpolicy.DefaultEnabled = ratelimitpolicyDescEnabled.Default.(bool)
-	// ratelimitpolicyDescID is the schema descriptor for id field.
-	ratelimitpolicyDescID := ratelimitpolicyFields[0].Descriptor()
-	// ratelimitpolicy.DefaultID holds the default value on creation for the id field.
-	ratelimitpolicy.DefaultID = ratelimitpolicyDescID.Default.(func() uuid.UUID)
 	requestlogFields := schema.RequestLog{}.Fields()
 	_ = requestlogFields
 	// requestlogDescRequestID is the schema descriptor for request_id field.

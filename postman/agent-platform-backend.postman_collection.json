@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "agent-platform-backend-v1",
     "name": "Agent Platform Backend API",
-    "description": "GraphQL API collection for the VMware AI Agent Platform backend.\n\n**Endpoint:** `POST http://localhost:8080/query`\n\n**Auth options:**\n1. Bearer token in `Authorization: Bearer <token>` header (returned from the `login` mutation — simplest in Postman).\n2. Session cookie `ap_session` (set automatically by browser when posting from same origin).\n\n**Required headers (every POST to /query):**\n- `Content-Type: application/json`\n- `Origin: http://localhost:8080` — required by the CSRF middleware (Origin or Referer must be present, and must be same-origin or allowlisted).\n\n**CORS allowlist headers (also valid):**\n- `Authorization` (Bearer)\n- `X-Environment`\n\n**Source of truth:** GraphQL schema at `/schema/*.graphql`. Generated from `internal/graph/testdata/client_operations/*.graphql` (these are the operations the front-end actually runs).\n\n**Authorization model (3 roles, post #56 refactor):**\n- `admin` — full access to every operation (only role that can write)\n- `read_only` — read-only access to most business objects (agents list, virtual keys list, dashboard, audit, metering); cannot mutate anything\n- `user` — owner-scoped access to their own agents/keys; unchanged\n\n**Default admin (dev):** username `admin@platform.local`, password `ChangeMe123!` (forces password change on first login unless `ADMIN_BOOTSTRAP_PASSWORD` env var is set).",
+    "description": "GraphQL API collection for the VMware AI Agent Platform backend.\n\n**Endpoint:** `POST http://localhost:8080/query`\n\n**Auth options:**\n1. Bearer token in `Authorization: Bearer <token>` header (returned from the `login` mutation \u2014 simplest in Postman).\n2. Session cookie `ap_session` (set automatically by browser when posting from same origin).\n\n**Required headers (every POST to /query):**\n- `Content-Type: application/json`\n- `Origin: http://localhost:8080` \u2014 required by the CSRF middleware (Origin or Referer must be present, and must be same-origin or allowlisted).\n\n**CORS allowlist headers (also valid):**\n- `Authorization` (Bearer)\n- `X-Environment`\n\n**Source of truth:** GraphQL schema at `/schema/*.graphql`. Generated from `internal/graph/testdata/client_operations/*.graphql` (these are the operations the front-end actually runs).\n\n**Authorization model (3 roles, post #56 refactor):**\n- `admin` \u2014 full access to every operation (only role that can write)\n- `read_only` \u2014 read-only access to most business objects (agents list, virtual keys list, dashboard, audit, metering); cannot mutate anything\n- `user` \u2014 owner-scoped access to their own agents/keys; unchanged\n\n**Default admin (dev):** username `admin@platform.local`, password `ChangeMe123!` (forces password change on first login unless `ADMIN_BOOTSTRAP_PASSWORD` env var is set).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -216,7 +216,7 @@
                 "query"
               ]
             },
-            "description": "Console overview page — stat cards, recent agents, system notices. Restricted to `admin` / `read_only`."
+            "description": "Console overview page \u2014 stat cards, recent agents, system notices. Restricted to `admin` / `read_only`."
           },
           "response": []
         }
@@ -2142,7 +2142,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query VirtualKeys($userId: ID) {\\n  virtualKeys(userId: $userId) { id alias userId agentId rateLimitPolicyId status expiresAt createdAt }\\n}\",\n  \"variables\": {\n    \"userId\": null\n  }\n}"
+              "raw": "{\n  \"query\": \"query VirtualKeys($userId: ID) {\\n  virtualKeys(userId: $userId) { id alias userId agentId status expiresAt createdAt }\\n}\",\n  \"variables\": {\n    \"userId\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -2174,7 +2174,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation IssueVirtualKey($input: IssueVirtualKeyInput!) {\\n  issueVirtualKey(input: $input) {\\n    secret\\n    virtualKey { id alias userId agentId rateLimitPolicyId status expiresAt createdAt }\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"userId\": \"REPLACE_WITH_USER_ID\",\n      \"agentId\": null,\n      \"rateLimitPolicyId\": null,\n      \"teamId\": null,\n      \"models\": [\n        \"gpt-4o-mini\"\n      ],\n      \"maxBudget\": 50,\n      \"alias\": \"alice-key\"\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation IssueVirtualKey($input: IssueVirtualKeyInput!) {\\n  issueVirtualKey(input: $input) {\\n    secret\\n    virtualKey { id alias userId agentId status expiresAt createdAt }\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"userId\": \"REPLACE_WITH_USER_ID\",\n      \"agentId\": null,\n      \"teamId\": null,\n      \"models\": [\n        \"gpt-4o-mini\"\n      ],\n      \"maxBudget\": 50,\n      \"alias\": \"alice-key\"\n    }\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -2238,7 +2238,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation RegenerateVirtualKey($id: ID!) {\\n  regenerateVirtualKey(id: $id) {\\n    secret\\n    virtualKey { id alias userId agentId rateLimitPolicyId status expiresAt createdAt }\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_KEY_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation RegenerateVirtualKey($id: ID!) {\\n  regenerateVirtualKey(id: $id) {\\n    secret\\n    virtualKey { id alias userId agentId status expiresAt createdAt }\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_KEY_ID\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -2270,7 +2270,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SetVirtualKeyEnabled($id: ID!, $enabled: Boolean!) {\\n  setVirtualKeyEnabled(id: $id, enabled: $enabled) { id alias userId agentId rateLimitPolicyId status expiresAt createdAt }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_KEY_ID\",\n    \"enabled\": false\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation SetVirtualKeyEnabled($id: ID!, $enabled: Boolean!) {\\n  setVirtualKeyEnabled(id: $id, enabled: $enabled) { id alias userId agentId status expiresAt createdAt }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_KEY_ID\",\n    \"enabled\": false\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -2283,139 +2283,6 @@
               ]
             },
             "description": "Toggle enabled/disabled on a virtual key (distinct from revoke, which is terminal)."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Rate Limit Policies",
-      "item": [
-        {
-          "name": "RateLimitPolicies (list)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"query RateLimitPolicies {\\n  rateLimitPolicies { id name rpm tpm enabled createdAt }\\n}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "List rate-limit policies. Restricted to `admin` only."
-          },
-          "response": []
-        },
-        {
-          "name": "UpsertRateLimitPolicy",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpsertRateLimitPolicy($input: UpsertRateLimitPolicyInput!) {\\n  upsertRateLimitPolicy(input: $input) { id name rpm tpm enabled createdAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"free-tier\",\n      \"rpm\": 60,\n      \"tpm\": 100000,\n      \"enabled\": true\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Create or update a rate-limit policy. Requires `route:manage` permission."
-          },
-          "response": []
-        },
-        {
-          "name": "SetRateLimitPolicyEnabled",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SetRateLimitPolicyEnabled($id: ID!, $enabled: Boolean!) {\\n  setRateLimitPolicyEnabled(id: $id, enabled: $enabled) { id name rpm tpm enabled createdAt }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_POLICY_ID\",\n    \"enabled\": false\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Toggle a policy's enabled flag."
-          },
-          "response": []
-        },
-        {
-          "name": "DeleteRateLimitPolicy",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeleteRateLimitPolicy($id: ID!) {\\n  deleteRateLimitPolicy(id: $id)\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_POLICY_ID\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Delete a policy. Refused while any non-revoked virtual key still references it."
           },
           "response": []
         }
@@ -2804,7 +2671,7 @@
                 "query"
               ]
             },
-            "description": "Create an agent config (智能体配置). Restricted to `admin` only."
+            "description": "Create an agent config (\u667a\u80fd\u4f53\u914d\u7f6e). Restricted to `admin` only."
           },
           "response": []
         },

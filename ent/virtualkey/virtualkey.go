@@ -29,8 +29,6 @@ const (
 	FieldUserID = "user_id"
 	// FieldAgentID holds the string denoting the agent_id field in the database.
 	FieldAgentID = "agent_id"
-	// FieldRateLimitPolicyID holds the string denoting the rate_limit_policy_id field in the database.
-	FieldRateLimitPolicyID = "rate_limit_policy_id"
 	// FieldTeamID holds the string denoting the team_id field in the database.
 	FieldTeamID = "team_id"
 	// FieldGatewayConnectionID holds the string denoting the gateway_connection_id field in the database.
@@ -57,7 +55,6 @@ var Columns = []string{
 	FieldAlias,
 	FieldUserID,
 	FieldAgentID,
-	FieldRateLimitPolicyID,
 	FieldTeamID,
 	FieldGatewayConnectionID,
 	FieldModels,
@@ -157,11 +154,6 @@ func ByUserID(opts ...sql.OrderTermOption) OrderOption {
 // ByAgentID orders the results by the agent_id field.
 func ByAgentID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAgentID, opts...).ToFunc()
-}
-
-// ByRateLimitPolicyID orders the results by the rate_limit_policy_id field.
-func ByRateLimitPolicyID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldRateLimitPolicyID, opts...).ToFunc()
 }
 
 // ByTeamID orders the results by the team_id field.

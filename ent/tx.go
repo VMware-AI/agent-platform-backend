@@ -46,8 +46,6 @@ type Tx struct {
 	Permission *PermissionClient
 	// PlatformSecret is the client for interacting with the PlatformSecret builders.
 	PlatformSecret *PlatformSecretClient
-	// RateLimitPolicy is the client for interacting with the RateLimitPolicy builders.
-	RateLimitPolicy *RateLimitPolicyClient
 	// RequestLog is the client for interacting with the RequestLog builders.
 	RequestLog *RequestLogClient
 	// ResourcePool is the client for interacting with the ResourcePool builders.
@@ -220,7 +218,6 @@ func (tx *Tx) init() {
 	tx.OvaTemplateVersion = NewOvaTemplateVersionClient(tx.config)
 	tx.Permission = NewPermissionClient(tx.config)
 	tx.PlatformSecret = NewPlatformSecretClient(tx.config)
-	tx.RateLimitPolicy = NewRateLimitPolicyClient(tx.config)
 	tx.RequestLog = NewRequestLogClient(tx.config)
 	tx.ResourcePool = NewResourcePoolClient(tx.config)
 	tx.Role = NewRoleClient(tx.config)

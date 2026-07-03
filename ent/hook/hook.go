@@ -213,18 +213,6 @@ func (f PlatformSecretFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Val
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PlatformSecretMutation", m)
 }
 
-// The RateLimitPolicyFunc type is an adapter to allow the use of ordinary
-// function as RateLimitPolicy mutator.
-type RateLimitPolicyFunc func(context.Context, *ent.RateLimitPolicyMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f RateLimitPolicyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.RateLimitPolicyMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RateLimitPolicyMutation", m)
-}
-
 // The RequestLogFunc type is an adapter to allow the use of ordinary
 // function as RequestLog mutator.
 type RequestLogFunc func(context.Context, *ent.RequestLogMutation) (ent.Value, error)

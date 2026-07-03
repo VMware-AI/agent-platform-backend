@@ -4,8 +4,6 @@
 
 > Source: `schema/virtualkey.graphql`
 
-> **Rate-limit policies** (the `RateLimitPolicy` type, the `rateLimitPolicies` query, and the `upsertRateLimitPolicy` / `setRateLimitPolicyEnabled` / `deleteRateLimitPolicy` mutations) are defined in `schema/observability.graphql` and documented on the [Observability page](./observability.md). A virtual key references a policy via `IssueVirtualKeyInput.rateLimitPolicyId`.
-
 ## Queries
 
 ### `virtualKeys`
@@ -103,7 +101,6 @@ Returned only at issue time — carries the secret, which is never queryable aga
 | `alias` | `String` | — |
 | `userId` | `ID!` | — |
 | `agentId` | `ID` | — |
-| `rateLimitPolicyId` | `ID` | — |
 | `teamId` | `String` | — |
 | `models` | `[String!]!` | — |
 | `maxBudget` | `Float` | — |
@@ -119,7 +116,6 @@ Returned only at issue time — carries the secret, which is never queryable aga
 |-------|------|-------------|
 | `userId` | `ID!` | — |
 | `agentId` | `ID` | — |
-| `rateLimitPolicyId` | `ID` | Associated rate-limit policy; its rpm/tpm are applied to the litellm key. |
 | `teamId` | `String` | — |
 | `models` | `[String!]` | — |
 | `maxBudget` | `Float` | — |

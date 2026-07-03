@@ -27,9 +27,8 @@ func (VirtualKey) Fields() []ent.Field {
 		field.String("litellm_token").Optional(),
 		field.String("alias").Optional(), // display label, e.g. "alice / coding"
 		field.UUID("user_id", uuid.UUID{}),
-		field.UUID("agent_id", uuid.UUID{}).Optional().Nillable(),             // 绑定的智能体ID (0619 第7页)
-		field.UUID("rate_limit_policy_id", uuid.UUID{}).Optional().Nillable(), // 关联策略
-		field.String("team_id").Optional(),                                    // = department / litellm team
+		field.UUID("agent_id", uuid.UUID{}).Optional().Nillable(), // 绑定的智能体ID (0619 第7页)
+		field.String("team_id").Optional(),                        // = department / litellm team
 		// The GatewayConnection that ISSUED this key (LLD-14). Its whole lifecycle
 		// (revoke/regenerate/recycle/reconcile) routes by this, decoupled from the
 		// department's *current* gateway binding. NULL for keys issued before this

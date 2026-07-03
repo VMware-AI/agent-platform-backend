@@ -29,7 +29,6 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplateversion"
 	"github.com/VMware-AI/agent-platform-backend/ent/permission"
 	"github.com/VMware-AI/agent-platform-backend/ent/platformsecret"
-	"github.com/VMware-AI/agent-platform-backend/ent/ratelimitpolicy"
 	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/ent/role"
@@ -119,7 +118,6 @@ func checkColumn(t, c string) error {
 			ovatemplateversion.Table: ovatemplateversion.ValidColumn,
 			permission.Table:         permission.ValidColumn,
 			platformsecret.Table:     platformsecret.ValidColumn,
-			ratelimitpolicy.Table:    ratelimitpolicy.ValidColumn,
 			requestlog.Table:         requestlog.ValidColumn,
 			resourcepool.Table:       resourcepool.ValidColumn,
 			role.Table:               role.ValidColumn,

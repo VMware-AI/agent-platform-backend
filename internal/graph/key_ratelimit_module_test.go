@@ -1,12 +1,10 @@
 package graph
 
 import (
-	"context"
 	"testing"
 
 	"github.com/google/uuid"
 
-	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 )
 
@@ -41,34 +39,5 @@ func TestIssueVirtualKey_OnePerAgent(t *testing.T) {
 	// a keyless (no agent) issue is always allowed
 	if _, err := mr.IssueVirtualKey(ctx, model.IssueVirtualKeyInput{UserID: owner.String()}); err != nil {
 		t.Fatalf("agent-less issue: %v", err)
-	}
-}
-
-// 模块⑤ 限流: a policy can be deleted, but not while a non-revoked key references it.
-func TestDeleteRateLimitPolicy_GuardsInUse(t *testing.T) {
-	r, cleanup := newTestResolver(t)
-	defer cleanup()
-	ctx := adminCtx()
-	bg := context.Background()
-	mr := &mutationResolver{r}
-
-	pol := r.Ent.RateLimitPolicy.Create().SetName("p1").SetRpm(60).SaveX(bg)
-	// a key bound to the policy blocks deletion
-	r.Ent.VirtualKey.Create().SetLitellmKey("sk-1").SetUserID(uuid.New()).
-		SetModels([]string{"smart"}).SetRateLimitPolicyID(pol.ID).
-		SetStatus(virtualkey.StatusActive).SaveX(bg)
-
-	if _, err := mr.DeleteRateLimitPolicy(ctx, pol.ID.String()); err == nil {
-		t.Fatal("delete should be refused while a key references the policy")
-	}
-
-	// an unreferenced policy deletes cleanly
-	free := r.Ent.RateLimitPolicy.Create().SetName("p2").SetTpm(1000).SaveX(bg)
-	ok, err := mr.DeleteRateLimitPolicy(ctx, free.ID.String())
-	if err != nil || !ok {
-		t.Fatalf("delete free policy: ok=%v err=%v", ok, err)
-	}
-	if n := r.Ent.RateLimitPolicy.Query().CountX(bg); n != 1 {
-		t.Fatalf("expected 1 policy left, got %d", n)
 	}
 }
