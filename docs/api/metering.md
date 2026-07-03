@@ -2,7 +2,7 @@
 
 [← API Reference index](./README.md)
 
-> Source: `schema/metering.graphql`
+> Source: `schema/metering.graphql`, `schema/observability-spend.graphql`
 
 ## Queries
 
@@ -51,6 +51,34 @@ meteringOverview(range: MeteringTimeRange = LAST_7_DAYS, userId: ID): MeteringOv
 | `range` | `MeteringTimeRange` | no | `LAST_7_DAYS` |
 | `userId` | `ID` | no | — |
 
+### `spendReport`
+
+litellm-authoritative spend, fanned out across gateways (pull + short cache).
+
+```graphql
+spendReport(input: SpendReportInput!): SpendReport!
+```
+
+- **Returns:** `SpendReport!`
+- **Auth:** `@hasPermission(perm: "metering:view")`
+
+| Argument | Type | Required | Default |
+|----------|------|----------|---------|
+| `input` | `SpendReportInput!` | yes | — |
+
+### `budgets`
+
+```graphql
+budgets(scope: BudgetScope!): [Budget!]!
+```
+
+- **Returns:** `[Budget!]!`
+- **Auth:** `@hasPermission(perm: "metering:view")`
+
+| Argument | Type | Required | Default |
+|----------|------|----------|---------|
+| `scope` | `BudgetScope!` | yes | — |
+
 ## Mutations
 
 ### `recordTokenUsage`
@@ -97,6 +125,22 @@ Per-agent usage row for the metering 智能体用量 table. Adds requests (row c
 | `requests` | `Int!` | — |
 | `cost` | `Float!` | — |
 
+### Budget
+
+*Object*
+
+A budget card: current spend vs the configured max, with reset timing.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `scope` | `String!` | team/user/key identifier |
+| `label` | `String!` | — |
+| `spend` | `Float!` | — |
+| `maxBudget` | `Float` | null = no cap |
+| `remaining` | `Float` | — |
+| `budgetResetAt` | `Time` | — |
+| `utilizationPct` | `Float` | spend/maxBudget*100; null when maxBudget is null |
+
 ### DailyUsageRow
 
 *Object*
@@ -122,6 +166,19 @@ Per-day usage row for the metering 每日用量/趋势 table+chart (date = YYYY-
 | `inputTokens` | `Int!` | — |
 | `outputTokens` | `Int!` | — |
 | `cost` | `Float!` | — |
+
+### GatewaySpendStatus
+
+*Object*
+
+Per-gateway fetch outcome so a single unreachable gateway degrades gracefully (partial data visible) instead of failing the whole report.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `gatewayId` | `ID!` | — |
+| `gatewayName` | `String!` | — |
+| `ok` | `Boolean!` | — |
+| `error` | `String` | — |
 
 ### MeteringCostSummary
 
@@ -191,6 +248,60 @@ Per-model usage row for the metering 模型用量 table.
 | `requests` | `Int!` | — |
 | `cost` | `Float!` | — |
 
+### SpendDailyPoint
+
+*Object*
+
+Cost trend point (all gateways merged), date is YYYY-MM-DD.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `date` | `String!` | — |
+| `spend` | `Float!` | — |
+| `totalTokens` | `Int!` | — |
+
+### SpendReport
+
+*Object*
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `from` | `Time!` | — |
+| `to` | `Time!` | — |
+| `groupBy` | `SpendGroupBy!` | — |
+| `rows` | `[SpendRow!]!` | — |
+| `totals` | `SpendTotals!` | — |
+| `byDay` | `[SpendDailyPoint!]!` | — |
+| `gateways` | `[GatewaySpendStatus!]!` | — |
+
+### SpendRow
+
+*Object*
+
+One aggregated row for the selected dimension, summed across all gateways.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `key` | `String!` | team_id / hashed api_key / model name (user_id is deferred to the copy phase). |
+| `label` | `String!` | Resolved display name: department name / key alias / model — falls back to key. |
+| `spend` | `Float!` | — |
+| `promptTokens` | `Int!` | — |
+| `completionTokens` | `Int!` | — |
+| `totalTokens` | `Int!` | — |
+| `requests` | `Int!` | — |
+
+### SpendTotals
+
+*Object*
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `spend` | `Float!` | — |
+| `promptTokens` | `Int!` | — |
+| `completionTokens` | `Int!` | — |
+| `totalTokens` | `Int!` | — |
+| `requests` | `Int!` | — |
+
 ### TokenUsage
 
 *Object*
@@ -219,6 +330,26 @@ Per-model usage row for the metering 模型用量 table.
 | `outputTokens` | `Int!` | — |
 | `cost` | `Float` | — |
 
+### SpendReportInput
+
+*Input*
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `from` | `Time!` | Custom window (lifts the LAST_7/30_DAYS/THIS_MONTH restriction of meteringOverview). |
+| `to` | `Time!` | — |
+| `groupBy` | `SpendGroupBy!` | — |
+
+### BudgetScope
+
+*Enum*
+
+| Value | Description |
+|-------|-------------|
+| `TEAMS` | — |
+| `USERS` | — |
+| `KEYS` | — |
+
 ### MeteringTimeRange
 
 *Enum*
@@ -230,3 +361,14 @@ Time window for the metering center (计量中心 time-range selector). LAST_30_
 | `LAST_7_DAYS` | — |
 | `LAST_30_DAYS` | — |
 | `THIS_MONTH` | — |
+
+### SpendGroupBy
+
+*Enum*
+
+| Value | Description |
+|-------|-------------|
+| `TEAM` | — |
+| `USER` | — |
+| `API_KEY` | — |
+| `MODEL` | — |

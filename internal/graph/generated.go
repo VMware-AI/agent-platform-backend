@@ -186,6 +186,16 @@ type ComplexityRoot struct {
 		User               func(childComplexity int) int
 	}
 
+	Budget struct {
+		BudgetResetAt  func(childComplexity int) int
+		Label          func(childComplexity int) int
+		MaxBudget      func(childComplexity int) int
+		Remaining      func(childComplexity int) int
+		Scope          func(childComplexity int) int
+		Spend          func(childComplexity int) int
+		UtilizationPct func(childComplexity int) int
+	}
+
 	Cluster struct {
 		EsxiHosts     func(childComplexity int) int
 		Name          func(childComplexity int) int
@@ -318,6 +328,13 @@ type ComplexityRoot struct {
 		Name                func(childComplexity int) int
 		PublicURL           func(childComplexity int) int
 		Status              func(childComplexity int) int
+	}
+
+	GatewaySpendStatus struct {
+		Error       func(childComplexity int) int
+		GatewayID   func(childComplexity int) int
+		GatewayName func(childComplexity int) int
+		Ok          func(childComplexity int) int
 	}
 
 	Image struct {
@@ -579,6 +596,7 @@ type ComplexityRoot struct {
 		ArtifactVersions        func(childComplexity int, name string) int
 		Artifacts               func(childComplexity int, kind *model.ArtifactKind) int
 		AuditLogs               func(childComplexity int, filter *model.AuditFilter, page *model.PageInput) int
+		Budgets                 func(childComplexity int, scope model.BudgetScope) int
 		ContentLibraries        func(childComplexity int, resourcePoolID string) int
 		ContentLibraryItems     func(childComplexity int, resourcePoolID string, libraryName string) int
 		CustomRoles             func(childComplexity int) int
@@ -606,6 +624,7 @@ type ComplexityRoot struct {
 		Roles                   func(childComplexity int, pagination *model.Pagination) int
 		RouterTiers             func(childComplexity int) int
 		Skills                  func(childComplexity int) int
+		SpendReport             func(childComplexity int, input model.SpendReportInput) int
 		TokenUsage              func(childComplexity int, userID *string, page *model.PageInput) int
 		Upstreams               func(childComplexity int) int
 		UserExists              func(childComplexity int, username *string, email *string) int
@@ -731,6 +750,40 @@ type ComplexityRoot struct {
 		Name        func(childComplexity int) int
 		URI         func(childComplexity int) int
 		Version     func(childComplexity int) int
+	}
+
+	SpendDailyPoint struct {
+		Date        func(childComplexity int) int
+		Spend       func(childComplexity int) int
+		TotalTokens func(childComplexity int) int
+	}
+
+	SpendReport struct {
+		ByDay    func(childComplexity int) int
+		From     func(childComplexity int) int
+		Gateways func(childComplexity int) int
+		GroupBy  func(childComplexity int) int
+		Rows     func(childComplexity int) int
+		To       func(childComplexity int) int
+		Totals   func(childComplexity int) int
+	}
+
+	SpendRow struct {
+		CompletionTokens func(childComplexity int) int
+		Key              func(childComplexity int) int
+		Label            func(childComplexity int) int
+		PromptTokens     func(childComplexity int) int
+		Requests         func(childComplexity int) int
+		Spend            func(childComplexity int) int
+		TotalTokens      func(childComplexity int) int
+	}
+
+	SpendTotals struct {
+		CompletionTokens func(childComplexity int) int
+		PromptTokens     func(childComplexity int) int
+		Requests         func(childComplexity int) int
+		Spend            func(childComplexity int) int
+		TotalTokens      func(childComplexity int) int
 	}
 
 	SyncResourcePoolPayload struct {
@@ -947,6 +1000,8 @@ type QueryResolver interface {
 	MeteringOverview(ctx context.Context, rangeArg *model.MeteringTimeRange, userID *string) (*model.MeteringOverview, error)
 	ModelGateways(ctx context.Context, filter *model.ModelGatewayFilterInput, page model.PageInput, sort *model.ModelGatewaySort) (*model.ModelGatewayConnection, error)
 	ModelGatewaySyncSummary(ctx context.Context) (*model.ModelGatewaySyncSummary, error)
+	SpendReport(ctx context.Context, input model.SpendReportInput) (*model.SpendReport, error)
+	Budgets(ctx context.Context, scope model.BudgetScope) ([]model.Budget, error)
 	RequestLogs(ctx context.Context, filter *model.RequestLogFilter, page *model.PageInput) ([]model.RequestLog, error)
 	RateLimitPolicies(ctx context.Context) ([]model.RateLimitPolicy, error)
 	RequestMetrics(ctx context.Context, from time.Time, to time.Time, granularity model.RequestMetricsBucketGranularity, filter *model.RequestMetricsFilter) (*model.RequestMetrics, error)
@@ -1549,6 +1604,49 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.AuthPayload.User(childComplexity), true
 
+	case "Budget.budgetResetAt":
+		if e.ComplexityRoot.Budget.BudgetResetAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Budget.BudgetResetAt(childComplexity), true
+	case "Budget.label":
+		if e.ComplexityRoot.Budget.Label == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Budget.Label(childComplexity), true
+	case "Budget.maxBudget":
+		if e.ComplexityRoot.Budget.MaxBudget == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Budget.MaxBudget(childComplexity), true
+	case "Budget.remaining":
+		if e.ComplexityRoot.Budget.Remaining == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Budget.Remaining(childComplexity), true
+	case "Budget.scope":
+		if e.ComplexityRoot.Budget.Scope == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Budget.Scope(childComplexity), true
+	case "Budget.spend":
+		if e.ComplexityRoot.Budget.Spend == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Budget.Spend(childComplexity), true
+	case "Budget.utilizationPct":
+		if e.ComplexityRoot.Budget.UtilizationPct == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Budget.UtilizationPct(childComplexity), true
+
 	case "Cluster.esxiHosts":
 		if e.ComplexityRoot.Cluster.EsxiHosts == nil {
 			break
@@ -2029,6 +2127,31 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.GatewayConnection.Status(childComplexity), true
+
+	case "GatewaySpendStatus.error":
+		if e.ComplexityRoot.GatewaySpendStatus.Error == nil {
+			break
+		}
+
+		return e.ComplexityRoot.GatewaySpendStatus.Error(childComplexity), true
+	case "GatewaySpendStatus.gatewayId":
+		if e.ComplexityRoot.GatewaySpendStatus.GatewayID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.GatewaySpendStatus.GatewayID(childComplexity), true
+	case "GatewaySpendStatus.gatewayName":
+		if e.ComplexityRoot.GatewaySpendStatus.GatewayName == nil {
+			break
+		}
+
+		return e.ComplexityRoot.GatewaySpendStatus.GatewayName(childComplexity), true
+	case "GatewaySpendStatus.ok":
+		if e.ComplexityRoot.GatewaySpendStatus.Ok == nil {
+			break
+		}
+
+		return e.ComplexityRoot.GatewaySpendStatus.Ok(childComplexity), true
 
 	case "Image.createdAt":
 		if e.ComplexityRoot.Image.CreatedAt == nil {
@@ -3577,6 +3700,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.AuditLogs(childComplexity, args["filter"].(*model.AuditFilter), args["page"].(*model.PageInput)), true
+	case "Query.budgets":
+		if e.ComplexityRoot.Query.Budgets == nil {
+			break
+		}
+
+		args, err := ec.field_Query_budgets_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.Budgets(childComplexity, args["scope"].(model.BudgetScope)), true
 	case "Query.contentLibraries":
 		if e.ComplexityRoot.Query.ContentLibraries == nil {
 			break
@@ -3815,6 +3949,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Skills(childComplexity), true
+	case "Query.spendReport":
+		if e.ComplexityRoot.Query.SpendReport == nil {
+			break
+		}
+
+		args, err := ec.field_Query_spendReport_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.SpendReport(childComplexity, args["input"].(model.SpendReportInput)), true
 	case "Query.tokenUsage":
 		if e.ComplexityRoot.Query.TokenUsage == nil {
 			break
@@ -4368,6 +4513,142 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Skill.Version(childComplexity), true
 
+	case "SpendDailyPoint.date":
+		if e.ComplexityRoot.SpendDailyPoint.Date == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendDailyPoint.Date(childComplexity), true
+	case "SpendDailyPoint.spend":
+		if e.ComplexityRoot.SpendDailyPoint.Spend == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendDailyPoint.Spend(childComplexity), true
+	case "SpendDailyPoint.totalTokens":
+		if e.ComplexityRoot.SpendDailyPoint.TotalTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendDailyPoint.TotalTokens(childComplexity), true
+
+	case "SpendReport.byDay":
+		if e.ComplexityRoot.SpendReport.ByDay == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendReport.ByDay(childComplexity), true
+	case "SpendReport.from":
+		if e.ComplexityRoot.SpendReport.From == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendReport.From(childComplexity), true
+	case "SpendReport.gateways":
+		if e.ComplexityRoot.SpendReport.Gateways == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendReport.Gateways(childComplexity), true
+	case "SpendReport.groupBy":
+		if e.ComplexityRoot.SpendReport.GroupBy == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendReport.GroupBy(childComplexity), true
+	case "SpendReport.rows":
+		if e.ComplexityRoot.SpendReport.Rows == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendReport.Rows(childComplexity), true
+	case "SpendReport.to":
+		if e.ComplexityRoot.SpendReport.To == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendReport.To(childComplexity), true
+	case "SpendReport.totals":
+		if e.ComplexityRoot.SpendReport.Totals == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendReport.Totals(childComplexity), true
+
+	case "SpendRow.completionTokens":
+		if e.ComplexityRoot.SpendRow.CompletionTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendRow.CompletionTokens(childComplexity), true
+	case "SpendRow.key":
+		if e.ComplexityRoot.SpendRow.Key == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendRow.Key(childComplexity), true
+	case "SpendRow.label":
+		if e.ComplexityRoot.SpendRow.Label == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendRow.Label(childComplexity), true
+	case "SpendRow.promptTokens":
+		if e.ComplexityRoot.SpendRow.PromptTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendRow.PromptTokens(childComplexity), true
+	case "SpendRow.requests":
+		if e.ComplexityRoot.SpendRow.Requests == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendRow.Requests(childComplexity), true
+	case "SpendRow.spend":
+		if e.ComplexityRoot.SpendRow.Spend == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendRow.Spend(childComplexity), true
+	case "SpendRow.totalTokens":
+		if e.ComplexityRoot.SpendRow.TotalTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendRow.TotalTokens(childComplexity), true
+
+	case "SpendTotals.completionTokens":
+		if e.ComplexityRoot.SpendTotals.CompletionTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendTotals.CompletionTokens(childComplexity), true
+	case "SpendTotals.promptTokens":
+		if e.ComplexityRoot.SpendTotals.PromptTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendTotals.PromptTokens(childComplexity), true
+	case "SpendTotals.requests":
+		if e.ComplexityRoot.SpendTotals.Requests == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendTotals.Requests(childComplexity), true
+	case "SpendTotals.spend":
+		if e.ComplexityRoot.SpendTotals.Spend == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendTotals.Spend(childComplexity), true
+	case "SpendTotals.totalTokens":
+		if e.ComplexityRoot.SpendTotals.TotalTokens == nil {
+			break
+		}
+
+		return e.ComplexityRoot.SpendTotals.TotalTokens(childComplexity), true
+
 	case "SyncResourcePoolPayload.pool":
 		if e.ComplexityRoot.SyncResourcePoolPayload.Pool == nil {
 			break
@@ -4733,6 +5014,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputResourcePoolSort,
 		ec.unmarshalInputRevertAgentSnapshotInput,
 		ec.unmarshalInputSnapshotAgentInput,
+		ec.unmarshalInputSpendReportInput,
 		ec.unmarshalInputTestModelGatewayConnectionInput,
 		ec.unmarshalInputTestResourcePoolConnectionInput,
 		ec.unmarshalInputUpdateAgentConfigInput,
@@ -5150,12 +5432,12 @@ extend type Query {
   # Catalog and configs are browsable by any authenticated user.
   agentTemplates: [AgentTemplate!]!
   agentConfigs(agentType: String): [AgentConfig!]!
-  # Admin sees all agents; tenant-admin their tenant; a regular user only their own
-  # (owner scope). Paged/filtered/sorted connection (前后端整合契约).
+  # Admin + read_only see all agents; a regular user only their own (owner scope).
+  # Paged/filtered/sorted connection (前后端整合契约).
   agents(filter: AgentFilter, pagination: Pagination, sort: AgentSort): AgentConnection!
     @hasRole(any: [admin, read_only, user])
-  # Single-agent detail. Owner or admin; follows the same three-track visibility as
-  # the agents list (admin→all, tenant-admin→their tenant, user→own agents only).
+  # Single-agent detail. Follows the same three-track visibility as the agents
+  # list (admin/read_only→all, user→own agents only).
   agent(id: ID!): Agent!
 }
 
@@ -5952,6 +6234,96 @@ extend type Mutation {
   testNewModelGatewayConnection(input: TestModelGatewayConnectionInput!): ModelGatewayTestResult! @hasRole(any: [admin])
 }
 `, BuiltIn: false},
+	{Name: "../../schema/observability-spend.graphql", Input: `# Gateway-authoritative spend (LLD-15). The platform holds each gateway's master
+# key and fans out to litellm's /global/spend/report + /*/info endpoints, merges
+# across gateways, and serves the console 计量中心's "网关账" view. Distinct from
+# metering.graphql's meteringOverview, which aggregates the platform's own
+# TokenUsage table ("平台记录"). The frontend never talks to litellm directly.
+
+enum SpendGroupBy {
+  TEAM
+  USER
+  API_KEY
+  MODEL
+}
+
+input SpendReportInput {
+  # Custom window (lifts the LAST_7/30_DAYS/THIS_MONTH restriction of meteringOverview).
+  from: Time!
+  to: Time!
+  groupBy: SpendGroupBy!
+}
+
+# One aggregated row for the selected dimension, summed across all gateways.
+type SpendRow {
+  # team_id / hashed api_key / model name (user_id is deferred to the copy phase).
+  key: String!
+  # Resolved display name: department name / key alias / model — falls back to key.
+  label: String!
+  spend: Float!
+  promptTokens: Int!
+  completionTokens: Int!
+  totalTokens: Int!
+  requests: Int!
+}
+
+type SpendTotals {
+  spend: Float!
+  promptTokens: Int!
+  completionTokens: Int!
+  totalTokens: Int!
+  requests: Int!
+}
+
+# Cost trend point (all gateways merged), date is YYYY-MM-DD.
+type SpendDailyPoint {
+  date: String!
+  spend: Float!
+  totalTokens: Int!
+}
+
+# Per-gateway fetch outcome so a single unreachable gateway degrades gracefully
+# (partial data visible) instead of failing the whole report.
+type GatewaySpendStatus {
+  gatewayId: ID!
+  gatewayName: String!
+  ok: Boolean!
+  error: String
+}
+
+type SpendReport {
+  from: Time!
+  to: Time!
+  groupBy: SpendGroupBy!
+  rows: [SpendRow!]!
+  totals: SpendTotals!
+  byDay: [SpendDailyPoint!]!
+  gateways: [GatewaySpendStatus!]!
+}
+
+enum BudgetScope {
+  TEAMS
+  USERS
+  KEYS
+}
+
+# A budget card: current spend vs the configured max, with reset timing.
+type Budget {
+  scope: String! # team/user/key identifier
+  label: String!
+  spend: Float!
+  maxBudget: Float # null = no cap
+  remaining: Float
+  budgetResetAt: Time
+  utilizationPct: Float # spend/maxBudget*100; null when maxBudget is null
+}
+
+extend type Query {
+  # litellm-authoritative spend, fanned out across gateways (pull + short cache).
+  spendReport(input: SpendReportInput!): SpendReport! @hasPermission(perm: "metering:view")
+  budgets(scope: BudgetScope!): [Budget!]! @hasPermission(perm: "metering:view")
+}
+`, BuiltIn: false},
 	{Name: "../../schema/observability.graphql", Input: `# Request logs (请求日志) + rate-limit policies (限流策略). 0619.
 
 type RequestLog {
@@ -6253,8 +6625,10 @@ type Cluster {
 }
 
 # vSphere datacenter — top-level node of vCenter inventory.
-# storagePolicies is nullable: null means PBM pull failed (frontend can
-# distinguish "PBM not pulled" from "pulled but empty" via null vs []).
+# storagePolicies is a non-null list: a failed PBM pull and "no profiles"
+# both surface as [] (the null-vs-[] distinction was never wired through;
+# make the field nullable in a dedicated contract change if the console
+# ever needs to tell them apart — see #98).
 type DataCenter {
   name: String!
   path: String!
@@ -6876,6 +7250,26 @@ func (ec *executionContext) childFields_AuthPayload(ctx context.Context, field g
 	return nil, fmt.Errorf("no field named %q was found under type AuthPayload", field.Name)
 }
 
+func (ec *executionContext) childFields_Budget(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "scope":
+		return ec.fieldContext_Budget_scope(ctx, field)
+	case "label":
+		return ec.fieldContext_Budget_label(ctx, field)
+	case "spend":
+		return ec.fieldContext_Budget_spend(ctx, field)
+	case "maxBudget":
+		return ec.fieldContext_Budget_maxBudget(ctx, field)
+	case "remaining":
+		return ec.fieldContext_Budget_remaining(ctx, field)
+	case "budgetResetAt":
+		return ec.fieldContext_Budget_budgetResetAt(ctx, field)
+	case "utilizationPct":
+		return ec.fieldContext_Budget_utilizationPct(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type Budget", field.Name)
+}
+
 func (ec *executionContext) childFields_Cluster(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "name":
@@ -7142,6 +7536,20 @@ func (ec *executionContext) childFields_GatewayConnection(ctx context.Context, f
 		return ec.fieldContext_GatewayConnection_createdAt(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type GatewayConnection", field.Name)
+}
+
+func (ec *executionContext) childFields_GatewaySpendStatus(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "gatewayId":
+		return ec.fieldContext_GatewaySpendStatus_gatewayId(ctx, field)
+	case "gatewayName":
+		return ec.fieldContext_GatewaySpendStatus_gatewayName(ctx, field)
+	case "ok":
+		return ec.fieldContext_GatewaySpendStatus_ok(ctx, field)
+	case "error":
+		return ec.fieldContext_GatewaySpendStatus_error(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type GatewaySpendStatus", field.Name)
 }
 
 func (ec *executionContext) childFields_Image(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -7724,6 +8132,74 @@ func (ec *executionContext) childFields_Skill(ctx context.Context, field graphql
 		return ec.fieldContext_Skill_createdAt(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Skill", field.Name)
+}
+
+func (ec *executionContext) childFields_SpendDailyPoint(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "date":
+		return ec.fieldContext_SpendDailyPoint_date(ctx, field)
+	case "spend":
+		return ec.fieldContext_SpendDailyPoint_spend(ctx, field)
+	case "totalTokens":
+		return ec.fieldContext_SpendDailyPoint_totalTokens(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type SpendDailyPoint", field.Name)
+}
+
+func (ec *executionContext) childFields_SpendReport(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "from":
+		return ec.fieldContext_SpendReport_from(ctx, field)
+	case "to":
+		return ec.fieldContext_SpendReport_to(ctx, field)
+	case "groupBy":
+		return ec.fieldContext_SpendReport_groupBy(ctx, field)
+	case "rows":
+		return ec.fieldContext_SpendReport_rows(ctx, field)
+	case "totals":
+		return ec.fieldContext_SpendReport_totals(ctx, field)
+	case "byDay":
+		return ec.fieldContext_SpendReport_byDay(ctx, field)
+	case "gateways":
+		return ec.fieldContext_SpendReport_gateways(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type SpendReport", field.Name)
+}
+
+func (ec *executionContext) childFields_SpendRow(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "key":
+		return ec.fieldContext_SpendRow_key(ctx, field)
+	case "label":
+		return ec.fieldContext_SpendRow_label(ctx, field)
+	case "spend":
+		return ec.fieldContext_SpendRow_spend(ctx, field)
+	case "promptTokens":
+		return ec.fieldContext_SpendRow_promptTokens(ctx, field)
+	case "completionTokens":
+		return ec.fieldContext_SpendRow_completionTokens(ctx, field)
+	case "totalTokens":
+		return ec.fieldContext_SpendRow_totalTokens(ctx, field)
+	case "requests":
+		return ec.fieldContext_SpendRow_requests(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type SpendRow", field.Name)
+}
+
+func (ec *executionContext) childFields_SpendTotals(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "spend":
+		return ec.fieldContext_SpendTotals_spend(ctx, field)
+	case "promptTokens":
+		return ec.fieldContext_SpendTotals_promptTokens(ctx, field)
+	case "completionTokens":
+		return ec.fieldContext_SpendTotals_completionTokens(ctx, field)
+	case "totalTokens":
+		return ec.fieldContext_SpendTotals_totalTokens(ctx, field)
+	case "requests":
+		return ec.fieldContext_SpendTotals_requests(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type SpendTotals", field.Name)
 }
 
 func (ec *executionContext) childFields_SyncResourcePoolPayload(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -9330,6 +9806,20 @@ func (ec *executionContext) field_Query_auditLogs_args(ctx context.Context, rawA
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_budgets_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "scope",
+		func(ctx context.Context, v any) (model.BudgetScope, error) {
+			return ec.unmarshalNBudgetScope2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐBudgetScope(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["scope"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_contentLibraries_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -9649,6 +10139,20 @@ func (ec *executionContext) field_Query_roles_args(ctx context.Context, rawArgs 
 		return nil, err
 	}
 	args["pagination"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_spendReport_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.SpendReportInput, error) {
+			return ec.unmarshalNSpendReportInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSpendReportInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -12048,6 +12552,167 @@ func (ec *executionContext) fieldContext_AuthPayload_mustChangePassword(_ contex
 	return graphql.NewScalarFieldContext("AuthPayload", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
+func (ec *executionContext) _Budget_scope(ctx context.Context, field graphql.CollectedField, obj *model.Budget) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Budget_scope(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Scope, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Budget_scope(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Budget", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Budget_label(ctx context.Context, field graphql.CollectedField, obj *model.Budget) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Budget_label(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Label, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Budget_label(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Budget", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Budget_spend(ctx context.Context, field graphql.CollectedField, obj *model.Budget) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Budget_spend(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Spend, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Budget_spend(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Budget", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _Budget_maxBudget(ctx context.Context, field graphql.CollectedField, obj *model.Budget) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Budget_maxBudget(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.MaxBudget, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *float64) graphql.Marshaler {
+			return ec.marshalOFloat2ᚖfloat64(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Budget_maxBudget(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Budget", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _Budget_remaining(ctx context.Context, field graphql.CollectedField, obj *model.Budget) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Budget_remaining(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Remaining, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *float64) graphql.Marshaler {
+			return ec.marshalOFloat2ᚖfloat64(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Budget_remaining(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Budget", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _Budget_budgetResetAt(ctx context.Context, field graphql.CollectedField, obj *model.Budget) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Budget_budgetResetAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.BudgetResetAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *time.Time) graphql.Marshaler {
+			return ec.marshalOTime2ᚖtimeᚐTime(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Budget_budgetResetAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Budget", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _Budget_utilizationPct(ctx context.Context, field graphql.CollectedField, obj *model.Budget) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Budget_utilizationPct(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.UtilizationPct, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *float64) graphql.Marshaler {
+			return ec.marshalOFloat2ᚖfloat64(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Budget_utilizationPct(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Budget", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
 func (ec *executionContext) _Cluster_name(ctx context.Context, field graphql.CollectedField, obj *model.Cluster) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -13961,6 +14626,98 @@ func (ec *executionContext) _GatewayConnection_createdAt(ctx context.Context, fi
 }
 func (ec *executionContext) fieldContext_GatewayConnection_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("GatewayConnection", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _GatewaySpendStatus_gatewayId(ctx context.Context, field graphql.CollectedField, obj *model.GatewaySpendStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_GatewaySpendStatus_gatewayId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.GatewayID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_GatewaySpendStatus_gatewayId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("GatewaySpendStatus", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _GatewaySpendStatus_gatewayName(ctx context.Context, field graphql.CollectedField, obj *model.GatewaySpendStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_GatewaySpendStatus_gatewayName(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.GatewayName, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_GatewaySpendStatus_gatewayName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("GatewaySpendStatus", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _GatewaySpendStatus_ok(ctx context.Context, field graphql.CollectedField, obj *model.GatewaySpendStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_GatewaySpendStatus_ok(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Ok, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_GatewaySpendStatus_ok(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("GatewaySpendStatus", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _GatewaySpendStatus_error(ctx context.Context, field graphql.CollectedField, obj *model.GatewaySpendStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_GatewaySpendStatus_error(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Error, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_GatewaySpendStatus_error(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("GatewaySpendStatus", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _Image_id(ctx context.Context, field graphql.CollectedField, obj *model.Image) (ret graphql.Marshaler) {
@@ -22374,6 +23131,130 @@ func (ec *executionContext) fieldContext_Query_modelGatewaySyncSummary(_ context
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_spendReport(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_spendReport(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().SpendReport(ctx, fc.Args["input"].(model.SpendReportInput))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				perm, err := ec.unmarshalNString2string(ctx, "metering:view")
+				if err != nil {
+					var zeroVal *model.SpendReport
+					return zeroVal, err
+				}
+				if ec.Directives.HasPermission == nil {
+					var zeroVal *model.SpendReport
+					return zeroVal, errors.New("directive hasPermission is not implemented")
+				}
+				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.SpendReport) graphql.Marshaler {
+			return ec.marshalNSpendReport2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSpendReport(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_spendReport(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_SpendReport(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_spendReport_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_budgets(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_budgets(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().Budgets(ctx, fc.Args["scope"].(model.BudgetScope))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				perm, err := ec.unmarshalNString2string(ctx, "metering:view")
+				if err != nil {
+					var zeroVal []model.Budget
+					return zeroVal, err
+				}
+				if ec.Directives.HasPermission == nil {
+					var zeroVal []model.Budget
+					return zeroVal, errors.New("directive hasPermission is not implemented")
+				}
+				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v []model.Budget) graphql.Marshaler {
+			return ec.marshalNBudget2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐBudgetᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_budgets(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Budget(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_budgets_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_requestLogs(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -25051,6 +25932,548 @@ func (ec *executionContext) _Skill_createdAt(ctx context.Context, field graphql.
 }
 func (ec *executionContext) fieldContext_Skill_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Skill", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _SpendDailyPoint_date(ctx context.Context, field graphql.CollectedField, obj *model.SpendDailyPoint) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendDailyPoint_date(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Date, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendDailyPoint_date(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SpendDailyPoint", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _SpendDailyPoint_spend(ctx context.Context, field graphql.CollectedField, obj *model.SpendDailyPoint) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendDailyPoint_spend(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Spend, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendDailyPoint_spend(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SpendDailyPoint", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _SpendDailyPoint_totalTokens(ctx context.Context, field graphql.CollectedField, obj *model.SpendDailyPoint) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendDailyPoint_totalTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendDailyPoint_totalTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SpendDailyPoint", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _SpendReport_from(ctx context.Context, field graphql.CollectedField, obj *model.SpendReport) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendReport_from(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.From, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendReport_from(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SpendReport", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _SpendReport_to(ctx context.Context, field graphql.CollectedField, obj *model.SpendReport) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendReport_to(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.To, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendReport_to(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SpendReport", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _SpendReport_groupBy(ctx context.Context, field graphql.CollectedField, obj *model.SpendReport) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendReport_groupBy(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.GroupBy, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.SpendGroupBy) graphql.Marshaler {
+			return ec.marshalNSpendGroupBy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSpendGroupBy(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendReport_groupBy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SpendReport", field, false, false, errors.New("field of type SpendGroupBy does not have child fields"))
+}
+
+func (ec *executionContext) _SpendReport_rows(ctx context.Context, field graphql.CollectedField, obj *model.SpendReport) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendReport_rows(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Rows, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.SpendRow) graphql.Marshaler {
+			return ec.marshalNSpendRow2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSpendRowᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendReport_rows(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpendReport",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_SpendRow(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpendReport_totals(ctx context.Context, field graphql.CollectedField, obj *model.SpendReport) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendReport_totals(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Totals, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.SpendTotals) graphql.Marshaler {
+			return ec.marshalNSpendTotals2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSpendTotals(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendReport_totals(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpendReport",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_SpendTotals(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpendReport_byDay(ctx context.Context, field graphql.CollectedField, obj *model.SpendReport) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendReport_byDay(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ByDay, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.SpendDailyPoint) graphql.Marshaler {
+			return ec.marshalNSpendDailyPoint2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSpendDailyPointᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendReport_byDay(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpendReport",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_SpendDailyPoint(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpendReport_gateways(ctx context.Context, field graphql.CollectedField, obj *model.SpendReport) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendReport_gateways(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Gateways, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.GatewaySpendStatus) graphql.Marshaler {
+			return ec.marshalNGatewaySpendStatus2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐGatewaySpendStatusᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendReport_gateways(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SpendReport",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_GatewaySpendStatus(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SpendRow_key(ctx context.Context, field graphql.CollectedField, obj *model.SpendRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendRow_key(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Key, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendRow_key(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SpendRow", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _SpendRow_label(ctx context.Context, field graphql.CollectedField, obj *model.SpendRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendRow_label(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Label, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendRow_label(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SpendRow", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _SpendRow_spend(ctx context.Context, field graphql.CollectedField, obj *model.SpendRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendRow_spend(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Spend, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendRow_spend(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SpendRow", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _SpendRow_promptTokens(ctx context.Context, field graphql.CollectedField, obj *model.SpendRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendRow_promptTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.PromptTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendRow_promptTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SpendRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _SpendRow_completionTokens(ctx context.Context, field graphql.CollectedField, obj *model.SpendRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendRow_completionTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.CompletionTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendRow_completionTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SpendRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _SpendRow_totalTokens(ctx context.Context, field graphql.CollectedField, obj *model.SpendRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendRow_totalTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendRow_totalTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SpendRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _SpendRow_requests(ctx context.Context, field graphql.CollectedField, obj *model.SpendRow) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendRow_requests(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Requests, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendRow_requests(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SpendRow", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _SpendTotals_spend(ctx context.Context, field graphql.CollectedField, obj *model.SpendTotals) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendTotals_spend(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Spend, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendTotals_spend(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SpendTotals", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _SpendTotals_promptTokens(ctx context.Context, field graphql.CollectedField, obj *model.SpendTotals) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendTotals_promptTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.PromptTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendTotals_promptTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SpendTotals", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _SpendTotals_completionTokens(ctx context.Context, field graphql.CollectedField, obj *model.SpendTotals) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendTotals_completionTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.CompletionTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendTotals_completionTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SpendTotals", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _SpendTotals_totalTokens(ctx context.Context, field graphql.CollectedField, obj *model.SpendTotals) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendTotals_totalTokens(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TotalTokens, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendTotals_totalTokens(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SpendTotals", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _SpendTotals_requests(ctx context.Context, field graphql.CollectedField, obj *model.SpendTotals) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SpendTotals_requests(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Requests, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SpendTotals_requests(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SpendTotals", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
 func (ec *executionContext) _SyncResourcePoolPayload_pool(ctx context.Context, field graphql.CollectedField, obj *model.SyncResourcePoolPayload) (ret graphql.Marshaler) {
@@ -29133,6 +30556,50 @@ func (ec *executionContext) unmarshalInputSnapshotAgentInput(ctx context.Context
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputSpendReportInput(ctx context.Context, obj any) (model.SpendReportInput, error) {
+	var it model.SpendReportInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"from", "to", "groupBy"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "from":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("from"))
+			data, err := ec.unmarshalNTime2timeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.From = data
+		case "to":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("to"))
+			data, err := ec.unmarshalNTime2timeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.To = data
+		case "groupBy":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("groupBy"))
+			data, err := ec.unmarshalNSpendGroupBy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSpendGroupBy(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.GroupBy = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputTestModelGatewayConnectionInput(ctx context.Context, obj any) (model.TestModelGatewayConnectionInput, error) {
 	var it model.TestModelGatewayConnectionInput
 	if obj == nil {
@@ -31222,6 +32689,75 @@ func (ec *executionContext) _AuthPayload(ctx context.Context, sel ast.SelectionS
 	return out
 }
 
+var budgetImplementors = []string{"Budget"}
+
+func (ec *executionContext) _Budget(ctx context.Context, sel ast.SelectionSet, obj *model.Budget) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, budgetImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Budget")
+		case "scope":
+			out.Values[i] = ec._Budget_scope(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "label":
+			out.Values[i] = ec._Budget_label(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "spend":
+			out.Values[i] = ec._Budget_spend(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "maxBudget":
+			out.Values[i] = ec._Budget_maxBudget(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "remaining":
+			out.Values[i] = ec._Budget_remaining(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "budgetResetAt":
+			out.Values[i] = ec._Budget_budgetResetAt(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "utilizationPct":
+			out.Values[i] = ec._Budget_utilizationPct(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var clusterImplementors = []string{"Cluster"}
 
 func (ec *executionContext) _Cluster(ctx context.Context, sel ast.SelectionSet, obj *model.Cluster) graphql.Marshaler {
@@ -32228,6 +33764,60 @@ func (ec *executionContext) _GatewayConnection(ctx context.Context, sel ast.Sele
 		case "createdAt":
 			out.Values[i] = ec._GatewayConnection_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var gatewaySpendStatusImplementors = []string{"GatewaySpendStatus"}
+
+func (ec *executionContext) _GatewaySpendStatus(ctx context.Context, sel ast.SelectionSet, obj *model.GatewaySpendStatus) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, gatewaySpendStatusImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("GatewaySpendStatus")
+		case "gatewayId":
+			out.Values[i] = ec._GatewaySpendStatus_gatewayId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "gatewayName":
+			out.Values[i] = ec._GatewaySpendStatus_gatewayName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "ok":
+			out.Values[i] = ec._GatewaySpendStatus_ok(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "error":
+			out.Values[i] = ec._GatewaySpendStatus_error(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
 		default:
@@ -34864,6 +36454,50 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "spendReport":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_spendReport(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "budgets":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_budgets(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "requestLogs":
 			field := field
 
@@ -36029,6 +37663,252 @@ func (ec *executionContext) _Skill(ctx context.Context, sel ast.SelectionSet, ob
 			}
 		case "createdAt":
 			out.Values[i] = ec._Skill_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var spendDailyPointImplementors = []string{"SpendDailyPoint"}
+
+func (ec *executionContext) _SpendDailyPoint(ctx context.Context, sel ast.SelectionSet, obj *model.SpendDailyPoint) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, spendDailyPointImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SpendDailyPoint")
+		case "date":
+			out.Values[i] = ec._SpendDailyPoint_date(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "spend":
+			out.Values[i] = ec._SpendDailyPoint_spend(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalTokens":
+			out.Values[i] = ec._SpendDailyPoint_totalTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var spendReportImplementors = []string{"SpendReport"}
+
+func (ec *executionContext) _SpendReport(ctx context.Context, sel ast.SelectionSet, obj *model.SpendReport) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, spendReportImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SpendReport")
+		case "from":
+			out.Values[i] = ec._SpendReport_from(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "to":
+			out.Values[i] = ec._SpendReport_to(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "groupBy":
+			out.Values[i] = ec._SpendReport_groupBy(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "rows":
+			out.Values[i] = ec._SpendReport_rows(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totals":
+			out.Values[i] = ec._SpendReport_totals(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "byDay":
+			out.Values[i] = ec._SpendReport_byDay(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "gateways":
+			out.Values[i] = ec._SpendReport_gateways(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var spendRowImplementors = []string{"SpendRow"}
+
+func (ec *executionContext) _SpendRow(ctx context.Context, sel ast.SelectionSet, obj *model.SpendRow) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, spendRowImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SpendRow")
+		case "key":
+			out.Values[i] = ec._SpendRow_key(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "label":
+			out.Values[i] = ec._SpendRow_label(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "spend":
+			out.Values[i] = ec._SpendRow_spend(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "promptTokens":
+			out.Values[i] = ec._SpendRow_promptTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "completionTokens":
+			out.Values[i] = ec._SpendRow_completionTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalTokens":
+			out.Values[i] = ec._SpendRow_totalTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "requests":
+			out.Values[i] = ec._SpendRow_requests(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var spendTotalsImplementors = []string{"SpendTotals"}
+
+func (ec *executionContext) _SpendTotals(ctx context.Context, sel ast.SelectionSet, obj *model.SpendTotals) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, spendTotalsImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SpendTotals")
+		case "spend":
+			out.Values[i] = ec._SpendTotals_spend(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "promptTokens":
+			out.Values[i] = ec._SpendTotals_promptTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "completionTokens":
+			out.Values[i] = ec._SpendTotals_completionTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalTokens":
+			out.Values[i] = ec._SpendTotals_totalTokens(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "requests":
+			out.Values[i] = ec._SpendTotals_requests(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -37535,6 +39415,36 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
+func (ec *executionContext) marshalNBudget2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐBudget(ctx context.Context, sel ast.SelectionSet, v model.Budget) graphql.Marshaler {
+	return ec._Budget(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNBudget2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐBudgetᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Budget) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNBudget2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐBudget(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNBudgetScope2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐBudgetScope(ctx context.Context, v any) (model.BudgetScope, error) {
+	var res model.BudgetScope
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNBudgetScope2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐBudgetScope(ctx context.Context, sel ast.SelectionSet, v model.BudgetScope) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) marshalNCluster2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐCluster(ctx context.Context, sel ast.SelectionSet, v model.Cluster) graphql.Marshaler {
 	return ec._Cluster(ctx, sel, &v)
 }
@@ -37981,6 +39891,26 @@ func (ec *executionContext) marshalNGatewayConnection2ᚖgithubᚗcomᚋVMware�
 		return graphql.Null
 	}
 	return ec._GatewayConnection(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNGatewaySpendStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐGatewaySpendStatus(ctx context.Context, sel ast.SelectionSet, v model.GatewaySpendStatus) graphql.Marshaler {
+	return ec._GatewaySpendStatus(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNGatewaySpendStatus2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐGatewaySpendStatusᚄ(ctx context.Context, sel ast.SelectionSet, v []model.GatewaySpendStatus) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNGatewaySpendStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐGatewaySpendStatus(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalNGatewayStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐGatewayStatus(ctx context.Context, v any) (model.GatewayStatus, error) {
@@ -39024,6 +40954,85 @@ func (ec *executionContext) unmarshalNSortDirection2githubᚗcomᚋVMwareᚑAI�
 
 func (ec *executionContext) marshalNSortDirection2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSortDirection(ctx context.Context, sel ast.SelectionSet, v model.SortDirection) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) marshalNSpendDailyPoint2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSpendDailyPoint(ctx context.Context, sel ast.SelectionSet, v model.SpendDailyPoint) graphql.Marshaler {
+	return ec._SpendDailyPoint(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNSpendDailyPoint2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSpendDailyPointᚄ(ctx context.Context, sel ast.SelectionSet, v []model.SpendDailyPoint) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNSpendDailyPoint2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSpendDailyPoint(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNSpendGroupBy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSpendGroupBy(ctx context.Context, v any) (model.SpendGroupBy, error) {
+	var res model.SpendGroupBy
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNSpendGroupBy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSpendGroupBy(ctx context.Context, sel ast.SelectionSet, v model.SpendGroupBy) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) marshalNSpendReport2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSpendReport(ctx context.Context, sel ast.SelectionSet, v model.SpendReport) graphql.Marshaler {
+	return ec._SpendReport(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNSpendReport2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSpendReport(ctx context.Context, sel ast.SelectionSet, v *model.SpendReport) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._SpendReport(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNSpendReportInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSpendReportInput(ctx context.Context, v any) (model.SpendReportInput, error) {
+	res, err := ec.unmarshalInputSpendReportInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNSpendRow2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSpendRow(ctx context.Context, sel ast.SelectionSet, v model.SpendRow) graphql.Marshaler {
+	return ec._SpendRow(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNSpendRow2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSpendRowᚄ(ctx context.Context, sel ast.SelectionSet, v []model.SpendRow) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNSpendRow2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSpendRow(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNSpendTotals2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐSpendTotals(ctx context.Context, sel ast.SelectionSet, v *model.SpendTotals) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._SpendTotals(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v any) (string, error) {

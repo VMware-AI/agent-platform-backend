@@ -71,6 +71,14 @@ type Resolver struct {
 	// gateway row, for per-department routing (LLD-13 §3.3). Injectable for tests;
 	// nil → a real HTTP client (see Resolver.buildGatewayKeyClient).
 	GatewayKeyClientFor func(ctx context.Context, g *ent.GatewayConnection) gateway.Client
+	// SpendReaderFor builds a litellm spend/budget reader bound to a gateway row,
+	// for the observability spend aggregator (LLD-15). Injectable for tests;
+	// nil → a real HTTP client (see Resolver.buildSpendReader).
+	SpendReaderFor func(ctx context.Context, g *ent.GatewayConnection) gateway.SpendReader
+	// spendCache memoizes spendReport results across gateways for a short TTL so
+	// page polling doesn't fan out to litellm on every request. nil = disabled
+	// (default; tests want fresh reads). Enabled in main via EnableSpendCache.
+	spendCache *spendReportCache
 	// Secrets resolves resource-pool credentials (encrypted DBStore); nil disables deploy.
 	Secrets secrets.Resolver
 	// GatewayURL is the LLM gateway base URL injected into provisioned VMs.

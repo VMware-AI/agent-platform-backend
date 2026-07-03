@@ -80,6 +80,9 @@ type Config struct {
 	// long after tripping; after which it enters HalfOpen and lets one
 	// request through to probe. Default 60s.
 	PoolSyncBreakerOpenSeconds int
+	// SpendCacheTTLSeconds memoizes observability spend reports across gateways
+	// (LLD-15). Default 30s; 0 disables (each request fans out fresh).
+	SpendCacheTTLSeconds int
 	// ModelGatewaySyncIntervalSeconds is how often (seconds) the background
 	// goroutine syncs every litellm GatewayConnection row (status, routing
 	// strategy, backend-model count). Default 1800 (30m). 0 disables the
@@ -163,6 +166,9 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	if c.PoolSyncBreakerThreshold, err = getenvInt("POOL_SYNC_BREAKER_THRESHOLD", 5); err != nil {
+		return nil, err
+	}
+	if c.SpendCacheTTLSeconds, err = getenvInt("OBS_SPEND_CACHE_TTL_SECONDS", 30); err != nil {
 		return nil, err
 	}
 	if c.PoolSyncBreakerOpenSeconds, err = getenvInt("POOL_SYNC_BREAKER_OPEN_SECONDS", 60); err != nil {

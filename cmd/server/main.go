@@ -167,6 +167,10 @@ func main() {
 		resolver.EnablePermissionCache(time.Duration(cfg.PermCacheTTLSeconds) * time.Second)
 	}
 
+	// Short-lived spend-report cache (LLD-15 §3.6): page polling doesn't fan out
+	// to litellm on every request. Default 30s; OBS_SPEND_CACHE_TTL_SECONDS=0 off.
+	resolver.EnableSpendCache(time.Duration(cfg.SpendCacheTTLSeconds) * time.Second)
+
 	// Periodically reconcile gateway keys against governance rows (detect/heal
 	// ungoverned orphans + stale rows). Disabled unless an interval is set AND a
 	// gateway is configured. Report-only unless RECONCILE_PRUNE=true.
