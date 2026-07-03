@@ -24,6 +24,10 @@ func (f fakeSpendReader) BudgetInfo(_ context.Context, _ gateway.BudgetInfoScope
 	return nil, nil
 }
 
+func (f fakeSpendReader) Health(_ context.Context) (*gateway.GatewayHealth, error) {
+	return &gateway.GatewayHealth{Reachable: true}, nil
+}
+
 func day(date string, teams ...gateway.TeamSpend) gateway.SpendReportDay {
 	return gateway.SpendReportDay{Date: date, Teams: teams}
 }
@@ -183,4 +187,8 @@ func (c countingReader) GlobalSpendReport(_ context.Context, _, _, _ string) ([]
 }
 func (c countingReader) BudgetInfo(_ context.Context, _ gateway.BudgetInfoScope, _ string) (*gateway.BudgetInfo, error) {
 	return nil, nil
+}
+
+func (c countingReader) Health(_ context.Context) (*gateway.GatewayHealth, error) {
+	return &gateway.GatewayHealth{Reachable: true}, nil
 }

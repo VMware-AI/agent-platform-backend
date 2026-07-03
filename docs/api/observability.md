@@ -47,6 +47,17 @@ requestMetrics(from: Time!, to: Time!, granularity: RequestMetricsBucketGranular
 | `granularity` | `RequestMetricsBucketGranularity!` | yes | — |
 | `filter` | `RequestMetricsFilter` | no | — |
 
+### `gatewayHealth`
+
+Upstream health across every configured gateway (fan-out to litellm /health).
+
+```graphql
+gatewayHealth: [GatewayHealth!]!
+```
+
+- **Returns:** `[GatewayHealth!]!`
+- **Auth:** `@hasPermission(perm: "audit:view")`
+
 ## Mutations
 
 ### `recordRequestLog`
@@ -105,6 +116,34 @@ deleteRateLimitPolicy(id: ID!): Boolean!
 | `id` | `ID!` | yes | — |
 
 ## Types
+
+### EndpointHealth
+
+*Object*
+
+One upstream deployment's health as litellm reports it (GET /health).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `model` | `String!` | — |
+| `apiBase` | `String` | — |
+
+### GatewayHealth
+
+*Object*
+
+A gateway's health, aggregated by the backend fanning out to litellm's /health (LLD-15 T4). reachable reflects /health/readiness; the endpoint lists come from /health (litellm probes its upstreams).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `gatewayId` | `ID!` | — |
+| `gatewayName` | `String!` | — |
+| `reachable` | `Boolean!` | — |
+| `healthyCount` | `Int!` | — |
+| `unhealthyCount` | `Int!` | — |
+| `healthy` | `[EndpointHealth!]!` | — |
+| `unhealthy` | `[EndpointHealth!]!` | — |
+| `error` | `String` | — |
 
 ### RateLimitPolicy
 
@@ -173,7 +212,9 @@ deleteRateLimitPolicy(id: ID!): Boolean!
 | `totalErrors` | `Int!` | — |
 | `errorRate` | `Float!` | — |
 | `avgLatencyMs` | `Int!` | — |
+| `p50LatencyMs` | `Int!` | — |
 | `p95LatencyMs` | `Int!` | — |
+| `p99LatencyMs` | `Int!` | — |
 | `totalInputTokens` | `Int!` | — |
 | `totalOutputTokens` | `Int!` | — |
 

@@ -50,9 +50,31 @@ type RequestMetricsSummary {
   totalErrors: Int!
   errorRate: Float!
   avgLatencyMs: Int!
+  p50LatencyMs: Int!
   p95LatencyMs: Int!
+  p99LatencyMs: Int!
   totalInputTokens: Int!
   totalOutputTokens: Int!
+}
+
+# One upstream deployment's health as litellm reports it (GET /health).
+type EndpointHealth {
+  model: String!
+  apiBase: String
+}
+
+# A gateway's health, aggregated by the backend fanning out to litellm's
+# /health (LLD-15 T4). reachable reflects /health/readiness; the endpoint lists
+# come from /health (litellm probes its upstreams).
+type GatewayHealth {
+  gatewayId: ID!
+  gatewayName: String!
+  reachable: Boolean!
+  healthyCount: Int!
+  unhealthyCount: Int!
+  healthy: [EndpointHealth!]!
+  unhealthy: [EndpointHealth!]!
+  error: String
 }
 
 type RequestMetrics {
@@ -89,6 +111,8 @@ extend type Query {
   requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
   rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin])
   requestMetrics(from: Time!, to: Time!, granularity: RequestMetricsBucketGranularity!, filter: RequestMetricsFilter): RequestMetrics! @hasPermission(perm: "audit:view")
+  # Upstream health across every configured gateway (fan-out to litellm /health).
+  gatewayHealth: [GatewayHealth!]! @hasPermission(perm: "audit:view")
 }
 
 extend type Mutation {

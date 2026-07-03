@@ -394,6 +394,10 @@ type DeployedAgent {
 	templateVersion: OvaTemplateVersion!
 	resourcePool: ResourcePool!
 }
+type EndpointHealth {
+	model: String!
+	apiBase: String
+}
 type GatewayConnection {
 	id: ID!
 	name: String!
@@ -403,6 +407,16 @@ type GatewayConnection {
 	status: GatewayStatus!
 	loadBalanceStrategy: LoadBalancingStrategy!
 	createdAt: Time!
+}
+type GatewayHealth {
+	gatewayId: ID!
+	gatewayName: String!
+	reachable: Boolean!
+	healthyCount: Int!
+	unhealthyCount: Int!
+	healthy: [EndpointHealth!]!
+	unhealthy: [EndpointHealth!]!
+	error: String
 }
 type GatewaySpendStatus {
 	gatewayId: ID!
@@ -785,6 +799,7 @@ type Query {
 	requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
 	rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin])
 	requestMetrics(from: Time!, to: Time!, granularity: RequestMetricsBucketGranularity!, filter: RequestMetricsFilter): RequestMetrics! @hasPermission(perm: "audit:view")
+	gatewayHealth: [GatewayHealth!]! @hasPermission(perm: "audit:view")
 	ovaTemplateFamilies(filter: OvaTemplateFamilyFilter, pagination: Pagination, sort: OvaTemplateFamilySort): OvaTemplateFamilyConnection! @hasRole(any: [admin])
 	ovaTemplateVersions(familyId: ID, pagination: Pagination): OvaTemplateVersionConnection! @hasRole(any: [admin])
 	customRoles: [CustomRole!]! @hasRole(any: [admin])
@@ -887,7 +902,9 @@ type RequestMetricsSummary {
 	totalErrors: Int!
 	errorRate: Float!
 	avgLatencyMs: Int!
+	p50LatencyMs: Int!
 	p95LatencyMs: Int!
+	p99LatencyMs: Int!
 	totalInputTokens: Int!
 	totalOutputTokens: Int!
 }

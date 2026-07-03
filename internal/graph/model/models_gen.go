@@ -409,6 +409,11 @@ type DeployedAgent struct {
 	ResourcePool     *ResourcePool       `json:"resourcePool"`
 }
 
+type EndpointHealth struct {
+	Model   string  `json:"model"`
+	APIBase *string `json:"apiBase,omitempty"`
+}
+
 type GatewayConnection struct {
 	ID                  string                `json:"id"`
 	Name                string                `json:"name"`
@@ -418,6 +423,17 @@ type GatewayConnection struct {
 	Status              GatewayStatus         `json:"status"`
 	LoadBalanceStrategy LoadBalancingStrategy `json:"loadBalanceStrategy"`
 	CreatedAt           time.Time             `json:"createdAt"`
+}
+
+type GatewayHealth struct {
+	GatewayID      string           `json:"gatewayId"`
+	GatewayName    string           `json:"gatewayName"`
+	Reachable      bool             `json:"reachable"`
+	HealthyCount   int              `json:"healthyCount"`
+	UnhealthyCount int              `json:"unhealthyCount"`
+	Healthy        []EndpointHealth `json:"healthy"`
+	Unhealthy      []EndpointHealth `json:"unhealthy"`
+	Error          *string          `json:"error,omitempty"`
 }
 
 type GatewaySpendStatus struct {
@@ -758,7 +774,9 @@ type RequestMetricsSummary struct {
 	TotalErrors       int     `json:"totalErrors"`
 	ErrorRate         float64 `json:"errorRate"`
 	AvgLatencyMs      int     `json:"avgLatencyMs"`
+	P50LatencyMs      int     `json:"p50LatencyMs"`
 	P95LatencyMs      int     `json:"p95LatencyMs"`
+	P99LatencyMs      int     `json:"p99LatencyMs"`
 	TotalInputTokens  int     `json:"totalInputTokens"`
 	TotalOutputTokens int     `json:"totalOutputTokens"`
 }

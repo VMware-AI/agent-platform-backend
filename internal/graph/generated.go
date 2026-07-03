@@ -320,6 +320,11 @@ type ComplexityRoot struct {
 		VirtualKeySecret func(childComplexity int) int
 	}
 
+	EndpointHealth struct {
+		APIBase func(childComplexity int) int
+		Model   func(childComplexity int) int
+	}
+
 	GatewayConnection struct {
 		CreatedAt           func(childComplexity int) int
 		Endpoint            func(childComplexity int) int
@@ -329,6 +334,17 @@ type ComplexityRoot struct {
 		Name                func(childComplexity int) int
 		PublicURL           func(childComplexity int) int
 		Status              func(childComplexity int) int
+	}
+
+	GatewayHealth struct {
+		Error          func(childComplexity int) int
+		GatewayID      func(childComplexity int) int
+		GatewayName    func(childComplexity int) int
+		Healthy        func(childComplexity int) int
+		HealthyCount   func(childComplexity int) int
+		Reachable      func(childComplexity int) int
+		Unhealthy      func(childComplexity int) int
+		UnhealthyCount func(childComplexity int) int
 	}
 
 	GatewaySpendStatus struct {
@@ -605,6 +621,7 @@ type ComplexityRoot struct {
 		DepartmentMembers       func(childComplexity int, departmentID string) int
 		Departments             func(childComplexity int) int
 		GatewayConnections      func(childComplexity int) int
+		GatewayHealth           func(childComplexity int) int
 		Images                  func(childComplexity int) int
 		Me                      func(childComplexity int) int
 		MeteringOverview        func(childComplexity int, rangeArg *model.MeteringTimeRange, userID *string) int
@@ -681,7 +698,9 @@ type ComplexityRoot struct {
 	RequestMetricsSummary struct {
 		AvgLatencyMs      func(childComplexity int) int
 		ErrorRate         func(childComplexity int) int
+		P50LatencyMs      func(childComplexity int) int
 		P95LatencyMs      func(childComplexity int) int
+		P99LatencyMs      func(childComplexity int) int
 		TotalErrors       func(childComplexity int) int
 		TotalInputTokens  func(childComplexity int) int
 		TotalOutputTokens func(childComplexity int) int
@@ -1006,6 +1025,7 @@ type QueryResolver interface {
 	RequestLogs(ctx context.Context, filter *model.RequestLogFilter, page *model.PageInput) ([]model.RequestLog, error)
 	RateLimitPolicies(ctx context.Context) ([]model.RateLimitPolicy, error)
 	RequestMetrics(ctx context.Context, from time.Time, to time.Time, granularity model.RequestMetricsBucketGranularity, filter *model.RequestMetricsFilter) (*model.RequestMetrics, error)
+	GatewayHealth(ctx context.Context) ([]model.GatewayHealth, error)
 	OvaTemplateFamilies(ctx context.Context, filter *model.OvaTemplateFamilyFilter, pagination *model.Pagination, sort *model.OvaTemplateFamilySort) (*model.OvaTemplateFamilyConnection, error)
 	OvaTemplateVersions(ctx context.Context, familyID *string, pagination *model.Pagination) (*model.OvaTemplateVersionConnection, error)
 	CustomRoles(ctx context.Context) ([]model.CustomRole, error)
@@ -2086,6 +2106,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.DeployedAgent.VirtualKeySecret(childComplexity), true
 
+	case "EndpointHealth.apiBase":
+		if e.ComplexityRoot.EndpointHealth.APIBase == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EndpointHealth.APIBase(childComplexity), true
+	case "EndpointHealth.model":
+		if e.ComplexityRoot.EndpointHealth.Model == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EndpointHealth.Model(childComplexity), true
+
 	case "GatewayConnection.createdAt":
 		if e.ComplexityRoot.GatewayConnection.CreatedAt == nil {
 			break
@@ -2134,6 +2167,55 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.GatewayConnection.Status(childComplexity), true
+
+	case "GatewayHealth.error":
+		if e.ComplexityRoot.GatewayHealth.Error == nil {
+			break
+		}
+
+		return e.ComplexityRoot.GatewayHealth.Error(childComplexity), true
+	case "GatewayHealth.gatewayId":
+		if e.ComplexityRoot.GatewayHealth.GatewayID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.GatewayHealth.GatewayID(childComplexity), true
+	case "GatewayHealth.gatewayName":
+		if e.ComplexityRoot.GatewayHealth.GatewayName == nil {
+			break
+		}
+
+		return e.ComplexityRoot.GatewayHealth.GatewayName(childComplexity), true
+	case "GatewayHealth.healthy":
+		if e.ComplexityRoot.GatewayHealth.Healthy == nil {
+			break
+		}
+
+		return e.ComplexityRoot.GatewayHealth.Healthy(childComplexity), true
+	case "GatewayHealth.healthyCount":
+		if e.ComplexityRoot.GatewayHealth.HealthyCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.GatewayHealth.HealthyCount(childComplexity), true
+	case "GatewayHealth.reachable":
+		if e.ComplexityRoot.GatewayHealth.Reachable == nil {
+			break
+		}
+
+		return e.ComplexityRoot.GatewayHealth.Reachable(childComplexity), true
+	case "GatewayHealth.unhealthy":
+		if e.ComplexityRoot.GatewayHealth.Unhealthy == nil {
+			break
+		}
+
+		return e.ComplexityRoot.GatewayHealth.Unhealthy(childComplexity), true
+	case "GatewayHealth.unhealthyCount":
+		if e.ComplexityRoot.GatewayHealth.UnhealthyCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.GatewayHealth.UnhealthyCount(childComplexity), true
 
 	case "GatewaySpendStatus.error":
 		if e.ComplexityRoot.GatewaySpendStatus.Error == nil {
@@ -3780,6 +3862,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.GatewayConnections(childComplexity), true
+	case "Query.gatewayHealth":
+		if e.ComplexityRoot.Query.GatewayHealth == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.GatewayHealth(childComplexity), true
 	case "Query.images":
 		if e.ComplexityRoot.Query.Images == nil {
 			break
@@ -4252,12 +4340,24 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.RequestMetricsSummary.ErrorRate(childComplexity), true
+	case "RequestMetricsSummary.p50LatencyMs":
+		if e.ComplexityRoot.RequestMetricsSummary.P50LatencyMs == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetricsSummary.P50LatencyMs(childComplexity), true
 	case "RequestMetricsSummary.p95LatencyMs":
 		if e.ComplexityRoot.RequestMetricsSummary.P95LatencyMs == nil {
 			break
 		}
 
 		return e.ComplexityRoot.RequestMetricsSummary.P95LatencyMs(childComplexity), true
+	case "RequestMetricsSummary.p99LatencyMs":
+		if e.ComplexityRoot.RequestMetricsSummary.P99LatencyMs == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RequestMetricsSummary.P99LatencyMs(childComplexity), true
 	case "RequestMetricsSummary.totalErrors":
 		if e.ComplexityRoot.RequestMetricsSummary.TotalErrors == nil {
 			break
@@ -6383,9 +6483,31 @@ type RequestMetricsSummary {
   totalErrors: Int!
   errorRate: Float!
   avgLatencyMs: Int!
+  p50LatencyMs: Int!
   p95LatencyMs: Int!
+  p99LatencyMs: Int!
   totalInputTokens: Int!
   totalOutputTokens: Int!
+}
+
+# One upstream deployment's health as litellm reports it (GET /health).
+type EndpointHealth {
+  model: String!
+  apiBase: String
+}
+
+# A gateway's health, aggregated by the backend fanning out to litellm's
+# /health (LLD-15 T4). reachable reflects /health/readiness; the endpoint lists
+# come from /health (litellm probes its upstreams).
+type GatewayHealth {
+  gatewayId: ID!
+  gatewayName: String!
+  reachable: Boolean!
+  healthyCount: Int!
+  unhealthyCount: Int!
+  healthy: [EndpointHealth!]!
+  unhealthy: [EndpointHealth!]!
+  error: String
 }
 
 type RequestMetrics {
@@ -6422,6 +6544,8 @@ extend type Query {
   requestLogs(filter: RequestLogFilter, page: PageInput): [RequestLog!]! @hasPermission(perm: "audit:view")
   rateLimitPolicies: [RateLimitPolicy!]! @hasRole(any: [admin])
   requestMetrics(from: Time!, to: Time!, granularity: RequestMetricsBucketGranularity!, filter: RequestMetricsFilter): RequestMetrics! @hasPermission(perm: "audit:view")
+  # Upstream health across every configured gateway (fan-out to litellm /health).
+  gatewayHealth: [GatewayHealth!]! @hasPermission(perm: "audit:view")
 }
 
 extend type Mutation {
@@ -7535,6 +7659,16 @@ func (ec *executionContext) childFields_DeployedAgent(ctx context.Context, field
 	return nil, fmt.Errorf("no field named %q was found under type DeployedAgent", field.Name)
 }
 
+func (ec *executionContext) childFields_EndpointHealth(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "model":
+		return ec.fieldContext_EndpointHealth_model(ctx, field)
+	case "apiBase":
+		return ec.fieldContext_EndpointHealth_apiBase(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type EndpointHealth", field.Name)
+}
+
 func (ec *executionContext) childFields_GatewayConnection(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -7555,6 +7689,28 @@ func (ec *executionContext) childFields_GatewayConnection(ctx context.Context, f
 		return ec.fieldContext_GatewayConnection_createdAt(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type GatewayConnection", field.Name)
+}
+
+func (ec *executionContext) childFields_GatewayHealth(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "gatewayId":
+		return ec.fieldContext_GatewayHealth_gatewayId(ctx, field)
+	case "gatewayName":
+		return ec.fieldContext_GatewayHealth_gatewayName(ctx, field)
+	case "reachable":
+		return ec.fieldContext_GatewayHealth_reachable(ctx, field)
+	case "healthyCount":
+		return ec.fieldContext_GatewayHealth_healthyCount(ctx, field)
+	case "unhealthyCount":
+		return ec.fieldContext_GatewayHealth_unhealthyCount(ctx, field)
+	case "healthy":
+		return ec.fieldContext_GatewayHealth_healthy(ctx, field)
+	case "unhealthy":
+		return ec.fieldContext_GatewayHealth_unhealthy(ctx, field)
+	case "error":
+		return ec.fieldContext_GatewayHealth_error(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type GatewayHealth", field.Name)
 }
 
 func (ec *executionContext) childFields_GatewaySpendStatus(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -8013,8 +8169,12 @@ func (ec *executionContext) childFields_RequestMetricsSummary(ctx context.Contex
 		return ec.fieldContext_RequestMetricsSummary_errorRate(ctx, field)
 	case "avgLatencyMs":
 		return ec.fieldContext_RequestMetricsSummary_avgLatencyMs(ctx, field)
+	case "p50LatencyMs":
+		return ec.fieldContext_RequestMetricsSummary_p50LatencyMs(ctx, field)
 	case "p95LatencyMs":
 		return ec.fieldContext_RequestMetricsSummary_p95LatencyMs(ctx, field)
+	case "p99LatencyMs":
+		return ec.fieldContext_RequestMetricsSummary_p99LatencyMs(ctx, field)
 	case "totalInputTokens":
 		return ec.fieldContext_RequestMetricsSummary_totalInputTokens(ctx, field)
 	case "totalOutputTokens":
@@ -14486,6 +14646,52 @@ func (ec *executionContext) fieldContext_DeployedAgent_resourcePool(_ context.Co
 	return fc, nil
 }
 
+func (ec *executionContext) _EndpointHealth_model(ctx context.Context, field graphql.CollectedField, obj *model.EndpointHealth) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EndpointHealth_model(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Model, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EndpointHealth_model(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EndpointHealth", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _EndpointHealth_apiBase(ctx context.Context, field graphql.CollectedField, obj *model.EndpointHealth) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EndpointHealth_apiBase(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.APIBase, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_EndpointHealth_apiBase(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EndpointHealth", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _GatewayConnection_id(ctx context.Context, field graphql.CollectedField, obj *model.GatewayConnection) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -14668,6 +14874,208 @@ func (ec *executionContext) _GatewayConnection_createdAt(ctx context.Context, fi
 }
 func (ec *executionContext) fieldContext_GatewayConnection_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("GatewayConnection", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _GatewayHealth_gatewayId(ctx context.Context, field graphql.CollectedField, obj *model.GatewayHealth) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_GatewayHealth_gatewayId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.GatewayID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_GatewayHealth_gatewayId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("GatewayHealth", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _GatewayHealth_gatewayName(ctx context.Context, field graphql.CollectedField, obj *model.GatewayHealth) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_GatewayHealth_gatewayName(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.GatewayName, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_GatewayHealth_gatewayName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("GatewayHealth", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _GatewayHealth_reachable(ctx context.Context, field graphql.CollectedField, obj *model.GatewayHealth) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_GatewayHealth_reachable(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Reachable, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_GatewayHealth_reachable(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("GatewayHealth", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _GatewayHealth_healthyCount(ctx context.Context, field graphql.CollectedField, obj *model.GatewayHealth) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_GatewayHealth_healthyCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.HealthyCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_GatewayHealth_healthyCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("GatewayHealth", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _GatewayHealth_unhealthyCount(ctx context.Context, field graphql.CollectedField, obj *model.GatewayHealth) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_GatewayHealth_unhealthyCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.UnhealthyCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_GatewayHealth_unhealthyCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("GatewayHealth", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _GatewayHealth_healthy(ctx context.Context, field graphql.CollectedField, obj *model.GatewayHealth) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_GatewayHealth_healthy(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Healthy, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.EndpointHealth) graphql.Marshaler {
+			return ec.marshalNEndpointHealth2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐEndpointHealthᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_GatewayHealth_healthy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GatewayHealth",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_EndpointHealth(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GatewayHealth_unhealthy(ctx context.Context, field graphql.CollectedField, obj *model.GatewayHealth) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_GatewayHealth_unhealthy(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Unhealthy, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.EndpointHealth) graphql.Marshaler {
+			return ec.marshalNEndpointHealth2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐEndpointHealthᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_GatewayHealth_unhealthy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GatewayHealth",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_EndpointHealth(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GatewayHealth_error(ctx context.Context, field graphql.CollectedField, obj *model.GatewayHealth) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_GatewayHealth_error(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Error, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_GatewayHealth_error(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("GatewayHealth", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _GatewaySpendStatus_gatewayId(ctx context.Context, field graphql.CollectedField, obj *model.GatewaySpendStatus) (ret graphql.Marshaler) {
@@ -23471,6 +23879,56 @@ func (ec *executionContext) fieldContext_Query_requestMetrics(ctx context.Contex
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_gatewayHealth(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_gatewayHealth(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().GatewayHealth(ctx)
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				perm, err := ec.unmarshalNString2string(ctx, "audit:view")
+				if err != nil {
+					var zeroVal []model.GatewayHealth
+					return zeroVal, err
+				}
+				if ec.Directives.HasPermission == nil {
+					var zeroVal []model.GatewayHealth
+					return zeroVal, errors.New("directive hasPermission is not implemented")
+				}
+				return ec.Directives.HasPermission(ctx, nil, directive0, perm)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v []model.GatewayHealth) graphql.Marshaler {
+			return ec.marshalNGatewayHealth2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐGatewayHealthᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_gatewayHealth(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_GatewayHealth(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_ovaTemplateFamilies(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -24970,6 +25428,29 @@ func (ec *executionContext) fieldContext_RequestMetricsSummary_avgLatencyMs(_ co
 	return graphql.NewScalarFieldContext("RequestMetricsSummary", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
+func (ec *executionContext) _RequestMetricsSummary_p50LatencyMs(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetricsSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetricsSummary_p50LatencyMs(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.P50LatencyMs, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetricsSummary_p50LatencyMs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestMetricsSummary", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
 func (ec *executionContext) _RequestMetricsSummary_p95LatencyMs(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetricsSummary) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -24990,6 +25471,29 @@ func (ec *executionContext) _RequestMetricsSummary_p95LatencyMs(ctx context.Cont
 	)
 }
 func (ec *executionContext) fieldContext_RequestMetricsSummary_p95LatencyMs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("RequestMetricsSummary", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _RequestMetricsSummary_p99LatencyMs(ctx context.Context, field graphql.CollectedField, obj *model.RequestMetricsSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_RequestMetricsSummary_p99LatencyMs(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.P99LatencyMs, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_RequestMetricsSummary_p99LatencyMs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("RequestMetricsSummary", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
@@ -33790,6 +34294,50 @@ func (ec *executionContext) _DeployedAgent(ctx context.Context, sel ast.Selectio
 	return out
 }
 
+var endpointHealthImplementors = []string{"EndpointHealth"}
+
+func (ec *executionContext) _EndpointHealth(ctx context.Context, sel ast.SelectionSet, obj *model.EndpointHealth) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, endpointHealthImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("EndpointHealth")
+		case "model":
+			out.Values[i] = ec._EndpointHealth_model(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "apiBase":
+			out.Values[i] = ec._EndpointHealth_apiBase(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var gatewayConnectionImplementors = []string{"GatewayConnection"}
 
 func (ec *executionContext) _GatewayConnection(ctx context.Context, sel ast.SelectionSet, obj *model.GatewayConnection) graphql.Marshaler {
@@ -33839,6 +34387,80 @@ func (ec *executionContext) _GatewayConnection(ctx context.Context, sel ast.Sele
 		case "createdAt":
 			out.Values[i] = ec._GatewayConnection_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var gatewayHealthImplementors = []string{"GatewayHealth"}
+
+func (ec *executionContext) _GatewayHealth(ctx context.Context, sel ast.SelectionSet, obj *model.GatewayHealth) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, gatewayHealthImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("GatewayHealth")
+		case "gatewayId":
+			out.Values[i] = ec._GatewayHealth_gatewayId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "gatewayName":
+			out.Values[i] = ec._GatewayHealth_gatewayName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "reachable":
+			out.Values[i] = ec._GatewayHealth_reachable(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "healthyCount":
+			out.Values[i] = ec._GatewayHealth_healthyCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "unhealthyCount":
+			out.Values[i] = ec._GatewayHealth_unhealthyCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "healthy":
+			out.Values[i] = ec._GatewayHealth_healthy(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "unhealthy":
+			out.Values[i] = ec._GatewayHealth_unhealthy(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "error":
+			out.Values[i] = ec._GatewayHealth_error(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
 		default:
@@ -36639,6 +37261,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "gatewayHealth":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_gatewayHealth(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "ovaTemplateFamilies":
 			field := field
 
@@ -37230,8 +37874,18 @@ func (ec *executionContext) _RequestMetricsSummary(ctx context.Context, sel ast.
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "p50LatencyMs":
+			out.Values[i] = ec._RequestMetricsSummary_p50LatencyMs(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "p95LatencyMs":
 			out.Values[i] = ec._RequestMetricsSummary_p95LatencyMs(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "p99LatencyMs":
+			out.Values[i] = ec._RequestMetricsSummary_p99LatencyMs(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -39922,6 +40576,26 @@ func (ec *executionContext) marshalNDeployedAgent2ᚖgithubᚗcomᚋVMwareᚑAI�
 	return ec._DeployedAgent(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNEndpointHealth2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐEndpointHealth(ctx context.Context, sel ast.SelectionSet, v model.EndpointHealth) graphql.Marshaler {
+	return ec._EndpointHealth(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNEndpointHealth2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐEndpointHealthᚄ(ctx context.Context, sel ast.SelectionSet, v []model.EndpointHealth) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNEndpointHealth2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐEndpointHealth(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) unmarshalNFloat2float64(ctx context.Context, v any) (float64, error) {
 	res, err := graphql.UnmarshalFloatContext(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -39966,6 +40640,26 @@ func (ec *executionContext) marshalNGatewayConnection2ᚖgithubᚗcomᚋVMware�
 		return graphql.Null
 	}
 	return ec._GatewayConnection(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNGatewayHealth2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐGatewayHealth(ctx context.Context, sel ast.SelectionSet, v model.GatewayHealth) graphql.Marshaler {
+	return ec._GatewayHealth(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNGatewayHealth2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐGatewayHealthᚄ(ctx context.Context, sel ast.SelectionSet, v []model.GatewayHealth) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNGatewayHealth2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐGatewayHealth(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalNGatewaySpendStatus2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐGatewaySpendStatus(ctx context.Context, sel ast.SelectionSet, v model.GatewaySpendStatus) graphql.Marshaler {

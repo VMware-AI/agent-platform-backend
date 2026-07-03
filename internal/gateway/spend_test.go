@@ -76,3 +76,33 @@ func TestBudgetInfo_ParsesTeam(t *testing.T) {
 		t.Errorf("budget parsed wrong: %+v", info)
 	}
 }
+
+// Real litellm /health omits healthy_count/unhealthy_count and only returns the
+// endpoint arrays (verified against a live proxy) — the client must derive the
+// counts from the array lengths.
+func TestHealth_DerivesCountsFromArrays(t *testing.T) {
+	body := `{"healthy_endpoints":[{"model":"gpt-4","api_base":"http://up1"}],
+	          "unhealthy_endpoints":[{"model":"gpt-3.5","api_base":"http://up2","error":"conn refused"}]}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.URL.Path != "/health" {
+			t.Errorf("unexpected path %s", req.URL.Path)
+		}
+		_, _ = w.Write([]byte(body))
+	}))
+	defer srv.Close()
+
+	c, _ := NewHTTPClient(srv.URL, "sk-1234")
+	h, err := c.Health(context.Background())
+	if err != nil {
+		t.Fatalf("Health: %v", err)
+	}
+	if !h.Reachable || h.HealthyCount != 1 || h.UnhealthyCount != 1 {
+		t.Errorf("counts not derived: %+v", h)
+	}
+	if len(h.Healthy) != 1 || h.Healthy[0].Model != "gpt-4" || h.Healthy[0].APIBase != "http://up1" {
+		t.Errorf("healthy endpoint parsed wrong: %+v", h.Healthy)
+	}
+	if h.Unhealthy[0].Model != "gpt-3.5" {
+		t.Errorf("unhealthy endpoint parsed wrong: %+v", h.Unhealthy)
+	}
+}
