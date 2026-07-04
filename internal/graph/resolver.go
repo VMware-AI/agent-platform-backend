@@ -21,6 +21,7 @@ import (
 // full provisioning lifecycle.
 type VCenterClient interface {
 	CloneFromTemplate(ctx context.Context, spec vcenter.CloneSpec) (*vcenter.VMInfo, error)
+	DeployOVF(ctx context.Context, spec vcenter.OVFDeploySpec) (*vcenter.VMInfo, error)
 	ListTemplates(ctx context.Context) ([]vcenter.VMInfo, error)
 	ListResourcePools(ctx context.Context) ([]vcenter.ResourcePoolInfo, error)
 	SetGuestinfo(ctx context.Context, vmName string, kv map[string]string) error
@@ -42,6 +43,8 @@ type VCenterClient interface {
 	// GetTemplateVAppProperties reads the vAppConfig from a deployed VM template
 	// and returns its user-configurable OVF properties for the deploy form.
 	GetTemplateVAppProperties(ctx context.Context, templateName string) ([]vcenter.OVFProperty, error)
+	ListVMs(ctx context.Context) ([]vcenter.VMInfo, error)
+	GetVMInfo(ctx context.Context, vmName string) (*vcenter.VMInfo, error)
 	// About returns the vCenter version/build identity (test-connection detail).
 	About() vcenter.AboutInfo
 	Logout(ctx context.Context) error

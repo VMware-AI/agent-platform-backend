@@ -12,6 +12,8 @@ import (
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/view"
+	"github.com/vmware/govmomi/vapi/rest"
+	"github.com/vmware/govmomi/vapi/vcenter"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
 )
@@ -62,6 +64,7 @@ type VMInfo struct {
 	Name       string
 	PowerState string
 	UUID       string
+	IP         string
 }
 
 // ListVMs returns all virtual machines visible to the account.
@@ -108,6 +111,20 @@ func (c *Client) SetGuestinfo(ctx context.Context, vmName string, kv map[string]
 		return fmt.Errorf("vcenter: reconfigure %s: %w", vmName, err)
 	}
 	return task.Wait(ctx)
+}
+
+// OVFDeploySpec describes a content-library OVF deployment request.
+// Uses vCenter's OVF deploy pipeline which generates the OVF environment
+// (ovf-env.xml ISO) so the guest OS can read deployment properties natively.
+type OVFDeploySpec struct {
+	LibraryItemID string            // content library item UUID
+	Name          string            // new VM name
+	ResourcePool  string            // target resource pool MoRef
+	Host          string            // target host MoRef
+	Folder        string            // target VM folder MoRef
+	Datastore     string            // target datastore MoRef
+	Properties    map[string]string // OVF property id→value pairs
+	Network       string            // target network/portgroup path ("" = keep default)
 }
 
 // CloneSpec describes a clone-from-template provisioning request. Placement
@@ -219,14 +236,20 @@ func (c *Client) CloneFromTemplate(ctx context.Context, spec CloneSpec) (*VMInfo
 				cs.VAppConfig = buildVAppPropertySpec(vci, spec.VAppProperties, transport)
 			}
 		}
-		config = cs
-	}
+				config = cs
+		}
+
+	// vCenter Guest OS Customization — the VMware-native way TKG uses.
+	// Always applied: static IP when ip_mode=static, hostname only otherwise.
+	customization := buildLinuxCustomization(spec.ExtraConfig, spec.Name)
+
 
 	task, err := src.Clone(ctx, folder, spec.Name, types.VirtualMachineCloneSpec{
-		Location: relocate,
-		PowerOn:  spec.PowerOn,
-		Template: false,
-		Config:   config,
+		Location:      relocate,
+		PowerOn:       spec.PowerOn,
+		Template:      false,
+		Config:        config,
+		Customization: customization,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("vcenter: clone %s→%s: %w", spec.Template, spec.Name, err)
@@ -236,6 +259,42 @@ func (c *Client) CloneFromTemplate(ctx context.Context, spec CloneSpec) (*VMInfo
 	}
 	return c.vmInfo(ctx, spec.Name)
 }
+	// DeployOVF deploys a VM from a content library OVF item using vCenter's
+	// native OVF deployment pipeline. Unlike CloneFromTemplate, this generates
+	// an OVF environment ISO that the guest OS reads to get deployment properties
+	// (network config, passwords, etc.) — the same mechanism TKG uses.
+	func (c *Client) DeployOVF(ctx context.Context, spec OVFDeploySpec) (*VMInfo, error) {
+	if spec.LibraryItemID == "" || spec.Name == "" {
+		return nil, fmt.Errorf("vcenter: OVF deploy requires LibraryItemID and Name")
+	}
+	rc := rest.NewClient(c.vc.Client)
+	if err := rc.Login(ctx, c.userinfo); err != nil {
+		return nil, fmt.Errorf("vcenter: REST login for OVF deploy: %w", err)
+	}
+	defer func() { _ = rc.Logout(ctx) }()
+
+	mgr := vcenter.NewManager(rc)
+
+	// vCenter 8.0.3 uses the VMTX deploy endpoint with flat placement fields.
+	deploy := vcenter.DeployTemplate{
+		Name:      spec.Name,
+		PoweredOn: false,
+	}
+	if spec.ResourcePool != "" || spec.Host != "" || spec.Folder != "" {
+		deploy.Placement = &vcenter.Placement{
+			ResourcePool: spec.ResourcePool,
+			Host:         spec.Host,
+			Folder:       spec.Folder,
+		}
+	}
+
+	_, err := mgr.DeployTemplateLibraryItem(ctx, spec.LibraryItemID, deploy)
+	if err != nil {
+		return nil, fmt.Errorf("vcenter: OVF deploy: %w", err)
+	}
+	return c.vmInfo(ctx, spec.Name)
+}
+
 
 // cloneFolder resolves the target VM folder, defaulting to the datacenter's.
 func (c *Client) cloneFolder(ctx context.Context, finder *find.Finder, dc *object.Datacenter, name string) (*object.Folder, error) {
@@ -263,10 +322,13 @@ func (c *Client) vmInfo(ctx context.Context, name string) (*VMInfo, error) {
 	if err := vm.Properties(ctx, vm.Reference(), []string{"summary"}, &mvm); err != nil {
 		return nil, fmt.Errorf("vcenter: vm properties %s: %w", name, err)
 	}
+	ip := ""
+	if mvm.Summary.Guest != nil { ip = mvm.Summary.Guest.IpAddress }
 	return &VMInfo{
 		Name:       mvm.Summary.Config.Name,
 		PowerState: string(mvm.Summary.Runtime.PowerState),
 		UUID:       mvm.Summary.Config.Uuid,
+		IP:         ip,
 	}, nil
 }
 
@@ -312,6 +374,11 @@ func (c *Client) Shutdown(ctx context.Context, vmName string) error {
 
 // ListTemplates returns VMs marked as templates (config.template=true) — the
 // OVA-built images available to clone agent VMs from (LLD-03 §4, 部署表单选模板).
+
+func (c *Client) GetVMInfo(ctx context.Context, vmName string) (*VMInfo, error) {
+	return c.vmInfo(ctx, vmName)
+}
+
 func (c *Client) ListTemplates(ctx context.Context) ([]VMInfo, error) {
 	m := view.NewManager(c.vc.Client)
 	v, err := m.CreateContainerView(ctx, c.vc.ServiceContent.RootFolder, []string{"VirtualMachine"}, true)
@@ -418,6 +485,53 @@ func (c *Client) readVAppConfig(ctx context.Context, vm *object.VirtualMachine) 
 // OVF environment (ISO or com.vmware.guestInfo) — the VMware-native way.
 // buildVAppPropertySpec creates a VmConfigSpec that sets OVF property values
 // by matching property Ids to their int32 Keys from the source template.
+// buildLinuxCustomization returns a CustomizationSpec that configures a static
+// IP on the first NIC. This is the VMware-native guest OS customization mechanism
+// — vCenter runs it at first boot via vmtools, the same way TKG does.
+func buildLinuxCustomization(props map[string]string, vmName string) *types.CustomizationSpec {
+	hostname := props["guestinfo.hostname"]
+	if hostname == "" { hostname = props["guestinfo.static_ip"] }
+	ip := props["guestinfo.static_ip"]
+	mask := props["guestinfo.netmask"]
+	if mask == "" { mask = "255.255.255.0" }
+	gw := props["guestinfo.gateway"]
+	dns := props["guestinfo.dns"]
+
+	var nicIP types.BaseCustomizationIpGenerator = &types.CustomizationDhcpIpGenerator{}
+	if props["guestinfo.ip_mode"] == "static" && ip != "" {
+		nicIP = &types.CustomizationFixedIp{IpAddress: ip}
+	}
+	spec := &types.CustomizationSpec{
+		Identity: &types.CustomizationLinuxPrep{
+			HostName: &types.CustomizationVirtualMachineName{},
+		},
+		GlobalIPSettings: types.CustomizationGlobalIPSettings{
+			DnsServerList: filterEmpty([]string{dns}),
+		},
+		// Always include 1 NIC mapping to match the VM's 1 NIC.
+		NicSettingMap: []types.CustomizationAdapterMapping{
+			{
+				Adapter: types.CustomizationIPSettings{
+					Ip:            nicIP,
+					SubnetMask:    mask,
+					Gateway:       filterEmpty([]string{gw}),
+					DnsServerList: filterEmpty([]string{dns}),
+				},
+			},
+		},
+	}
+	return spec
+}
+
+
+func filterEmpty(ss []string) []string {
+	var out []string
+	for _, s := range ss {
+		if s != "" { out = append(out, s) }
+	}
+	return out
+}
+
 func buildVAppPropertySpec(src *types.VmConfigInfo, values map[string]string, transport []string) *types.VmConfigSpec {
 	// Build a lookup of Id→Key from the source template so we correctly
 	// reference each property by its int32 key when setting the value.

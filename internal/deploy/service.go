@@ -20,6 +20,7 @@ import (
 // testability.
 type VMProvisioner interface {
 	CloneFromTemplate(ctx context.Context, spec vcenter.CloneSpec) (*vcenter.VMInfo, error)
+	DeployOVF(ctx context.Context, spec vcenter.OVFDeploySpec) (*vcenter.VMInfo, error)
 	SetGuestinfo(ctx context.Context, vmName string, kv map[string]string) error
 	PowerOn(ctx context.Context, vmName string) error
 	Destroy(ctx context.Context, vmName string) error
@@ -66,6 +67,18 @@ type Request struct {
 	// OVFProperties carries user-provided vApp/OVF property values from the deploy
 	// form. guestinfo.* keys are injected as VM ExtraConfig at clone time.
 	OVFProperties map[string]string
+	// ContentLibraryItemID, when set, switches from CloneFromTemplate to OVF deploy
+	// via vCenter's content-library deploy pipeline (native OVF environment).
+	ContentLibraryItemID string
+	// HostMoRef is the target host managed object reference for OVF deploy.
+	HostMoRef string
+	// FolderMoRef is the target VM folder managed object reference for OVF deploy.
+	FolderMoRef string
+	// ExistingKey, when set, reuses an existing gateway virtual key instead of
+	// issuing a new one. The key must be unbound (not attached to any agent).
+	ExistingKey string
+	// ExistingKeyToken is the gateway's hashed key identifier for reconciliation.
+	ExistingKeyToken string
 }
 
 // Result carries the issued secret (returned once), the rendered userdata, and
@@ -104,16 +117,24 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 		models = []string{gateway.DefaultRouterModel} // difficulty router by default (LLD-04)
 	}
 
-	// 1) Issue the gateway key (cheap and revocable — do it before the VM).
-	key, err := s.Gateway.GenerateKey(ctx, gateway.GenerateKeyRequest{
-		UserID:    req.UserID,
-		TeamID:    req.TeamID,
-		Models:    models,
-		MaxBudget: req.MaxBudget,
-		Metadata:  map[string]string{"agent": req.AgentName},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("deploy: issue key: %w", err)
+	// 1) Issue or reuse gateway key.
+	var key gateway.KeyResponse
+	if req.ExistingKey != "" {
+		// Reuse an existing unbound virtual key — no GenerateKey call.
+		key.Key = req.ExistingKey
+		key.Token = req.ExistingKeyToken
+	} else {
+		k, err := s.Gateway.GenerateKey(ctx, gateway.GenerateKeyRequest{
+			UserID:    req.UserID,
+			TeamID:    req.TeamID,
+			Models:    models,
+			MaxBudget: req.MaxBudget,
+			Metadata:  map[string]string{"agent": req.AgentName},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("deploy: issue key: %w", err)
+		}
+		key = *k
 	}
 
 	// Dev mode: skip VM provisioning, return the key immediately.
@@ -121,10 +142,25 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 		return &Result{VirtualKey: key.Key, VirtualKeyToken: key.Token, VMName: req.VMName}, nil
 	}
 
-	// 2) Clone the agent VM from the OVA template, powered off so guestinfo is
-	//    set before first boot. OVF properties with guestinfo.* keys are injected
-	//    as ExtraConfig at clone time; the template's vApp/OVF reads them on boot.
-	if _, err := s.VCenter.CloneFromTemplate(ctx, vcenter.CloneSpec{
+	// 2) Deploy the agent VM. Two paths:
+	//    a) OVF deploy from content library (native OVF environment → guest reads ovf-env.xml).
+	//    b) Clone from VM template (guestinfo/cloud-init injection).
+	if req.ContentLibraryItemID != "" {
+		if _, err := s.VCenter.DeployOVF(ctx, vcenter.OVFDeploySpec{
+			LibraryItemID: req.ContentLibraryItemID,
+			Name:          req.VMName,
+			ResourcePool:  "resgroup-10",
+			Host:          req.HostMoRef,
+			Folder:        req.FolderMoRef,
+			Datastore:     "",
+			Properties:    req.OVFProperties,
+			Network:       req.Network,
+		}); err != nil {
+			s.revokeKey(ctx, key.Key)
+			return nil, fmt.Errorf("deploy: OVF deploy: %w", err)
+		}
+	} else {
+		if _, err := s.VCenter.CloneFromTemplate(ctx, vcenter.CloneSpec{
 		Template:     req.Template,
 		Name:         req.VMName,
 		ResourcePool: req.ResourcePool,
@@ -134,7 +170,8 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 			VAppProperties: req.OVFProperties,
 	}); err != nil {
 		s.revokeKey(ctx, key.Key) // no VM to clean up yet
-		return nil, fmt.Errorf("deploy: clone template: %w", err)
+			return nil, fmt.Errorf("deploy: clone template: %w", err)
+		}
 	}
 
 	// 3) Inject per-VM cloud-init via guestinfo.
@@ -255,11 +292,46 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 	if hostname != "" {
 		fmt.Fprintf(&b, "hostname: %s\n", hostname)
 	}
-	
-	// Static IP: write a netplan YAML file so systemd-networkd picks it up.
-	// The network: section in cloud-init userdata is not reliably processed by
-	// the VMware GuestInfo datasource, so we drop a file into /etc/netplan instead.
-	if ovfProps != nil && ovfProps["guestinfo.ip_mode"] == "static" {
+
+	// OS user/password/SSH from OVF vApp properties — must come before write_files.
+	if ovfProps != nil {
+		pw := ovfProps["password"]
+		user := ovfProps["guestinfo.runas_user"]
+		sshKey := ovfProps["public-keys"]
+
+		if pw != "" {
+			fmt.Fprintf(&b, "password: %s\n", pw)
+			b.WriteString("ssh_pwauth: true\n")
+			b.WriteString("chpasswd:\n")
+			b.WriteString("  expire: false\n")
+			b.WriteString("  list:\n")
+			fmt.Fprintf(&b, "    - ubuntu:%s\n", pw)
+			if user != "" {
+				fmt.Fprintf(&b, "    - %s:%s\n", user, pw)
+			}
+		}
+		if user != "" {
+			b.WriteString("users:\n")
+			fmt.Fprintf(&b, "  - name: %s\n", user)
+			b.WriteString("    lock_passwd: false\n")
+			b.WriteString("    shell: /bin/bash\n")
+			b.WriteString("    sudo: ALL=(ALL) ALL\n")
+			if sshKey != "" {
+				b.WriteString("    ssh_authorized_keys:\n")
+				b.WriteString("      - " + sshKey + "\n")
+			}
+		} else if sshKey != "" {
+			b.WriteString("ssh_authorized_keys:\n")
+			b.WriteString("  - " + sshKey + "\n")
+		}
+	}
+
+	// All write_files entries must come after the write_files: header.
+	b.WriteString("write_files:\n")
+
+	// No netplan needed — CustomizationSpec handles IP natively (vCenter/VMware Tools).
+	// Cloud-init netplan would conflict with vCenter guest customization.
+	if false {
 		ip := ovfProps["guestinfo.static_ip"]
 		mask := ovfProps["guestinfo.netmask"]
 		if mask == "" { mask = "255.255.255.0" }
@@ -291,7 +363,7 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 		b.WriteString("    permissions: \"0644\"\n")
 		b.WriteString("    content: auto-deployed by agent platform\n")
 	}
-	b.WriteString("write_files:\n")
+
 	b.WriteString("  - path: /etc/agent/llm-gateway.env\n")
 	b.WriteString("    permissions: \"0640\"\n")
 	b.WriteString("    owner: root:agent\n")
@@ -313,11 +385,6 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 		}
 	}
 	
-	// Apply netplan if static IP netplan file was written.
-	if ovfProps != nil && ovfProps["guestinfo.ip_mode"] == "static" {
-		b.WriteString("runcmd:\n")
-		b.WriteString("  - [netplan, apply]\n")
-	}
 	return b.String()
 }
 

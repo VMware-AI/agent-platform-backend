@@ -196,6 +196,13 @@ func main() {
 		go resolver.StartModelGatewayAutoSync(mgSyncCtx, time.Duration(cfg.ModelGatewaySyncIntervalSeconds)*time.Second)
 	}
 
+	// Periodically sync agent status from vCenter VM power state.
+	if cfg.PoolSyncIntervalSeconds > 0 {
+		astCtx, stopAgentSync := context.WithCancel(context.Background())
+		defer stopAgentSync()
+		go resolver.StartAgentVMStatusSync(astCtx, time.Duration(cfg.PoolSyncIntervalSeconds)*time.Second)
+	}
+
 	es := graph.NewExecutableSchema(graph.Config{
 		Resolvers: resolver,
 		Directives: graph.DirectiveRoot{

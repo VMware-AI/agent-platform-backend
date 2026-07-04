@@ -132,7 +132,7 @@ func Load() (*Config, error) {
 	if c.DBConnMaxLifetimeMinutes, err = getenvInt("DB_CONN_MAX_LIFETIME_MINUTES", 30); err != nil {
 		return nil, err
 	}
-	if c.PoolSyncIntervalSeconds, err = getenvInt("POOL_SYNC_INTERVAL_SECONDS", 0); err != nil {
+	if c.PoolSyncIntervalSeconds, err = getenvInt("POOL_SYNC_INTERVAL_SECONDS", 120); err != nil {
 		return nil, err
 	}
 	if c.ModelGatewaySyncIntervalSeconds, err = getenvInt("MODEL_GATEWAY_SYNC_INTERVAL_SECONDS", 1800); err != nil {

@@ -87,6 +87,8 @@ type AgentApiKey {
 # the password is never returned by the API (it is a Sensitive VM secret).
 type AgentCredentials {
   username: String!
+  # VM IP from vCenter guest info. Empty if not deployed.
+  ip: String!
 }
 
 # Connection wrapper for the paged/filtered/sorted agent list (前后端整合契约).
