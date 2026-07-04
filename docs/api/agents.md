@@ -547,6 +547,7 @@ A vCenter resource pool offered as a placement target for the cloned VM. A true 
 | `hostname` | `String` | Optional cloud-init hostname for the VM (defaults to none). |
 | `maxBudget` | `Float` | Optional per-key spend cap handed to the gateway when issuing the agent's key. |
 | `targetNetwork` | `String` | Optional target network/portgroup path for the agent VM's NIC. Matches VsphereNetwork.path. "" = keep the source template's NIC mapping. |
+| `initialPassword` | `String` | One-time initial credential for the agent VM's UI + OS accounts. deployAgent stamps it into guestinfo.agentmgr.initial_password; the VM's webadmin seeds it into the nginx htpasswd + the OS user at first boot, and the user should change it right after first login (via /manage/). Policy mirrors the VM webadmin's: at least 12 characters, at most 72 bytes (bcrypt cap), no leading/trailing whitespace, no control characters, no ':'. SENSITIVE: never logged, audited or persisted by the platform. Optional for contract backward-compatibility — omitted = no credential is seeded. |
 
 ### Pagination
 

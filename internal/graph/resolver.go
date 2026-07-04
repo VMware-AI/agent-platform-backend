@@ -97,6 +97,14 @@ type Resolver struct {
 	// ControlPlaneURL is the backend base URL injected into VMs for the daemon's
 	// heartbeat/enroll calls (LLD-08).
 	ControlPlaneURL string
+	// AgentPkgBaseURL is the internal artifact mirror base stamped into agent VMs
+	// (guestinfo.agentmgr.agent_pkg_base_url) so the in-VM webadmin can pull
+	// upgrade packages — same value as InstallVars' AGENT_PKG_BASE_URL. May embed
+	// read-only mirror credentials; never log it.
+	AgentPkgBaseURL string
+	// AgentKeepVersions is stamped as guestinfo.agentmgr.agent_keep_versions at
+	// deploy (0 = don't stamp; the daemon default of 3 applies).
+	AgentKeepVersions int
 	// EnvScopeEnabled turns on env_scope soft filtering (LLD-10 §2.3); OFF by
 	// default until the frontend X-Environment contract is live.
 	EnvScopeEnabled bool

@@ -126,6 +126,15 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		ControlPlaneURL:  r.ControlPlaneURL,
 		KnowledgePackIDs: r.resolveAgentKnowledge(ctx, ag), // LLD-11 K2: 下发知识包引用
 		KnowledgeRoot:    r.resolveKnowledgeRoot(ctx, ag),  // LLD-11 K4: 按 kind 的解包根
+		// webadmin deploy-time contract: one-time credential seed + upgrade wiring.
+		// agent_name is the package base name == the catalog kind (the daemon
+		// resolves {pkg_base_url}/{name}-{version}.tar.gz). agent_service /
+		// agent_install_root are not sent — the OVA follows the daemon defaults
+		// (agent.service, /opt/agent) until the catalog grows a per-kind source.
+		InitialPassword:   derefString(input.InitialPassword),
+		AgentPkgName:      ag.AgentType,
+		AgentPkgBaseURL:   r.AgentPkgBaseURL,
+		AgentKeepVersions: r.AgentKeepVersions,
 	})
 	if err != nil {
 		// Provision rolls back its own partial work (VM+key); the agent row is ours.

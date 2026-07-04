@@ -142,7 +142,11 @@ func main() {
 		LoginLimiter:    loginLimiter,
 		AgentMgr:        agentMgr,
 		ControlPlaneURL: os.Getenv("CONTROL_PLANE_URL"),
-		EnvScopeEnabled: cfg.EnvScopeEnabled,
+		// webadmin deploy-time contract: mirror base + prune depth stamped into
+		// agent VMs at deploy (guestinfo.agentmgr.*).
+		AgentPkgBaseURL:   cfg.AgentPkgBaseURL,
+		AgentKeepVersions: cfg.AgentKeepVersions,
+		EnvScopeEnabled:   cfg.EnvScopeEnabled,
 	}
 	// DEV_MOCK_GATEWAY: local-dev shortcut only. Injecting the mock unconditionally
 	// would silently issue fake sk-mock- keys (and mark deploys successful) whenever

@@ -29,10 +29,19 @@ type Config struct {
 	// ReconcilePrune lets the reconciler heal drift (delete gateway orphans +
 	// revoke stale rows). Default false = report-only ("对账"), the safe default.
 	ReconcilePrune bool
-	// AgentPkgBaseURL is the offline mirror base for agent install packages,
-	// substituted for {{AGENT_PKG_BASE_URL}} in catalog install commands. Empty
-	// leaves the placeholder intact (operator must configure the mirror).
+	// AgentPkgBaseURL is the offline mirror base for agent install packages:
+	// substituted for {{AGENT_PKG_BASE_URL}} in catalog install commands, and
+	// stamped into agent VMs as guestinfo.agentmgr.agent_pkg_base_url so the
+	// in-VM webadmin can pull upgrade packages. May embed read-only mirror
+	// credentials (ftp://user:pass@...) — never log it. Empty leaves the
+	// placeholder intact and stamps nothing (operator must configure the mirror).
 	AgentPkgBaseURL string
+	// AgentKeepVersions is stamped into agent VMs as
+	// guestinfo.agentmgr.agent_keep_versions at deploy: how many installed agent
+	// versions the VM's upgrader retains when pruning. 0 (the default) is the
+	// "unset" sentinel — nothing is stamped and the daemon default (3) applies;
+	// the daemon rejects values < 1, so "retain nothing" is not expressible.
+	AgentKeepVersions int
 	// EnvScopeEnabled turns on environment (env_scope) filtering on top of tenant
 	// isolation (LLD-10 §2.3). OFF by default — the tables/columns exist but env
 	// filtering only activates once the frontend X-Environment contract is ready.
@@ -138,6 +147,9 @@ func Load() (*Config, error) {
 	c.ReconcileInterval = ri
 	c.ReconcilePrune = getenv("RECONCILE_PRUNE", "false") == "true"
 	c.AgentPkgBaseURL = strings.TrimRight(os.Getenv("AGENT_PKG_BASE_URL"), "/")
+	if c.AgentKeepVersions, err = getenvInt("AGENT_KEEP_VERSIONS", 0); err != nil {
+		return nil, err
+	}
 	c.EnvScopeEnabled = getenv("ENV_SCOPE_ENABLED", "false") == "true"
 	pcttl, err := strconv.Atoi(getenv("PERM_CACHE_TTL_SECONDS", "0"))
 	if err != nil {
