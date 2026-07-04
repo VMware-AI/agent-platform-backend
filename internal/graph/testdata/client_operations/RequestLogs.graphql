@@ -1,6 +1,9 @@
 query RequestLogs($filter: RequestLogFilter, $page: PageInput) {
     requestLogs(filter: $filter, page: $page) {
-      ...RequestLogFields
+      items {
+        ...RequestLogFields
+      }
+      total
     }
   }
   

@@ -169,13 +169,18 @@ func TestHasPermissionDirective(t *testing.T) {
 		}
 	}
 
-	// After the 3-role refactor read_only has NO entries in rolePermissions —
-	// read access flows through @hasRole(any: [admin, read_only]) gates, NOT
-	// through permissions. So read_only fails every @hasPermission check here.
-	for _, p := range []string{auth.PermAuditView, auth.PermMeteringView,
-		auth.PermUserManage, auth.PermAgentManage, auth.PermKeyManage, auth.PermRouteManage} {
+	// read_only is the observability seat: it HOLDS audit:view + metering:view
+	// (LLD-15 T7) and NO write perms. Reads it can't do via perm flow through
+	// @hasRole(any: [admin, read_only]) gates instead.
+	for _, p := range []string{auth.PermAuditView, auth.PermMeteringView} {
+		if _, err := r.HasPermission(readOnlyCtx, nil, next, p); err != nil {
+			t.Errorf("read_only must hold %q (observability seat): %v", p, err)
+		}
+	}
+	for _, p := range []string{auth.PermUserManage, auth.PermAgentManage,
+		auth.PermKeyManage, auth.PermRouteManage} {
 		if _, err := r.HasPermission(readOnlyCtx, nil, next, p); err == nil {
-			t.Errorf("read_only must NOT hold %q (no perm in matrix)", p)
+			t.Errorf("read_only must NOT hold write perm %q", p)
 		}
 	}
 
