@@ -15,7 +15,12 @@ import (
 // syncOnePool so the fire-and-forget first sync (CreateResourcePool) and the
 // manual syncResourcePool mutation share the same fault-tolerance chain
 // (timeout → retry → breaker).
-func (r *Resolver) StartAutoSync(ctx context.Context, interval time.Duration) {
+//
+// isLeader single-flights the tick across replicas, mirroring the gateway-key
+// reconciler (see cmd/server/main.go): each vCenter login + status write is
+// destructive of the shared row, so only the elected leader ticks. nil gate =
+// always run (dev/single-replica sqlite path, where there is no PG lease).
+func (r *Resolver) StartAutoSync(ctx context.Context, interval time.Duration, isLeader func(context.Context) bool) {
 	log.Printf("pool auto-sync: every %s", interval)
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -24,6 +29,12 @@ func (r *Resolver) StartAutoSync(ctx context.Context, interval time.Duration) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			// Only the leader replica runs the tick body; followers skip so a
+			// multi-replica deployment doesn't fan out N× vCenter logins and
+			// race status writes on the same pool row.
+			if isLeader != nil && !isLeader(ctx) {
+				continue
+			}
 			r.syncAllPools(ctx)
 		}
 	}

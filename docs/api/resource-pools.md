@@ -278,7 +278,7 @@ vCenter deployment candidate resource — minimum information for an OVA deploym
 | `endpoint` | `String!` | — |
 | `contentLibraryName` | `String` | — |
 | `insecure` | `Boolean` | 跳过 vCenter TLS 验证(自签名/内网 CA);省略 = false(默认验证)。LLD-13。 |
-| `username` | `String` | vCenter (JVC) 凭据(可选;真机连接必填,前端表单可后补)。后端写入 secret store (Vaultwarden)并只存返回的引用,明文不落库;优先于 secretRef。 |
+| `username` | `String` | vCenter (JVC) 凭据(可选;真机连接必填,前端表单可后补)。后端加密写入 platform_secrets 表(密文,AES-GCM)并只存返回的引用,明文不落库;优先于 secretRef。 |
 | `password` | `String` | — |
 | `secretRef` | `String` | 已有 secret store 引用(高级/预置);与 username/password 二选一。 |
 

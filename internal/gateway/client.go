@@ -346,12 +346,15 @@ func (c *HTTPClient) get(ctx context.Context, path string, out any) error {
 // re-trying (transport error or 5xx) vs terminal (4xx, decode error, breaker
 // open).
 func (c *HTTPClient) getOnce(ctx context.Context, path string, out any) (retryable bool, err error) {
+	// logPath never carries the raw query string (which may hold a secret, e.g.
+	// /key/info?key=sk-...); the request itself still uses the full path.
+	logPath := redactPath(path)
 	if !c.breaker.allow() {
-		return false, fmt.Errorf("%w: %s", ErrUnavailable, path)
+		return false, fmt.Errorf("%w: %s", ErrUnavailable, logPath)
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
 	if err != nil {
-		return false, &Error{Method: http.MethodGet, Path: path, Cause: err}
+		return false, &Error{Method: http.MethodGet, Path: logPath, Cause: err}
 	}
 	c.auth(req)
 
@@ -359,8 +362,8 @@ func (c *HTTPClient) getOnce(ctx context.Context, path string, out any) (retryab
 	if err != nil {
 		c.breaker.record(ErrTransport)
 		slog.WarnContext(ctx, "gateway transport error",
-			"base_url", c.baseURL, "path", path, "err", err)
-		return true, &Error{Method: http.MethodGet, Path: path, Cause: fmt.Errorf("%w: %v", ErrTransport, err)}
+			"base_url", c.baseURL, "path", logPath, "err", err)
+		return true, &Error{Method: http.MethodGet, Path: logPath, Cause: fmt.Errorf("%w: %v", ErrTransport, err)}
 	}
 	defer resp.Body.Close()
 
@@ -368,8 +371,8 @@ func (c *HTTPClient) getOnce(ctx context.Context, path string, out any) (retryab
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body := redactSecrets(string(data))
 		slog.WarnContext(ctx, "gateway request failed",
-			"base_url", c.baseURL, "path", path, "status", resp.StatusCode, "body", body)
-		gwErr := &Error{Method: http.MethodGet, Path: path, Status: resp.StatusCode, Body: body}
+			"base_url", c.baseURL, "path", logPath, "status", resp.StatusCode, "body", body)
+		gwErr := &Error{Method: http.MethodGet, Path: logPath, Status: resp.StatusCode, Body: body}
 		if sentinel := sentinelFromStatus(resp.StatusCode); sentinel != nil {
 			if resp.StatusCode >= 500 {
 				c.breaker.record(sentinel)
@@ -383,9 +386,9 @@ func (c *HTTPClient) getOnce(ctx context.Context, path string, out any) (retryab
 	if out != nil {
 		if err := json.Unmarshal(data, out); err != nil {
 			slog.WarnContext(ctx, "gateway decode error",
-				"base_url", c.baseURL, "path", path, "err", err)
+				"base_url", c.baseURL, "path", logPath, "err", err)
 			return false, &Error{
-				Method: http.MethodGet, Path: path,
+				Method: http.MethodGet, Path: logPath,
 				Cause: fmt.Errorf("%w: %v", ErrMalformedResponse, err),
 			}
 		}
@@ -438,16 +441,19 @@ func (c *HTTPClient) post(ctx context.Context, path string, body, out any) error
 }
 
 func (c *HTTPClient) postOnce(ctx context.Context, path string, body, out any) (retryable bool, err error) {
+	// logPath never carries the raw query string (which may hold a secret); the
+	// request itself still uses the full path.
+	logPath := redactPath(path)
 	if !c.breaker.allow() {
-		return false, fmt.Errorf("%w: %s", ErrUnavailable, path)
+		return false, fmt.Errorf("%w: %s", ErrUnavailable, logPath)
 	}
 	buf, err := json.Marshal(body)
 	if err != nil {
-		return false, &Error{Method: http.MethodPost, Path: path, Cause: fmt.Errorf("marshal: %w", err)}
+		return false, &Error{Method: http.MethodPost, Path: logPath, Cause: fmt.Errorf("marshal: %w", err)}
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, bytes.NewReader(buf))
 	if err != nil {
-		return false, &Error{Method: http.MethodPost, Path: path, Cause: err}
+		return false, &Error{Method: http.MethodPost, Path: logPath, Cause: err}
 	}
 	c.auth(req)
 	req.Header.Set("Content-Type", "application/json")
@@ -456,8 +462,8 @@ func (c *HTTPClient) postOnce(ctx context.Context, path string, body, out any) (
 	if err != nil {
 		c.breaker.record(ErrTransport)
 		slog.WarnContext(ctx, "gateway transport error",
-			"base_url", c.baseURL, "path", path, "err", err)
-		return true, &Error{Method: http.MethodPost, Path: path, Cause: fmt.Errorf("%w: %v", ErrTransport, err)}
+			"base_url", c.baseURL, "path", logPath, "err", err)
+		return true, &Error{Method: http.MethodPost, Path: logPath, Cause: fmt.Errorf("%w: %v", ErrTransport, err)}
 	}
 	defer resp.Body.Close()
 
@@ -465,8 +471,8 @@ func (c *HTTPClient) postOnce(ctx context.Context, path string, body, out any) (
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body := redactSecrets(string(data))
 		slog.WarnContext(ctx, "gateway request failed",
-			"base_url", c.baseURL, "path", path, "status", resp.StatusCode, "body", body)
-		gwErr := &Error{Method: http.MethodPost, Path: path, Status: resp.StatusCode, Body: body}
+			"base_url", c.baseURL, "path", logPath, "status", resp.StatusCode, "body", body)
+		gwErr := &Error{Method: http.MethodPost, Path: logPath, Status: resp.StatusCode, Body: body}
 		if sentinel := sentinelFromStatus(resp.StatusCode); sentinel != nil {
 			// 5xx is retryable only when the caller opted in via
 			// RetryPolicy.POSTRetryOn5xx. 4xx (incl. 401/403/404) is always
@@ -483,12 +489,25 @@ func (c *HTTPClient) postOnce(ctx context.Context, path string, body, out any) (
 	if out != nil {
 		if err := json.Unmarshal(data, out); err != nil {
 			return false, &Error{
-				Method: http.MethodPost, Path: path,
+				Method: http.MethodPost, Path: logPath,
 				Cause: fmt.Errorf("%w: %v", ErrMalformedResponse, err),
 			}
 		}
 	}
 	return false, nil
+}
+
+// redactPath returns a request path safe to log or store in Error.Path: the
+// path component is kept, but the raw query string is dropped (replaced with a
+// "?[REDACTED]" marker when present). Some endpoints put secrets in the query —
+// e.g. spend.go's BudgetInfo builds "/key/info?key=sk-<real>" — so logging the
+// verbatim path (#95's leak, closed there for bodies) would leak the key. The
+// path segment alone (/key/info, /team/info) is the useful diagnostic signal.
+func redactPath(path string) string {
+	if i := strings.IndexByte(path, '?'); i >= 0 {
+		return path[:i] + "?[REDACTED]"
+	}
+	return path
 }
 
 // redactSecrets strips bearer / api-key content from response bodies so a
