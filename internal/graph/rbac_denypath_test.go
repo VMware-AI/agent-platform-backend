@@ -100,7 +100,8 @@ func TestDenyPath_PermissionGatedOps(t *testing.T) {
 			ops:  []string{"requestLogs", "auditLogs", "requestMetrics"},
 			perm: auth.PermAuditView,
 			grants: map[auth.Role]bool{
-				auth.RoleAdmin: true,
+				auth.RoleAdmin:    true,
+				auth.RoleReadOnly: true,
 			},
 		},
 		{
@@ -108,7 +109,8 @@ func TestDenyPath_PermissionGatedOps(t *testing.T) {
 			ops:  []string{"meteringOverview(perm-gate via field)"},
 			perm: auth.PermMeteringView,
 			grants: map[auth.Role]bool{
-				auth.RoleAdmin: true,
+				auth.RoleAdmin:    true,
+				auth.RoleReadOnly: true,
 			},
 		},
 		{
