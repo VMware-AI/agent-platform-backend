@@ -208,9 +208,13 @@ func (r *queryResolver) AuditLogs(ctx context.Context, filter *model.AuditFilter
 	q := r.Ent.AuditLog.Query()
 	if filter != nil {
 		if filter.ActorUserID != nil {
-			if aid, err := uuid.Parse(*filter.ActorUserID); err == nil {
-				q = q.Where(auditlog.ActorUserID(aid))
+			// Fail closed: a malformed UUID must not silently drop the predicate
+			// and return the unfiltered (cross-tenant) audit trail.
+			aid, err := uuid.Parse(*filter.ActorUserID)
+			if err != nil {
+				return nil, gqlerror.Errorf("invalid actorUserId")
 			}
+			q = q.Where(auditlog.ActorUserID(aid))
 		}
 		if filter.ActionPrefix != nil {
 			q = q.Where(auditlog.ActionHasPrefix(*filter.ActionPrefix))
@@ -228,7 +232,14 @@ func (r *queryResolver) AuditLogs(ctx context.Context, filter *model.AuditFilter
 			q = q.Where(auditlog.CreatedAtLTE(*filter.To))
 		}
 		if filter.Result != nil && *filter.Result != "" {
-			q = q.Where(auditlog.ResultEQ(auditlog.Result(*filter.Result)))
+			// Validate against the enum's known values instead of casting a raw
+			// client string straight through; an unknown value would otherwise
+			// silently match nothing (or, worse, mask a client bug).
+			res := auditlog.Result(*filter.Result)
+			if err := auditlog.ResultValidator(res); err != nil {
+				return nil, gqlerror.Errorf("invalid result")
+			}
+			q = q.Where(auditlog.ResultEQ(res))
 		}
 		if filter.ResourceType != nil && *filter.ResourceType != "" {
 			q = q.Where(auditlog.ResourceTypeEQ(*filter.ResourceType))

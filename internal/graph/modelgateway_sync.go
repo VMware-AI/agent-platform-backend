@@ -60,7 +60,12 @@ func (r *Resolver) syncGatewayOnce(ctx context.Context, id uuid.UUID) {
 // (status, loadBalancingStrategy, backendModelCount). One bad gateway logs
 // and continues — a bad row must not block the rest. Disabled when the
 // configured interval is 0 — see main.go's wiring guard.
-func (r *Resolver) StartModelGatewayAutoSync(ctx context.Context, interval time.Duration) {
+//
+// isLeader single-flights the tick across replicas, mirroring the gateway-key
+// reconciler (see cmd/server/main.go): every replica otherwise probes each
+// gateway and races the status/strategy/count writes on the same row. nil gate
+// = always run (dev/single-replica sqlite path, where there is no PG lease).
+func (r *Resolver) StartModelGatewayAutoSync(ctx context.Context, interval time.Duration, isLeader func(context.Context) bool) {
 	log.Printf("model-gateway auto-sync: every %s", interval)
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -69,6 +74,12 @@ func (r *Resolver) StartModelGatewayAutoSync(ctx context.Context, interval time.
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			// Only the leader replica runs the tick body; followers skip so a
+			// multi-replica deployment doesn't fan out N× litellm probes and
+			// race status writes on the same gateway row.
+			if isLeader != nil && !isLeader(ctx) {
+				continue
+			}
 			r.syncAllGateways(ctx)
 		}
 	}

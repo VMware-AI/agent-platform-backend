@@ -178,14 +178,20 @@ func (r *queryResolver) RequestLogs(ctx context.Context, filter *model.RequestLo
 			q = q.Where(requestlog.RequestID(*filter.RequestID))
 		}
 		if filter.AgentID != nil {
-			if aid, err := uuid.Parse(*filter.AgentID); err == nil {
-				q = q.Where(requestlog.AgentID(aid))
+			// Fail closed: a malformed UUID must not silently drop the predicate
+			// and return every tenant's logs unfiltered (mirrors MeteringRecords).
+			aid, err := uuid.Parse(*filter.AgentID)
+			if err != nil {
+				return nil, gqlerror.Errorf("invalid agentId")
 			}
+			q = q.Where(requestlog.AgentID(aid))
 		}
 		if filter.UserID != nil {
-			if uid, err := uuid.Parse(*filter.UserID); err == nil {
-				q = q.Where(requestlog.UserID(uid))
+			uid, err := uuid.Parse(*filter.UserID)
+			if err != nil {
+				return nil, gqlerror.Errorf("invalid userId")
 			}
+			q = q.Where(requestlog.UserID(uid))
 		}
 		if filter.From != nil {
 			q = q.Where(requestlog.CreatedAtGTE(*filter.From))

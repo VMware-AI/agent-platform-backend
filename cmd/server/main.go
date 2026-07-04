@@ -175,6 +175,18 @@ func main() {
 	// to litellm on every request. Default 30s; OBS_SPEND_CACHE_TTL_SECONDS=0 off.
 	resolver.EnableSpendCache(time.Duration(cfg.SpendCacheTTLSeconds) * time.Second)
 
+	// Leader election for ALL periodic background jobs (gateway-key reconciler +
+	// the two auto-sync tickers below). One Postgres advisory lock so exactly one
+	// replica runs them — otherwise every replica would fan out N× vCenter /
+	// litellm logins and race status writes on the same rows. nil on the dev
+	// sqlite path (no DATABASE_URL): a single in-memory replica is always leader.
+	var isLeader func(context.Context) bool
+	if cfg.DatabaseURL != "" {
+		lease := leader.NewPGLease(db, reconcileLeaseKey)
+		defer lease.Release(context.Background())
+		isLeader = lease.IsLeader
+	}
+
 	// Periodically reconcile gateway keys against governance rows (detect/heal
 	// ungoverned orphans + stale rows). Disabled unless an interval is set AND a
 	// gateway is configured. Report-only unless RECONCILE_PRUNE=true.
@@ -188,14 +200,9 @@ func main() {
 			// until at least one gateway is configured.
 			GatewaysFunc: resolver.ReconcileTargets,
 			Prune:        cfg.ReconcilePrune,
-		}
-		// Single-flight across replicas via a Postgres advisory lock so the prune
-		// runs on exactly one replica (postgres only — the dev sqlite path has a
-		// single in-memory replica, so it's always leader).
-		if cfg.DatabaseURL != "" {
-			lease := leader.NewPGLease(db, reconcileLeaseKey)
-			defer lease.Release(context.Background())
-			rec.IsLeader = lease.IsLeader
+			// Single-flight across replicas so the prune runs on exactly one replica
+			// (nil on the dev sqlite path → always leader).
+			IsLeader: isLeader,
 		}
 		interval := time.Duration(cfg.ReconcileInterval) * time.Second
 		log.Printf("gateway-key reconciler: every %s (prune=%v), all gateways", interval, cfg.ReconcilePrune)
@@ -203,20 +210,22 @@ func main() {
 	}
 
 	// Periodically re-sync resource pools that have stored credentials.
-	// Default 60m; disabled when POOL_SYNC_INTERVAL_SECONDS=0.
+	// Default 60m; disabled when POOL_SYNC_INTERVAL_SECONDS=0. Leader-gated so
+	// only one replica logs into vCenter and writes pool status.
 	if cfg.PoolSyncIntervalSeconds > 0 {
 		poolSyncCtx, stopPoolSync := context.WithCancel(context.Background())
 		defer stopPoolSync()
-		go resolver.StartAutoSync(poolSyncCtx, time.Duration(cfg.PoolSyncIntervalSeconds)*time.Second)
+		go resolver.StartAutoSync(poolSyncCtx, time.Duration(cfg.PoolSyncIntervalSeconds)*time.Second, isLeader)
 	}
 
 	// Periodically re-sync every model gateway (status, loadBalancingStrategy,
 	// backendModelCount). Default 10m; disable with MODEL_GATEWAY_SYNC_INTERVAL_SECONDS=0.
+	// Leader-gated so only one replica probes litellm and writes gateway status.
 	if cfg.ModelGatewaySyncIntervalSeconds > 0 {
 		mgSyncCtx, stopMGSync := context.WithCancel(context.Background())
 		defer stopMGSync()
 		log.Printf("model-gateway auto-sync: every %s", time.Duration(cfg.ModelGatewaySyncIntervalSeconds)*time.Second)
-		go resolver.StartModelGatewayAutoSync(mgSyncCtx, time.Duration(cfg.ModelGatewaySyncIntervalSeconds)*time.Second)
+		go resolver.StartModelGatewayAutoSync(mgSyncCtx, time.Duration(cfg.ModelGatewaySyncIntervalSeconds)*time.Second, isLeader)
 	}
 
 	es := graph.NewExecutableSchema(graph.Config{
