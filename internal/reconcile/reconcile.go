@@ -369,6 +369,19 @@ func (r *Reconciler) runCycle(ctx context.Context) {
 			log.Printf("reconcile: resolve gateway targets failed, skipping cycle: %v", err)
 			return
 		}
+		// Prune-guard is a SUPERSET across ALL gateways: a team that owns an active
+		// (non-revoked) key on ANY gateway is never pruned. Keys with a recorded
+		// gateway_connection_id bucket by their issuing gateway, but legacy NULL-
+		// gateway keys bucket by the department's CURRENT binding — so after a
+		// default-gateway switch a team's keys can sit in a different gateway's
+		// bucket than the gateway the team physically lives on. A per-gateway guard
+		// would miss that and prune a team with live keys (#81). A superset only ever
+		// errs toward NOT deleting — the safe default for a destructive prune.
+		var allKeys []*ent.VirtualKey
+		for _, t := range targets {
+			allKeys = append(allKeys, t.Keys...)
+		}
+		allActiveKeyTeams := activeKeyTeamIDs(allKeys)
 		for _, t := range targets {
 			if t.Gateway == nil {
 				continue
@@ -376,10 +389,7 @@ func (r *Reconciler) runCycle(ctx context.Context) {
 			if _, err := r.reconcileKeysFor(ctx, t.Gateway, t.Keys); err != nil {
 				log.Printf("reconcile keys cycle error: %v", err)
 			}
-			// Prune-guard set is derived from THIS gateway's own key bucket (keys are
-			// bucketed by issuing gateway): a team whose keys still live here must not
-			// be pruned even though its department may have re-bound elsewhere (#81).
-			if _, err := r.reconcileTeamsFor(ctx, t.Gateway, t.Depts, activeKeyTeamIDs(t.Keys)); err != nil {
+			if _, err := r.reconcileTeamsFor(ctx, t.Gateway, t.Depts, allActiveKeyTeams); err != nil {
 				log.Printf("reconcile teams cycle error: %v", err)
 			}
 		}

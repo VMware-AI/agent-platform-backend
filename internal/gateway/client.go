@@ -360,9 +360,12 @@ func (c *HTTPClient) getOnce(ctx context.Context, path string, out any) (retryab
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		// A cancelled/timed-out request is the caller giving up, not a gateway
-		// fault: don't feed the breaker and don't retry (#87).
-		if isContextError(err) {
+		// The CALLER giving up (its ctx cancelled / its own deadline) is not a
+		// gateway fault: don't feed the breaker and don't retry (#87). Gate on
+		// ctx.Err() so this catches only the caller's ctx — NOT the transport-level
+		// http.Client.Timeout, which Go ALSO surfaces as context.DeadlineExceeded
+		// but which means the gateway hung and MUST still trip the breaker.
+		if isContextError(err) && ctx.Err() != nil {
 			return false, &Error{Method: http.MethodGet, Path: logPath, Cause: err}
 		}
 		c.breaker.record(ErrTransport)
@@ -465,9 +468,12 @@ func (c *HTTPClient) postOnce(ctx context.Context, path string, body, out any) (
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		// A cancelled/timed-out request is the caller giving up, not a gateway
-		// fault: don't feed the breaker and don't retry (#87).
-		if isContextError(err) {
+		// The CALLER giving up (its ctx cancelled / its own deadline) is not a
+		// gateway fault: don't feed the breaker and don't retry (#87). Gate on
+		// ctx.Err() so this catches only the caller's ctx — NOT the transport-level
+		// http.Client.Timeout, which Go ALSO surfaces as context.DeadlineExceeded
+		// but which means the gateway hung and MUST still trip the breaker.
+		if isContextError(err) && ctx.Err() != nil {
 			return false, &Error{Method: http.MethodPost, Path: logPath, Cause: err}
 		}
 		c.breaker.record(ErrTransport)
