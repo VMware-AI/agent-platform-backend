@@ -3,6 +3,7 @@ query AuditLogs($filter: AuditFilter, $page: PageInput) {
       items {
         id
         actorUserId
+        actorName
         action
         resourceType
         resourceId

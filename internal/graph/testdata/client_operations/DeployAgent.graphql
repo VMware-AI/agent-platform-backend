@@ -38,6 +38,9 @@ fragment OvaTemplateVersionFields on OvaTemplateVersion {
         endpoint
         syncStatus
         lastSyncedAt
+        datacenters {
+          name
+        }
       }
     }
   }

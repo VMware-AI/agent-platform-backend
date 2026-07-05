@@ -1,9 +1,0 @@
-fragment PlatformSettingsFields on PlatformSettings {
-    agentUser
-  }
-
-  mutation UpdatePlatformSettings($input: UpdatePlatformSettingsInput!) {
-    updatePlatformSettings(input: $input) {
-      ...PlatformSettingsFields
-    }
-  }

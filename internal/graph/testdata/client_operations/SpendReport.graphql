@@ -1,0 +1,34 @@
+query SpendReport($input: SpendReportInput!) {
+    spendReport(input: $input) {
+      from
+      to
+      groupBy
+      rows {
+        key
+        label
+        spend
+        promptTokens
+        completionTokens
+        totalTokens
+        requests
+      }
+      totals {
+        spend
+        promptTokens
+        completionTokens
+        totalTokens
+        requests
+      }
+      byDay {
+        date
+        spend
+        totalTokens
+      }
+      gateways {
+        gatewayId
+        gatewayName
+        ok
+        error
+      }
+    }
+  }

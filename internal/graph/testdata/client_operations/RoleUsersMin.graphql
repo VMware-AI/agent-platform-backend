@@ -1,0 +1,11 @@
+query RoleUsersMin($roleId: ID!) {
+    users(filter: { roleId: $roleId }) {
+      nodes {
+        id
+        username
+        email
+        enabled
+      }
+      totalCount
+    }
+  }

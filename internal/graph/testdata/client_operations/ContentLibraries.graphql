@@ -1,0 +1,3 @@
+query ContentLibraries($resourcePoolId: ID!) {
+    contentLibraries(resourcePoolId: $resourcePoolId)
+  }

@@ -1,0 +1,7 @@
+mutation RecycleAgent($input: RecycleAgentInput!) {
+    recycleAgent(input: $input) {
+      id
+      status
+      updatedAt
+    }
+  }

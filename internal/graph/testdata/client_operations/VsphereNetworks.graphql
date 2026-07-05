@@ -1,0 +1,8 @@
+query VsphereNetworks($resourcePoolId: ID!) {
+    vsphereNetworks(resourcePoolId: $resourcePoolId) {
+      name
+      path
+      type
+      dvsName
+    }
+  }

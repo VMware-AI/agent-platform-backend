@@ -1,0 +1,11 @@
+query Budgets($scope: BudgetScope!) {
+    budgets(scope: $scope) {
+      scope
+      label
+      spend
+      maxBudget
+      remaining
+      budgetResetAt
+      utilizationPct
+    }
+  }

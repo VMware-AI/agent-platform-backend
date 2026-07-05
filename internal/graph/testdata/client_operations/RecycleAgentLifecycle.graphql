@@ -1,7 +1,0 @@
-mutation RecycleAgentLifecycle($input: RecycleAgentInput!) {
-    recycleAgent(input: $input) {
-      id
-      name
-      status
-    }
-  }

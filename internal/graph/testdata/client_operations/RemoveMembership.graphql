@@ -1,3 +1,0 @@
-mutation RemoveMembership($userId: ID!, $departmentId: ID!) {
-    removeMembership(userId: $userId, departmentId: $departmentId)
-  }
