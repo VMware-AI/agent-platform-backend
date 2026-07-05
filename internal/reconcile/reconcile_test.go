@@ -64,6 +64,22 @@ func mkKey(t *testing.T, c *ent.Client, litellmKey string, status virtualkey.Sta
 	return vk
 }
 
+// mkKeyTeam creates a key bound to a team id (= department / litellm team), used
+// by the prune-guard tests (#81).
+func mkKeyTeam(t *testing.T, c *ent.Client, litellmKey, teamID string, status virtualkey.Status) *ent.VirtualKey {
+	t.Helper()
+	vk, err := c.VirtualKey.Create().
+		SetLitellmKey(litellmKey).
+		SetUserID(uuid.New()).
+		SetTeamID(teamID).
+		SetStatus(status).
+		Save(context.Background())
+	if err != nil {
+		t.Fatalf("create key %s: %v", litellmKey, err)
+	}
+	return vk
+}
+
 // Default mode is report-only: discrepancies are found but nothing is mutated.
 func TestReconcileKeys_ReportOnly(t *testing.T) {
 	db, cleanup := newDB(t)
@@ -363,6 +379,63 @@ func TestReconcileTeams_Prune(t *testing.T) {
 	}
 	if len(rep.DanglingDepts) != 1 {
 		t.Errorf("dangling dept should still be reported under prune, got %v", rep.DanglingDepts)
+	}
+}
+
+// Prune-guard (#81): a gateway team orphan (no backing department after a
+// re-bind) that STILL owns an active virtual key must NOT be pruned — deleting it
+// would cascade-delete the key and strand the agent. It is surfaced as a
+// ProtectedOrphan instead.
+func TestReconcileTeams_Prune_ProtectsTeamWithActiveKeys(t *testing.T) {
+	db, cleanup := newDB(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	// "research" is backed by a department; "t-orphan" is not (its department
+	// re-bound to another gateway) — but it still owns an active key here.
+	mkDept(t, db, "research", "t-research")
+	mkKeyTeam(t, db, "sk-live", "t-orphan", virtualkey.StatusActive)
+
+	gw := &fakeKeyGateway{teams: []gateway.TeamInfo{
+		{TeamID: "t-research"}, // backed → matched, never a prune candidate
+		{TeamID: "t-orphan"},   // no department, but owns a live key → protected
+	}}
+	r := &Reconciler{Ent: db, Gateway: gw, Prune: true}
+
+	rep, err := r.ReconcileTeams(ctx)
+	if err != nil {
+		t.Fatalf("ReconcileTeams: %v", err)
+	}
+	if len(gw.deletedTeams) != 0 || rep.Pruned != 0 {
+		t.Errorf("team with active keys must not be pruned: deleted=%v pruned=%d", gw.deletedTeams, rep.Pruned)
+	}
+	if len(rep.ProtectedOrphans) != 1 || rep.ProtectedOrphans[0] != "t-orphan" {
+		t.Errorf("ProtectedOrphans = %v, want [t-orphan]", rep.ProtectedOrphans)
+	}
+}
+
+// The guard is scoped to ACTIVE keys: a team whose only key is revoked is a
+// genuine orphan and is pruned normally.
+func TestReconcileTeams_Prune_RevokedKeyDoesNotProtect(t *testing.T) {
+	db, cleanup := newDB(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	mkDept(t, db, "research", "t-research")
+	mkKeyTeam(t, db, "sk-dead", "t-orphan", virtualkey.StatusRevoked) // terminal → no protection
+
+	gw := &fakeKeyGateway{teams: []gateway.TeamInfo{{TeamID: "t-research"}, {TeamID: "t-orphan"}}}
+	r := &Reconciler{Ent: db, Gateway: gw, Prune: true}
+
+	rep, err := r.ReconcileTeams(ctx)
+	if err != nil {
+		t.Fatalf("ReconcileTeams: %v", err)
+	}
+	if len(rep.ProtectedOrphans) != 0 {
+		t.Errorf("revoked-key team must not be protected: %v", rep.ProtectedOrphans)
+	}
+	if rep.Pruned != 1 || len(gw.deletedTeams) != 1 || gw.deletedTeams[0] != "t-orphan" {
+		t.Errorf("orphan with only a revoked key should be pruned, got pruned=%d deleted=%v", rep.Pruned, gw.deletedTeams)
 	}
 }
 
