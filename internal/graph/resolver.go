@@ -130,6 +130,13 @@ type Resolver struct {
 	poolBreakers       *poolBreakerRegistry
 	poolSyncTimeout    time.Duration
 	poolSyncMaxRetries int
+	// poolSyncLocks serialises concurrent syncs of the SAME pool. The ticker, the
+	// manual syncResourcePool mutation and the create-time first sync can all fire
+	// for one pool at once; without this they would interleave their status +
+	// inventory writes (last-writer-wins) and double the vCenter login load. Keyed
+	// by pool id; a per-pool mutex is created lazily under poolSyncLocksMu.
+	poolSyncLocks   map[uuid.UUID]*sync.Mutex
+	poolSyncLocksMu sync.Mutex
 }
 
 // EnablePermissionCache turns on memoization of custom-role permission sets for

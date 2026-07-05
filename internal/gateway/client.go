@@ -360,6 +360,11 @@ func (c *HTTPClient) getOnce(ctx context.Context, path string, out any) (retryab
 
 	resp, err := c.http.Do(req)
 	if err != nil {
+		// A cancelled/timed-out request is the caller giving up, not a gateway
+		// fault: don't feed the breaker and don't retry (#87).
+		if isContextError(err) {
+			return false, &Error{Method: http.MethodGet, Path: logPath, Cause: err}
+		}
 		c.breaker.record(ErrTransport)
 		slog.WarnContext(ctx, "gateway transport error",
 			"base_url", c.baseURL, "path", logPath, "err", err)
@@ -460,6 +465,11 @@ func (c *HTTPClient) postOnce(ctx context.Context, path string, body, out any) (
 
 	resp, err := c.http.Do(req)
 	if err != nil {
+		// A cancelled/timed-out request is the caller giving up, not a gateway
+		// fault: don't feed the breaker and don't retry (#87).
+		if isContextError(err) {
+			return false, &Error{Method: http.MethodPost, Path: logPath, Cause: err}
+		}
 		c.breaker.record(ErrTransport)
 		slog.WarnContext(ctx, "gateway transport error",
 			"base_url", c.baseURL, "path", logPath, "err", err)
@@ -474,13 +484,18 @@ func (c *HTTPClient) postOnce(ctx context.Context, path string, body, out any) (
 			"base_url", c.baseURL, "path", logPath, "status", resp.StatusCode, "body", body)
 		gwErr := &Error{Method: http.MethodPost, Path: logPath, Status: resp.StatusCode, Body: body}
 		if sentinel := sentinelFromStatus(resp.StatusCode); sentinel != nil {
-			// 5xx is retryable only when the caller opted in via
-			// RetryPolicy.POSTRetryOn5xx. 4xx (incl. 401/403/404) is always
-			// terminal — re-POSTing won't change a malformed request.
-			if resp.StatusCode >= 500 && c.policy.POSTRetryOn5xx {
+			if resp.StatusCode >= 500 {
+				// 5xx always feeds the breaker — the gateway is unhealthy regardless
+				// of method (#87, "5xx-only breaker"). Recording is decoupled from the
+				// retry decision: RETRYING is still opt-in via POSTRetryOn5xx (mutations
+				// are exactly-once by default), but the breaker must see the failure
+				// either way, otherwise a run of 5xx POSTs never opens it.
 				c.breaker.record(sentinel)
-				return true, fmt.Errorf("%w: %w", gwErr, sentinel)
+				return c.policy.POSTRetryOn5xx, fmt.Errorf("%w: %w", gwErr, sentinel)
 			}
+			// 4xx (incl. 401/403/404) is a caller error — terminal, and it must NOT
+			// trip the breaker (re-POSTing won't change a malformed request, and the
+			// gateway is healthy).
 			return false, fmt.Errorf("%w: %w", gwErr, sentinel)
 		}
 		return false, gwErr
@@ -588,6 +603,15 @@ func replaceTokens(s, prefix, stop string) string {
 // reject secret-prefix matches that are really the tail of a longer token.
 func isWordByte(b byte) bool {
 	return b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z' || b >= '0' && b <= '9' || b == '_'
+}
+
+// isContextError reports whether err is (or wraps) a context cancellation or
+// deadline. Such an error means the CALLER gave up (request cancelled, per-call
+// timeout) — it is not evidence the gateway is unhealthy, so it must neither trip
+// the circuit breaker nor be retried. Guarding it keeps a burst of cancellations
+// (e.g. a shutdown) from falsely opening the breaker (#87).
+func isContextError(err error) bool {
+	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
 }
 
 // --- circuit breaker ---

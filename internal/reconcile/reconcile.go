@@ -155,17 +155,29 @@ type TeamReport struct {
 	TeamOrphans   []string // team ids at gateway with no department (prune candidates)
 	DanglingDepts []string // department ids whose litellm_team_id is absent at gateway
 	Pruned        int      // orphan teams deleted at the gateway (Prune only)
+	// ProtectedOrphans are orphan team ids that were NOT pruned because they still
+	// own active (non-revoked) virtual keys — deleting the team would cascade-delete
+	// those keys at litellm and strand live agents (#81). Reported so an operator can
+	// heal the underlying key/team bucketing asymmetry instead of the reconciler
+	// silently leaking the gateway team.
+	ProtectedOrphans []string
 }
 
 // ReconcileTeams compares r.Gateway's teams against ALL department rows. Mirrors
 // ReconcileKeys: the single-gateway/legacy entry point; the multi-gateway path
-// calls reconcileTeamsFor per gateway with a pre-scoped department subset.
+// calls reconcileTeamsFor per gateway with a pre-scoped department subset. The
+// prune-guard set (team ids that still own active keys) is derived from ALL
+// virtual keys here, matching the all-rows department scope.
 func (r *Reconciler) ReconcileTeams(ctx context.Context) (*TeamReport, error) {
 	depts, err := r.Ent.Department.Query().All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list departments: %w", err)
 	}
-	return r.reconcileTeamsFor(ctx, r.Gateway, depts)
+	keys, err := r.Ent.VirtualKey.Query().All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list governance rows: %w", err)
+	}
+	return r.reconcileTeamsFor(ctx, r.Gateway, depts, activeKeyTeamIDs(keys))
 }
 
 // reconcileTeamsFor diffs ONE gateway's teams against the GIVEN department subset
@@ -173,7 +185,16 @@ func (r *Reconciler) ReconcileTeams(ctx context.Context) (*TeamReport, error) {
 // (no backing department) are pruned under Prune; dangling department references
 // are only reported — re-creating vs clearing the link is an operator policy
 // decision. Returns an error only when it cannot read the gateway side.
-func (r *Reconciler) reconcileTeamsFor(ctx context.Context, gw Gateway, depts []*ent.Department) (*TeamReport, error) {
+//
+// activeKeyTeams is the set of team ids that still own at least one active
+// (non-revoked) virtual key on THIS gateway. An orphan team in that set is never
+// pruned regardless of Prune: because virtual keys are bucketed by their issuing
+// gateway while departments are bucketed by their current binding, a default-
+// gateway switch can leave a team on its old gateway looking orphaned (no backing
+// department in this bucket) even though its keys still live and bill here.
+// Pruning it would cascade-delete those keys and strand live agents (#81), so it
+// is surfaced as a ProtectedOrphan instead.
+func (r *Reconciler) reconcileTeamsFor(ctx context.Context, gw Gateway, depts []*ent.Department, activeKeyTeams map[string]struct{}) (*TeamReport, error) {
 	gwTeams, err := gw.ListTeams(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list gateway teams: %w", err)
@@ -215,6 +236,17 @@ func (r *Reconciler) reconcileTeamsFor(ctx context.Context, gw Gateway, depts []
 				rep.GatewayTeams, rep.DBDepartments)
 		} else {
 			for _, teamID := range rep.TeamOrphans {
+				// Safety net (#81): never prune a team that still owns active keys on
+				// this gateway. DeleteTeam cascades at litellm and would revoke those
+				// still-billing keys, cutting off live agents. This can happen when a
+				// department re-binds to another gateway (or the default switches) but
+				// its keys — bucketed by issuing gateway — remain here; the team then
+				// looks orphaned in this bucket while its keys are very much alive.
+				if _, hasActive := activeKeyTeams[teamID]; hasActive {
+					rep.ProtectedOrphans = append(rep.ProtectedOrphans, teamID)
+					log.Printf("reconcile: SKIP pruning gateway team orphan — it still owns active virtual keys on this gateway (key/team bucketing asymmetry, #81); heal the binding instead")
+					continue
+				}
 				if err := gw.DeleteTeam(ctx, teamID); err != nil {
 					log.Printf("reconcile: prune gateway team orphan failed: %v", err)
 					continue
@@ -224,10 +256,29 @@ func (r *Reconciler) reconcileTeamsFor(ctx context.Context, gw Gateway, depts []
 		}
 	}
 
-	log.Printf("reconcile teams: gateway=%d db=%d orphans=%d dangling=%d pruned=%d prune=%v",
+	log.Printf("reconcile teams: gateway=%d db=%d orphans=%d dangling=%d pruned=%d protected=%d prune=%v",
 		rep.GatewayTeams, rep.DBDepartments, len(rep.TeamOrphans), len(rep.DanglingDepts),
-		rep.Pruned, r.Prune)
+		rep.Pruned, len(rep.ProtectedOrphans), r.Prune)
 	return rep, nil
+}
+
+// activeKeyTeamIDs collects the team ids (VirtualKey.team_id == department id ==
+// litellm team id, per LLD-13 §3.3) that still own at least one active
+// (non-revoked) key. reconcileTeamsFor uses it as a prune-guard so a team with
+// live keys is never cascade-deleted (#81). A key with an empty team id (a
+// user-level key on the default gateway with no team) contributes nothing.
+func activeKeyTeamIDs(keys []*ent.VirtualKey) map[string]struct{} {
+	teams := make(map[string]struct{})
+	for _, vk := range keys {
+		if vk.Status == virtualkey.StatusRevoked {
+			continue // terminal — its key is expected to be gone, protects nothing
+		}
+		if vk.TeamID == "" {
+			continue
+		}
+		teams[vk.TeamID] = struct{}{}
+	}
+	return teams
 }
 
 // allUnmatched reports the catastrophic signature where EVERY gateway item is
@@ -325,7 +376,10 @@ func (r *Reconciler) runCycle(ctx context.Context) {
 			if _, err := r.reconcileKeysFor(ctx, t.Gateway, t.Keys); err != nil {
 				log.Printf("reconcile keys cycle error: %v", err)
 			}
-			if _, err := r.reconcileTeamsFor(ctx, t.Gateway, t.Depts); err != nil {
+			// Prune-guard set is derived from THIS gateway's own key bucket (keys are
+			// bucketed by issuing gateway): a team whose keys still live here must not
+			// be pruned even though its department may have re-bound elsewhere (#81).
+			if _, err := r.reconcileTeamsFor(ctx, t.Gateway, t.Depts, activeKeyTeamIDs(t.Keys)); err != nil {
 				log.Printf("reconcile teams cycle error: %v", err)
 			}
 		}

@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -185,6 +186,104 @@ func TestPost_NoRetry(t *testing.T) {
 	}
 	if got := atomic.LoadInt32(&attempts); got != 1 {
 		t.Errorf("POST must not be retried, got %d attempts", got)
+	}
+}
+
+// A run of 5xx on POST must feed the circuit breaker even though POST is not
+// retried by default (#87 / #98 item 4): after `threshold` consecutive 5xx the
+// breaker opens and the next POST fast-fails with ErrUnavailable WITHOUT hitting
+// the server. The default breaker threshold is 3 (see NewHTTPClient).
+func TestPost_5xxTripsBreaker(t *testing.T) {
+	var hits int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		w.WriteHeader(http.StatusServiceUnavailable) // 503
+	}))
+	defer srv.Close()
+
+	c, _ := NewHTTPClient(srv.URL, "sk-master", WithRetryBackoff(0))
+
+	// Three 5xx POSTs (threshold=3) to open the breaker. POST isn't retried, so
+	// each mutation is exactly one server hit.
+	for i := 0; i < 3; i++ {
+		if _, err := c.GenerateKey(context.Background(), GenerateKeyRequest{UserID: "u1"}); err == nil {
+			t.Fatalf("call %d: expected 5xx error", i)
+		}
+	}
+	if got := atomic.LoadInt32(&hits); got != 3 {
+		t.Fatalf("want 3 server hits before trip, got %d", got)
+	}
+
+	// Breaker is now open: this POST must be rejected locally, not sent.
+	_, err := c.GenerateKey(context.Background(), GenerateKeyRequest{UserID: "u1"})
+	if err == nil {
+		t.Fatal("expected the open breaker to reject the call")
+	}
+	if !errors.Is(err, ErrUnavailable) {
+		t.Fatalf("open-breaker error should wrap ErrUnavailable, got %v", err)
+	}
+	if got := atomic.LoadInt32(&hits); got != 3 {
+		t.Fatalf("open breaker must not hit the server, hits=%d (want 3)", got)
+	}
+}
+
+// 4xx on POST is a caller error and must NOT trip the breaker: after many 4xx
+// POSTs the breaker stays closed and calls keep reaching the server (#98 item 4).
+func TestPost_4xxDoesNotTripBreaker(t *testing.T) {
+	var hits int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		w.WriteHeader(http.StatusBadRequest) // 400
+	}))
+	defer srv.Close()
+
+	c, _ := NewHTTPClient(srv.URL, "sk-master", WithRetryBackoff(0))
+
+	// Far more than the breaker threshold; every one must still reach the server.
+	const n = 8
+	for i := 0; i < n; i++ {
+		if _, err := c.GenerateKey(context.Background(), GenerateKeyRequest{UserID: "u1"}); err == nil {
+			t.Fatalf("call %d: expected 4xx error", i)
+		}
+	}
+	if got := atomic.LoadInt32(&hits); got != n {
+		t.Fatalf("4xx must not trip the breaker: hits=%d, want %d", got, n)
+	}
+}
+
+// A cancelled context on POST must not trip the breaker (the caller gave up; the
+// gateway may be perfectly healthy) — nor be retried (#87). After several
+// cancelled POSTs a normal POST still succeeds.
+func TestPost_ContextCancelDoesNotTripBreaker(t *testing.T) {
+	var hits int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"team_id":"t1"}`))
+	}))
+	defer srv.Close()
+
+	c, _ := NewHTTPClient(srv.URL, "sk-master", WithRetryBackoff(0))
+
+	// Issue several already-cancelled POSTs. c.http.Do returns a context error
+	// before reaching the handler, so hits stays 0 and the breaker must stay closed.
+	for i := 0; i < 5; i++ {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		if _, err := c.CreateTeam(ctx, TeamRequest{TeamID: "t1"}); err == nil {
+			t.Fatalf("cancelled call %d should error", i)
+		}
+	}
+	if got := atomic.LoadInt32(&hits); got != 0 {
+		t.Fatalf("cancelled requests should not reach the server, hits=%d", got)
+	}
+
+	// The breaker must still be closed: a fresh POST reaches the server and works.
+	if _, err := c.CreateTeam(context.Background(), TeamRequest{TeamID: "t1"}); err != nil {
+		t.Fatalf("breaker wrongly opened by context cancels: %v", err)
+	}
+	if got := atomic.LoadInt32(&hits); got != 1 {
+		t.Fatalf("post-cancel call should reach the server exactly once, hits=%d", got)
 	}
 }
 

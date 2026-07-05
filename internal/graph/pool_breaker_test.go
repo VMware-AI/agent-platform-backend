@@ -72,6 +72,81 @@ func TestPoolBreakerRegistry_TripsAfterConsecutiveFailures(t *testing.T) {
 	// type, only that the breaker is now blocking traffic.
 }
 
+// TestPoolBreakerRegistry_ThresholdZeroNeverTrips: threshold 0 means the breaker
+// is disabled (config doc: "Zero or negative disables the breaker"). Even after
+// many consecutive failures it must keep letting requests through — an unguarded
+// ReadyToTrip (ConsecutiveFailures >= 0) would be vacuously true and trip on the
+// very first failure, the inverse of the doc (#98 item 2).
+func TestPoolBreakerRegistry_ThresholdZeroNeverTrips(t *testing.T) {
+	r := newPoolBreakerRegistry(0, 100)
+	cb := r.get("vc")
+
+	// Drive far more failures than any sane threshold; the breaker must stay closed.
+	for i := 0; i < 50; i++ {
+		_, _ = cb.Execute(func() (any, error) {
+			return nil, errors.New("boom")
+		})
+	}
+	// A subsequent call must still be executed (breaker never opened).
+	called := 0
+	_, err := cb.Execute(func() (any, error) {
+		called++
+		return nil, nil
+	})
+	if err != nil {
+		t.Fatalf("disabled breaker rejected a call: %v", err)
+	}
+	if called != 1 {
+		t.Fatalf("disabled breaker did not execute the call (called=%d)", called)
+	}
+}
+
+// TestPoolBreakerRegistry_TripsOnNthFailure: with threshold N the breaker trips
+// on exactly the Nth consecutive failure — not before (calls N-1 and earlier
+// still execute) and not after (call N+1 is rejected without running).
+func TestPoolBreakerRegistry_TripsOnNthFailure(t *testing.T) {
+	const n = 3
+	r := newPoolBreakerRegistry(n, 100)
+	cb := r.get("vc")
+
+	// The first N-1 failures must NOT trip: each call still runs.
+	for i := 1; i < n; i++ {
+		ran := false
+		_, err := cb.Execute(func() (any, error) {
+			ran = true
+			return nil, errors.New("boom")
+		})
+		if !ran {
+			t.Fatalf("failure %d/%d should still execute (breaker not yet tripped)", i, n)
+		}
+		if err == nil {
+			t.Fatalf("failure %d should surface the error", i)
+		}
+	}
+
+	// The Nth failure runs and trips the breaker.
+	ranNth := false
+	_, err := cb.Execute(func() (any, error) {
+		ranNth = true
+		return nil, errors.New("boom")
+	})
+	if !ranNth {
+		t.Fatal("the Nth failure should still execute (it is what trips the breaker)")
+	}
+	if err == nil {
+		t.Fatal("the Nth failure should surface the error")
+	}
+
+	// Now the breaker is open: the next call is rejected without running.
+	_, err = cb.Execute(func() (any, error) {
+		t.Fatal("breaker is open; this fn must not run")
+		return nil, nil
+	})
+	if err == nil {
+		t.Fatal("call after the Nth failure should be rejected by the open breaker")
+	}
+}
+
 // TestSyncOnePool_GracefulWhenNoBreaker: when the Resolver hasn't been
 // wired with EnablePoolSync, syncOnePool still runs the connect→write
 // pipeline (without retry/breaker layers). This is the path tests take.
