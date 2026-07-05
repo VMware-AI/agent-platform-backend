@@ -1,7 +1,7 @@
-mutation SetAgentLifecycleStatus($id: ID!, $status: AgentStatus!) {
+mutation SetAgentStatus($id: ID!, $status: AgentStatus!) {
     setAgentStatus(id: $id, status: $status) {
       id
-      name
       status
+      updatedAt
     }
   }

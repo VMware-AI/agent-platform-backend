@@ -1,0 +1,17 @@
+query GatewayHealth {
+    gatewayHealth {
+      gatewayId
+      gatewayName
+      healthyCount
+      unhealthyCount
+      healthy {
+        model
+        apiBase
+      }
+      unhealthy {
+        model
+        apiBase
+      }
+      error
+    }
+  }

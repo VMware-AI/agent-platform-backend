@@ -3,12 +3,13 @@ mutation CreateModelGateway($input: ModelGatewayInput!) {
       ...ModelGatewayFields
     }
   }
-
+  
   fragment ModelGatewayFields on ModelGateway {
     id
     name
     provider
     endpoint
+    backendModelCount
     loadBalancingStrategy
     lastSyncAt
     lastSyncStatus

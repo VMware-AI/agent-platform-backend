@@ -1,3 +1,0 @@
-mutation ConsoleDeleteSkill($id: ID!) {
-    deleteSkill(id: $id)
-  }

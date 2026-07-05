@@ -1,0 +1,7 @@
+mutation TestNewModelGatewayConnection($input: TestModelGatewayConnectionInput!) {
+    testNewModelGatewayConnection(input: $input) {
+      success
+      message
+      testedAt
+    }
+  }

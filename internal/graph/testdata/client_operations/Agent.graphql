@@ -1,0 +1,27 @@
+query Agent($id: ID!) {
+    agent(id: $id) {
+      id
+      name
+      type
+      status
+      apiKey {
+        id
+        name
+      }
+      owner {
+        id
+        displayName
+        email
+      }
+      credentials {
+        username
+      }
+      endpoint
+      templateFamilyId
+      templateVersionId
+      resourcePoolId
+      typeLabel
+      createdAt
+      updatedAt
+    }
+  }

@@ -1,9 +1,0 @@
-query GatewayConnectionsSyncSummary {
-    modelGatewaySyncSummary {
-      state
-      lastSyncedAt
-      successCount
-      failedCount
-      message
-    }
-  }

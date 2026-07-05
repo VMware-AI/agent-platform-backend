@@ -1,17 +1,40 @@
-fragment ResourcePoolFields on ResourcePool {
-    id
-    name
-    endpoint
-    contentLibraryName
-    insecure
-    syncStatus
-    lastSyncedAt
-    createdAt
-    updatedAt
+fragment ResourcePoolInventoryFields on ResourcePool {
+    datacenters {
+      name
+      path
+      clusters {
+        name
+        path
+        esxiHosts {
+          name
+          path
+        }
+        resourcePools {
+          name
+          path
+        }
+      }
+      datastores {
+        name
+        path
+      }
+      networks {
+        name
+        path
+      }
+      folders {
+        name
+        path
+      }
+      storagePolicies {
+        name
+        path
+      }
+    }
   }
 
   query ResourcePool($id: ID!) {
     resourcePool(id: $id) {
-      ...ResourcePoolFields
+      ...ResourcePoolInventoryFields
     }
   }

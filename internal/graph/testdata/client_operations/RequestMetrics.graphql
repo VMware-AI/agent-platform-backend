@@ -13,7 +13,9 @@ query RequestMetrics(
         totalErrors
         errorRate
         avgLatencyMs
+        p50LatencyMs
         p95LatencyMs
+        p99LatencyMs
         totalInputTokens
         totalOutputTokens
       }

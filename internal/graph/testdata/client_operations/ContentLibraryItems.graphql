@@ -1,0 +1,6 @@
+query ContentLibraryItems($resourcePoolId: ID!, $libraryName: String!) {
+    contentLibraryItems(resourcePoolId: $resourcePoolId, libraryName: $libraryName) {
+      name
+      type
+    }
+  }
