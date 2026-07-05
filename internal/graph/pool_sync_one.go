@@ -3,13 +3,18 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
+	"runtime/debug"
+	"sync"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/sony/gobreaker"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
-	"github.com/sony/gobreaker"
 )
 
 // syncOnePool is the single shared entry point for "sync one pool". It is
@@ -29,7 +34,42 @@ import (
 // On real failure → status=error (so the operator can spot the outage).
 // On breaker open → log + leave status untouched, the next ticker tick
 // will try the half-open probe.
-func (r *Resolver) syncOnePool(ctx context.Context, pool *ent.ResourcePool) (*ent.ResourcePool, time.Time, error) {
+func (r *Resolver) syncOnePool(ctx context.Context, pool *ent.ResourcePool) (synced *ent.ResourcePool, syncedAt time.Time, err error) {
+	// Identify which entry point invoked us, so log lines tell the operator
+	// whether a given sync came from the fire-and-forget first sync, the
+	// background ticker, or the manual mutation. The caller tags the ctx
+	// via syncSourceTag; default "unknown" if absent.
+	source := syncSourceFromCtx(ctx)
+	poolID := pool.ID.String()
+	poolName := pool.Name
+
+	// Serialise concurrent syncs of the SAME pool (#98 item 5b): the ticker, the
+	// manual mutation and the create-time first sync can all target one pool at
+	// once. Without this their status + inventory writes interleave (last-writer-
+	// wins) and the vCenter login load doubles. Different pools still sync in
+	// parallel — the lock is per pool id.
+	lock := r.poolSyncLock(pool.ID)
+	lock.Lock()
+	defer lock.Unlock()
+
+	// Recover any panic on the sync path (#98 item 5c). syncOnePool runs under a
+	// bare goroutine for the first sync and under the ticker goroutine — neither
+	// is wrapped by net/http's per-request recover — so an unrecovered panic on
+	// the vCenter/ent path would crash the whole control plane. Log the stack,
+	// mark the pool status=error, and return a non-nil error so callers observe
+	// the failure instead of a silent nil.
+	defer func() {
+		if p := recover(); p != nil {
+			log.Printf("pool-sync [%s] pool=%s: PANIC recovered: %v\n%s", source, poolName, p, debug.Stack())
+			if _, werr := r.Ent.ResourcePool.UpdateOne(pool).
+				SetStatus(resourcepool.StatusError).
+				Save(context.Background()); werr != nil {
+				log.Printf("pool-sync [%s] pool=%s: status=error write after panic failed: %v", source, poolName, werr)
+			}
+			synced, syncedAt, err = nil, time.Time{}, fmt.Errorf("pool sync panicked: %v", p)
+		}
+	}()
+
 	// When sync plumbing is disabled (e.g. most unit tests), still run the
 	// core connect→inventory→full-inventory pipeline — just skip the breaker
 	// + retry layers. The mutations (SyncResourcePool) and the fire-and-
@@ -45,14 +85,6 @@ func (r *Resolver) syncOnePool(ctx context.Context, pool *ent.ResourcePool) (*en
 	}
 	syncCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-
-	// Identify which entry point invoked us, so log lines tell the operator
-	// whether a given sync came from the fire-and-forget first sync, the
-	// background ticker, or the manual mutation. The caller tags the ctx
-	// via syncSourceTag; default "unknown" if absent.
-	source := syncSourceFromCtx(ctx)
-	poolID := pool.ID.String()
-	poolName := pool.Name
 
 	log.Printf("pool-sync [%s] start pool=%s id=%s endpoint=%s timeout=%s secret_ref=%q",
 		source, poolName, poolID, pool.Endpoint, timeout,
@@ -118,7 +150,11 @@ func (r *Resolver) syncOnePool(ctx context.Context, pool *ent.ResourcePool) (*en
 			if err != nil {
 				log.Printf("pool-sync [%s] attempt %d pool=%s: persist failed err=%q elapsed=%s",
 					source, attempts, poolName, err, time.Since(persistStart))
-				return err
+				// Tag the local DB write failure so the breaker layer can tell it
+				// apart from a genuine vCenter fault and NOT trip the vCenter breaker
+				// on it (#98 item 5d). It is also non-retryable (not a transport
+				// error), so retrySync returns it immediately.
+				return &poolPersistError{err: err}
 			}
 			log.Printf("pool-sync [%s] attempt %d pool=%s: persist ok last_synced_at=%s elapsed=%s",
 				source, attempts, poolName, now.UTC().Format(time.RFC3339), time.Since(persistStart))
@@ -128,7 +164,8 @@ func (r *Resolver) syncOnePool(ctx context.Context, pool *ent.ResourcePool) (*en
 	}
 
 	start := time.Now()
-	var err error
+	// err is the named return; the recover defer above may also set it. Here it
+	// carries the sync outcome for the status write below.
 	if r.poolBreakers == nil {
 		log.Printf("pool-sync [%s] pool=%s: breaker disabled (no EnablePoolSync), running raw",
 			source, poolName)
@@ -137,9 +174,25 @@ func (r *Resolver) syncOnePool(ctx context.Context, pool *ent.ResourcePool) (*en
 		cb := r.poolBreakers.get(pool.Endpoint)
 		log.Printf("pool-sync [%s] pool=%s: breaker execute start (endpoint=%s)",
 			source, poolName, pool.Endpoint)
+		// Only genuine vCenter dial/API failures should feed the vCenter breaker
+		// (#98 item 5d). A local DB write failure (poolPersistError) means the
+		// vCenter side actually succeeded — connect + full inventory returned — so
+		// we hide it from the breaker (return nil to Execute → counts as success)
+		// but still surface the real error to the caller via persistErr for the
+		// status=error write below.
+		var persistErr error
 		_, err = cb.Execute(func() (any, error) {
-			return nil, run()
+			runErr := run()
+			var pe *poolPersistError
+			if errors.As(runErr, &pe) {
+				persistErr = runErr
+				return nil, nil // breaker sees success; vCenter was reachable
+			}
+			return nil, runErr
 		})
+		if err == nil && persistErr != nil {
+			err = persistErr
+		}
 	}
 
 	if err != nil {
@@ -166,4 +219,31 @@ func (r *Resolver) syncOnePool(ctx context.Context, pool *ent.ResourcePool) (*en
 		source, poolName, time.Since(start),
 		pool.LastSyncedAt.UTC().Format(time.RFC3339))
 	return pool, pool.LastSyncedAt.UTC(), nil
+}
+
+// poolPersistError wraps a failure of the LOCAL DB write that stamps a pool's
+// synced inventory. It is distinguished from a vCenter error so the breaker layer
+// does not trip the per-endpoint vCenter circuit breaker on a database problem
+// (the vCenter round-trip already succeeded) — see syncOnePool (#98 item 5d).
+type poolPersistError struct{ err error }
+
+func (e *poolPersistError) Error() string { return "pool persist: " + e.err.Error() }
+func (e *poolPersistError) Unwrap() error { return e.err }
+
+// poolSyncLock returns the per-pool mutex for id, creating it on first use. The
+// registry itself is guarded by poolSyncLocksMu; the returned lock serialises
+// syncs of that one pool (#98 item 5b). Entries are never evicted — one *Mutex
+// per pool is negligible and avoids a lock-while-held eviction race.
+func (r *Resolver) poolSyncLock(id uuid.UUID) *sync.Mutex {
+	r.poolSyncLocksMu.Lock()
+	defer r.poolSyncLocksMu.Unlock()
+	if r.poolSyncLocks == nil {
+		r.poolSyncLocks = make(map[uuid.UUID]*sync.Mutex)
+	}
+	lock, ok := r.poolSyncLocks[id]
+	if !ok {
+		lock = &sync.Mutex{}
+		r.poolSyncLocks[id] = lock
+	}
+	return lock
 }
