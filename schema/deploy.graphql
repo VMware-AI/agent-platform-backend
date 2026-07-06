@@ -51,6 +51,8 @@ input DeployAgentInput {
   existingKeyId: ID
   # Optional free-text deploy notes.
   notes: String
+  cloneMode: CloneMode! = full
+  instantCloneParent: String
 }
 
 # A single OVF property value for the deploy mutation.
@@ -64,6 +66,8 @@ enum KeySource {
   new
   existing
 }
+
+enum CloneMode { full instant }
 
 # An OVA template VM available to clone agents from.
 type VMTemplate {
@@ -139,6 +143,9 @@ extend type Query {
   # List virtual keys not yet bound to any agent, for the deploy form's
   # "use existing key" flow. Admin-only.
   unboundKeys: [VirtualKey!]! @hasRole(any: [admin])
+  # Running VMs eligible as instant-clone parents (powered on, not templates).
+  instantCloneParents(resourcePoolId: ID!): [VMTemplate!]!
+    @hasRole(any: [admin])
 }
 
 extend type Mutation {

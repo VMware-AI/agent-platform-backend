@@ -11,9 +11,10 @@ import (
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
-	"github.com/vmware/govmomi/view"
 	"github.com/vmware/govmomi/vapi/rest"
 	"github.com/vmware/govmomi/vapi/vcenter"
+	"github.com/vmware/govmomi/view"
+	"github.com/vmware/govmomi/vim25/methods"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
 )
@@ -236,13 +237,12 @@ func (c *Client) CloneFromTemplate(ctx context.Context, spec CloneSpec) (*VMInfo
 				cs.VAppConfig = buildVAppPropertySpec(vci, spec.VAppProperties, transport)
 			}
 		}
-				config = cs
-		}
+		config = cs
+	}
 
 	// vCenter Guest OS Customization — the VMware-native way TKG uses.
 	// Always applied: static IP when ip_mode=static, hostname only otherwise.
 	customization := buildLinuxCustomization(spec.ExtraConfig, spec.Name)
-
 
 	task, err := src.Clone(ctx, folder, spec.Name, types.VirtualMachineCloneSpec{
 		Location:      relocate,
@@ -259,11 +259,12 @@ func (c *Client) CloneFromTemplate(ctx context.Context, spec CloneSpec) (*VMInfo
 	}
 	return c.vmInfo(ctx, spec.Name)
 }
-	// DeployOVF deploys a VM from a content library OVF item using vCenter's
-	// native OVF deployment pipeline. Unlike CloneFromTemplate, this generates
-	// an OVF environment ISO that the guest OS reads to get deployment properties
-	// (network config, passwords, etc.) — the same mechanism TKG uses.
-	func (c *Client) DeployOVF(ctx context.Context, spec OVFDeploySpec) (*VMInfo, error) {
+
+// DeployOVF deploys a VM from a content library OVF item using vCenter's
+// native OVF deployment pipeline. Unlike CloneFromTemplate, this generates
+// an OVF environment ISO that the guest OS reads to get deployment properties
+// (network config, passwords, etc.) — the same mechanism TKG uses.
+func (c *Client) DeployOVF(ctx context.Context, spec OVFDeploySpec) (*VMInfo, error) {
 	if spec.LibraryItemID == "" || spec.Name == "" {
 		return nil, fmt.Errorf("vcenter: OVF deploy requires LibraryItemID and Name")
 	}
@@ -295,7 +296,6 @@ func (c *Client) CloneFromTemplate(ctx context.Context, spec CloneSpec) (*VMInfo
 	return c.vmInfo(ctx, spec.Name)
 }
 
-
 // cloneFolder resolves the target VM folder, defaulting to the datacenter's.
 func (c *Client) cloneFolder(ctx context.Context, finder *find.Finder, dc *object.Datacenter, name string) (*object.Folder, error) {
 	if name != "" {
@@ -323,7 +323,9 @@ func (c *Client) vmInfo(ctx context.Context, name string) (*VMInfo, error) {
 		return nil, fmt.Errorf("vcenter: vm properties %s: %w", name, err)
 	}
 	ip := ""
-	if mvm.Summary.Guest != nil { ip = mvm.Summary.Guest.IpAddress }
+	if mvm.Summary.Guest != nil {
+		ip = mvm.Summary.Guest.IpAddress
+	}
 	return &VMInfo{
 		Name:       mvm.Summary.Config.Name,
 		PowerState: string(mvm.Summary.Runtime.PowerState),
@@ -490,10 +492,14 @@ func (c *Client) readVAppConfig(ctx context.Context, vm *object.VirtualMachine) 
 // — vCenter runs it at first boot via vmtools, the same way TKG does.
 func buildLinuxCustomization(props map[string]string, vmName string) *types.CustomizationSpec {
 	hostname := props["guestinfo.hostname"]
-	if hostname == "" { hostname = props["guestinfo.static_ip"] }
+	if hostname == "" {
+		hostname = props["guestinfo.static_ip"]
+	}
 	ip := props["guestinfo.static_ip"]
 	mask := props["guestinfo.netmask"]
-	if mask == "" { mask = "255.255.255.0" }
+	if mask == "" {
+		mask = "255.255.255.0"
+	}
 	gw := props["guestinfo.gateway"]
 	dns := props["guestinfo.dns"]
 
@@ -523,11 +529,12 @@ func buildLinuxCustomization(props map[string]string, vmName string) *types.Cust
 	return spec
 }
 
-
 func filterEmpty(ss []string) []string {
 	var out []string
 	for _, s := range ss {
-		if s != "" { out = append(out, s) }
+		if s != "" {
+			out = append(out, s)
+		}
 	}
 	return out
 }
@@ -542,7 +549,9 @@ func buildVAppPropertySpec(src *types.VmConfigInfo, values map[string]string, tr
 	specs := make([]types.VAppPropertySpec, 0, len(values))
 	for k, v := range values {
 		key, ok := srcKeys[k]
-		if !ok { continue } // skip properties not in the template
+		if !ok {
+			continue
+		} // skip properties not in the template
 		specs = append(specs, types.VAppPropertySpec{
 			ArrayUpdateSpec: types.ArrayUpdateSpec{Operation: "edit"},
 			Info:            &types.VAppPropertyInfo{Key: key, Id: k, Value: v},
@@ -783,4 +792,190 @@ func (c *Client) buildNetworkDevice(ctx context.Context, finder *find.Finder, sr
 		Operation: types.VirtualDeviceConfigSpecOperationEdit,
 		Device:    srcNIC.(types.BaseVirtualDevice),
 	}, nil
+}
+
+type VMHardware struct {
+	CPU          int32
+	MemoryMB     int32
+	DiskKB       int64
+	NetworkLabel string
+}
+type ReconfigSpec struct {
+	CPU       *int32
+	MemoryMB  *int32
+	DiskKB    *int64
+	PortGroup *string
+	VAppProps map[string]string
+}
+
+func (c *Client) ReconfigVM(ctx context.Context, vmName string, spec ReconfigSpec) error {
+	vm, err := c.findVM(ctx, vmName)
+	if err != nil {
+		return fmt.Errorf("find vm: %w", err)
+	}
+	cs := types.VirtualMachineConfigSpec{}
+	if spec.CPU != nil {
+		cs.NumCPUs = *spec.CPU
+	}
+	if spec.MemoryMB != nil {
+		cs.MemoryMB = int64(*spec.MemoryMB)
+	}
+	if spec.DiskKB != nil {
+		devs, _ := vm.Device(ctx)
+		for _, d := range devs.SelectByType(&types.VirtualDisk{}) {
+			if vd, ok := d.(*types.VirtualDisk); ok {
+				vd.CapacityInKB = *spec.DiskKB
+				cs.DeviceChange = append(cs.DeviceChange, &types.VirtualDeviceConfigSpec{Operation: types.VirtualDeviceConfigSpecOperationEdit, Device: vd})
+				break
+			}
+		}
+	}
+	if spec.PortGroup != nil {
+		c.applyNet(ctx, vm, *spec.PortGroup, &cs)
+	}
+	if len(spec.VAppProps) > 0 {
+		specs := make([]types.VAppPropertySpec, 0, len(spec.VAppProps))
+		for k, v := range spec.VAppProps {
+			specs = append(specs, types.VAppPropertySpec{ArrayUpdateSpec: types.ArrayUpdateSpec{Operation: types.ArrayUpdateOperationEdit}, Info: &types.VAppPropertyInfo{Key: 0, Id: k, Value: v}})
+		}
+		cs.VAppConfig = &types.VmConfigSpec{Property: specs}
+	}
+	task, _ := vm.Reconfigure(ctx, cs)
+	return task.Wait(ctx)
+}
+func (c *Client) applyNet(ctx context.Context, vm *object.VirtualMachine, pp string, cs *types.VirtualMachineConfigSpec) {
+	finder := find.NewFinder(c.vc.Client, false)
+	netRef, _ := finder.Network(ctx, pp)
+	if netRef == nil {
+		return
+	}
+	backing, _ := netRef.EthernetCardBackingInfo(ctx)
+	devs, _ := vm.Device(ctx)
+	for _, d := range devs.SelectByType(&types.VirtualEthernetCard{}) {
+		if nic, ok := d.(types.BaseVirtualEthernetCard); ok {
+			nic.GetVirtualEthernetCard().Backing = backing
+			cs.DeviceChange = append(cs.DeviceChange, &types.VirtualDeviceConfigSpec{Operation: types.VirtualDeviceConfigSpecOperationEdit, Device: nic.(types.BaseVirtualDevice)})
+			break
+		}
+	}
+}
+func (c *Client) GetVMHardware(ctx context.Context, vmName string) (*VMHardware, error) {
+	vm, _ := c.findVM(ctx, vmName)
+	var mvm mo.VirtualMachine
+	vm.Properties(ctx, vm.Reference(), []string{"summary.config.numCpu", "summary.config.memorySizeMB", "summary.storage.committed", "summary.storage.uncommitted"}, &mvm)
+	return &VMHardware{CPU: int32(mvm.Summary.Config.NumCpu), MemoryMB: int32(mvm.Summary.Config.MemorySizeMB), DiskKB: mvm.Summary.Storage.Committed + mvm.Summary.Storage.Uncommitted}, nil
+}
+func (c *Client) GetVAppProperties(ctx context.Context, vmName string) ([]OVFProperty, error) {
+	vm, _ := c.findVM(ctx, vmName)
+	var mvm mo.VirtualMachine
+	vm.Properties(ctx, vm.Reference(), []string{"config.vAppConfig"}, &mvm)
+	if mvm.Config == nil || mvm.Config.VAppConfig == nil {
+		return nil, nil
+	}
+	vci, ok := mvm.Config.VAppConfig.(*types.VmConfigInfo)
+	if !ok {
+		return nil, nil
+	}
+	out := make([]OVFProperty, 0, len(vci.Property))
+	for _, p := range vci.Property {
+		out = append(out, OVFProperty{Key: p.Id, DefaultValue: p.Value})
+	}
+	return out, nil
+}
+
+type InstantCloneSpec struct {
+	ParentVM, Name, ResourcePool, Datastore, Folder, Network string
+	ExtraConfig                                              map[string]string
+	BiosUUID                                                 string
+}
+
+func (c *Client) InstantClone(ctx context.Context, spec InstantCloneSpec) (*VMInfo, error) {
+	src, _ := c.findVM(ctx, spec.ParentVM)
+	finder := find.NewFinder(c.vc.Client, true)
+	dc, _ := finder.DefaultDatacenter(ctx)
+	finder.SetDatacenter(dc)
+	relocate := &types.VirtualMachineRelocateSpec{}
+	if spec.ResourcePool != "" {
+		p, _ := finder.ResourcePool(ctx, spec.ResourcePool)
+		if p != nil {
+			relocate.Pool = types.NewReference(p.Reference())
+		}
+	}
+	if spec.Datastore != "" {
+		d, _ := finder.Datastore(ctx, spec.Datastore)
+		if d != nil {
+			relocate.Datastore = types.NewReference(d.Reference())
+		}
+	}
+	if spec.Network != "" {
+		nd, _ := c.buildNetworkDevice(ctx, finder, src, spec.Network)
+		if nd != nil {
+			relocate.DeviceChange = append(relocate.DeviceChange, nd)
+		}
+	}
+	var config []types.BaseOptionValue
+	for k, v := range spec.ExtraConfig {
+		config = append(config, &types.OptionValue{Key: k, Value: v})
+	}
+	cs := &types.VirtualMachineInstantCloneSpec{Name: spec.Name, Location: *relocate}
+	if len(config) > 0 {
+		cs.Config = config
+	}
+	if spec.BiosUUID != "" {
+		cs.BiosUuid = spec.BiosUUID
+	}
+	req := &types.InstantClone_Task{This: src.Reference(), Spec: *cs}
+	resp, _ := methods.InstantClone_Task(ctx, c.vc.Client.RoundTripper, req)
+	task := object.NewTask(c.vc.Client, resp.Returnval)
+	task.Wait(ctx)
+	return c.vmInfo(ctx, spec.Name)
+}
+func (c *Client) ListRunningVMs(ctx context.Context) ([]VMInfo, error) {
+	m := view.NewManager(c.vc.Client)
+	v, _ := m.CreateContainerView(ctx, c.vc.ServiceContent.RootFolder, []string{"VirtualMachine"}, true)
+	defer v.Destroy(ctx)
+	var vms []mo.VirtualMachine
+	v.Retrieve(ctx, []string{"VirtualMachine"}, []string{"summary"}, &vms)
+	var out []VMInfo
+	for _, vm := range vms {
+		if vm.Summary.Runtime.PowerState != "poweredOn" || vm.Summary.Config.Template {
+			continue
+		}
+		out = append(out, VMInfo{Name: vm.Summary.Config.Name, PowerState: string(vm.Summary.Runtime.PowerState), UUID: vm.Summary.Config.Uuid})
+	}
+	return out, nil
+}
+func (c *Client) CheckInstantCloneCompatible(ctx context.Context, vmName string) error {
+	vm, _ := c.findVM(ctx, vmName)
+	req := &types.CheckInstantClone_Task{This: vm.Reference(), Spec: types.VirtualMachineInstantCloneSpec{Name: "_ck_", Location: types.VirtualMachineRelocateSpec{}}}
+	_, err := methods.CheckInstantClone_Task(ctx, c.vc.Client.RoundTripper, req)
+	return err
+}
+func (c *Client) RemoveSerialPorts(ctx context.Context, vmName string) error {
+	vm, err := c.findVM(ctx, vmName)
+	if err != nil {
+		return fmt.Errorf("find vm: %w", err)
+	}
+	devs, err := vm.Device(ctx)
+	fmt.Printf("[RemoveSerialPorts] vm=%q devices=%d\n", vmName, len(devs))
+	if err != nil {
+		return fmt.Errorf("get devices: %w", err)
+	}
+	var changes []types.BaseVirtualDeviceConfigSpec
+	for _, d := range devs {
+		if _, ok := d.(*types.VirtualSerialPort); ok {
+			fmt.Printf("[RemoveSerialPorts] FOUND serial port on %q\n", vmName)
+		}
+		if _, ok := d.(*types.VirtualSerialPort); ok {
+			changes = append(changes, &types.VirtualDeviceConfigSpec{Operation: types.VirtualDeviceConfigSpecOperationRemove, Device: d})
+		}
+	}
+	if len(changes) == 0 {
+		return nil
+	}
+	task, err := vm.Reconfigure(ctx, types.VirtualMachineConfigSpec{DeviceChange: changes})
+	if err != nil {
+		return fmt.Errorf("reconfigure: %w", err)
+	}
+	return task.Wait(ctx)
 }

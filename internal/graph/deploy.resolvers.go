@@ -9,9 +9,11 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
 	"os"
+	"strings"
+	"time"
 
+	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/rotationcommand"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
@@ -19,7 +21,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/deploy"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
-	_ "github.com/VMware-AI/agent-platform-backend/internal/vcenter"
+	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
@@ -98,6 +100,11 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		enrollToken = tok
 	}
 
+	// Instant Clone path — fork from running parent VM (seconds).
+	if input.CloneMode == model.CloneModeInstant {
+		return r.deployAgentInstant(ctx, ag, t, conn, input, vmName, enrollToken, defaultConfig, configPath)
+	}
+
 	svc := &deploy.Service{Gateway: t.gw, VCenter: conn, GatewayURL: t.gwURL}
 	// Decouple provisioning from the HTTP write deadline (server WriteTimeout=60s):
 	// a clone + power-on can run minutes, and if the request ctx is canceled
@@ -127,7 +134,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		ControlPlaneURL:  r.ControlPlaneURL,
 		KnowledgePackIDs: r.resolveAgentKnowledge(ctx, ag), // LLD-11 K2: 下发知识包引用
 		KnowledgeRoot:    r.resolveKnowledgeRoot(ctx, ag),  // LLD-11 K4
-			OVFProperties:    mapOVFProperties(input.OvfProperties),
+		OVFProperties:    mapOVFProperties(input.OvfProperties),
 	})
 	if err != nil {
 		// Provision rolls back its own partial work (VM+key); the agent row is ours.
@@ -370,6 +377,7 @@ func (r *mutationResolver) RevokeAgentEnrollment(ctx context.Context, agentID st
 	}
 	return true, nil
 }
+
 // mapOVFProperties converts deploy-input OVF property pairs to a map for
 // the deploy service (guestinfo.* keys become VM ExtraConfig). Only keys
 // starting with "guestinfo." are forwarded; anything else is logged and
@@ -393,7 +401,6 @@ func mapOVFProperties(props []model.OVFPropertyInput) map[string]string {
 	}
 	return m
 }
-
 
 // VMTemplates lists the OVA templates available in a resource pool's vCenter,
 // powering the deploy form's template picker.
@@ -550,4 +557,93 @@ func (r *queryResolver) UnboundKeys(ctx context.Context) ([]model.VirtualKey, er
 		out[i] = *toModelVirtualKey(k)
 	}
 	return out, nil
+}
+
+func (r *mutationResolver) deployAgentInstant(
+	ctx context.Context,
+	ag *ent.Agent,
+	t *deployTargets,
+	conn VCenterClient,
+	input model.DeployAgentInput,
+	vmName string,
+	enrollToken string,
+	defaultConfig string,
+	configPath string,
+) (*model.DeployedAgent, error) {
+	parentVM := derefString(input.InstantCloneParent)
+	if parentVM == "" {
+		return nil, fmt.Errorf("instantCloneParent required")
+	}
+
+	// 1. Issue gateway key
+	key, err := t.gw.GenerateKey(ctx, gateway.GenerateKeyRequest{UserID: ag.OwnerUserID.String(), TeamID: t.deployTeamID, MaxBudget: input.MaxBudget})
+	if err != nil {
+		r.deleteAgentRow(ctx, ag)
+		return nil, fmt.Errorf("generate key: %w", err)
+	}
+
+	// 2. Remove serial ports (power-off → remove → power-on)
+	if err := conn.PowerOff(ctx, parentVM); err != nil {
+		log.Printf("[instant-clone] power off non-fatal: %v", err)
+	}
+	time.Sleep(3 * time.Second)
+	if err := conn.RemoveSerialPorts(ctx, parentVM); err != nil {
+		_ = t.gw.DeleteKey(ctx, key.Key)
+		r.deleteAgentRow(ctx, ag)
+		return nil, fmt.Errorf("remove serial ports from %q: %w", parentVM, err)
+	}
+	if err := conn.PowerOn(ctx, parentVM); err != nil {
+		_ = t.gw.DeleteKey(ctx, key.Key)
+		r.deleteAgentRow(ctx, ag)
+		return nil, fmt.Errorf("power on parent %q: %w", parentVM, err)
+	}
+	time.Sleep(5 * time.Second)
+
+	// 3. Instant Clone
+	icSpec := vcenter.InstantCloneSpec{
+		ParentVM: parentVM, Name: vmName,
+		ResourcePool: derefString(input.TargetResourcePool),
+		Network:      derefString(input.TargetNetwork),
+	}
+	if len(input.OvfProperties) > 0 {
+		icSpec.ExtraConfig = make(map[string]string, len(input.OvfProperties))
+		for _, p := range input.OvfProperties {
+			icSpec.ExtraConfig[p.Key] = p.Value
+		}
+	}
+	if _, err := conn.InstantClone(ctx, icSpec); err != nil {
+		_ = t.gw.DeleteKey(ctx, key.Key)
+		r.deleteAgentRow(ctx, ag)
+		return nil, fmt.Errorf("instant clone: %w", err)
+	}
+
+	// 4. Inject guestinfo (VM already running)
+	gi := map[string]string{}
+	if enrollToken != "" {
+		gi["agentmgr.enroll_token"] = enrollToken
+		gi["agentmgr.vm_id"] = vmName
+		gi["agentmgr.control_plane_url"] = r.ControlPlaneURL
+	}
+	if defaultConfig != "" {
+		gi["agent.default_config"] = defaultConfig
+	}
+	if len(gi) > 0 {
+		conn.SetGuestinfo(ctx, vmName, gi)
+	}
+
+	// 5. Persist virtual key
+	vk, err := r.Ent.VirtualKey.Create().SetLitellmKey(key.Key).SetUserID(ag.OwnerUserID).SetModels([]string{gateway.DefaultRouterModel}).SetAlias(ag.Name).Save(ctx)
+	if err != nil {
+		r.rollbackDeployCreate(ctx, conn, t.gw, ag, vmName, key.Key)
+		return nil, fmt.Errorf("save vk: %w", err)
+	}
+
+	// 6. Mark running
+	updated, err := r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusRunning).SetVMRef(vmName).SetVirtualKeyID(vk.ID).Save(ctx)
+	if err != nil {
+		r.rollbackDeployCreate(ctx, conn, t.gw, ag, vmName, key.Key)
+		return nil, fmt.Errorf("update agent: %w", err)
+	}
+
+	return &model.DeployedAgent{Agent: toModelAgent(updated), VirtualKeySecret: key.Key, TemplateVersion: toModelOvaVersion(t.version, t.familyID.String()), ResourcePool: toModelResourcePool(t.pool)}, nil
 }

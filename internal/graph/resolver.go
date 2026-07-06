@@ -26,6 +26,7 @@ type VCenterClient interface {
 	ListResourcePools(ctx context.Context) ([]vcenter.ResourcePoolInfo, error)
 	SetGuestinfo(ctx context.Context, vmName string, kv map[string]string) error
 	PowerOn(ctx context.Context, vmName string) error
+	PowerOff(ctx context.Context, vmName string) error
 	Destroy(ctx context.Context, vmName string) error
 	Inventory(ctx context.Context) (vcenter.Inventory, error)
 	CreateSnapshot(ctx context.Context, vmName, name, description string) error
@@ -44,6 +45,13 @@ type VCenterClient interface {
 	// and returns its user-configurable OVF properties for the deploy form.
 	GetTemplateVAppProperties(ctx context.Context, templateName string) ([]vcenter.OVFProperty, error)
 	ListVMs(ctx context.Context) ([]vcenter.VMInfo, error)
+	ReconfigVM(ctx context.Context, vmName string, spec vcenter.ReconfigSpec) error
+	GetVMHardware(ctx context.Context, vmName string) (*vcenter.VMHardware, error)
+	GetVAppProperties(ctx context.Context, vmName string) ([]vcenter.OVFProperty, error)
+	InstantClone(ctx context.Context, spec vcenter.InstantCloneSpec) (*vcenter.VMInfo, error)
+	ListRunningVMs(ctx context.Context) ([]vcenter.VMInfo, error)
+	RemoveSerialPorts(ctx context.Context, vmName string) error
+	CheckInstantCloneCompatible(ctx context.Context, vmName string) error
 	GetVMInfo(ctx context.Context, vmName string) (*vcenter.VMInfo, error)
 	// About returns the vCenter version/build identity (test-connection detail).
 	About() vcenter.AboutInfo

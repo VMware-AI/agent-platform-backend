@@ -32,6 +32,10 @@ var authExemptFields = map[string]string{
 	"revertAgentSnapshot":   "owner/admin in resolver",
 	"requestRotation":       "owner/admin in resolver",
 	"revokeAgentEnrollment": "owner/admin in resolver",
+	"agent":                 "owner/admin in resolver (getOwnedAgent)",
+	"agentVmResources":      "owner/admin in resolver (getOwnedAgent)",
+	"reconfigAgentVM":       "owner/admin in resolver (getOwnedAgent)",
+	"instantCloneParents":   "admin-only (resource pool vCenter query)",
 	// department delegation (canManageDepartment, includes tenant check)
 	"departmentMembers": "canManageDepartment",
 	"addMembership":     "canManageDepartment",

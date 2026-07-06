@@ -73,6 +73,8 @@ type Agent {
   # Run-as credentials for the agent's VM. Currently sources `username` from the
   # owning user (the agent has no separate OS account today); resolver-computed.
   credentials: AgentCredentials @goField(forceResolver: true)
+  # Live VM hardware snapshot from vCenter (null if not deployed).
+  vmResources: AgentVmResources @goField(forceResolver: true)
   createdAt: Time!
   updatedAt: Time!
 }
@@ -83,12 +85,15 @@ type AgentApiKey {
   name: String!
 }
 
-# Run-as credentials surfaced for a deployed agent. Only `username` is exposed;
-# the password is never returned by the API (it is a Sensitive VM secret).
+# VM access credentials for a deployed agent.
 type AgentCredentials {
   username: String!
   # VM IP from vCenter guest info. Empty if not deployed.
   ip: String!
+  # SSH connection string (e.g. "ssh user@ip").
+  sshCommand: String!
+  # Password hint — never returns the actual password.
+  passwordHint: String!
 }
 
 # Connection wrapper for the paged/filtered/sorted agent list (前后端整合契约).
@@ -179,6 +184,7 @@ extend type Query {
   # Single-agent detail. Owner or admin; follows the same three-track visibility as
   # the agents list (admin→all, tenant-admin→their tenant, user→own agents only).
   agent(id: ID!): Agent!
+  agentVmResources(id: ID!): AgentVmResources! @hasRole(any: [admin, user])
 }
 
 extend type Mutation {
@@ -198,4 +204,40 @@ extend type Mutation {
   # kind=knowledge artifact visible to the caller's tenant; the set is replaced wholesale.
   setAgentConfigKnowledge(configId: ID!, knowledgeArtifactIds: [ID!]!): AgentConfig!
     @hasRole(any: [admin, tenant_admin])
+  reconfigAgentVM(
+    agentId: ID!
+    resource: AgentResourceInput
+    network: AgentNetworkInput
+    vAppProperties: [VAppPropertyInput!]
+  ): Agent! @hasRole(any: [admin, user])
 }
+
+# VM hardware resources returned by live vCenter query.
+type AgentVmResources {
+  cpu: Int!
+  memory: Int!
+  disk: Int!
+  networkLabel: String!
+  vAppProperties: [VAppProperty!]!
+}
+
+type VAppProperty {
+  key: String!
+  value: String!
+}
+
+input AgentResourceInput {
+  cpu: Int
+  memory: Int
+  disk: Int
+}
+
+input AgentNetworkInput {
+  portGroup: String
+}
+
+input VAppPropertyInput {
+  key: String!
+  value: String!
+}
+

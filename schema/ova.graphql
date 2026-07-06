@@ -136,4 +136,6 @@ extend type Mutation {
   createOvaTemplateFamily(input: CreateOvaTemplateFamilyInput!): CreateOvaTemplateFamilyPayload! @hasRole(any: [admin])
   # Append a version to an existing family (errors if the family is missing).
   addOvaTemplateVersion(input: AddOvaTemplateVersionInput!): AddOvaTemplateVersionPayload! @hasRole(any: [admin])
+  # Delete a template family and all its versions. Admin only.
+  deleteOvaTemplateFamily(id: ID!): Boolean! @hasRole(any: [admin])
 }

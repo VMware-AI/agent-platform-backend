@@ -54,6 +54,7 @@ type Agent struct {
 	TemplateVersionID *string           `json:"templateVersionId,omitempty"`
 	ResourcePoolID    *string           `json:"resourcePoolId,omitempty"`
 	Credentials       *AgentCredentials `json:"credentials,omitempty"`
+	VMResources       *AgentVMResources `json:"vmResources,omitempty"`
 	CreatedAt         time.Time         `json:"createdAt"`
 	UpdatedAt         time.Time         `json:"updatedAt"`
 	OwnerUserID       uuid.UUID         `json:"-"`
@@ -82,7 +83,10 @@ type AgentConnection struct {
 }
 
 type AgentCredentials struct {
-	Username string `json:"username"`
+	Username     string `json:"username"`
+	IP           string `json:"ip"`
+	SSHCommand   string `json:"sshCommand"`
+	PasswordHint string `json:"passwordHint"`
 }
 
 type AgentFilter struct {
@@ -91,6 +95,16 @@ type AgentFilter struct {
 	NameKeyword  *string      `json:"nameKeyword,omitempty"`
 	KeyKeyword   *string      `json:"keyKeyword,omitempty"`
 	OwnerKeyword *string      `json:"ownerKeyword,omitempty"`
+}
+
+type AgentNetworkInput struct {
+	PortGroup *string `json:"portGroup,omitempty"`
+}
+
+type AgentResourceInput struct {
+	CPU    *int `json:"cpu,omitempty"`
+	Memory *int `json:"memory,omitempty"`
+	Disk   *int `json:"disk,omitempty"`
 }
 
 type AgentSnapshot struct {
@@ -134,6 +148,14 @@ type AgentUsageRow struct {
 	TotalTokens  int     `json:"totalTokens"`
 	Requests     int     `json:"requests"`
 	Cost         float64 `json:"cost"`
+}
+
+type AgentVMResources struct {
+	CPU            int            `json:"cpu"`
+	Memory         int            `json:"memory"`
+	Disk           int            `json:"disk"`
+	NetworkLabel   string         `json:"networkLabel"`
+	VAppProperties []VAppProperty `json:"vAppProperties"`
 }
 
 type Artifact struct {
@@ -374,6 +396,8 @@ type DeployAgentInput struct {
 	KeySource          KeySource          `json:"keySource"`
 	ExistingKeyID      *string            `json:"existingKeyId,omitempty"`
 	Notes              *string            `json:"notes,omitempty"`
+	CloneMode          CloneMode          `json:"cloneMode"`
+	InstantCloneParent *string            `json:"instantCloneParent,omitempty"`
 }
 
 type DeployedAgent struct {
@@ -1014,6 +1038,16 @@ type UserSort struct {
 	Direction SortDirection `json:"direction"`
 }
 
+type VAppProperty struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type VAppPropertyInput struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
 type VMTemplate struct {
 	Name string `json:"name"`
 	UUID string `json:"uuid"`
@@ -1278,6 +1312,61 @@ func (e *ArtifactKind) UnmarshalJSON(b []byte) error {
 }
 
 func (e ArtifactKind) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type CloneMode string
+
+const (
+	CloneModeFull    CloneMode = "full"
+	CloneModeInstant CloneMode = "instant"
+)
+
+var AllCloneMode = []CloneMode{
+	CloneModeFull,
+	CloneModeInstant,
+}
+
+func (e CloneMode) IsValid() bool {
+	switch e {
+	case CloneModeFull, CloneModeInstant:
+		return true
+	}
+	return false
+}
+
+func (e CloneMode) String() string {
+	return string(e)
+}
+
+func (e *CloneMode) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = CloneMode(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid CloneMode", str)
+	}
+	return nil
+}
+
+func (e CloneMode) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *CloneMode) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e CloneMode) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

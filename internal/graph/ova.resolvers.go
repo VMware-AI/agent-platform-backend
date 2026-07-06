@@ -7,8 +7,10 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
+	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplatefamily"
 	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplateversion"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
@@ -280,3 +282,37 @@ func (r *Resolver) OvaTemplateVersion() OvaTemplateVersionResolver {
 
 type ovaTemplateFamilyResolver struct{ *Resolver }
 type ovaTemplateVersionResolver struct{ *Resolver }
+
+// DeleteOvaTemplateFamily deletes a template family and all its versions.
+// Refuses if any deployed agent still references this template.
+func (r *mutationResolver) DeleteOvaTemplateFamily(ctx context.Context, id string) (bool, error) {
+	fid, err := uuid.Parse(id)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid id")
+	}
+	_, err = r.Ent.OvaTemplateFamily.Get(ctx, fid)
+	if err != nil {
+		return false, fmt.Errorf("template not found: %w", err)
+	}
+	count, err := r.Ent.Agent.Query().Where(agent.TemplateFamilyID(fid)).Count(ctx)
+	if err != nil {
+		return false, fmt.Errorf("check agents: %w", err)
+	}
+	if count > 0 {
+		return false, gqlerror.Errorf("cannot delete: %d agent(s) still reference this template", count)
+	}
+	tx, err := r.Ent.Tx(ctx)
+	if err != nil {
+		return false, fmt.Errorf("start tx: %w", err)
+	}
+	if _, err := tx.OvaTemplateVersion.Delete().Where(ovatemplateversion.HasFamilyWith(ovatemplatefamily.ID(fid))).Exec(ctx); err != nil {
+		return false, rollback(tx, fmt.Errorf("delete versions: %w", err))
+	}
+	if err := tx.OvaTemplateFamily.DeleteOneID(fid).Exec(ctx); err != nil {
+		return false, rollback(tx, fmt.Errorf("delete family: %w", err))
+	}
+	if err := tx.Commit(); err != nil {
+		return false, fmt.Errorf("commit: %w", err)
+	}
+	return true, nil
+}
