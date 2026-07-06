@@ -11,10 +11,11 @@ All operations are served from a single endpoint: **`POST /query`**.
 | [Agents, Templates & Snapshots](./agents.md) | Agent catalog/templates, agent instances, deploy from OVA, snapshots, lifecycle |
 | [Agent Config, Artifacts, Skills & Images](./agent-config.md) | Agent configs, content-library artifacts, skills, container images |
 | [Model Gateway & Routing](./model-gateway.md) | Model gateways, gateway connections, upstreams, model routes, difficulty router tiers |
+| [Provider Model (Upstream LLM)](./provider-model.md) |  |
 | [Virtual Keys & Rate Limits](./virtual-keys.md) | Per-user LiteLLM virtual keys and rate-limit policies |
 | [Observability (Request Logs, Audit Logs, Metrics)](./observability.md) | Request logs, audit logs, request metrics, rate-limit policies |
 | [Metering](./metering.md) | Token usage and cost aggregation (metering center) |
-| [Platform (Users, Roles, Permissions, Departments, Settings)](./platform.md) | Users, built-in roles, custom roles, permissions, departments, memberships |
+| [Platform (Users, Roles, Permissions, Departments)](./platform.md) | Users, built-in roles, custom roles, permissions, departments, memberships |
 | [Resource Pools & vSphere](./resource-pools.md) | vCenter resource pools and vSphere placement pools |
 | [OVA Marketplace](./ova-marketplace.md) | OVA template families and versions (agent marketplace catalog) |
 | [Dashboard](./dashboard.md) | Console overview: stat cards, recent agents, system notices |
