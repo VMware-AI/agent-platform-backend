@@ -1,7 +1,9 @@
 package graph
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
@@ -9,6 +11,8 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/catalog"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
+	"github.com/google/uuid"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 // toModelUser maps an ent.User to the GraphQL model (omits password_hash).
@@ -111,39 +115,120 @@ func poolSyncState(p *ent.ResourcePool) model.ResourcePoolSyncState {
 	}
 }
 
-// toModelVirtualKey maps an ent.VirtualKey to the GraphQL model (omits the secret).
-func toModelVirtualKey(k *ent.VirtualKey) *model.VirtualKey {
-	m := &model.VirtualKey{
-		ID:        k.ID.String(),
-		UserID:    k.UserID.String(),
-		Models:    k.Models,
-		Status:    model.VirtualKeyStatus(string(k.Status)),
-		CreatedAt: k.CreatedAt,
+// formatRemainingDuration returns a human-friendly "remaining lifetime" string
+// for display on the console (e.g. "30d", "12h", ""). Pure projection —
+// not persisted. Empty when expiresAt is nil.
+func formatRemainingDuration(expiresAt *time.Time) string {
+	if expiresAt == nil {
+		return ""
 	}
-	if k.Models == nil {
-		m.Models = []string{}
+	d := time.Until(*expiresAt)
+	if d <= 0 {
+		return "expired"
 	}
-	if k.Alias != "" {
-		a := k.Alias
-		m.Alias = &a
+	days := int(d.Hours() / 24)
+	if days >= 1 {
+		return fmt.Sprintf("%dd", days)
 	}
-	if k.AgentID != nil {
-		a := k.AgentID.String()
-		m.AgentID = &a
+	hours := int(d.Hours())
+	if hours >= 1 {
+		return fmt.Sprintf("%dh", hours)
 	}
-	if k.TeamID != "" {
-		tid := k.TeamID
-		m.TeamID = &tid
+	return fmt.Sprintf("%dm", int(d.Minutes()))
+}
+
+// modelsOrEmpty / tagsOrEmpty / routesOrEmpty: nil → []string{} so the
+// GraphQL non-null array contract holds even when the ent column is empty.
+func modelsOrEmpty(s []string) []string {
+	if s == nil {
+		return []string{}
 	}
-	if k.MaxBudget != 0 {
-		b := k.MaxBudget
-		m.MaxBudget = &b
+	return s
+}
+
+func tagsOrEmpty(s []string) []string {
+	if s == nil {
+		return []string{}
 	}
-	if k.ExpiresAt != nil {
-		t := *k.ExpiresAt
-		m.ExpiresAt = &t
+	return s
+}
+
+func routesOrEmpty(s []string) []string {
+	if s == nil {
+		return []string{}
 	}
-	return m
+	return s
+}
+
+// toModelVirtualKey maps an ent.VirtualKey to the GraphQL model.
+//
+// Signature is (ctx, r, k) — NOT (k) — because the VirtualKey.modelGateway
+// nested object requires a database lookup. The lookup + nested model
+// construction happens in this mapper; `r` is the resolver (for Ent
+// access) and `ctx` is the request context.
+//
+// The ModelGateway nested object is set via `r.toModelGateway` from
+// gateway_facade.go (intra-package, since both live in `package graph`).
+// This is the single source of truth for the ent→GraphQL ModelGateway
+// field mapping. See Task 11 for the rename to buildModelGatewayFromConn.
+func toModelVirtualKey(ctx context.Context, r *Resolver, k *ent.VirtualKey) (*model.VirtualKey, error) {
+	mg, err := lookupModelGateway(ctx, r, k.ModelGatewayID)
+	if err != nil {
+		return nil, err
+	}
+	return &model.VirtualKey{
+		ID:             k.ID.String(),
+		Name:           k.Name,
+		MaskedKey:      k.MaskedKey,
+		OrganizationID: k.OrganizationID,
+		ModelGateway:   r.toModelGateway(mg),
+		AgentID:        uuidOrNil(k.AgentID),
+		Models:         modelsOrEmpty(k.Models),
+		Tags:           tagsOrEmpty(k.Tags),
+		AllowedRoutes:  routesOrEmpty(k.AllowedRoutes),
+		Blocked:        k.Blocked,
+		KeyType:        k.KeyType,
+		AutoRotate:     k.AutoRotate,
+		Spend:          float64(k.Spend),
+		Status:         model.VirtualKeyStatus(string(k.Status)),
+		CreatedAt:      k.CreatedAt,
+		UpdatedAt:      k.UpdatedAt,
+		Duration:       formatRemainingDuration(k.ExpiresAt),
+		// Optional/nullable pointers via existing ent helpers:
+		MaxParallelRequests: k.MaxParallelRequests,
+		TpmLimit:            k.TpmLimit,
+		RpmLimit:            k.RpmLimit,
+		RpmLimitType:        k.RpmLimitType,
+		TpmLimitType:        k.TpmLimitType,
+		BudgetDuration:      k.BudgetDuration,
+		ExpiresAt:           k.ExpiresAt,
+		RotationInterval:    k.RotationInterval,
+		LastActiveAt:        k.LastActiveAt,
+		MaxBudget:           k.MaxBudget,
+	}, nil
+}
+
+// lookupModelGateway fetches the GatewayConnection that issued this key.
+// NotFound is converted to a gqlerror so callers can surface a clean 404.
+func lookupModelGateway(ctx context.Context, r *Resolver, id uuid.UUID) (*ent.GatewayConnection, error) {
+	c, err := r.Ent.GatewayConnection.Get(ctx, id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, gqlerror.Errorf("model gateway not found")
+		}
+		return nil, err
+	}
+	return c, nil
+}
+
+// uuidOrNil returns the UUID as a string, or nil if the pointer is nil.
+// Used to map ent nullable FK pointers to GraphQL optional ID fields.
+func uuidOrNil(id *uuid.UUID) *string {
+	if id == nil {
+		return nil
+	}
+	s := id.String()
+	return &s
 }
 
 // toModelAgentTemplate maps a catalog entry to its GraphQL model, resolving the
@@ -322,22 +407,6 @@ func toModelRequestLog(l *ent.RequestLog) *model.RequestLog {
 	return m
 }
 
-func toModelUpstream(u *ent.Upstream) *model.Upstream {
-	m := &model.Upstream{
-		ID:        u.ID.String(),
-		Name:      u.Name,
-		Provider:  model.UpstreamProvider(string(u.Provider)),
-		Model:     u.Model,
-		Enabled:   u.Enabled,
-		CreatedAt: u.CreatedAt,
-	}
-	if u.APIBase != "" {
-		b := u.APIBase
-		m.APIBase = &b
-	}
-	return m
-}
-
 func toModelModelRoute(r *ent.ModelRoute) *model.ModelRoute {
 	ups := r.Upstreams
 	if ups == nil {
@@ -357,19 +426,10 @@ func toModelModelRoute(r *ent.ModelRoute) *model.ModelRoute {
 		CreatedAt:       r.CreatedAt,
 		UpdatedAt:       r.UpdatedAt,
 	}
-	if r.GatewayConnectionID != nil {
-		g := r.GatewayConnectionID.String()
-		m.BackendGatewayID = &g
+	if r.GatewayConnectionID != uuid.Nil {
+		m.BackendGatewayID = r.GatewayConnectionID.String()
 	}
 	return m
-}
-
-func toModelRouterTier(t *ent.RouterTier) *model.RouterTier {
-	return &model.RouterTier{
-		ID:         t.ID.String(),
-		Tier:       model.RouterTierLevel(string(t.Tier)),
-		ModelAlias: t.ModelAlias,
-	}
 }
 
 func toModelArtifact(a *ent.Artifact) *model.Artifact {
