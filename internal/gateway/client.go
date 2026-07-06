@@ -136,6 +136,10 @@ type Client interface {
 	// RegenerateKey rotates a key's secret, returning the new one (POST
 	// /key/{key}/regenerate). The governance row/binding is unchanged. LLD-04 §3.
 	RegenerateKey(ctx context.Context, key string) (*KeyResponse, error)
+	// ListAvailableModels enumerates the models the gateway currently
+	// advertises (GET /model/list). Used by gatewayAvailableModels query
+	// and by IssueVirtualKey's pre-mint cross-check. Real-time; no cache.
+	ListAvailableModels(ctx context.Context) ([]string, error)
 	CreateTeam(ctx context.Context, req TeamRequest) (*TeamResponse, error)
 	DeleteTeam(ctx context.Context, teamID string) error
 	// ListKeys enumerates the keys the gateway currently holds, for
@@ -166,14 +170,24 @@ type TeamInfo struct {
 // GenerateKeyRequest mints a per-user virtual key (LLD-04 §3). Budget/rate
 // limits are set HERE (per-key), never globally (research §2.3).
 type GenerateKeyRequest struct {
-	UserID         string            `json:"user_id,omitempty"`
-	TeamID         string            `json:"team_id,omitempty"`
-	Models         []string          `json:"models,omitempty"`
-	MaxBudget      *float64          `json:"max_budget,omitempty"`
-	BudgetDuration string            `json:"budget_duration,omitempty"`
-	RPMLimit       *int              `json:"rpm_limit,omitempty"`
-	TPMLimit       *int              `json:"tpm_limit,omitempty"`
-	Metadata       map[string]string `json:"metadata,omitempty"`
+	UserID              string            `json:"user_id,omitempty"`
+	TeamID              string            `json:"team_id,omitempty"`
+	Models              []string          `json:"models,omitempty"`
+	MaxBudget           *float64          `json:"max_budget,omitempty"`
+	BudgetDuration      string            `json:"budget_duration,omitempty"`
+	RPMLimit            *int              `json:"rpm_limit,omitempty"`
+	TPMLimit            *int              `json:"tpm_limit,omitempty"`
+	RPMLimitType        string            `json:"rpm_limit_type,omitempty"`
+	TPMLimitType        string            `json:"tpm_limit_type,omitempty"`
+	MaxParallelRequests *int              `json:"max_parallel_requests,omitempty"`
+	AllowedRoutes       []string          `json:"allowed_routes,omitempty"`
+	Tags                []string          `json:"tags,omitempty"`
+	Blocked             *bool             `json:"blocked,omitempty"`
+	KeyType             string            `json:"key_type,omitempty"`
+	AutoRotate          *bool             `json:"auto_rotate,omitempty"`
+	RotationInterval    string            `json:"rotation_interval,omitempty"`
+	OrganizationID      string            `json:"organization_id,omitempty"`
+	Metadata            map[string]string `json:"metadata,omitempty"`
 }
 
 // KeyResponse is the result of generating/regenerating a key.
@@ -311,6 +325,26 @@ func (c *HTTPClient) ListTeams(ctx context.Context) ([]TeamInfo, error) {
 		teams = append(teams, TeamInfo{TeamID: t.TeamID, Alias: t.TeamAlias})
 	}
 	return teams, nil
+}
+
+// ListAvailableModels enumerates the gateway's model catalog via
+// GET /model/list. LiteLLM returns a top-level array of objects whose
+// `id` field is the model name used by /key/generate's `models` param.
+func (c *HTTPClient) ListAvailableModels(ctx context.Context) ([]string, error) {
+	var raw []struct {
+		ID string `json:"id"`
+	}
+	if err := c.get(ctx, "/model/list", &raw); err != nil {
+		return nil, err
+	}
+	models := make([]string, 0, len(raw))
+	for _, m := range raw {
+		if m.ID == "" {
+			continue // unidentifiable entry
+		}
+		models = append(models, m.ID)
+	}
+	return models, nil
 }
 
 // --- Low-level HTTP ---
@@ -484,6 +518,87 @@ func (c *HTTPClient) postOnce(ctx context.Context, path string, body, out any) (
 		if err := json.Unmarshal(data, out); err != nil {
 			return false, &Error{
 				Method: http.MethodPost, Path: path,
+				Cause: fmt.Errorf("%w: %v", ErrMalformedResponse, err),
+			}
+		}
+	}
+	return false, nil
+}
+
+// patch sends a PATCH with the configured AuthFunc and decodes the JSON
+// response. It mirrors c.post — same retry policy (POSTRetryOn5xx gate), same
+// breaker, same redact-on-error — but the verb differs because PATCH is the
+// idiomatic partial-update verb on LiteLLM's /model/{id}/update. Mutations
+// are still exactly-once by default (LLD-04 §2), so the default
+// POSTMaxAttempts=1 carries over.
+func (c *HTTPClient) patch(ctx context.Context, path string, body, out any) error {
+	attempts := c.policy.POSTMaxAttempts
+	if attempts < 1 {
+		attempts = 1
+	}
+	var lastErr error
+	for attempt := 1; attempt <= attempts; attempt++ {
+		if attempt > 1 {
+			if err := sleepCtx(ctx, c.policy.RetryBackoff*time.Duration(attempt-1)); err != nil {
+				return err
+			}
+		}
+		retryable, err := c.patchOnce(ctx, path, body, out)
+		if err == nil {
+			return nil
+		}
+		lastErr = err
+		if !retryable {
+			return err
+		}
+	}
+	return lastErr
+}
+
+func (c *HTTPClient) patchOnce(ctx context.Context, path string, body, out any) (retryable bool, err error) {
+	if !c.breaker.allow() {
+		return false, fmt.Errorf("%w: %s", ErrUnavailable, path)
+	}
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return false, &Error{Method: http.MethodPatch, Path: path, Cause: fmt.Errorf("marshal: %w", err)}
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, c.baseURL+path, bytes.NewReader(buf))
+	if err != nil {
+		return false, &Error{Method: http.MethodPatch, Path: path, Cause: err}
+	}
+	c.auth(req)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		c.breaker.record(ErrTransport)
+		slog.WarnContext(ctx, "gateway transport error",
+			"base_url", c.baseURL, "path", path, "err", err)
+		return true, &Error{Method: http.MethodPatch, Path: path, Cause: fmt.Errorf("%w: %v", ErrTransport, err)}
+	}
+	defer resp.Body.Close()
+
+	data, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body := redactSecrets(string(data))
+		slog.WarnContext(ctx, "gateway request failed",
+			"base_url", c.baseURL, "path", path, "status", resp.StatusCode, "body", body)
+		gwErr := &Error{Method: http.MethodPatch, Path: path, Status: resp.StatusCode, Body: body}
+		if sentinel := sentinelFromStatus(resp.StatusCode); sentinel != nil {
+			if resp.StatusCode >= 500 && c.policy.POSTRetryOn5xx {
+				c.breaker.record(sentinel)
+				return true, fmt.Errorf("%w: %w", gwErr, sentinel)
+			}
+			return false, fmt.Errorf("%w: %w", gwErr, sentinel)
+		}
+		return false, gwErr
+	}
+	c.breaker.record(nil)
+	if out != nil {
+		if err := json.Unmarshal(data, out); err != nil {
+			return false, &Error{
+				Method: http.MethodPatch, Path: path,
 				Cause: fmt.Errorf("%w: %v", ErrMalformedResponse, err),
 			}
 		}
