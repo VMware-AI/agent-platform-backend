@@ -43,7 +43,7 @@ func (r *agentResolver) APIKey(ctx context.Context, obj *model.Agent) (*model.Ag
 	if err != nil || vk == nil {
 		return nil, err
 	}
-	return &model.AgentAPIKey{ID: vk.ID.String(), Name: vk.Alias}, nil
+	return &model.AgentAPIKey{ID: vk.ID.String(), Name: vk.Name}, nil
 }
 
 // Owner resolves the agent's owner User, or nil if the owning user is gone. The
@@ -433,7 +433,7 @@ func (r *queryResolver) Agents(ctx context.Context, filter *model.AgentFilter, p
 			q = q.Where(agent.OwnerUserIDIn(ids...)) // empty → matches nothing (fail-closed)
 		}
 		if v := derefString(filter.KeyKeyword); v != "" {
-			ids, err := r.Ent.VirtualKey.Query().Where(virtualkey.AliasContainsFold(v)).IDs(ctx)
+			ids, err := r.Ent.VirtualKey.Query().Where(virtualkey.NameContainsFold(v)).IDs(ctx)
 			if err != nil {
 				return nil, err
 			}

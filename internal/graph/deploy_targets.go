@@ -73,9 +73,13 @@ func (r *mutationResolver) resolveDeployTargets(ctx context.Context, input model
 	if deptID != nil {
 		deployTeamID = deptID.String()
 	}
-	gw, gwURL, gwConn := r.deployGateway(ctx, deptID)
+	gw, gwConn := r.deployGateway(ctx, deptID)
 	if gw == nil {
 		return nil, gqlerror.Errorf("deploy is not configured (gateway required)")
+	}
+	gwURL := ""
+	if gwConn != nil {
+		gwURL = gwConn.Endpoint
 	}
 	cu := auth.FromContext(ctx)
 	ownerID, err := uuid.Parse(cu.ID)
@@ -128,7 +132,7 @@ func (r *mutationResolver) resolveDeployTargets(ctx context.Context, input model
 	if pool.SecretRef == "" {
 		return nil, gqlerror.Errorf("resource pool has no secret_ref")
 	}
-	cred, err := r.Secrets.Resolve(ctx, pool.SecretRef)
+	cred, err := r.resolveSecret(ctx, pool.SecretRef, secretPurposeVCenterConnect)
 	if err != nil {
 		return nil, fmt.Errorf("resolve pool credentials: %w", err)
 	}
@@ -166,7 +170,7 @@ func (r *mutationResolver) devDeployAgent(ctx context.Context, ag *ent.Agent, t 
 	key, err := t.gw.GenerateKey(ctx, gateway.GenerateKeyRequest{
 		UserID:   ag.OwnerUserID.String(),
 		TeamID:   t.deployTeamID,
-		Models:   []string{gateway.DefaultRouterModel},
+		Models:   nil,
 		Metadata: map[string]string{"agent": ag.Name},
 	})
 	if err != nil {
@@ -176,11 +180,14 @@ func (r *mutationResolver) devDeployAgent(ctx context.Context, ag *ent.Agent, t 
 
 	vkCreate := r.Ent.VirtualKey.Create().
 		SetLitellmKey(key.Key).
-		SetUserID(ag.OwnerUserID).
-		SetModels([]string{gateway.DefaultRouterModel}).
-		SetAlias(ag.Name)
+		SetModelGatewayID(t.gwConn.ID).
+		SetModels(nil).
+		SetName(ag.Name).
+		SetOrganizationID(ag.TenantID.String())
 	if t.deployTeamID != "" {
-		vkCreate.SetTeamID(t.deployTeamID)
+		// No-op after per-agent-per-org refactor: organizationId is required,
+		// but the legacy teamID context is not needed in the deploy path.
+		_ = t.deployTeamID
 	}
 	if key.Token != "" {
 		vkCreate.SetLitellmToken(key.Token)

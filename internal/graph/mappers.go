@@ -193,18 +193,18 @@ func toModelVirtualKey(ctx context.Context, r *Resolver, k *ent.VirtualKey) (*mo
 		Status:         model.VirtualKeyStatus(string(k.Status)),
 		CreatedAt:      k.CreatedAt,
 		UpdatedAt:      k.UpdatedAt,
-		Duration:       formatRemainingDuration(k.ExpiresAt),
+		Duration:       stringPtr(formatRemainingDuration(k.ExpiresAt)),
 		// Optional/nullable pointers via existing ent helpers:
-		MaxParallelRequests: k.MaxParallelRequests,
-		TpmLimit:            k.TpmLimit,
-		RpmLimit:            k.RpmLimit,
-		RpmLimitType:        k.RpmLimitType,
-		TpmLimitType:        k.TpmLimitType,
-		BudgetDuration:      k.BudgetDuration,
+		MaxParallelRequests: intPtr(k.MaxParallelRequests),
+		TpmLimit:            intPtr(k.TpmLimit),
+		RpmLimit:            intPtr(k.RpmLimit),
+		RpmLimitType:        strPtr(k.RpmLimitType),
+		TpmLimitType:        strPtr(k.TpmLimitType),
+		BudgetDuration:      strPtr(k.BudgetDuration),
 		ExpiresAt:           k.ExpiresAt,
-		RotationInterval:    k.RotationInterval,
+		RotationInterval:    strPtr(k.RotationInterval),
 		LastActiveAt:        k.LastActiveAt,
-		MaxBudget:           k.MaxBudget,
+		MaxBudget:           float64Ptr(k.MaxBudget),
 	}, nil
 }
 
@@ -229,6 +229,34 @@ func uuidOrNil(id *uuid.UUID) *string {
 	}
 	s := id.String()
 	return &s
+}
+
+func intPtr(v int) *int {
+	if v == 0 {
+		return nil
+	}
+	return &v
+}
+
+func strPtr(v string) *string {
+	if v == "" {
+		return nil
+	}
+	return &v
+}
+
+func float64Ptr(v float64) *float64 {
+	if v == 0 {
+		return nil
+	}
+	return &v
+}
+
+func stringPtrForMapper(v string) *string {
+	if v == "" {
+		return nil
+	}
+	return &v
 }
 
 // toModelAgentTemplate maps a catalog entry to its GraphQL model, resolving the

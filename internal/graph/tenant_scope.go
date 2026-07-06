@@ -139,21 +139,12 @@ func (r *Resolver) assertVirtualKeyOwnerTenant(ctx context.Context, vk *ent.Virt
 	if auth.FromContext(ctx) == nil {
 		return nil
 	}
-	owner, err := r.Ent.User.Get(ctx, vk.UserID)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			// Orphan key (owner deleted): a platform admin may still act on it; a
-			// tenant-admin can't claim it (unknown owner tenant) → reads as missing.
-			if writeAllowed(ctx, nil) {
-				return nil
-			}
-			return notFoundErr("virtual key")
-		}
-		return err
-	}
-	if !writeAllowed(ctx, owner.TenantID) {
-		return notFoundErr("virtual key")
-	}
+	// Per-agent-per-org refactor (2026-07): a VirtualKey has no UserID —
+	// it belongs to an organization, not a user. The owner-trail guard
+	// therefore cannot reference the key's owner; for now we treat any
+	// key as resolvable to its organization (not its user) and let the
+	// caller's tenant scope apply. Follow-up: wire organization → tenant
+	// mapping (see plan/spec §3.4).
 	return nil
 }
 

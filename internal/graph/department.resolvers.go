@@ -12,7 +12,6 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/department"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
-	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
@@ -109,22 +108,10 @@ func (r *mutationResolver) DeleteDepartment(ctx context.Context, id string) (boo
 	} else if n > 0 {
 		return false, gqlerror.Errorf("department has %d member(s); remove them before deleting", n)
 	}
-	// Don't orphan active billable keys. A key minted under this department's
-	// litellm team stores team_id = the department id and is revoked by
-	// re-resolving the department's gateway at revoke time (deptIDFromTeam →
-	// resolveDeptGateway). Once the department row is gone, that routing falls back
-	// to the platform default gateway, so a key on this department's (possibly
-	// NON-default) gateway can never be revoked — a permanent ungoverned billable
-	// key (the reconciler only sweeps the default gateway, OQ-5). Refuse while any
-	// non-revoked key still references this team; recycle/revoke those agents first
-	// (that revokes on the correct gateway while the department still resolves).
-	if n, err := r.Ent.VirtualKey.Query().
-		Where(virtualkey.TeamID(did.String()), virtualkey.StatusNEQ(virtualkey.StatusRevoked)).
-		Count(ctx); err != nil {
-		return false, err
-	} else if n > 0 {
-		return false, gqlerror.Errorf("department has %d active virtual key(s); recycle or revoke those agents before deleting", n)
-	}
+	// Key check removed per per-agent-per-org refactor (spec §4).
+	// VirtualKey no longer carries team_id; gateway-facade's
+	// DeleteModelGateway has its own non-revoked-key safety check on
+	// model_gateway_id.
 	if gw := r.gatewayKeyClient(ctx, &did); gw != nil && dept.LitellmTeamID != "" {
 		if err := gw.DeleteTeam(ctx, dept.LitellmTeamID); err != nil {
 			return false, fmt.Errorf("delete litellm team: %w", err)
