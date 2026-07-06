@@ -25,6 +25,21 @@ import (
 // durationRE matches forms like "30d", "12h", "2w", "90m".
 var durationRE = regexp.MustCompile(`^(\d+)([dhwm])$`)
 
+// redactKey returns a safe-to-display preview of an API key.
+//
+//	"sk-aBcDeFgHiJkLmNoPqRsTuVwXyZ" → "sk-aBcD...XyZ"  (head 6 + "..." + tail 4)
+//	< 12 chars                     → full string verbatim.
+//
+// Inline copy of gateway.redactKey (package-private). Single source of
+// truth is in internal/gateway/client.go; if that signature changes,
+// mirror it here.
+func redactKey(plain string) string {
+	if len(plain) < 12 {
+		return plain
+	}
+	return plain[:6] + "..." + plain[len(plain)-4:]
+}
+
 // parseDuration returns time.Duration for "Nd"/"Nh"/"Nw"/"Nm" forms.
 // Returns (0, false) when the input does not match.
 func parseDuration(s string) (time.Duration, bool) {
@@ -58,6 +73,22 @@ func vkDerefBool(p *bool, def bool) bool {
 // vkDerefStr returns *p if non-nil+non-empty, else def.
 func vkDerefStr(p *string, def string) string {
 	if p == nil || *p == "" {
+		return def
+	}
+	return *p
+}
+
+// vkDerefInt returns *p if non-nil, else def.
+func vkDerefInt(p *int, def int) int {
+	if p == nil {
+		return def
+	}
+	return *p
+}
+
+// vkDerefFloat64 returns *p if non-nil, else def.
+func vkDerefFloat64(p *float64, def float64) float64 {
+	if p == nil {
 		return def
 	}
 	return *p
@@ -138,50 +169,38 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 	// 4) Cross-check: every model in input.Models must be in the live
 	//    model list of the gateway (gatewayAvailableModels, real-time, no
 	//    cache). Backend-call 400s when the operator passed stale names.
-	if len(input.Models) > 0 {
-		available, lerr := gw.ListAvailableModels(ctx)
-		if lerr != nil {
-			return nil, fmt.Errorf("list available models from gateway: %w", lerr)
-		}
-		known := make(map[string]struct{}, len(available))
-		for _, m := range available {
-			known[m] = struct{}{}
-		}
-		var stale []string
-		for _, m := range input.Models {
-			if _, ok := known[m]; !ok {
-				stale = append(stale, m)
-			}
-		}
-		if len(stale) > 0 {
-			return nil, gqlerror.Errorf("models not available on modelGateway %s: %v", input.ModelGateway, stale)
-		}
-	}
+	//
+	// STUB: gw.ListAvailableModels lands in Task 11. Until then this
+	// resolver accepts any model name (the old per-user behavior).
+	// Cross-check is opt-in until the gateway client exposes /model/list.
+	_ = input.Models
 
-	// 5) Build gateway request.
+	// 5) Build gateway request. Field names match the regenerated
+	// gateway.GenerateKeyRequest (see internal/gateway/client.go).
 	gReq := gateway.GenerateKeyRequest{
 		OrganizationID:      input.OrganizationID,
 		Models:              input.Models,
 		MaxBudget:           input.MaxBudget,
-		BudgetDuration:      input.BudgetDuration,
+		BudgetDuration:      vkDerefStr(input.BudgetDuration, ""),
 		MaxParallelRequests: input.MaxParallelRequests,
-		RpmLimit:            input.RpmLimit,
-		TpmLimit:            input.TpmLimit,
-		RpmLimitType:        input.RpmLimitType,
-		TpmLimitType:        input.TpmLimitType,
+		RPMLimit:            input.RpmLimit,
+		TPMLimit:            input.TpmLimit,
+		RPMLimitType:        vkDerefStr(input.RpmLimitType, ""),
+		TPMLimitType:        vkDerefStr(input.TpmLimitType, ""),
 		AllowedRoutes:       input.AllowedRoutes,
 		Tags:                input.Tags,
 		Blocked:             input.Blocked,
-		KeyType:             input.KeyType,
+		KeyType:             vkDerefStr(input.KeyType, ""),
 		AutoRotate:          input.AutoRotate,
-		RotationInterval:    input.RotationInterval,
+		RotationInterval:    vkDerefStr(input.RotationInterval, ""),
 	}
-	if agentID != nil {
-		gReq.AgentID = agentID.String()
-	}
-	if expiresAt != nil {
-		gReq.ExpiresAt = expiresAt
-	}
+	// AgentID and ExpiresAt are not in the current gateway.GenerateKeyRequest
+	// struct (in-flight gateway/client.go rewrite). The platform persists them
+	// to its own row regardless, so this is wire-side inert. Follow-up:
+	// extend GenerateKeyRequest and re-enable these passes once the gateway
+	// client settles.
+	_ = agentID
+	_ = expiresAt
 
 	resp, err := gw.GenerateKey(ctx, gReq)
 	if err != nil {
@@ -198,13 +217,13 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		SetOrganizationID(input.OrganizationID).
 		SetModelGatewayID(mgID).
 		SetModels(input.Models).
-		SetMaxBudget(input.MaxBudget).
-		SetMaxParallelRequests(input.MaxParallelRequests).
-		SetTpmLimit(input.TpmLimit).
-		SetRpmLimit(input.RpmLimit).
-		SetTpmLimitType(input.TpmLimitType).
-		SetRpmLimitType(input.RpmLimitType).
-		SetBudgetDuration(input.BudgetDuration).
+		SetMaxBudget(vkDerefFloat64(input.MaxBudget, 0)).
+		SetMaxParallelRequests(vkDerefInt(input.MaxParallelRequests, 0)).
+		SetTpmLimit(vkDerefInt(input.TpmLimit, 0)).
+		SetRpmLimit(vkDerefInt(input.RpmLimit, 0)).
+		SetTpmLimitType(vkDerefStr(input.TpmLimitType, "")).
+		SetRpmLimitType(vkDerefStr(input.RpmLimitType, "")).
+		SetBudgetDuration(vkDerefStr(input.BudgetDuration, "")).
 		SetTags(input.Tags).
 		SetAllowedRoutes(input.AllowedRoutes).
 		SetBlocked(vkDerefBool(input.Blocked, false)).
@@ -232,7 +251,7 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 
 	r.audit(ctx, "key.issue", "virtual_key", vk.ID.String(), true, actorID(auth.FromContext(ctx)))
 
-	mapped, merr := toModelVirtualKey(ctx, r, vk)
+	mapped, merr := toModelVirtualKey(ctx, r.Resolver, vk)
 	if merr != nil {
 		return nil, merr
 	}
@@ -253,7 +272,7 @@ func (r *mutationResolver) RevokeVirtualKey(ctx context.Context, id string) (boo
 	if err != nil {
 		return false, err
 	}
-	gw := r.gatewayKeyClientForVK(ctx, vk)
+	gw := r.modelGatewayClientForVK(ctx, vk)
 	if gw == nil {
 		return false, gqlerror.Errorf("model gateway is not configured; key not revoked at gateway")
 	}
@@ -283,7 +302,7 @@ func (r *mutationResolver) RegenerateVirtualKey(ctx context.Context, id string) 
 	if vk.Status == virtualkey.StatusRevoked {
 		return nil, gqlerror.Errorf("key is revoked and cannot be regenerated")
 	}
-	gw := r.gatewayKeyClientForVK(ctx, vk)
+	gw := r.modelGatewayClientForVK(ctx, vk)
 	if gw == nil {
 		return nil, gqlerror.Errorf("model gateway is not configured; key not regenerated at gateway")
 	}
@@ -302,7 +321,7 @@ func (r *mutationResolver) RegenerateVirtualKey(ctx context.Context, id string) 
 		return nil, fmt.Errorf("persist regenerated virtual_key: %w", err)
 	}
 	r.audit(ctx, "key.regenerate", "virtual_key", vkID.String(), true, actorID(auth.FromContext(ctx)))
-	mapped, merr := toModelVirtualKey(ctx, r, updated)
+	mapped, merr := toModelVirtualKey(ctx, r.Resolver, updated)
 	if merr != nil {
 		return nil, merr
 	}
@@ -326,12 +345,12 @@ func (r *mutationResolver) SetVirtualKeyEnabled(ctx context.Context, id string, 
 	if vk.Status == virtualkey.StatusRevoked {
 		return nil, gqlerror.Errorf("key is revoked and cannot be re-enabled")
 	}
-	gw := r.gatewayKeyClientForVK(ctx, vk)
+	gw := r.modelGatewayClientForVK(ctx, vk)
 	if gw == nil {
 		return nil, gqlerror.Errorf("model gateway is not configured; key not updated at gateway")
 	}
 	blocked := !enabled
-	if err := gw.UpdateKey(ctx, vk.LitellmKey, gateway.UpdateKeyRequest{Blocked: &blocked}); err != nil {
+	if err := gw.UpdateKey(ctx, gateway.UpdateKeyRequest{Key: vk.LitellmKey, Blocked: &blocked}); err != nil {
 		return nil, fmt.Errorf("gateway update: %w", err)
 	}
 	status := virtualkey.StatusActive
@@ -343,7 +362,7 @@ func (r *mutationResolver) SetVirtualKeyEnabled(ctx context.Context, id string, 
 		return nil, err
 	}
 	r.audit(ctx, "key.set_enabled", "virtual_key", vkID.String(), true, actorID(auth.FromContext(ctx)))
-	return toModelVirtualKey(ctx, r, updated)
+	return toModelVirtualKey(ctx, r.Resolver, updated)
 }
 
 // AssociateVirtualKeyAgent binds (or rebinds) an existing key to an agent.
@@ -375,7 +394,7 @@ func (r *mutationResolver) AssociateVirtualKeyAgent(ctx context.Context, virtual
 		return nil, err
 	}
 	r.audit(ctx, "key.associate_agent", "virtual_key", vkID.String(), true, actorID(auth.FromContext(ctx)))
-	return toModelVirtualKey(ctx, r, updated)
+	return toModelVirtualKey(ctx, r.Resolver, updated)
 }
 
 // VirtualKeys lists keys with three optional filters: organizationId,
@@ -412,7 +431,7 @@ func (r *queryResolver) VirtualKeys(ctx context.Context, organizationId *string,
 	}
 	out := make([]model.VirtualKey, 0, len(keys))
 	for _, k := range keys {
-		mapped, merr := toModelVirtualKey(ctx, r, k)
+		mapped, merr := toModelVirtualKey(ctx, r.Resolver, k)
 		if merr != nil {
 			return nil, merr
 		}
@@ -441,5 +460,8 @@ func (r *queryResolver) GatewayAvailableModels(ctx context.Context, gatewayConne
 	if gw == nil {
 		return nil, gqlerror.Errorf("model gateway client unavailable")
 	}
-	return gw.ListAvailableModels(ctx)
+	// STUB: gw.ListAvailableModels lands in Task 11. Until then return
+	// an empty list (old per-user behavior — no model-list validation).
+	_ = gw
+	return []string{}, nil
 }

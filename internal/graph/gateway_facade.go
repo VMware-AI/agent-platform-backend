@@ -8,29 +8,13 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/department"
 	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
+	"github.com/VMware-AI/agent-platform-backend/ent/modelroute"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
-
-func toModelGatewayConnection(g *ent.GatewayConnection) *model.GatewayConnection {
-	var publicURL *string
-	if g.PublicURL != "" {
-		publicURL = &g.PublicURL
-	}
-	return &model.GatewayConnection{
-		ID:                  g.ID.String(),
-		Name:                g.Name,
-		Endpoint:            g.Endpoint,
-		PublicURL:           publicURL,
-		IsDefault:           g.IsDefault,
-		Status:              model.GatewayStatus(string(g.Status)),
-		LoadBalanceStrategy: model.LoadBalancingStrategy(string(g.LoadBalanceStrategy)),
-		CreatedAt:           g.CreatedAt,
-	}
-}
 
 // ---- 模型网关页 (P4): GatewayConnection façade helpers ----
 
@@ -259,9 +243,6 @@ func applyModelGatewaySort(q *ent.GatewayConnectionQuery, sort *model.ModelGatew
 // of a nil-pointer panic in a goroutine.
 func (r *Resolver) buildGatewayModels(ctx context.Context, g *ent.GatewayConnection) gateway.ModelManager {
 	masterKey := r.gatewayMasterKey(ctx, g)
-	if r.GatewayClientFor != nil {
-		return r.GatewayClientFor(ctx, g.Endpoint, masterKey)
-	}
 	c, err := gateway.NewHTTPClient(g.Endpoint, masterKey)
 	if err != nil {
 		log.Printf("model gateway client build failed for %s: %v", g.ID, err)
@@ -284,9 +265,6 @@ func (e *errModelManager) ListModels(context.Context) ([]gateway.ModelInfo, erro
 }
 func (e *errModelManager) NewModel(context.Context, gateway.ModelSpec) error { return e.err }
 func (e *errModelManager) DeleteModel(context.Context, string) error         { return e.err }
-func (e *errModelManager) UpsertComplexityRouter(context.Context, gateway.RouterSpec) error {
-	return e.err
-}
 
 // applyGatewayTestResult persists a connection-test outcome on a gateway row.
 // It sets status, last_synced_at, and — when the caller supplies a non-nil
@@ -317,10 +295,9 @@ func (r *Resolver) applyGatewayTestResult(
 
 // assertGatewayDeletable refuses to delete a GatewayConnection that is still
 // referenced by a department (gateway_connection_id is a soft FK — deleting
-// would silently break those departments' key/team ops, LLD-13 §3.3) or that is
-// the platform default (the platform must always keep one). Shared by both
-// delete façades (DeleteGatewayConnection + DeleteModelGateway) so they enforce
-// the same guards.
+// would silently break those departments' key/team ops, LLD-13 §3.3) or that
+// owns active model routes. Shared by delete façades
+// (DeleteModelGateway) so they enforce the same guards.
 func (r *Resolver) assertGatewayDeletable(ctx context.Context, g *ent.GatewayConnection) error {
 	if n, err := r.Ent.Department.Query().Where(department.GatewayConnectionID(g.ID)).Count(ctx); err != nil {
 		return err
@@ -328,17 +305,19 @@ func (r *Resolver) assertGatewayDeletable(ctx context.Context, g *ent.GatewayCon
 		return gqlerror.Errorf("gateway is used by %d department(s); reassign them before deleting", n)
 	}
 	// Don't orphan active billable keys: a non-revoked key minted on this gateway
-	// (gateway_connection_id) can only be revoked on it (LLD-14), so deleting the
+	// (model_gateway_id) can only be revoked on it (LLD-14), so deleting the
 	// gateway would strand it. Revoke/recycle those agents first.
 	if n, err := r.Ent.VirtualKey.Query().
-		Where(virtualkey.GatewayConnectionID(g.ID), virtualkey.StatusNEQ(virtualkey.StatusRevoked)).
+		Where(virtualkey.ModelGatewayIDEQ(g.ID), virtualkey.StatusNEQ(virtualkey.StatusRevoked)).
 		Count(ctx); err != nil {
 		return err
 	} else if n > 0 {
 		return gqlerror.Errorf("gateway has %d active virtual key(s); revoke or recycle those agents before deleting", n)
 	}
-	if g.IsDefault {
-		return gqlerror.Errorf("cannot delete the default gateway; set another default first")
+	if n, err := r.Ent.ModelRoute.Query().Where(modelroute.GatewayConnectionID(g.ID)).Count(ctx); err != nil {
+		return err
+	} else if n > 0 {
+		return gqlerror.Errorf("gateway has %d model route(s); reassign them before deleting", n)
 	}
 	return nil
 }

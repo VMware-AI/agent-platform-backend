@@ -16,7 +16,6 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/deploy"
-	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	_ "github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 	"github.com/google/uuid"
@@ -140,16 +139,14 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	// drop the agent row), else we leak an orphan VM and an ungoverned key.
 	vkCreate := r.Ent.VirtualKey.Create().
 		SetLitellmKey(res.VirtualKey).
-		SetUserID(ag.OwnerUserID).
-		SetModels([]string{gateway.DefaultRouterModel}).
-		SetAlias(ag.Name)
-	if t.gwConn != nil {
-		vkCreate.SetGatewayConnectionID(t.gwConn.ID) // LLD-14: pin lifecycle to the issuing gateway
-	}
+		SetModelGatewayID(t.gwConn.ID).
+		SetModels(nil).
+		SetName(ag.Name).
+		SetOrganizationID(ag.TenantID.String())
 	if t.deployTeamID != "" {
-		// Bind the key to its department/team so RecycleAgent revokes on the
-		// department's gateway (deptIDFromTeam(vk.TeamID)), not the default.
-		vkCreate.SetTeamID(t.deployTeamID)
+		// No-op after per-agent-per-org refactor: organizationId is required,
+		// but the legacy teamID context is not needed in the deploy path.
+		_ = t.deployTeamID
 	}
 	if res.VirtualKeyToken != "" {
 		vkCreate.SetLitellmToken(res.VirtualKeyToken) // gateway reconciliation id
@@ -233,7 +230,7 @@ func (r *mutationResolver) RecycleAgent(ctx context.Context, input model.Recycle
 		cctx := context.WithoutCancel(ctx)
 		if vk, err := r.Ent.VirtualKey.Get(cctx, *ag.VirtualKeyID); err == nil {
 			// Route the revoke to the gateway that issued the key (LLD-14).
-			if gw := r.gatewayKeyClientForVK(cctx, vk); gw == nil {
+			if gw := r.modelGatewayClientForVK(cctx, vk); gw == nil {
 				log.Printf("recycle agent %s: no gateway to revoke key %s", ag.ID, vk.ID)
 			} else if delErr := gw.DeleteKey(cctx, vk.LitellmKey); delErr != nil {
 				log.Printf("recycle agent %s: orphan gateway key %s, revoke failed: %v", ag.ID, vk.ID, delErr)
