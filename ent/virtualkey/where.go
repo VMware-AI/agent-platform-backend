@@ -75,14 +75,19 @@ func LitellmToken(v string) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldEQ(FieldLitellmToken, v))
 }
 
-// Alias applies equality check predicate on the "alias" field. It's identical to AliasEQ.
-func Alias(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldEQ(FieldAlias, v))
+// MaskedKey applies equality check predicate on the "masked_key" field. It's identical to MaskedKeyEQ.
+func MaskedKey(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldMaskedKey, v))
 }
 
-// UserID applies equality check predicate on the "user_id" field. It's identical to UserIDEQ.
-func UserID(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldEQ(FieldUserID, v))
+// Name applies equality check predicate on the "name" field. It's identical to NameEQ.
+func Name(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldName, v))
+}
+
+// OrganizationID applies equality check predicate on the "organization_id" field. It's identical to OrganizationIDEQ.
+func OrganizationID(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldOrganizationID, v))
 }
 
 // AgentID applies equality check predicate on the "agent_id" field. It's identical to AgentIDEQ.
@@ -90,14 +95,9 @@ func AgentID(v uuid.UUID) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldEQ(FieldAgentID, v))
 }
 
-// TeamID applies equality check predicate on the "team_id" field. It's identical to TeamIDEQ.
-func TeamID(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldEQ(FieldTeamID, v))
-}
-
-// GatewayConnectionID applies equality check predicate on the "gateway_connection_id" field. It's identical to GatewayConnectionIDEQ.
-func GatewayConnectionID(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldEQ(FieldGatewayConnectionID, v))
+// ModelGatewayID applies equality check predicate on the "model_gateway_id" field. It's identical to ModelGatewayIDEQ.
+func ModelGatewayID(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldModelGatewayID, v))
 }
 
 // MaxBudget applies equality check predicate on the "max_budget" field. It's identical to MaxBudgetEQ.
@@ -105,9 +105,69 @@ func MaxBudget(v float64) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldEQ(FieldMaxBudget, v))
 }
 
+// MaxParallelRequests applies equality check predicate on the "max_parallel_requests" field. It's identical to MaxParallelRequestsEQ.
+func MaxParallelRequests(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldMaxParallelRequests, v))
+}
+
+// TpmLimit applies equality check predicate on the "tpm_limit" field. It's identical to TpmLimitEQ.
+func TpmLimit(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldTpmLimit, v))
+}
+
+// RpmLimit applies equality check predicate on the "rpm_limit" field. It's identical to RpmLimitEQ.
+func RpmLimit(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldRpmLimit, v))
+}
+
+// TpmLimitType applies equality check predicate on the "tpm_limit_type" field. It's identical to TpmLimitTypeEQ.
+func TpmLimitType(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldTpmLimitType, v))
+}
+
+// RpmLimitType applies equality check predicate on the "rpm_limit_type" field. It's identical to RpmLimitTypeEQ.
+func RpmLimitType(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldRpmLimitType, v))
+}
+
+// BudgetDuration applies equality check predicate on the "budget_duration" field. It's identical to BudgetDurationEQ.
+func BudgetDuration(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldBudgetDuration, v))
+}
+
 // ExpiresAt applies equality check predicate on the "expires_at" field. It's identical to ExpiresAtEQ.
 func ExpiresAt(v time.Time) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldEQ(FieldExpiresAt, v))
+}
+
+// Blocked applies equality check predicate on the "blocked" field. It's identical to BlockedEQ.
+func Blocked(v bool) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldBlocked, v))
+}
+
+// KeyType applies equality check predicate on the "key_type" field. It's identical to KeyTypeEQ.
+func KeyType(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldKeyType, v))
+}
+
+// AutoRotate applies equality check predicate on the "auto_rotate" field. It's identical to AutoRotateEQ.
+func AutoRotate(v bool) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldAutoRotate, v))
+}
+
+// RotationInterval applies equality check predicate on the "rotation_interval" field. It's identical to RotationIntervalEQ.
+func RotationInterval(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldRotationInterval, v))
+}
+
+// LastActiveAt applies equality check predicate on the "last_active_at" field. It's identical to LastActiveAtEQ.
+func LastActiveAt(v time.Time) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldLastActiveAt, v))
+}
+
+// Spend applies equality check predicate on the "spend" field. It's identical to SpendEQ.
+func Spend(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldSpend, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
@@ -330,119 +390,199 @@ func LitellmTokenContainsFold(v string) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldContainsFold(FieldLitellmToken, v))
 }
 
-// AliasEQ applies the EQ predicate on the "alias" field.
-func AliasEQ(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldEQ(FieldAlias, v))
+// MaskedKeyEQ applies the EQ predicate on the "masked_key" field.
+func MaskedKeyEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldMaskedKey, v))
 }
 
-// AliasNEQ applies the NEQ predicate on the "alias" field.
-func AliasNEQ(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldNEQ(FieldAlias, v))
+// MaskedKeyNEQ applies the NEQ predicate on the "masked_key" field.
+func MaskedKeyNEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldMaskedKey, v))
 }
 
-// AliasIn applies the In predicate on the "alias" field.
-func AliasIn(vs ...string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldIn(FieldAlias, vs...))
+// MaskedKeyIn applies the In predicate on the "masked_key" field.
+func MaskedKeyIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIn(FieldMaskedKey, vs...))
 }
 
-// AliasNotIn applies the NotIn predicate on the "alias" field.
-func AliasNotIn(vs ...string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldNotIn(FieldAlias, vs...))
+// MaskedKeyNotIn applies the NotIn predicate on the "masked_key" field.
+func MaskedKeyNotIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotIn(FieldMaskedKey, vs...))
 }
 
-// AliasGT applies the GT predicate on the "alias" field.
-func AliasGT(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldGT(FieldAlias, v))
+// MaskedKeyGT applies the GT predicate on the "masked_key" field.
+func MaskedKeyGT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGT(FieldMaskedKey, v))
 }
 
-// AliasGTE applies the GTE predicate on the "alias" field.
-func AliasGTE(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldGTE(FieldAlias, v))
+// MaskedKeyGTE applies the GTE predicate on the "masked_key" field.
+func MaskedKeyGTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGTE(FieldMaskedKey, v))
 }
 
-// AliasLT applies the LT predicate on the "alias" field.
-func AliasLT(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldLT(FieldAlias, v))
+// MaskedKeyLT applies the LT predicate on the "masked_key" field.
+func MaskedKeyLT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLT(FieldMaskedKey, v))
 }
 
-// AliasLTE applies the LTE predicate on the "alias" field.
-func AliasLTE(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldLTE(FieldAlias, v))
+// MaskedKeyLTE applies the LTE predicate on the "masked_key" field.
+func MaskedKeyLTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLTE(FieldMaskedKey, v))
 }
 
-// AliasContains applies the Contains predicate on the "alias" field.
-func AliasContains(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldContains(FieldAlias, v))
+// MaskedKeyContains applies the Contains predicate on the "masked_key" field.
+func MaskedKeyContains(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContains(FieldMaskedKey, v))
 }
 
-// AliasHasPrefix applies the HasPrefix predicate on the "alias" field.
-func AliasHasPrefix(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldHasPrefix(FieldAlias, v))
+// MaskedKeyHasPrefix applies the HasPrefix predicate on the "masked_key" field.
+func MaskedKeyHasPrefix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasPrefix(FieldMaskedKey, v))
 }
 
-// AliasHasSuffix applies the HasSuffix predicate on the "alias" field.
-func AliasHasSuffix(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldHasSuffix(FieldAlias, v))
+// MaskedKeyHasSuffix applies the HasSuffix predicate on the "masked_key" field.
+func MaskedKeyHasSuffix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasSuffix(FieldMaskedKey, v))
 }
 
-// AliasIsNil applies the IsNil predicate on the "alias" field.
-func AliasIsNil() predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldIsNull(FieldAlias))
+// MaskedKeyEqualFold applies the EqualFold predicate on the "masked_key" field.
+func MaskedKeyEqualFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEqualFold(FieldMaskedKey, v))
 }
 
-// AliasNotNil applies the NotNil predicate on the "alias" field.
-func AliasNotNil() predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldNotNull(FieldAlias))
+// MaskedKeyContainsFold applies the ContainsFold predicate on the "masked_key" field.
+func MaskedKeyContainsFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContainsFold(FieldMaskedKey, v))
 }
 
-// AliasEqualFold applies the EqualFold predicate on the "alias" field.
-func AliasEqualFold(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldEqualFold(FieldAlias, v))
+// NameEQ applies the EQ predicate on the "name" field.
+func NameEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldName, v))
 }
 
-// AliasContainsFold applies the ContainsFold predicate on the "alias" field.
-func AliasContainsFold(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldContainsFold(FieldAlias, v))
+// NameNEQ applies the NEQ predicate on the "name" field.
+func NameNEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldName, v))
 }
 
-// UserIDEQ applies the EQ predicate on the "user_id" field.
-func UserIDEQ(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldEQ(FieldUserID, v))
+// NameIn applies the In predicate on the "name" field.
+func NameIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIn(FieldName, vs...))
 }
 
-// UserIDNEQ applies the NEQ predicate on the "user_id" field.
-func UserIDNEQ(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldNEQ(FieldUserID, v))
+// NameNotIn applies the NotIn predicate on the "name" field.
+func NameNotIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotIn(FieldName, vs...))
 }
 
-// UserIDIn applies the In predicate on the "user_id" field.
-func UserIDIn(vs ...uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldIn(FieldUserID, vs...))
+// NameGT applies the GT predicate on the "name" field.
+func NameGT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGT(FieldName, v))
 }
 
-// UserIDNotIn applies the NotIn predicate on the "user_id" field.
-func UserIDNotIn(vs ...uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldNotIn(FieldUserID, vs...))
+// NameGTE applies the GTE predicate on the "name" field.
+func NameGTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGTE(FieldName, v))
 }
 
-// UserIDGT applies the GT predicate on the "user_id" field.
-func UserIDGT(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldGT(FieldUserID, v))
+// NameLT applies the LT predicate on the "name" field.
+func NameLT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLT(FieldName, v))
 }
 
-// UserIDGTE applies the GTE predicate on the "user_id" field.
-func UserIDGTE(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldGTE(FieldUserID, v))
+// NameLTE applies the LTE predicate on the "name" field.
+func NameLTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLTE(FieldName, v))
 }
 
-// UserIDLT applies the LT predicate on the "user_id" field.
-func UserIDLT(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldLT(FieldUserID, v))
+// NameContains applies the Contains predicate on the "name" field.
+func NameContains(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContains(FieldName, v))
 }
 
-// UserIDLTE applies the LTE predicate on the "user_id" field.
-func UserIDLTE(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldLTE(FieldUserID, v))
+// NameHasPrefix applies the HasPrefix predicate on the "name" field.
+func NameHasPrefix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasPrefix(FieldName, v))
+}
+
+// NameHasSuffix applies the HasSuffix predicate on the "name" field.
+func NameHasSuffix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasSuffix(FieldName, v))
+}
+
+// NameEqualFold applies the EqualFold predicate on the "name" field.
+func NameEqualFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEqualFold(FieldName, v))
+}
+
+// NameContainsFold applies the ContainsFold predicate on the "name" field.
+func NameContainsFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContainsFold(FieldName, v))
+}
+
+// OrganizationIDEQ applies the EQ predicate on the "organization_id" field.
+func OrganizationIDEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldOrganizationID, v))
+}
+
+// OrganizationIDNEQ applies the NEQ predicate on the "organization_id" field.
+func OrganizationIDNEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldOrganizationID, v))
+}
+
+// OrganizationIDIn applies the In predicate on the "organization_id" field.
+func OrganizationIDIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIn(FieldOrganizationID, vs...))
+}
+
+// OrganizationIDNotIn applies the NotIn predicate on the "organization_id" field.
+func OrganizationIDNotIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotIn(FieldOrganizationID, vs...))
+}
+
+// OrganizationIDGT applies the GT predicate on the "organization_id" field.
+func OrganizationIDGT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGT(FieldOrganizationID, v))
+}
+
+// OrganizationIDGTE applies the GTE predicate on the "organization_id" field.
+func OrganizationIDGTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGTE(FieldOrganizationID, v))
+}
+
+// OrganizationIDLT applies the LT predicate on the "organization_id" field.
+func OrganizationIDLT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLT(FieldOrganizationID, v))
+}
+
+// OrganizationIDLTE applies the LTE predicate on the "organization_id" field.
+func OrganizationIDLTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLTE(FieldOrganizationID, v))
+}
+
+// OrganizationIDContains applies the Contains predicate on the "organization_id" field.
+func OrganizationIDContains(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContains(FieldOrganizationID, v))
+}
+
+// OrganizationIDHasPrefix applies the HasPrefix predicate on the "organization_id" field.
+func OrganizationIDHasPrefix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasPrefix(FieldOrganizationID, v))
+}
+
+// OrganizationIDHasSuffix applies the HasSuffix predicate on the "organization_id" field.
+func OrganizationIDHasSuffix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasSuffix(FieldOrganizationID, v))
+}
+
+// OrganizationIDEqualFold applies the EqualFold predicate on the "organization_id" field.
+func OrganizationIDEqualFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEqualFold(FieldOrganizationID, v))
+}
+
+// OrganizationIDContainsFold applies the ContainsFold predicate on the "organization_id" field.
+func OrganizationIDContainsFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContainsFold(FieldOrganizationID, v))
 }
 
 // AgentIDEQ applies the EQ predicate on the "agent_id" field.
@@ -495,129 +635,44 @@ func AgentIDNotNil() predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldNotNull(FieldAgentID))
 }
 
-// TeamIDEQ applies the EQ predicate on the "team_id" field.
-func TeamIDEQ(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldEQ(FieldTeamID, v))
+// ModelGatewayIDEQ applies the EQ predicate on the "model_gateway_id" field.
+func ModelGatewayIDEQ(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldModelGatewayID, v))
 }
 
-// TeamIDNEQ applies the NEQ predicate on the "team_id" field.
-func TeamIDNEQ(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldNEQ(FieldTeamID, v))
+// ModelGatewayIDNEQ applies the NEQ predicate on the "model_gateway_id" field.
+func ModelGatewayIDNEQ(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldModelGatewayID, v))
 }
 
-// TeamIDIn applies the In predicate on the "team_id" field.
-func TeamIDIn(vs ...string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldIn(FieldTeamID, vs...))
+// ModelGatewayIDIn applies the In predicate on the "model_gateway_id" field.
+func ModelGatewayIDIn(vs ...uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIn(FieldModelGatewayID, vs...))
 }
 
-// TeamIDNotIn applies the NotIn predicate on the "team_id" field.
-func TeamIDNotIn(vs ...string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldNotIn(FieldTeamID, vs...))
+// ModelGatewayIDNotIn applies the NotIn predicate on the "model_gateway_id" field.
+func ModelGatewayIDNotIn(vs ...uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotIn(FieldModelGatewayID, vs...))
 }
 
-// TeamIDGT applies the GT predicate on the "team_id" field.
-func TeamIDGT(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldGT(FieldTeamID, v))
+// ModelGatewayIDGT applies the GT predicate on the "model_gateway_id" field.
+func ModelGatewayIDGT(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGT(FieldModelGatewayID, v))
 }
 
-// TeamIDGTE applies the GTE predicate on the "team_id" field.
-func TeamIDGTE(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldGTE(FieldTeamID, v))
+// ModelGatewayIDGTE applies the GTE predicate on the "model_gateway_id" field.
+func ModelGatewayIDGTE(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGTE(FieldModelGatewayID, v))
 }
 
-// TeamIDLT applies the LT predicate on the "team_id" field.
-func TeamIDLT(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldLT(FieldTeamID, v))
+// ModelGatewayIDLT applies the LT predicate on the "model_gateway_id" field.
+func ModelGatewayIDLT(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLT(FieldModelGatewayID, v))
 }
 
-// TeamIDLTE applies the LTE predicate on the "team_id" field.
-func TeamIDLTE(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldLTE(FieldTeamID, v))
-}
-
-// TeamIDContains applies the Contains predicate on the "team_id" field.
-func TeamIDContains(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldContains(FieldTeamID, v))
-}
-
-// TeamIDHasPrefix applies the HasPrefix predicate on the "team_id" field.
-func TeamIDHasPrefix(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldHasPrefix(FieldTeamID, v))
-}
-
-// TeamIDHasSuffix applies the HasSuffix predicate on the "team_id" field.
-func TeamIDHasSuffix(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldHasSuffix(FieldTeamID, v))
-}
-
-// TeamIDIsNil applies the IsNil predicate on the "team_id" field.
-func TeamIDIsNil() predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldIsNull(FieldTeamID))
-}
-
-// TeamIDNotNil applies the NotNil predicate on the "team_id" field.
-func TeamIDNotNil() predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldNotNull(FieldTeamID))
-}
-
-// TeamIDEqualFold applies the EqualFold predicate on the "team_id" field.
-func TeamIDEqualFold(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldEqualFold(FieldTeamID, v))
-}
-
-// TeamIDContainsFold applies the ContainsFold predicate on the "team_id" field.
-func TeamIDContainsFold(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldContainsFold(FieldTeamID, v))
-}
-
-// GatewayConnectionIDEQ applies the EQ predicate on the "gateway_connection_id" field.
-func GatewayConnectionIDEQ(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldEQ(FieldGatewayConnectionID, v))
-}
-
-// GatewayConnectionIDNEQ applies the NEQ predicate on the "gateway_connection_id" field.
-func GatewayConnectionIDNEQ(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldNEQ(FieldGatewayConnectionID, v))
-}
-
-// GatewayConnectionIDIn applies the In predicate on the "gateway_connection_id" field.
-func GatewayConnectionIDIn(vs ...uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldIn(FieldGatewayConnectionID, vs...))
-}
-
-// GatewayConnectionIDNotIn applies the NotIn predicate on the "gateway_connection_id" field.
-func GatewayConnectionIDNotIn(vs ...uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldNotIn(FieldGatewayConnectionID, vs...))
-}
-
-// GatewayConnectionIDGT applies the GT predicate on the "gateway_connection_id" field.
-func GatewayConnectionIDGT(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldGT(FieldGatewayConnectionID, v))
-}
-
-// GatewayConnectionIDGTE applies the GTE predicate on the "gateway_connection_id" field.
-func GatewayConnectionIDGTE(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldGTE(FieldGatewayConnectionID, v))
-}
-
-// GatewayConnectionIDLT applies the LT predicate on the "gateway_connection_id" field.
-func GatewayConnectionIDLT(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldLT(FieldGatewayConnectionID, v))
-}
-
-// GatewayConnectionIDLTE applies the LTE predicate on the "gateway_connection_id" field.
-func GatewayConnectionIDLTE(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldLTE(FieldGatewayConnectionID, v))
-}
-
-// GatewayConnectionIDIsNil applies the IsNil predicate on the "gateway_connection_id" field.
-func GatewayConnectionIDIsNil() predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldIsNull(FieldGatewayConnectionID))
-}
-
-// GatewayConnectionIDNotNil applies the NotNil predicate on the "gateway_connection_id" field.
-func GatewayConnectionIDNotNil() predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldNotNull(FieldGatewayConnectionID))
+// ModelGatewayIDLTE applies the LTE predicate on the "model_gateway_id" field.
+func ModelGatewayIDLTE(v uuid.UUID) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLTE(FieldModelGatewayID, v))
 }
 
 // ModelsIsNil applies the IsNil predicate on the "models" field.
@@ -678,6 +733,381 @@ func MaxBudgetIsNil() predicate.VirtualKey {
 // MaxBudgetNotNil applies the NotNil predicate on the "max_budget" field.
 func MaxBudgetNotNil() predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldNotNull(FieldMaxBudget))
+}
+
+// MaxParallelRequestsEQ applies the EQ predicate on the "max_parallel_requests" field.
+func MaxParallelRequestsEQ(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldMaxParallelRequests, v))
+}
+
+// MaxParallelRequestsNEQ applies the NEQ predicate on the "max_parallel_requests" field.
+func MaxParallelRequestsNEQ(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldMaxParallelRequests, v))
+}
+
+// MaxParallelRequestsIn applies the In predicate on the "max_parallel_requests" field.
+func MaxParallelRequestsIn(vs ...int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIn(FieldMaxParallelRequests, vs...))
+}
+
+// MaxParallelRequestsNotIn applies the NotIn predicate on the "max_parallel_requests" field.
+func MaxParallelRequestsNotIn(vs ...int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotIn(FieldMaxParallelRequests, vs...))
+}
+
+// MaxParallelRequestsGT applies the GT predicate on the "max_parallel_requests" field.
+func MaxParallelRequestsGT(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGT(FieldMaxParallelRequests, v))
+}
+
+// MaxParallelRequestsGTE applies the GTE predicate on the "max_parallel_requests" field.
+func MaxParallelRequestsGTE(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGTE(FieldMaxParallelRequests, v))
+}
+
+// MaxParallelRequestsLT applies the LT predicate on the "max_parallel_requests" field.
+func MaxParallelRequestsLT(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLT(FieldMaxParallelRequests, v))
+}
+
+// MaxParallelRequestsLTE applies the LTE predicate on the "max_parallel_requests" field.
+func MaxParallelRequestsLTE(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLTE(FieldMaxParallelRequests, v))
+}
+
+// MaxParallelRequestsIsNil applies the IsNil predicate on the "max_parallel_requests" field.
+func MaxParallelRequestsIsNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIsNull(FieldMaxParallelRequests))
+}
+
+// MaxParallelRequestsNotNil applies the NotNil predicate on the "max_parallel_requests" field.
+func MaxParallelRequestsNotNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotNull(FieldMaxParallelRequests))
+}
+
+// TpmLimitEQ applies the EQ predicate on the "tpm_limit" field.
+func TpmLimitEQ(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldTpmLimit, v))
+}
+
+// TpmLimitNEQ applies the NEQ predicate on the "tpm_limit" field.
+func TpmLimitNEQ(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldTpmLimit, v))
+}
+
+// TpmLimitIn applies the In predicate on the "tpm_limit" field.
+func TpmLimitIn(vs ...int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIn(FieldTpmLimit, vs...))
+}
+
+// TpmLimitNotIn applies the NotIn predicate on the "tpm_limit" field.
+func TpmLimitNotIn(vs ...int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotIn(FieldTpmLimit, vs...))
+}
+
+// TpmLimitGT applies the GT predicate on the "tpm_limit" field.
+func TpmLimitGT(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGT(FieldTpmLimit, v))
+}
+
+// TpmLimitGTE applies the GTE predicate on the "tpm_limit" field.
+func TpmLimitGTE(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGTE(FieldTpmLimit, v))
+}
+
+// TpmLimitLT applies the LT predicate on the "tpm_limit" field.
+func TpmLimitLT(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLT(FieldTpmLimit, v))
+}
+
+// TpmLimitLTE applies the LTE predicate on the "tpm_limit" field.
+func TpmLimitLTE(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLTE(FieldTpmLimit, v))
+}
+
+// TpmLimitIsNil applies the IsNil predicate on the "tpm_limit" field.
+func TpmLimitIsNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIsNull(FieldTpmLimit))
+}
+
+// TpmLimitNotNil applies the NotNil predicate on the "tpm_limit" field.
+func TpmLimitNotNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotNull(FieldTpmLimit))
+}
+
+// RpmLimitEQ applies the EQ predicate on the "rpm_limit" field.
+func RpmLimitEQ(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldRpmLimit, v))
+}
+
+// RpmLimitNEQ applies the NEQ predicate on the "rpm_limit" field.
+func RpmLimitNEQ(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldRpmLimit, v))
+}
+
+// RpmLimitIn applies the In predicate on the "rpm_limit" field.
+func RpmLimitIn(vs ...int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIn(FieldRpmLimit, vs...))
+}
+
+// RpmLimitNotIn applies the NotIn predicate on the "rpm_limit" field.
+func RpmLimitNotIn(vs ...int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotIn(FieldRpmLimit, vs...))
+}
+
+// RpmLimitGT applies the GT predicate on the "rpm_limit" field.
+func RpmLimitGT(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGT(FieldRpmLimit, v))
+}
+
+// RpmLimitGTE applies the GTE predicate on the "rpm_limit" field.
+func RpmLimitGTE(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGTE(FieldRpmLimit, v))
+}
+
+// RpmLimitLT applies the LT predicate on the "rpm_limit" field.
+func RpmLimitLT(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLT(FieldRpmLimit, v))
+}
+
+// RpmLimitLTE applies the LTE predicate on the "rpm_limit" field.
+func RpmLimitLTE(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLTE(FieldRpmLimit, v))
+}
+
+// RpmLimitIsNil applies the IsNil predicate on the "rpm_limit" field.
+func RpmLimitIsNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIsNull(FieldRpmLimit))
+}
+
+// RpmLimitNotNil applies the NotNil predicate on the "rpm_limit" field.
+func RpmLimitNotNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotNull(FieldRpmLimit))
+}
+
+// TpmLimitTypeEQ applies the EQ predicate on the "tpm_limit_type" field.
+func TpmLimitTypeEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldTpmLimitType, v))
+}
+
+// TpmLimitTypeNEQ applies the NEQ predicate on the "tpm_limit_type" field.
+func TpmLimitTypeNEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldTpmLimitType, v))
+}
+
+// TpmLimitTypeIn applies the In predicate on the "tpm_limit_type" field.
+func TpmLimitTypeIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIn(FieldTpmLimitType, vs...))
+}
+
+// TpmLimitTypeNotIn applies the NotIn predicate on the "tpm_limit_type" field.
+func TpmLimitTypeNotIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotIn(FieldTpmLimitType, vs...))
+}
+
+// TpmLimitTypeGT applies the GT predicate on the "tpm_limit_type" field.
+func TpmLimitTypeGT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGT(FieldTpmLimitType, v))
+}
+
+// TpmLimitTypeGTE applies the GTE predicate on the "tpm_limit_type" field.
+func TpmLimitTypeGTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGTE(FieldTpmLimitType, v))
+}
+
+// TpmLimitTypeLT applies the LT predicate on the "tpm_limit_type" field.
+func TpmLimitTypeLT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLT(FieldTpmLimitType, v))
+}
+
+// TpmLimitTypeLTE applies the LTE predicate on the "tpm_limit_type" field.
+func TpmLimitTypeLTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLTE(FieldTpmLimitType, v))
+}
+
+// TpmLimitTypeContains applies the Contains predicate on the "tpm_limit_type" field.
+func TpmLimitTypeContains(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContains(FieldTpmLimitType, v))
+}
+
+// TpmLimitTypeHasPrefix applies the HasPrefix predicate on the "tpm_limit_type" field.
+func TpmLimitTypeHasPrefix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasPrefix(FieldTpmLimitType, v))
+}
+
+// TpmLimitTypeHasSuffix applies the HasSuffix predicate on the "tpm_limit_type" field.
+func TpmLimitTypeHasSuffix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasSuffix(FieldTpmLimitType, v))
+}
+
+// TpmLimitTypeIsNil applies the IsNil predicate on the "tpm_limit_type" field.
+func TpmLimitTypeIsNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIsNull(FieldTpmLimitType))
+}
+
+// TpmLimitTypeNotNil applies the NotNil predicate on the "tpm_limit_type" field.
+func TpmLimitTypeNotNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotNull(FieldTpmLimitType))
+}
+
+// TpmLimitTypeEqualFold applies the EqualFold predicate on the "tpm_limit_type" field.
+func TpmLimitTypeEqualFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEqualFold(FieldTpmLimitType, v))
+}
+
+// TpmLimitTypeContainsFold applies the ContainsFold predicate on the "tpm_limit_type" field.
+func TpmLimitTypeContainsFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContainsFold(FieldTpmLimitType, v))
+}
+
+// RpmLimitTypeEQ applies the EQ predicate on the "rpm_limit_type" field.
+func RpmLimitTypeEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldRpmLimitType, v))
+}
+
+// RpmLimitTypeNEQ applies the NEQ predicate on the "rpm_limit_type" field.
+func RpmLimitTypeNEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldRpmLimitType, v))
+}
+
+// RpmLimitTypeIn applies the In predicate on the "rpm_limit_type" field.
+func RpmLimitTypeIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIn(FieldRpmLimitType, vs...))
+}
+
+// RpmLimitTypeNotIn applies the NotIn predicate on the "rpm_limit_type" field.
+func RpmLimitTypeNotIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotIn(FieldRpmLimitType, vs...))
+}
+
+// RpmLimitTypeGT applies the GT predicate on the "rpm_limit_type" field.
+func RpmLimitTypeGT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGT(FieldRpmLimitType, v))
+}
+
+// RpmLimitTypeGTE applies the GTE predicate on the "rpm_limit_type" field.
+func RpmLimitTypeGTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGTE(FieldRpmLimitType, v))
+}
+
+// RpmLimitTypeLT applies the LT predicate on the "rpm_limit_type" field.
+func RpmLimitTypeLT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLT(FieldRpmLimitType, v))
+}
+
+// RpmLimitTypeLTE applies the LTE predicate on the "rpm_limit_type" field.
+func RpmLimitTypeLTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLTE(FieldRpmLimitType, v))
+}
+
+// RpmLimitTypeContains applies the Contains predicate on the "rpm_limit_type" field.
+func RpmLimitTypeContains(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContains(FieldRpmLimitType, v))
+}
+
+// RpmLimitTypeHasPrefix applies the HasPrefix predicate on the "rpm_limit_type" field.
+func RpmLimitTypeHasPrefix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasPrefix(FieldRpmLimitType, v))
+}
+
+// RpmLimitTypeHasSuffix applies the HasSuffix predicate on the "rpm_limit_type" field.
+func RpmLimitTypeHasSuffix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasSuffix(FieldRpmLimitType, v))
+}
+
+// RpmLimitTypeIsNil applies the IsNil predicate on the "rpm_limit_type" field.
+func RpmLimitTypeIsNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIsNull(FieldRpmLimitType))
+}
+
+// RpmLimitTypeNotNil applies the NotNil predicate on the "rpm_limit_type" field.
+func RpmLimitTypeNotNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotNull(FieldRpmLimitType))
+}
+
+// RpmLimitTypeEqualFold applies the EqualFold predicate on the "rpm_limit_type" field.
+func RpmLimitTypeEqualFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEqualFold(FieldRpmLimitType, v))
+}
+
+// RpmLimitTypeContainsFold applies the ContainsFold predicate on the "rpm_limit_type" field.
+func RpmLimitTypeContainsFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContainsFold(FieldRpmLimitType, v))
+}
+
+// BudgetDurationEQ applies the EQ predicate on the "budget_duration" field.
+func BudgetDurationEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldBudgetDuration, v))
+}
+
+// BudgetDurationNEQ applies the NEQ predicate on the "budget_duration" field.
+func BudgetDurationNEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldBudgetDuration, v))
+}
+
+// BudgetDurationIn applies the In predicate on the "budget_duration" field.
+func BudgetDurationIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIn(FieldBudgetDuration, vs...))
+}
+
+// BudgetDurationNotIn applies the NotIn predicate on the "budget_duration" field.
+func BudgetDurationNotIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotIn(FieldBudgetDuration, vs...))
+}
+
+// BudgetDurationGT applies the GT predicate on the "budget_duration" field.
+func BudgetDurationGT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGT(FieldBudgetDuration, v))
+}
+
+// BudgetDurationGTE applies the GTE predicate on the "budget_duration" field.
+func BudgetDurationGTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGTE(FieldBudgetDuration, v))
+}
+
+// BudgetDurationLT applies the LT predicate on the "budget_duration" field.
+func BudgetDurationLT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLT(FieldBudgetDuration, v))
+}
+
+// BudgetDurationLTE applies the LTE predicate on the "budget_duration" field.
+func BudgetDurationLTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLTE(FieldBudgetDuration, v))
+}
+
+// BudgetDurationContains applies the Contains predicate on the "budget_duration" field.
+func BudgetDurationContains(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContains(FieldBudgetDuration, v))
+}
+
+// BudgetDurationHasPrefix applies the HasPrefix predicate on the "budget_duration" field.
+func BudgetDurationHasPrefix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasPrefix(FieldBudgetDuration, v))
+}
+
+// BudgetDurationHasSuffix applies the HasSuffix predicate on the "budget_duration" field.
+func BudgetDurationHasSuffix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasSuffix(FieldBudgetDuration, v))
+}
+
+// BudgetDurationIsNil applies the IsNil predicate on the "budget_duration" field.
+func BudgetDurationIsNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIsNull(FieldBudgetDuration))
+}
+
+// BudgetDurationNotNil applies the NotNil predicate on the "budget_duration" field.
+func BudgetDurationNotNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotNull(FieldBudgetDuration))
+}
+
+// BudgetDurationEqualFold applies the EqualFold predicate on the "budget_duration" field.
+func BudgetDurationEqualFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEqualFold(FieldBudgetDuration, v))
+}
+
+// BudgetDurationContainsFold applies the ContainsFold predicate on the "budget_duration" field.
+func BudgetDurationContainsFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContainsFold(FieldBudgetDuration, v))
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.
@@ -748,6 +1178,286 @@ func ExpiresAtIsNil() predicate.VirtualKey {
 // ExpiresAtNotNil applies the NotNil predicate on the "expires_at" field.
 func ExpiresAtNotNil() predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldNotNull(FieldExpiresAt))
+}
+
+// AllowedRoutesIsNil applies the IsNil predicate on the "allowed_routes" field.
+func AllowedRoutesIsNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIsNull(FieldAllowedRoutes))
+}
+
+// AllowedRoutesNotNil applies the NotNil predicate on the "allowed_routes" field.
+func AllowedRoutesNotNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotNull(FieldAllowedRoutes))
+}
+
+// TagsIsNil applies the IsNil predicate on the "tags" field.
+func TagsIsNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIsNull(FieldTags))
+}
+
+// TagsNotNil applies the NotNil predicate on the "tags" field.
+func TagsNotNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotNull(FieldTags))
+}
+
+// BlockedEQ applies the EQ predicate on the "blocked" field.
+func BlockedEQ(v bool) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldBlocked, v))
+}
+
+// BlockedNEQ applies the NEQ predicate on the "blocked" field.
+func BlockedNEQ(v bool) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldBlocked, v))
+}
+
+// KeyTypeEQ applies the EQ predicate on the "key_type" field.
+func KeyTypeEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldKeyType, v))
+}
+
+// KeyTypeNEQ applies the NEQ predicate on the "key_type" field.
+func KeyTypeNEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldKeyType, v))
+}
+
+// KeyTypeIn applies the In predicate on the "key_type" field.
+func KeyTypeIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIn(FieldKeyType, vs...))
+}
+
+// KeyTypeNotIn applies the NotIn predicate on the "key_type" field.
+func KeyTypeNotIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotIn(FieldKeyType, vs...))
+}
+
+// KeyTypeGT applies the GT predicate on the "key_type" field.
+func KeyTypeGT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGT(FieldKeyType, v))
+}
+
+// KeyTypeGTE applies the GTE predicate on the "key_type" field.
+func KeyTypeGTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGTE(FieldKeyType, v))
+}
+
+// KeyTypeLT applies the LT predicate on the "key_type" field.
+func KeyTypeLT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLT(FieldKeyType, v))
+}
+
+// KeyTypeLTE applies the LTE predicate on the "key_type" field.
+func KeyTypeLTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLTE(FieldKeyType, v))
+}
+
+// KeyTypeContains applies the Contains predicate on the "key_type" field.
+func KeyTypeContains(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContains(FieldKeyType, v))
+}
+
+// KeyTypeHasPrefix applies the HasPrefix predicate on the "key_type" field.
+func KeyTypeHasPrefix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasPrefix(FieldKeyType, v))
+}
+
+// KeyTypeHasSuffix applies the HasSuffix predicate on the "key_type" field.
+func KeyTypeHasSuffix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasSuffix(FieldKeyType, v))
+}
+
+// KeyTypeEqualFold applies the EqualFold predicate on the "key_type" field.
+func KeyTypeEqualFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEqualFold(FieldKeyType, v))
+}
+
+// KeyTypeContainsFold applies the ContainsFold predicate on the "key_type" field.
+func KeyTypeContainsFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContainsFold(FieldKeyType, v))
+}
+
+// AutoRotateEQ applies the EQ predicate on the "auto_rotate" field.
+func AutoRotateEQ(v bool) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldAutoRotate, v))
+}
+
+// AutoRotateNEQ applies the NEQ predicate on the "auto_rotate" field.
+func AutoRotateNEQ(v bool) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldAutoRotate, v))
+}
+
+// RotationIntervalEQ applies the EQ predicate on the "rotation_interval" field.
+func RotationIntervalEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldRotationInterval, v))
+}
+
+// RotationIntervalNEQ applies the NEQ predicate on the "rotation_interval" field.
+func RotationIntervalNEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldRotationInterval, v))
+}
+
+// RotationIntervalIn applies the In predicate on the "rotation_interval" field.
+func RotationIntervalIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIn(FieldRotationInterval, vs...))
+}
+
+// RotationIntervalNotIn applies the NotIn predicate on the "rotation_interval" field.
+func RotationIntervalNotIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotIn(FieldRotationInterval, vs...))
+}
+
+// RotationIntervalGT applies the GT predicate on the "rotation_interval" field.
+func RotationIntervalGT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGT(FieldRotationInterval, v))
+}
+
+// RotationIntervalGTE applies the GTE predicate on the "rotation_interval" field.
+func RotationIntervalGTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGTE(FieldRotationInterval, v))
+}
+
+// RotationIntervalLT applies the LT predicate on the "rotation_interval" field.
+func RotationIntervalLT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLT(FieldRotationInterval, v))
+}
+
+// RotationIntervalLTE applies the LTE predicate on the "rotation_interval" field.
+func RotationIntervalLTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLTE(FieldRotationInterval, v))
+}
+
+// RotationIntervalContains applies the Contains predicate on the "rotation_interval" field.
+func RotationIntervalContains(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContains(FieldRotationInterval, v))
+}
+
+// RotationIntervalHasPrefix applies the HasPrefix predicate on the "rotation_interval" field.
+func RotationIntervalHasPrefix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasPrefix(FieldRotationInterval, v))
+}
+
+// RotationIntervalHasSuffix applies the HasSuffix predicate on the "rotation_interval" field.
+func RotationIntervalHasSuffix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasSuffix(FieldRotationInterval, v))
+}
+
+// RotationIntervalIsNil applies the IsNil predicate on the "rotation_interval" field.
+func RotationIntervalIsNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIsNull(FieldRotationInterval))
+}
+
+// RotationIntervalNotNil applies the NotNil predicate on the "rotation_interval" field.
+func RotationIntervalNotNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotNull(FieldRotationInterval))
+}
+
+// RotationIntervalEqualFold applies the EqualFold predicate on the "rotation_interval" field.
+func RotationIntervalEqualFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEqualFold(FieldRotationInterval, v))
+}
+
+// RotationIntervalContainsFold applies the ContainsFold predicate on the "rotation_interval" field.
+func RotationIntervalContainsFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContainsFold(FieldRotationInterval, v))
+}
+
+// LastActiveAtEQ applies the EQ predicate on the "last_active_at" field.
+func LastActiveAtEQ(v time.Time) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldLastActiveAt, v))
+}
+
+// LastActiveAtNEQ applies the NEQ predicate on the "last_active_at" field.
+func LastActiveAtNEQ(v time.Time) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldLastActiveAt, v))
+}
+
+// LastActiveAtIn applies the In predicate on the "last_active_at" field.
+func LastActiveAtIn(vs ...time.Time) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIn(FieldLastActiveAt, vs...))
+}
+
+// LastActiveAtNotIn applies the NotIn predicate on the "last_active_at" field.
+func LastActiveAtNotIn(vs ...time.Time) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotIn(FieldLastActiveAt, vs...))
+}
+
+// LastActiveAtGT applies the GT predicate on the "last_active_at" field.
+func LastActiveAtGT(v time.Time) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGT(FieldLastActiveAt, v))
+}
+
+// LastActiveAtGTE applies the GTE predicate on the "last_active_at" field.
+func LastActiveAtGTE(v time.Time) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGTE(FieldLastActiveAt, v))
+}
+
+// LastActiveAtLT applies the LT predicate on the "last_active_at" field.
+func LastActiveAtLT(v time.Time) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLT(FieldLastActiveAt, v))
+}
+
+// LastActiveAtLTE applies the LTE predicate on the "last_active_at" field.
+func LastActiveAtLTE(v time.Time) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLTE(FieldLastActiveAt, v))
+}
+
+// LastActiveAtIsNil applies the IsNil predicate on the "last_active_at" field.
+func LastActiveAtIsNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIsNull(FieldLastActiveAt))
+}
+
+// LastActiveAtNotNil applies the NotNil predicate on the "last_active_at" field.
+func LastActiveAtNotNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotNull(FieldLastActiveAt))
+}
+
+// SpendEQ applies the EQ predicate on the "spend" field.
+func SpendEQ(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldSpend, v))
+}
+
+// SpendNEQ applies the NEQ predicate on the "spend" field.
+func SpendNEQ(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldSpend, v))
+}
+
+// SpendIn applies the In predicate on the "spend" field.
+func SpendIn(vs ...int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIn(FieldSpend, vs...))
+}
+
+// SpendNotIn applies the NotIn predicate on the "spend" field.
+func SpendNotIn(vs ...int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotIn(FieldSpend, vs...))
+}
+
+// SpendGT applies the GT predicate on the "spend" field.
+func SpendGT(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGT(FieldSpend, v))
+}
+
+// SpendGTE applies the GTE predicate on the "spend" field.
+func SpendGTE(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGTE(FieldSpend, v))
+}
+
+// SpendLT applies the LT predicate on the "spend" field.
+func SpendLT(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLT(FieldSpend, v))
+}
+
+// SpendLTE applies the LTE predicate on the "spend" field.
+func SpendLTE(v int) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLTE(FieldSpend, v))
+}
+
+// SpendIsNil applies the IsNil predicate on the "spend" field.
+func SpendIsNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIsNull(FieldSpend))
+}
+
+// SpendNotNil applies the NotNil predicate on the "spend" field.
+func SpendNotNil() predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotNull(FieldSpend))
 }
 
 // And groups predicates with the AND operator between them.
