@@ -23,24 +23,52 @@ const (
 	FieldLitellmKey = "litellm_key"
 	// FieldLitellmToken holds the string denoting the litellm_token field in the database.
 	FieldLitellmToken = "litellm_token"
-	// FieldAlias holds the string denoting the alias field in the database.
-	FieldAlias = "alias"
-	// FieldUserID holds the string denoting the user_id field in the database.
-	FieldUserID = "user_id"
+	// FieldMaskedKey holds the string denoting the masked_key field in the database.
+	FieldMaskedKey = "masked_key"
+	// FieldName holds the string denoting the name field in the database.
+	FieldName = "name"
+	// FieldOrganizationID holds the string denoting the organization_id field in the database.
+	FieldOrganizationID = "organization_id"
 	// FieldAgentID holds the string denoting the agent_id field in the database.
 	FieldAgentID = "agent_id"
-	// FieldTeamID holds the string denoting the team_id field in the database.
-	FieldTeamID = "team_id"
-	// FieldGatewayConnectionID holds the string denoting the gateway_connection_id field in the database.
-	FieldGatewayConnectionID = "gateway_connection_id"
+	// FieldModelGatewayID holds the string denoting the model_gateway_id field in the database.
+	FieldModelGatewayID = "model_gateway_id"
 	// FieldModels holds the string denoting the models field in the database.
 	FieldModels = "models"
 	// FieldMaxBudget holds the string denoting the max_budget field in the database.
 	FieldMaxBudget = "max_budget"
+	// FieldMaxParallelRequests holds the string denoting the max_parallel_requests field in the database.
+	FieldMaxParallelRequests = "max_parallel_requests"
+	// FieldTpmLimit holds the string denoting the tpm_limit field in the database.
+	FieldTpmLimit = "tpm_limit"
+	// FieldRpmLimit holds the string denoting the rpm_limit field in the database.
+	FieldRpmLimit = "rpm_limit"
+	// FieldTpmLimitType holds the string denoting the tpm_limit_type field in the database.
+	FieldTpmLimitType = "tpm_limit_type"
+	// FieldRpmLimitType holds the string denoting the rpm_limit_type field in the database.
+	FieldRpmLimitType = "rpm_limit_type"
+	// FieldBudgetDuration holds the string denoting the budget_duration field in the database.
+	FieldBudgetDuration = "budget_duration"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
 	// FieldExpiresAt holds the string denoting the expires_at field in the database.
 	FieldExpiresAt = "expires_at"
+	// FieldAllowedRoutes holds the string denoting the allowed_routes field in the database.
+	FieldAllowedRoutes = "allowed_routes"
+	// FieldTags holds the string denoting the tags field in the database.
+	FieldTags = "tags"
+	// FieldBlocked holds the string denoting the blocked field in the database.
+	FieldBlocked = "blocked"
+	// FieldKeyType holds the string denoting the key_type field in the database.
+	FieldKeyType = "key_type"
+	// FieldAutoRotate holds the string denoting the auto_rotate field in the database.
+	FieldAutoRotate = "auto_rotate"
+	// FieldRotationInterval holds the string denoting the rotation_interval field in the database.
+	FieldRotationInterval = "rotation_interval"
+	// FieldLastActiveAt holds the string denoting the last_active_at field in the database.
+	FieldLastActiveAt = "last_active_at"
+	// FieldSpend holds the string denoting the spend field in the database.
+	FieldSpend = "spend"
 	// Table holds the table name of the virtualkey in the database.
 	Table = "virtual_keys"
 )
@@ -52,15 +80,29 @@ var Columns = []string{
 	FieldUpdatedAt,
 	FieldLitellmKey,
 	FieldLitellmToken,
-	FieldAlias,
-	FieldUserID,
+	FieldMaskedKey,
+	FieldName,
+	FieldOrganizationID,
 	FieldAgentID,
-	FieldTeamID,
-	FieldGatewayConnectionID,
+	FieldModelGatewayID,
 	FieldModels,
 	FieldMaxBudget,
+	FieldMaxParallelRequests,
+	FieldTpmLimit,
+	FieldRpmLimit,
+	FieldTpmLimitType,
+	FieldRpmLimitType,
+	FieldBudgetDuration,
 	FieldStatus,
 	FieldExpiresAt,
+	FieldAllowedRoutes,
+	FieldTags,
+	FieldBlocked,
+	FieldKeyType,
+	FieldAutoRotate,
+	FieldRotationInterval,
+	FieldLastActiveAt,
+	FieldSpend,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -82,6 +124,20 @@ var (
 	UpdateDefaultUpdatedAt func() time.Time
 	// LitellmKeyValidator is a validator for the "litellm_key" field. It is called by the builders before save.
 	LitellmKeyValidator func(string) error
+	// MaskedKeyValidator is a validator for the "masked_key" field. It is called by the builders before save.
+	MaskedKeyValidator func(string) error
+	// NameValidator is a validator for the "name" field. It is called by the builders before save.
+	NameValidator func(string) error
+	// OrganizationIDValidator is a validator for the "organization_id" field. It is called by the builders before save.
+	OrganizationIDValidator func(string) error
+	// DefaultBlocked holds the default value on creation for the "blocked" field.
+	DefaultBlocked bool
+	// DefaultKeyType holds the default value on creation for the "key_type" field.
+	DefaultKeyType string
+	// DefaultAutoRotate holds the default value on creation for the "auto_rotate" field.
+	DefaultAutoRotate bool
+	// DefaultSpend holds the default value on creation for the "spend" field.
+	DefaultSpend int
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -141,14 +197,19 @@ func ByLitellmToken(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLitellmToken, opts...).ToFunc()
 }
 
-// ByAlias orders the results by the alias field.
-func ByAlias(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldAlias, opts...).ToFunc()
+// ByMaskedKey orders the results by the masked_key field.
+func ByMaskedKey(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMaskedKey, opts...).ToFunc()
 }
 
-// ByUserID orders the results by the user_id field.
-func ByUserID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldUserID, opts...).ToFunc()
+// ByName orders the results by the name field.
+func ByName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldName, opts...).ToFunc()
+}
+
+// ByOrganizationID orders the results by the organization_id field.
+func ByOrganizationID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOrganizationID, opts...).ToFunc()
 }
 
 // ByAgentID orders the results by the agent_id field.
@@ -156,19 +217,44 @@ func ByAgentID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAgentID, opts...).ToFunc()
 }
 
-// ByTeamID orders the results by the team_id field.
-func ByTeamID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldTeamID, opts...).ToFunc()
-}
-
-// ByGatewayConnectionID orders the results by the gateway_connection_id field.
-func ByGatewayConnectionID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldGatewayConnectionID, opts...).ToFunc()
+// ByModelGatewayID orders the results by the model_gateway_id field.
+func ByModelGatewayID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldModelGatewayID, opts...).ToFunc()
 }
 
 // ByMaxBudget orders the results by the max_budget field.
 func ByMaxBudget(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMaxBudget, opts...).ToFunc()
+}
+
+// ByMaxParallelRequests orders the results by the max_parallel_requests field.
+func ByMaxParallelRequests(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMaxParallelRequests, opts...).ToFunc()
+}
+
+// ByTpmLimit orders the results by the tpm_limit field.
+func ByTpmLimit(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTpmLimit, opts...).ToFunc()
+}
+
+// ByRpmLimit orders the results by the rpm_limit field.
+func ByRpmLimit(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRpmLimit, opts...).ToFunc()
+}
+
+// ByTpmLimitType orders the results by the tpm_limit_type field.
+func ByTpmLimitType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTpmLimitType, opts...).ToFunc()
+}
+
+// ByRpmLimitType orders the results by the rpm_limit_type field.
+func ByRpmLimitType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRpmLimitType, opts...).ToFunc()
+}
+
+// ByBudgetDuration orders the results by the budget_duration field.
+func ByBudgetDuration(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBudgetDuration, opts...).ToFunc()
 }
 
 // ByStatus orders the results by the status field.
@@ -179,4 +265,34 @@ func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 // ByExpiresAt orders the results by the expires_at field.
 func ByExpiresAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldExpiresAt, opts...).ToFunc()
+}
+
+// ByBlocked orders the results by the blocked field.
+func ByBlocked(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBlocked, opts...).ToFunc()
+}
+
+// ByKeyType orders the results by the key_type field.
+func ByKeyType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKeyType, opts...).ToFunc()
+}
+
+// ByAutoRotate orders the results by the auto_rotate field.
+func ByAutoRotate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAutoRotate, opts...).ToFunc()
+}
+
+// ByRotationInterval orders the results by the rotation_interval field.
+func ByRotationInterval(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRotationInterval, opts...).ToFunc()
+}
+
+// ByLastActiveAt orders the results by the last_active_at field.
+func ByLastActiveAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastActiveAt, opts...).ToFunc()
+}
+
+// BySpend orders the results by the spend field.
+func BySpend(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSpend, opts...).ToFunc()
 }
