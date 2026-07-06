@@ -504,6 +504,7 @@ type LitellmParams struct {
 	MaxBudget                      *float64 `json:"maxBudget,omitempty"`
 	BudgetDuration                 *string  `json:"budgetDuration,omitempty"`
 	UseInPassThrough               bool     `json:"useInPassThrough"`
+	UseLitellmProxy                bool     `json:"useLitellmProxy"`
 	UseChatCompletionsAPI          bool     `json:"useChatCompletionsApi"`
 	MergeReasoningContentInChoices bool     `json:"mergeReasoningContentInChoices"`
 	Tags                           []string `json:"tags"`
@@ -527,6 +528,7 @@ type LitellmParamsInput struct {
 	MaxBudget                      *float64 `json:"maxBudget,omitempty"`
 	BudgetDuration                 *string  `json:"budgetDuration,omitempty"`
 	UseInPassThrough               *bool    `json:"useInPassThrough,omitempty"`
+	UseLitellmProxy                *bool    `json:"useLitellmProxy,omitempty"`
 	UseChatCompletionsAPI          *bool    `json:"useChatCompletionsApi,omitempty"`
 	MergeReasoningContentInChoices *bool    `json:"mergeReasoningContentInChoices,omitempty"`
 	Tags                           []string `json:"tags,omitempty"`
@@ -762,13 +764,6 @@ type Permission struct {
 type PlacementRef struct {
 	Name string  `json:"name"`
 	Path *string `json:"path,omitempty"`
-}
-
-type PrivateModelSpecTestResult struct {
-	Success   bool      `json:"success"`
-	Message   string    `json:"message"`
-	ModelList []string  `json:"modelList"`
-	TestedAt  time.Time `json:"testedAt"`
 }
 
 type ProviderModel struct {
@@ -1034,11 +1029,6 @@ type SyncResourcePoolPayload struct {
 type TestModelGatewayConnectionInput struct {
 	Endpoint  string `json:"endpoint"`
 	MasterKey string `json:"masterKey"`
-}
-
-type TestPrivateModelSpecConnectionInput struct {
-	APIBase string `json:"apiBase"`
-	APIKey  string `json:"apiKey"`
 }
 
 type TestResourcePoolConnectionInput struct {
