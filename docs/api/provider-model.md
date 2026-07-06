@@ -146,21 +146,6 @@ refreshProviderModelStatus(id: ID!): ProviderModel!
 |----------|------|----------|---------|
 | `id` | `ID!` | yes | — |
 
-### `testPrivateModelSpecConnection`
-
-0.1.x: dry-run probe of a private model spec's apiBase+apiKey against the upstream provider's /v1/models. Pre-save — no row read, no secret write. 供 ProviderModel 增改表单的"Test Connection"按钮调用(per-spec 一对一)。
-
-```graphql
-testPrivateModelSpecConnection(input: TestPrivateModelSpecConnectionInput!): PrivateModelSpecTestResult!
-```
-
-- **Returns:** `PrivateModelSpecTestResult!`
-- **Auth:** `@hasRole(any: [admin])`
-
-| Argument | Type | Required | Default |
-|----------|------|----------|---------|
-| `input` | `TestPrivateModelSpecConnectionInput!` | yes | — |
-
 ## Types
 
 ### AdditionalProp1
@@ -193,6 +178,7 @@ testPrivateModelSpecConnection(input: TestPrivateModelSpecConnectionInput!): Pri
 | `maxBudget` | `Float` | — |
 | `budgetDuration` | `String` | — |
 | `useInPassThrough` | `Boolean!` | — |
+| `useLitellmProxy` | `Boolean!` | — |
 | `useChatCompletionsApi` | `Boolean!` | — |
 | `mergeReasoningContentInChoices` | `Boolean!` | — |
 | `tags` | `[String!]!` | — |
@@ -222,19 +208,6 @@ testPrivateModelSpecConnection(input: TestPrivateModelSpecConnectionInput!): Pri
 |-------|------|-------------|
 | `litellmParams` | `LitellmParams!` | — |
 | `modelInfo` | `ModelInfo!` | — |
-
-### PrivateModelSpecTestResult
-
-*Object*
-
-0.1.x: TestPrivateModelSpecConnection 返回 — success/message + 上游 /v1/models 返回的 model id 列表
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `success` | `Boolean!` | — |
-| `message` | `String!` | — |
-| `modelList` | `[String!]!` | 上游 data[].id;失败时 [] |
-| `testedAt` | `Time!` | — |
 
 ### ProviderModel
 
@@ -309,6 +282,7 @@ CreateProviderModelInput: name + modelSpecs + modelGateway
 | `maxBudget` | `Float` | — |
 | `budgetDuration` | `String` | — |
 | `useInPassThrough` | `Boolean` | — |
+| `useLitellmProxy` | `Boolean` | — |
 | `useChatCompletionsApi` | `Boolean` | — |
 | `mergeReasoningContentInChoices` | `Boolean` | — |
 | `tags` | `[String!]` | — |
@@ -374,17 +348,6 @@ CreateProviderModelInput: name + modelSpecs + modelGateway
 | Field | Type | Description |
 |-------|------|-------------|
 | `specId` | `ID!` | — |
-
-### TestPrivateModelSpecConnectionInput
-
-*Input*
-
-0.1.x: TestPrivateModelSpecConnection 入参(apiBase + apiKey 直接传,不经 secret store)
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `apiBase` | `String!` | — |
-| `apiKey` | `String!` | — |
 
 ### UpdateProviderModelInput
 

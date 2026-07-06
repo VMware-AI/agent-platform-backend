@@ -488,6 +488,7 @@ type LitellmParams {
 	maxBudget: Float
 	budgetDuration: String
 	useInPassThrough: Boolean!
+	useLitellmProxy: Boolean!
 	useChatCompletionsApi: Boolean!
 	mergeReasoningContentInChoices: Boolean!
 	tags: [String!]!
@@ -510,6 +511,7 @@ input LitellmParamsInput {
 	maxBudget: Float
 	budgetDuration: String
 	useInPassThrough: Boolean
+	useLitellmProxy: Boolean
 	useChatCompletionsApi: Boolean
 	mergeReasoningContentInChoices: Boolean
 	tags: [String!]
@@ -749,7 +751,6 @@ type Mutation {
 	blockProviderModelSpec(input: ProviderModelSpecBlockInput!): ProviderModel! @hasRole(any: [admin])
 	testProviderConnection(name: String!): ProviderModelStatus! @hasRole(any: [admin])
 	refreshProviderModelStatus(id: ID!): ProviderModel! @hasRole(any: [admin])
-	testPrivateModelSpecConnection(input: TestPrivateModelSpecConnectionInput!): PrivateModelSpecTestResult! @hasRole(any: [admin])
 	createCustomRole(input: CreateCustomRoleInput!): CustomRole! @hasRole(any: [admin])
 	deleteCustomRole(id: ID!): Boolean! @hasRole(any: [admin])
 	upsertPermission(key: String!, description: String): Permission! @hasRole(any: [admin])
@@ -847,12 +848,6 @@ type Permission {
 type PlacementRef {
 	name: String!
 	path: String
-}
-type PrivateModelSpecTestResult {
-	success: Boolean!
-	message: String!
-	modelList: [String!]!
-	testedAt: Time!
 }
 type ProviderModel {
 	id: ID!
@@ -1195,10 +1190,6 @@ type SyncResourcePoolPayload {
 input TestModelGatewayConnectionInput {
 	endpoint: String!
 	masterKey: String!
-}
-input TestPrivateModelSpecConnectionInput {
-	apiBase: String!
-	apiKey: String!
 }
 input TestResourcePoolConnectionInput {
 	name: String!
