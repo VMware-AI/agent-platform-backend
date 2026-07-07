@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/VMware-AI/agent-platform-backend/ent/providermodel"
 	"github.com/google/uuid"
 )
 
@@ -40,16 +39,6 @@ type AddOvaTemplateVersionInput struct {
 
 type AddOvaTemplateVersionPayload struct {
 	Version *OvaTemplateVersion `json:"version"`
-}
-
-type AddProviderModelSpecInput struct {
-	ProviderModelID string          `json:"providerModelId"`
-	Spec            *ModelSpecInput `json:"spec"`
-}
-
-type AdditionalProp1 struct {
-	Status  ModelHealth `json:"status"`
-	Message *string     `json:"message,omitempty"`
 }
 
 type Agent struct {
@@ -251,16 +240,12 @@ type CreateDepartmentInput struct {
 }
 
 type CreateModelRouteInput struct {
-	Name                   string                 `json:"name"`
-	BackendGatewayID       string                 `json:"backendGatewayId"`
-	GatewayName            *string                `json:"gatewayName,omitempty"`
-	SupportedModels        []string               `json:"supportedModels,omitempty"`
-	Strategy               *LoadBalancingStrategy `json:"strategy,omitempty"`
-	UIStrategy             *ModelRouteStrategy    `json:"uiStrategy,omitempty"`
-	Enabled                *bool                  `json:"enabled,omitempty"`
-	Fallbacks              []string               `json:"fallbacks,omitempty"`
-	ContextWindowFallbacks []string               `json:"contextWindowFallbacks,omitempty"`
-	ContentPolicyFallbacks []string               `json:"contentPolicyFallbacks,omitempty"`
+	Name             string              `json:"name"`
+	BackendGatewayID *string             `json:"backendGatewayId,omitempty"`
+	GatewayName      *string             `json:"gatewayName,omitempty"`
+	SupportedModels  []string            `json:"supportedModels,omitempty"`
+	UIStrategy       *ModelRouteStrategy `json:"uiStrategy,omitempty"`
+	Enabled          *bool               `json:"enabled,omitempty"`
 }
 
 type CreateOvaTemplateFamilyInput struct {
@@ -283,12 +268,6 @@ type CreateOvaTemplateVersionInput struct {
 	Version       string  `json:"version"`
 	OvaIdentifier string  `json:"ovaIdentifier"`
 	Notes         *string `json:"notes,omitempty"`
-}
-
-type CreateProviderModelInput struct {
-	Name         string           `json:"name"`
-	ModelGateway string           `json:"modelGateway"`
-	ModelSpecs   []ModelSpecInput `json:"modelSpecs"`
 }
 
 type CreateResourcePoolInput struct {
@@ -435,6 +414,17 @@ type EndpointHealth struct {
 	APIBase *string `json:"apiBase,omitempty"`
 }
 
+type GatewayConnection struct {
+	ID                  string                `json:"id"`
+	Name                string                `json:"name"`
+	Endpoint            string                `json:"endpoint"`
+	PublicURL           *string               `json:"publicUrl,omitempty"`
+	IsDefault           bool                  `json:"isDefault"`
+	Status              GatewayStatus         `json:"status"`
+	LoadBalanceStrategy LoadBalancingStrategy `json:"loadBalanceStrategy"`
+	CreatedAt           time.Time             `json:"createdAt"`
+}
+
 type GatewayHealth struct {
 	GatewayID      string           `json:"gatewayId"`
 	GatewayName    string           `json:"gatewayName"`
@@ -463,79 +453,20 @@ type Image struct {
 }
 
 type IssueVirtualKeyInput struct {
-	OrganizationID      string     `json:"organizationId"`
-	Name                string     `json:"name"`
-	ModelGateway        string     `json:"modelGateway"`
-	AgentID             *string    `json:"agentId,omitempty"`
-	Duration            *string    `json:"duration,omitempty"`
-	ExpiresAt           *time.Time `json:"expiresAt,omitempty"`
-	Models              []string   `json:"models,omitempty"`
-	MaxBudget           *float64   `json:"maxBudget,omitempty"`
-	BudgetDuration      *string    `json:"budgetDuration,omitempty"`
-	MaxParallelRequests *int       `json:"maxParallelRequests,omitempty"`
-	RpmLimit            *int       `json:"rpmLimit,omitempty"`
-	TpmLimit            *int       `json:"tpmLimit,omitempty"`
-	RpmLimitType        *string    `json:"rpmLimitType,omitempty"`
-	TpmLimitType        *string    `json:"tpmLimitType,omitempty"`
-	AllowedRoutes       []string   `json:"allowedRoutes,omitempty"`
-	Tags                []string   `json:"tags,omitempty"`
-	Blocked             *bool      `json:"blocked,omitempty"`
-	KeyType             *string    `json:"keyType,omitempty"`
-	AutoRotate          *bool      `json:"autoRotate,omitempty"`
-	RotationInterval    *string    `json:"rotationInterval,omitempty"`
+	UserID    string     `json:"userId"`
+	AgentID   *string    `json:"agentId,omitempty"`
+	TeamID    *string    `json:"teamId,omitempty"`
+	Models    []string   `json:"models,omitempty"`
+	MaxBudget *float64   `json:"maxBudget,omitempty"`
+	RpmLimit  *int       `json:"rpmLimit,omitempty"`
+	TpmLimit  *int       `json:"tpmLimit,omitempty"`
+	Alias     *string    `json:"alias,omitempty"`
+	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
 }
 
 type IssuedVirtualKey struct {
 	VirtualKey *VirtualKey `json:"virtualKey"`
 	Secret     string      `json:"secret"`
-}
-
-type LitellmParams struct {
-	APIKey                         *string  `json:"apiKey,omitempty"`
-	APIKeyRef                      *string  `json:"apiKeyRef,omitempty"`
-	APIBase                        *string  `json:"apiBase,omitempty"`
-	Model                          string   `json:"model"`
-	CustomLlmProvider              *string  `json:"customLlmProvider,omitempty"`
-	Organization                   *string  `json:"organization,omitempty"`
-	Tpm                            *int     `json:"tpm,omitempty"`
-	Rpm                            *int     `json:"rpm,omitempty"`
-	DefaultAPIKeyTpmLimit          *int     `json:"defaultApiKeyTpmLimit,omitempty"`
-	DefaultAPIKeyRpmLimit          *int     `json:"defaultApiKeyRpmLimit,omitempty"`
-	MaxBudget                      *float64 `json:"maxBudget,omitempty"`
-	BudgetDuration                 *string  `json:"budgetDuration,omitempty"`
-	UseInPassThrough               bool     `json:"useInPassThrough"`
-	UseLitellmProxy                bool     `json:"useLitellmProxy"`
-	UseChatCompletionsAPI          bool     `json:"useChatCompletionsApi"`
-	MergeReasoningContentInChoices bool     `json:"mergeReasoningContentInChoices"`
-	Tags                           []string `json:"tags"`
-	InputCostPerToken              *float64 `json:"inputCostPerToken,omitempty"`
-	OutputCostPerToken             *float64 `json:"outputCostPerToken,omitempty"`
-	CacheReadInputTokenCost        *float64 `json:"cacheReadInputTokenCost,omitempty"`
-	CacheCreationInputTokenCost    *float64 `json:"cacheCreationInputTokenCost,omitempty"`
-}
-
-type LitellmParamsInput struct {
-	APIKey                         *string  `json:"apiKey,omitempty"`
-	APIKeyRef                      *string  `json:"apiKeyRef,omitempty"`
-	APIBase                        *string  `json:"apiBase,omitempty"`
-	Model                          string   `json:"model"`
-	CustomLlmProvider              *string  `json:"customLlmProvider,omitempty"`
-	Organization                   *string  `json:"organization,omitempty"`
-	Tpm                            *int     `json:"tpm,omitempty"`
-	Rpm                            *int     `json:"rpm,omitempty"`
-	DefaultAPIKeyTpmLimit          *int     `json:"defaultApiKeyTpmLimit,omitempty"`
-	DefaultAPIKeyRpmLimit          *int     `json:"defaultApiKeyRpmLimit,omitempty"`
-	MaxBudget                      *float64 `json:"maxBudget,omitempty"`
-	BudgetDuration                 *string  `json:"budgetDuration,omitempty"`
-	UseInPassThrough               *bool    `json:"useInPassThrough,omitempty"`
-	UseLitellmProxy                *bool    `json:"useLitellmProxy,omitempty"`
-	UseChatCompletionsAPI          *bool    `json:"useChatCompletionsApi,omitempty"`
-	MergeReasoningContentInChoices *bool    `json:"mergeReasoningContentInChoices,omitempty"`
-	Tags                           []string `json:"tags,omitempty"`
-	InputCostPerToken              *float64 `json:"inputCostPerToken,omitempty"`
-	OutputCostPerToken             *float64 `json:"outputCostPerToken,omitempty"`
-	CacheReadInputTokenCost        *float64 `json:"cacheReadInputTokenCost,omitempty"`
-	CacheCreationInputTokenCost    *float64 `json:"cacheCreationInputTokenCost,omitempty"`
 }
 
 type LoginInput struct {
@@ -632,45 +563,19 @@ type ModelGatewayTestResult struct {
 	TestedAt time.Time `json:"testedAt"`
 }
 
-type ModelInfo struct {
-	ID              string           `json:"id"`
-	Mode            *string          `json:"mode,omitempty"`
-	Blocked         bool             `json:"blocked"`
-	AdditionalProp1 *AdditionalProp1 `json:"additionalProp1"`
-}
-
-type ModelInfoInput struct {
-	ID      *string `json:"id,omitempty"`
-	Mode    *string `json:"mode,omitempty"`
-	Blocked *bool   `json:"blocked,omitempty"`
-}
-
 type ModelRoute struct {
-	ID                     string                `json:"id"`
-	Name                   string                `json:"name"`
-	ModelAlias             string                `json:"modelAlias"`
-	BackendGatewayID       string                `json:"backendGatewayId"`
-	GatewayName            string                `json:"gatewayName"`
-	Upstreams              []string              `json:"upstreams"`
-	SupportedModels        []string              `json:"supportedModels"`
-	Strategy               LoadBalancingStrategy `json:"strategy"`
-	UIStrategy             ModelRouteStrategy    `json:"uiStrategy"`
-	Enabled                bool                  `json:"enabled"`
-	CreatedAt              time.Time             `json:"createdAt"`
-	UpdatedAt              time.Time             `json:"updatedAt"`
-	Fallbacks              []string              `json:"fallbacks"`
-	ContextWindowFallbacks []string              `json:"contextWindowFallbacks"`
-	ContentPolicyFallbacks []string              `json:"contentPolicyFallbacks"`
-}
-
-type ModelSpec struct {
-	LitellmParams *LitellmParams `json:"litellmParams"`
-	ModelInfo     *ModelInfo     `json:"modelInfo"`
-}
-
-type ModelSpecInput struct {
-	LitellmParams *LitellmParamsInput `json:"litellmParams"`
-	ModelInfo     *ModelInfoInput     `json:"modelInfo,omitempty"`
+	ID               string                `json:"id"`
+	Name             string                `json:"name"`
+	ModelAlias       string                `json:"modelAlias"`
+	BackendGatewayID *string               `json:"backendGatewayId,omitempty"`
+	GatewayName      string                `json:"gatewayName"`
+	Upstreams        []string              `json:"upstreams"`
+	SupportedModels  []string              `json:"supportedModels"`
+	Strategy         LoadBalancingStrategy `json:"strategy"`
+	UIStrategy       ModelRouteStrategy    `json:"uiStrategy"`
+	Enabled          bool                  `json:"enabled"`
+	CreatedAt        time.Time             `json:"createdAt"`
+	UpdatedAt        time.Time             `json:"updatedAt"`
 }
 
 type ModelUsage struct {
@@ -766,42 +671,8 @@ type PlacementRef struct {
 	Path *string `json:"path,omitempty"`
 }
 
-type ProviderModel struct {
-	ID            string               `json:"id"`
-	Name          string               `json:"name"`
-	ModelGateway  *ModelGateway        `json:"modelGateway"`
-	Status        providermodel.Status `json:"status"`
-	CreatedAt     time.Time            `json:"createdAt"`
-	UpdatedAt     time.Time            `json:"updatedAt"`
-	LastCheckedAt *time.Time           `json:"lastCheckedAt,omitempty"`
-	ModelSpecs    []ModelSpec          `json:"modelSpecs"`
-}
-
-type ProviderModelInfoConnection struct {
-	Data        []ProviderModel `json:"data"`
-	TotalCount  int             `json:"total_count"`
-	CurrentPage int             `json:"current_page"`
-	TotalPages  int             `json:"total_pages"`
-	Size        int             `json:"size"`
-}
-
-type ProviderModelInfoFilterInput struct {
-	Search *string               `json:"search,omitempty"`
-	Status *providermodel.Status `json:"status,omitempty"`
-}
-
-type ProviderModelInfoSort struct {
-	Field     ProviderModelInfoSortField `json:"field"`
-	Direction SortDirection              `json:"direction"`
-}
-
-type ProviderModelSpecBlockInput struct {
-	SpecID  string `json:"specId"`
-	Blocked bool   `json:"blocked"`
-}
-
-type ProviderModelSpecIDInput struct {
-	SpecID string `json:"specId"`
+type PlatformSettings struct {
+	AgentUser string `json:"agentUser"`
 }
 
 type Query struct {
@@ -831,6 +702,16 @@ type RecordTokenUsageInput struct {
 type RecycleAgentInput struct {
 	AgentID string `json:"agentId"`
 	Confirm bool   `json:"confirm"`
+}
+
+type RegisterGatewayConnectionInput struct {
+	Name                string                 `json:"name"`
+	Endpoint            string                 `json:"endpoint"`
+	MasterKey           *string                `json:"masterKey,omitempty"`
+	MasterKeyRef        *string                `json:"masterKeyRef,omitempty"`
+	LoadBalanceStrategy *LoadBalancingStrategy `json:"loadBalanceStrategy,omitempty"`
+	PublicURL           *string                `json:"publicUrl,omitempty"`
+	IsDefault           *bool                  `json:"isDefault,omitempty"`
 }
 
 type RequestLog struct {
@@ -966,6 +847,12 @@ type RoleConnection struct {
 	PageInfo   *PageInfo `json:"pageInfo"`
 }
 
+type RouterTier struct {
+	ID         string          `json:"id"`
+	Tier       RouterTierLevel `json:"tier"`
+	ModelAlias string          `json:"modelAlias"`
+}
+
 type Skill struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
@@ -1060,26 +947,16 @@ type UpdateAgentConfigInput struct {
 }
 
 type UpdateModelRouteInput struct {
-	Name                   *string             `json:"name,omitempty"`
-	BackendGatewayID       *string             `json:"backendGatewayId,omitempty"`
-	GatewayName            *string             `json:"gatewayName,omitempty"`
-	SupportedModels        []string            `json:"supportedModels,omitempty"`
-	UIStrategy             *ModelRouteStrategy `json:"uiStrategy,omitempty"`
-	Enabled                *bool               `json:"enabled,omitempty"`
-	Fallbacks              []string            `json:"fallbacks,omitempty"`
-	ContextWindowFallbacks []string            `json:"contextWindowFallbacks,omitempty"`
-	ContentPolicyFallbacks []string            `json:"contentPolicyFallbacks,omitempty"`
+	Name             *string             `json:"name,omitempty"`
+	BackendGatewayID *string             `json:"backendGatewayId,omitempty"`
+	GatewayName      *string             `json:"gatewayName,omitempty"`
+	SupportedModels  []string            `json:"supportedModels,omitempty"`
+	UIStrategy       *ModelRouteStrategy `json:"uiStrategy,omitempty"`
+	Enabled          *bool               `json:"enabled,omitempty"`
 }
 
-type UpdateProviderModelInput struct {
-	ProviderModelID string           `json:"providerModelId"`
-	ModelSpecs      []ModelSpecInput `json:"modelSpecs"`
-}
-
-type UpdateProviderModelSpecInput struct {
-	SpecID        string              `json:"specId"`
-	LitellmParams *LitellmParamsInput `json:"litellmParams"`
-	ModelInfo     *ModelInfoInput     `json:"modelInfo"`
+type UpdatePlatformSettingsInput struct {
+	AgentUser *string `json:"agentUser,omitempty"`
 }
 
 type UpdateResourcePoolInput struct {
@@ -1132,11 +1009,40 @@ type UpsertImageInput struct {
 	Signed     *bool   `json:"signed,omitempty"`
 }
 
+type UpsertModelRouteInput struct {
+	Name             string                 `json:"name"`
+	ModelAlias       string                 `json:"modelAlias"`
+	BackendGatewayID *string                `json:"backendGatewayId,omitempty"`
+	Upstreams        []string               `json:"upstreams,omitempty"`
+	Strategy         *LoadBalancingStrategy `json:"strategy,omitempty"`
+	Enabled          *bool                  `json:"enabled,omitempty"`
+}
+
 type UpsertSkillInput struct {
 	Name        string  `json:"name"`
 	Version     string  `json:"version"`
 	Description *string `json:"description,omitempty"`
 	URI         string  `json:"uri"`
+}
+
+type UpsertUpstreamInput struct {
+	Name      string           `json:"name"`
+	Provider  UpstreamProvider `json:"provider"`
+	APIBase   *string          `json:"apiBase,omitempty"`
+	APIKey    *string          `json:"apiKey,omitempty"`
+	APIKeyRef *string          `json:"apiKeyRef,omitempty"`
+	Model     string           `json:"model"`
+	Enabled   *bool            `json:"enabled,omitempty"`
+}
+
+type Upstream struct {
+	ID        string           `json:"id"`
+	Name      string           `json:"name"`
+	Provider  UpstreamProvider `json:"provider"`
+	APIBase   *string          `json:"apiBase,omitempty"`
+	Model     string           `json:"model"`
+	Enabled   bool             `json:"enabled"`
+	CreatedAt time.Time        `json:"createdAt"`
 }
 
 type User struct {
@@ -1178,33 +1084,16 @@ type VMTemplate struct {
 }
 
 type VirtualKey struct {
-	ID                  string           `json:"id"`
-	Name                string           `json:"name"`
-	MaskedKey           string           `json:"maskedKey"`
-	OrganizationID      string           `json:"organizationId"`
-	ModelGateway        *ModelGateway    `json:"modelGateway"`
-	AgentID             *string          `json:"agentId,omitempty"`
-	Models              []string         `json:"models"`
-	MaxBudget           *float64         `json:"maxBudget,omitempty"`
-	Status              VirtualKeyStatus `json:"status"`
-	ExpiresAt           *time.Time       `json:"expiresAt,omitempty"`
-	Duration            *string          `json:"duration,omitempty"`
-	CreatedAt           time.Time        `json:"createdAt"`
-	UpdatedAt           time.Time        `json:"updatedAt"`
-	MaxParallelRequests *int             `json:"maxParallelRequests,omitempty"`
-	TpmLimit            *int             `json:"tpmLimit,omitempty"`
-	RpmLimit            *int             `json:"rpmLimit,omitempty"`
-	RpmLimitType        *string          `json:"rpmLimitType,omitempty"`
-	TpmLimitType        *string          `json:"tpmLimitType,omitempty"`
-	BudgetDuration      *string          `json:"budgetDuration,omitempty"`
-	AllowedRoutes       []string         `json:"allowedRoutes"`
-	Tags                []string         `json:"tags"`
-	Blocked             bool             `json:"blocked"`
-	KeyType             string           `json:"keyType"`
-	AutoRotate          bool             `json:"autoRotate"`
-	RotationInterval    *string          `json:"rotationInterval,omitempty"`
-	Spend               float64          `json:"spend"`
-	LastActiveAt        *time.Time       `json:"lastActiveAt,omitempty"`
+	ID        string           `json:"id"`
+	Alias     *string          `json:"alias,omitempty"`
+	UserID    string           `json:"userId"`
+	AgentID   *string          `json:"agentId,omitempty"`
+	TeamID    *string          `json:"teamId,omitempty"`
+	Models    []string         `json:"models"`
+	MaxBudget *float64         `json:"maxBudget,omitempty"`
+	Status    VirtualKeyStatus `json:"status"`
+	ExpiresAt *time.Time       `json:"expiresAt,omitempty"`
+	CreatedAt time.Time        `json:"createdAt"`
 }
 
 type VsphereNetwork struct {
@@ -1683,6 +1572,63 @@ func (e DashboardNoticeStatus) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type GatewayStatus string
+
+const (
+	GatewayStatusConnected    GatewayStatus = "connected"
+	GatewayStatusDisconnected GatewayStatus = "disconnected"
+	GatewayStatusError        GatewayStatus = "error"
+)
+
+var AllGatewayStatus = []GatewayStatus{
+	GatewayStatusConnected,
+	GatewayStatusDisconnected,
+	GatewayStatusError,
+}
+
+func (e GatewayStatus) IsValid() bool {
+	switch e {
+	case GatewayStatusConnected, GatewayStatusDisconnected, GatewayStatusError:
+		return true
+	}
+	return false
+}
+
+func (e GatewayStatus) String() string {
+	return string(e)
+}
+
+func (e *GatewayStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = GatewayStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid GatewayStatus", str)
+	}
+	return nil
+}
+
+func (e GatewayStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *GatewayStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e GatewayStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type InstallMethod string
 
 const (
@@ -1735,61 +1681,6 @@ func (e *InstallMethod) UnmarshalJSON(b []byte) error {
 }
 
 func (e InstallMethod) MarshalJSON() ([]byte, error) {
-	var buf bytes.Buffer
-	e.MarshalGQL(&buf)
-	return buf.Bytes(), nil
-}
-
-type LimitType string
-
-const (
-	LimitTypeGuaranteedThroughput LimitType = "guaranteed_throughput"
-	LimitTypeBestEffort           LimitType = "best_effort"
-)
-
-var AllLimitType = []LimitType{
-	LimitTypeGuaranteedThroughput,
-	LimitTypeBestEffort,
-}
-
-func (e LimitType) IsValid() bool {
-	switch e {
-	case LimitTypeGuaranteedThroughput, LimitTypeBestEffort:
-		return true
-	}
-	return false
-}
-
-func (e LimitType) String() string {
-	return string(e)
-}
-
-func (e *LimitType) UnmarshalGQL(v any) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = LimitType(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid LimitType", str)
-	}
-	return nil
-}
-
-func (e LimitType) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-func (e *LimitType) UnmarshalJSON(b []byte) error {
-	s, err := strconv.Unquote(string(b))
-	if err != nil {
-		return err
-	}
-	return e.UnmarshalGQL(s)
-}
-
-func (e LimitType) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil
@@ -2141,63 +2032,6 @@ func (e ModelGatewaySyncState) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-type ModelHealth string
-
-const (
-	ModelHealthHealthy   ModelHealth = "healthy"
-	ModelHealthUnhealthy ModelHealth = "unhealthy"
-	ModelHealthUnknown   ModelHealth = "unknown"
-)
-
-var AllModelHealth = []ModelHealth{
-	ModelHealthHealthy,
-	ModelHealthUnhealthy,
-	ModelHealthUnknown,
-}
-
-func (e ModelHealth) IsValid() bool {
-	switch e {
-	case ModelHealthHealthy, ModelHealthUnhealthy, ModelHealthUnknown:
-		return true
-	}
-	return false
-}
-
-func (e ModelHealth) String() string {
-	return string(e)
-}
-
-func (e *ModelHealth) UnmarshalGQL(v any) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = ModelHealth(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid ModelHealth", str)
-	}
-	return nil
-}
-
-func (e ModelHealth) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-func (e *ModelHealth) UnmarshalJSON(b []byte) error {
-	s, err := strconv.Unquote(string(b))
-	if err != nil {
-		return err
-	}
-	return e.UnmarshalGQL(s)
-}
-
-func (e ModelHealth) MarshalJSON() ([]byte, error) {
-	var buf bytes.Buffer
-	e.MarshalGQL(&buf)
-	return buf.Bytes(), nil
-}
-
 type ModelRouteStrategy string
 
 const (
@@ -2427,126 +2261,6 @@ func (e *PasswordMode) UnmarshalJSON(b []byte) error {
 }
 
 func (e PasswordMode) MarshalJSON() ([]byte, error) {
-	var buf bytes.Buffer
-	e.MarshalGQL(&buf)
-	return buf.Bytes(), nil
-}
-
-type ProviderModelInfoSortField string
-
-const (
-	ProviderModelInfoSortFieldName   ProviderModelInfoSortField = "NAME"
-	ProviderModelInfoSortFieldStatus ProviderModelInfoSortField = "STATUS"
-)
-
-var AllProviderModelInfoSortField = []ProviderModelInfoSortField{
-	ProviderModelInfoSortFieldName,
-	ProviderModelInfoSortFieldStatus,
-}
-
-func (e ProviderModelInfoSortField) IsValid() bool {
-	switch e {
-	case ProviderModelInfoSortFieldName, ProviderModelInfoSortFieldStatus:
-		return true
-	}
-	return false
-}
-
-func (e ProviderModelInfoSortField) String() string {
-	return string(e)
-}
-
-func (e *ProviderModelInfoSortField) UnmarshalGQL(v any) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = ProviderModelInfoSortField(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid ProviderModelInfoSortField", str)
-	}
-	return nil
-}
-
-func (e ProviderModelInfoSortField) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-func (e *ProviderModelInfoSortField) UnmarshalJSON(b []byte) error {
-	s, err := strconv.Unquote(string(b))
-	if err != nil {
-		return err
-	}
-	return e.UnmarshalGQL(s)
-}
-
-func (e ProviderModelInfoSortField) MarshalJSON() ([]byte, error) {
-	var buf bytes.Buffer
-	e.MarshalGQL(&buf)
-	return buf.Bytes(), nil
-}
-
-type ProviderModelProvider string
-
-const (
-	ProviderModelProviderCustom     ProviderModelProvider = "custom"
-	ProviderModelProviderDeepseek   ProviderModelProvider = "deepseek"
-	ProviderModelProviderMinimax    ProviderModelProvider = "minimax"
-	ProviderModelProviderMoonshot   ProviderModelProvider = "moonshot"
-	ProviderModelProviderOpenrouter ProviderModelProvider = "openrouter"
-	ProviderModelProviderOpenai     ProviderModelProvider = "openai"
-	ProviderModelProviderAnthropic  ProviderModelProvider = "anthropic"
-)
-
-var AllProviderModelProvider = []ProviderModelProvider{
-	ProviderModelProviderCustom,
-	ProviderModelProviderDeepseek,
-	ProviderModelProviderMinimax,
-	ProviderModelProviderMoonshot,
-	ProviderModelProviderOpenrouter,
-	ProviderModelProviderOpenai,
-	ProviderModelProviderAnthropic,
-}
-
-func (e ProviderModelProvider) IsValid() bool {
-	switch e {
-	case ProviderModelProviderCustom, ProviderModelProviderDeepseek, ProviderModelProviderMinimax, ProviderModelProviderMoonshot, ProviderModelProviderOpenrouter, ProviderModelProviderOpenai, ProviderModelProviderAnthropic:
-		return true
-	}
-	return false
-}
-
-func (e ProviderModelProvider) String() string {
-	return string(e)
-}
-
-func (e *ProviderModelProvider) UnmarshalGQL(v any) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = ProviderModelProvider(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid ProviderModelProvider", str)
-	}
-	return nil
-}
-
-func (e ProviderModelProvider) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-func (e *ProviderModelProvider) UnmarshalJSON(b []byte) error {
-	s, err := strconv.Unquote(string(b))
-	if err != nil {
-		return err
-	}
-	return e.UnmarshalGQL(s)
-}
-
-func (e ProviderModelProvider) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil
@@ -2900,52 +2614,52 @@ func (e RotationKind) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-type RoutePermission string
+type RouterTierLevel string
 
 const (
-	RoutePermissionChat       RoutePermission = "CHAT"
-	RoutePermissionEmbeddings RoutePermission = "EMBEDDINGS"
-	RoutePermissionImages     RoutePermission = "IMAGES"
-	RoutePermissionAudio      RoutePermission = "AUDIO"
+	RouterTierLevelSimple    RouterTierLevel = "SIMPLE"
+	RouterTierLevelMedium    RouterTierLevel = "MEDIUM"
+	RouterTierLevelComplex   RouterTierLevel = "COMPLEX"
+	RouterTierLevelReasoning RouterTierLevel = "REASONING"
 )
 
-var AllRoutePermission = []RoutePermission{
-	RoutePermissionChat,
-	RoutePermissionEmbeddings,
-	RoutePermissionImages,
-	RoutePermissionAudio,
+var AllRouterTierLevel = []RouterTierLevel{
+	RouterTierLevelSimple,
+	RouterTierLevelMedium,
+	RouterTierLevelComplex,
+	RouterTierLevelReasoning,
 }
 
-func (e RoutePermission) IsValid() bool {
+func (e RouterTierLevel) IsValid() bool {
 	switch e {
-	case RoutePermissionChat, RoutePermissionEmbeddings, RoutePermissionImages, RoutePermissionAudio:
+	case RouterTierLevelSimple, RouterTierLevelMedium, RouterTierLevelComplex, RouterTierLevelReasoning:
 		return true
 	}
 	return false
 }
 
-func (e RoutePermission) String() string {
+func (e RouterTierLevel) String() string {
 	return string(e)
 }
 
-func (e *RoutePermission) UnmarshalGQL(v any) error {
+func (e *RouterTierLevel) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
 	}
 
-	*e = RoutePermission(str)
+	*e = RouterTierLevel(str)
 	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid RoutePermission", str)
+		return fmt.Errorf("%s is not a valid RouterTierLevel", str)
 	}
 	return nil
 }
 
-func (e RoutePermission) MarshalGQL(w io.Writer) {
+func (e RouterTierLevel) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
-func (e *RoutePermission) UnmarshalJSON(b []byte) error {
+func (e *RouterTierLevel) UnmarshalJSON(b []byte) error {
 	s, err := strconv.Unquote(string(b))
 	if err != nil {
 		return err
@@ -2953,7 +2667,7 @@ func (e *RoutePermission) UnmarshalJSON(b []byte) error {
 	return e.UnmarshalGQL(s)
 }
 
-func (e RoutePermission) MarshalJSON() ([]byte, error) {
+func (e RouterTierLevel) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil
@@ -3068,6 +2782,67 @@ func (e *SpendGroupBy) UnmarshalJSON(b []byte) error {
 }
 
 func (e SpendGroupBy) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type UpstreamProvider string
+
+const (
+	UpstreamProviderVllm      UpstreamProvider = "vllm"
+	UpstreamProviderOpenai    UpstreamProvider = "openai"
+	UpstreamProviderAnthropic UpstreamProvider = "anthropic"
+	UpstreamProviderMinimax   UpstreamProvider = "minimax"
+	UpstreamProviderCodex     UpstreamProvider = "codex"
+)
+
+var AllUpstreamProvider = []UpstreamProvider{
+	UpstreamProviderVllm,
+	UpstreamProviderOpenai,
+	UpstreamProviderAnthropic,
+	UpstreamProviderMinimax,
+	UpstreamProviderCodex,
+}
+
+func (e UpstreamProvider) IsValid() bool {
+	switch e {
+	case UpstreamProviderVllm, UpstreamProviderOpenai, UpstreamProviderAnthropic, UpstreamProviderMinimax, UpstreamProviderCodex:
+		return true
+	}
+	return false
+}
+
+func (e UpstreamProvider) String() string {
+	return string(e)
+}
+
+func (e *UpstreamProvider) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = UpstreamProvider(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid UpstreamProvider", str)
+	}
+	return nil
+}
+
+func (e UpstreamProvider) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *UpstreamProvider) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e UpstreamProvider) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil
