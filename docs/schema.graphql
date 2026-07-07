@@ -52,6 +52,7 @@ type Agent {
 	templateVersionId: ID
 	resourcePoolId: ID
 	credentials: AgentCredentials @goField(forceResolver: true)
+	vmResources: AgentVmResources @goField(forceResolver: true)
 	createdAt: Time!
 	updatedAt: Time!
 }
@@ -75,6 +76,9 @@ type AgentConnection {
 }
 type AgentCredentials {
 	username: String!
+	ip: String!
+	sshCommand: String!
+	passwordHint: String!
 }
 input AgentFilter {
 	status: AgentStatus
@@ -82,6 +86,14 @@ input AgentFilter {
 	nameKeyword: String
 	keyKeyword: String
 	ownerKeyword: String
+}
+input AgentNetworkInput {
+	portGroup: String
+}
+input AgentResourceInput {
+	cpu: Int
+	memory: Int
+	disk: Int
 }
 type AgentSnapshot {
 	name: String!
@@ -139,6 +151,13 @@ type AgentUsageRow {
 	totalTokens: Int!
 	requests: Int!
 	cost: Float!
+}
+type AgentVmResources {
+	cpu: Int!
+	memory: Int!
+	disk: Int!
+	networkLabel: String!
+	vAppProperties: [VAppProperty!]!
 }
 type Artifact {
 	id: ID!
@@ -208,6 +227,10 @@ enum BudgetScope {
 	TEAMS
 	USERS
 	KEYS
+}
+enum CloneMode {
+	full
+	instant
 }
 type Cluster {
 	name: String!
@@ -404,7 +427,12 @@ input DeployAgentInput {
 	hostname: String
 	maxBudget: Float
 	targetNetwork: String
-	initialPassword: String
+	ovfProperties: [OVFPropertyInput!]
+	keySource: KeySource! = new
+	existingKeyId: ID
+	notes: String
+	cloneMode: CloneMode! = full
+	instantCloneParent: String
 }
 type DeployedAgent {
 	agent: Agent!
@@ -470,6 +498,10 @@ input IssueVirtualKeyInput {
 type IssuedVirtualKey {
 	virtualKey: VirtualKey!
 	secret: String!
+}
+enum KeySource {
+	new
+	existing
 }
 enum LimitType {
 	guaranteed_throughput
@@ -706,11 +738,12 @@ type Mutation {
 	upsertAgentTemplate(input: UpsertAgentTemplateInput!): AgentTemplate! @hasRole(any: [admin])
 	createAgent(input: CreateAgentInput!): Agent!
 	setAgentStatus(id: ID!, status: AgentStatus!): Agent!
-	createAgentConfig(input: CreateAgentConfigInput!): AgentConfig! @hasRole(any: [admin])
-	updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig! @hasRole(any: [admin])
-	deleteAgentConfig(id: ID!): Boolean! @hasRole(any: [admin])
-	setDefaultAgentConfig(id: ID!): AgentConfig! @hasRole(any: [admin])
-	setAgentConfigKnowledge(configId: ID!, knowledgeArtifactIds: [ID!]!): AgentConfig! @hasRole(any: [admin])
+	createAgentConfig(input: CreateAgentConfigInput!): AgentConfig! @hasRole(any: [admin,tenant_admin])
+	updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig! @hasRole(any: [admin,tenant_admin])
+	deleteAgentConfig(id: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
+	setDefaultAgentConfig(id: ID!): AgentConfig! @hasRole(any: [admin,tenant_admin])
+	setAgentConfigKnowledge(configId: ID!, knowledgeArtifactIds: [ID!]!): AgentConfig! @hasRole(any: [admin,tenant_admin])
+	reconfigAgentVM(agentId: ID!, resource: AgentResourceInput, network: AgentNetworkInput, vAppProperties: [VAppPropertyInput!]): Agent! @hasRole(any: [admin,user])
 	upsertArtifact(input: UpsertArtifactInput!): Artifact! @hasRole(any: [admin])
 	deleteArtifact(id: ID!): Boolean! @hasRole(any: [admin])
 	upsertSkill(input: UpsertSkillInput!): Skill! @hasRole(any: [admin])
@@ -741,6 +774,7 @@ type Mutation {
 	recordRequestLog(input: RecordRequestLogInput!): RequestLog! @hasRole(any: [admin])
 	createOvaTemplateFamily(input: CreateOvaTemplateFamilyInput!): CreateOvaTemplateFamilyPayload! @hasRole(any: [admin])
 	addOvaTemplateVersion(input: AddOvaTemplateVersionInput!): AddOvaTemplateVersionPayload! @hasRole(any: [admin])
+	deleteOvaTemplateFamily(id: ID!): Boolean! @hasRole(any: [admin])
 	createProviderModel(input: CreateProviderModelInput!): ProviderModel! @hasRole(any: [admin])
 	deleteProviderModel(id: ID!): Boolean! @hasRole(any: [admin])
 	addProviderModelSpec(input: AddProviderModelSpecInput!): ProviderModel! @hasRole(any: [admin])
@@ -767,6 +801,21 @@ type Mutation {
 	regenerateVirtualKey(id: ID!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
 	setVirtualKeyEnabled(id: ID!, enabled: Boolean!): VirtualKey! @hasPermission(perm: "key:manage")
 	associateVirtualKeyAgent(virtualKeyId: ID!, agentId: ID!): VirtualKey! @hasPermission(perm: "key:manage")
+}
+type OVFProperty {
+	key: String!
+	label: String!
+	type: String!
+	defaultValue: String
+	description: String!
+	required: Boolean!
+	password: Boolean!
+	values: [String!]!
+	category: String!
+}
+input OVFPropertyInput {
+	key: String!
+	value: String!
 }
 enum OvaTemplateColor {
 	BLUE
@@ -817,6 +866,7 @@ type OvaTemplateVersion {
 	ovaIdentifier: String!
 	notes: String
 	createdAt: Time!
+	ovfProperties: [OVFProperty!]! @goField(forceResolver: true)
 }
 type OvaTemplateVersionConnection {
 	nodes: [OvaTemplateVersion!]!
@@ -917,6 +967,7 @@ type Query {
 	agentConfigs(agentType: String): [AgentConfig!]!
 	agents(filter: AgentFilter, pagination: Pagination, sort: AgentSort): AgentConnection! @hasRole(any: [admin,read_only,user])
 	agent(id: ID!): Agent!
+	agentVmResources(id: ID!): AgentVmResources! @hasRole(any: [admin,user])
 	artifacts(kind: ArtifactKind): [Artifact!]!
 	artifactVersions(name: String!): [Artifact!]!
 	skills: [Skill!]!
@@ -928,6 +979,8 @@ type Query {
 	vsphereResourcePools(resourcePoolId: ID!): [VsphereResourcePool!]! @hasRole(any: [admin])
 	vsphereNetworks(resourcePoolId: ID!): [VsphereNetwork!]! @hasRole(any: [admin])
 	agentSnapshots(agentId: ID!): [AgentSnapshot!]!
+	unboundKeys: [VirtualKey!]! @hasRole(any: [admin])
+	instantCloneParents(resourcePoolId: ID!): [VMTemplate!]! @hasRole(any: [admin])
 	modelRoutes: [ModelRoute!]! @hasRole(any: [admin])
 	tokenUsage(userId: ID, page: PageInput): [TokenUsage!]! @hasPermission(perm: "metering:view")
 	meteringSummary(userId: ID): MeteringSummary! @hasPermission(perm: "metering:view")
@@ -1333,6 +1386,14 @@ enum UserSortField {
 	LAST_LOGIN
 	CREATED_AT
 	UPDATED_AT
+}
+type VAppProperty {
+	key: String!
+	value: String!
+}
+input VAppPropertyInput {
+	key: String!
+	value: String!
 }
 type VMTemplate {
 	name: String!

@@ -11,7 +11,10 @@ import (
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
+	"github.com/vmware/govmomi/vapi/rest"
+	"github.com/vmware/govmomi/vapi/vcenter"
 	"github.com/vmware/govmomi/view"
+	"github.com/vmware/govmomi/vim25/methods"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
 )
@@ -62,6 +65,7 @@ type VMInfo struct {
 	Name       string
 	PowerState string
 	UUID       string
+	IP         string
 }
 
 // ListVMs returns all virtual machines visible to the account.
@@ -120,6 +124,20 @@ func (c *Client) SetGuestinfo(ctx context.Context, vmName string, kv map[string]
 	return task.Wait(ctx)
 }
 
+// OVFDeploySpec describes a content-library OVF deployment request.
+// Uses vCenter's OVF deploy pipeline which generates the OVF environment
+// (ovf-env.xml ISO) so the guest OS can read deployment properties natively.
+type OVFDeploySpec struct {
+	LibraryItemID string            // content library item UUID
+	Name          string            // new VM name
+	ResourcePool  string            // target resource pool MoRef
+	Host          string            // target host MoRef
+	Folder        string            // target VM folder MoRef
+	Datastore     string            // target datastore MoRef
+	Properties    map[string]string // OVF property id→value pairs
+	Network       string            // target network/portgroup path ("" = keep default)
+}
+
 // CloneSpec describes a clone-from-template provisioning request. Placement
 // fields are optional — empty values fall back to the datacenter defaults.
 type CloneSpec struct {
@@ -129,7 +147,20 @@ type CloneSpec struct {
 	ResourcePool string // target pool; "" = datacenter default
 	Datastore    string // target datastore; "" = inherit from source
 	Folder       string // target VM folder; "" = datacenter VM folder
-	Network      string // target network (standard portgroup or dvPortgroup); "" = keep the source template's NIC mapping unchanged
+	// Network is the inventory path of the target portgroup (standard or dvPort).
+	// "" = keep the source template's NIC mapping unchanged.
+	Network string
+	// ExtraConfig is guestinfo.* key-value pairs injected as VM ExtraConfig at
+	// clone time. Typically carries OVF/vApp properties set by the deploy form
+	// (ip, netmask, gateway, dns, password, etc.) so they are available when
+	// cloud-init / VMwareGuestInfo datasource runs at first boot.
+	ExtraConfig map[string]string
+	// VAppProperties carries OVF user-configurable property key->value pairs
+	// injected into the clone's VAppConfig so the guest receives them via the
+	// OVF environment transport (iso / com.vmware.guestInfo).
+	VAppProperties map[string]string
+	// VAppTransport overrides the source template's OVF environment transport.
+	VAppTransport []string
 }
 
 // CloneFromTemplate clones a template VM into a new agent VM and returns its
@@ -178,13 +209,9 @@ func (c *Client) CloneFromTemplate(ctx context.Context, spec CloneSpec) (*VMInfo
 		relocate.Datastore = types.NewReference(ds.Reference())
 	}
 
-	folder, err := c.cloneFolder(ctx, finder, dc, spec.Folder)
-	if err != nil {
-		return nil, err
-	}
 	// Remap the first NIC to the requested network/portgroup (optional).
 	if spec.Network != "" {
-		netDev, err := c.buildNetworkDevice(ctx, src, spec.Network)
+		netDev, err := c.buildNetworkDevice(ctx, finder, src, spec.Network)
 		if err != nil {
 			return nil, err
 		}
@@ -192,16 +219,89 @@ func (c *Client) CloneFromTemplate(ctx context.Context, spec CloneSpec) (*VMInfo
 			relocate.DeviceChange = append(relocate.DeviceChange, netDev)
 		}
 	}
+
+	folder, err := c.cloneFolder(ctx, finder, dc, spec.Folder)
+	if err != nil {
+		return nil, err
+	}
+	// Build ConfigSpec: ExtraConfig for guestinfo.* keys + VAppConfig for
+	// OVF properties (the VMware-native way for guests to consume deploy params).
+	var config *types.VirtualMachineConfigSpec
+	needsConfig := len(spec.ExtraConfig) > 0
+	needsVApp := len(spec.VAppProperties) > 0
+	if needsConfig || needsVApp {
+		cs := &types.VirtualMachineConfigSpec{}
+		if needsConfig {
+			opts := make([]types.BaseOptionValue, 0, len(spec.ExtraConfig))
+			for k, v := range spec.ExtraConfig {
+				opts = append(opts, &types.OptionValue{Key: k, Value: v})
+			}
+			cs.ExtraConfig = opts
+		}
+		if needsVApp {
+			if vci := c.readVAppConfig(ctx, src); vci != nil {
+				transport := spec.VAppTransport
+				if len(transport) == 0 {
+					transport = vci.OvfEnvironmentTransport
+				}
+				cs.VAppConfig = buildVAppPropertySpec(vci, spec.VAppProperties, transport)
+			}
+		}
+		config = cs
+	}
+
+	// vCenter Guest OS Customization — the VMware-native way TKG uses.
+	// Always applied: static IP when ip_mode=static, hostname only otherwise.
+	customization := buildLinuxCustomization(spec.ExtraConfig, spec.Name)
+
 	task, err := src.Clone(ctx, folder, spec.Name, types.VirtualMachineCloneSpec{
-		Location: relocate,
-		PowerOn:  spec.PowerOn,
-		Template: false,
+		Location:      relocate,
+		PowerOn:       spec.PowerOn,
+		Template:      false,
+		Config:        config,
+		Customization: customization,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("vcenter: clone %s→%s: %w", spec.Template, spec.Name, err)
 	}
 	if err := task.Wait(ctx); err != nil {
 		return nil, fmt.Errorf("vcenter: clone task %s→%s: %w", spec.Template, spec.Name, err)
+	}
+	return c.vmInfo(ctx, spec.Name)
+}
+
+// DeployOVF deploys a VM from a content library OVF item using vCenter's
+// native OVF deployment pipeline. Unlike CloneFromTemplate, this generates
+// an OVF environment ISO that the guest OS reads to get deployment properties
+// (network config, passwords, etc.) — the same mechanism TKG uses.
+func (c *Client) DeployOVF(ctx context.Context, spec OVFDeploySpec) (*VMInfo, error) {
+	if spec.LibraryItemID == "" || spec.Name == "" {
+		return nil, fmt.Errorf("vcenter: OVF deploy requires LibraryItemID and Name")
+	}
+	rc := rest.NewClient(c.vc.Client)
+	if err := rc.Login(ctx, c.userinfo); err != nil {
+		return nil, fmt.Errorf("vcenter: REST login for OVF deploy: %w", err)
+	}
+	defer func() { _ = rc.Logout(ctx) }()
+
+	mgr := vcenter.NewManager(rc)
+
+	// vCenter 8.0.3 uses the VMTX deploy endpoint with flat placement fields.
+	deploy := vcenter.DeployTemplate{
+		Name:      spec.Name,
+		PoweredOn: false,
+	}
+	if spec.ResourcePool != "" || spec.Host != "" || spec.Folder != "" {
+		deploy.Placement = &vcenter.Placement{
+			ResourcePool: spec.ResourcePool,
+			Host:         spec.Host,
+			Folder:       spec.Folder,
+		}
+	}
+
+	_, err := mgr.DeployTemplateLibraryItem(ctx, spec.LibraryItemID, deploy)
+	if err != nil {
+		return nil, fmt.Errorf("vcenter: OVF deploy: %w", err)
 	}
 	return c.vmInfo(ctx, spec.Name)
 }
@@ -232,10 +332,15 @@ func (c *Client) vmInfo(ctx context.Context, name string) (*VMInfo, error) {
 	if err := vm.Properties(ctx, vm.Reference(), []string{"summary"}, &mvm); err != nil {
 		return nil, fmt.Errorf("vcenter: vm properties %s: %w", name, err)
 	}
+	ip := ""
+	if mvm.Summary.Guest != nil {
+		ip = mvm.Summary.Guest.IpAddress
+	}
 	return &VMInfo{
 		Name:       mvm.Summary.Config.Name,
 		PowerState: string(mvm.Summary.Runtime.PowerState),
 		UUID:       mvm.Summary.Config.Uuid,
+		IP:         ip,
 	}, nil
 }
 
@@ -281,6 +386,11 @@ func (c *Client) Shutdown(ctx context.Context, vmName string) error {
 
 // ListTemplates returns VMs marked as templates (config.template=true) — the
 // OVA-built images available to clone agent VMs from (LLD-03 §4, 部署表单选模板).
+
+func (c *Client) GetVMInfo(ctx context.Context, vmName string) (*VMInfo, error) {
+	return c.vmInfo(ctx, vmName)
+}
+
 func (c *Client) ListTemplates(ctx context.Context) ([]VMInfo, error) {
 	m := view.NewManager(c.vc.Client)
 	v, err := m.CreateContainerView(ctx, c.vc.ServiceContent.RootFolder, []string{"VirtualMachine"}, true)
@@ -368,6 +478,104 @@ func (c *Client) MarkAsTemplate(ctx context.Context, vmName string) error {
 // Destroy powers a VM off (if needed) and permanently deletes it. This is
 // destructive — the resolver layer gates it with dry-run + confirmation + audit
 // (LLD-03 §4 回收, 沿用旧平台 @vmware_tool 约束精神).
+
+// readVAppConfig reads the source VM's VmConfigInfo (vApp properties and transport).
+func (c *Client) readVAppConfig(ctx context.Context, vm *object.VirtualMachine) *types.VmConfigInfo {
+	var mvm mo.VirtualMachine
+	if err := vm.Properties(ctx, vm.Reference(), []string{"config.vAppConfig"}, &mvm); err != nil {
+		return nil
+	}
+	if mvm.Config == nil || mvm.Config.VAppConfig == nil {
+		return nil
+	}
+	vci, _ := mvm.Config.VAppConfig.(*types.VmConfigInfo)
+	return vci
+}
+
+// buildVAppPropertySpec creates a VmConfigSpec that sets OVF property values
+// via the OVF environment transport mechanism. The guest reads these from the
+// OVF environment (ISO or com.vmware.guestInfo) — the VMware-native way.
+// buildVAppPropertySpec creates a VmConfigSpec that sets OVF property values
+// by matching property Ids to their int32 Keys from the source template.
+// buildLinuxCustomization returns a CustomizationSpec that configures a static
+// IP on the first NIC. This is the VMware-native guest OS customization mechanism
+// — vCenter runs it at first boot via vmtools, the same way TKG does.
+func buildLinuxCustomization(props map[string]string, vmName string) *types.CustomizationSpec {
+	hostname := props["guestinfo.hostname"]
+	if hostname == "" {
+		hostname = props["guestinfo.static_ip"]
+	}
+	ip := props["guestinfo.static_ip"]
+	mask := props["guestinfo.netmask"]
+	if mask == "" {
+		mask = "255.255.255.0"
+	}
+	gw := props["guestinfo.gateway"]
+	dns := props["guestinfo.dns"]
+
+	var nicIP types.BaseCustomizationIpGenerator = &types.CustomizationDhcpIpGenerator{}
+	if props["guestinfo.ip_mode"] == "static" && ip != "" {
+		nicIP = &types.CustomizationFixedIp{IpAddress: ip}
+	}
+	spec := &types.CustomizationSpec{
+		Identity: &types.CustomizationLinuxPrep{
+			HostName: &types.CustomizationVirtualMachineName{},
+		},
+		GlobalIPSettings: types.CustomizationGlobalIPSettings{
+			DnsServerList: filterEmpty([]string{dns}),
+		},
+		// Always include 1 NIC mapping to match the VM's 1 NIC.
+		NicSettingMap: []types.CustomizationAdapterMapping{
+			{
+				Adapter: types.CustomizationIPSettings{
+					Ip:            nicIP,
+					SubnetMask:    mask,
+					Gateway:       filterEmpty([]string{gw}),
+					DnsServerList: filterEmpty([]string{dns}),
+				},
+			},
+		},
+	}
+	return spec
+}
+
+func filterEmpty(ss []string) []string {
+	var out []string
+	for _, s := range ss {
+		if s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+func buildVAppPropertySpec(src *types.VmConfigInfo, values map[string]string, transport []string) *types.VmConfigSpec {
+	// Build a lookup of Id→Key from the source template so we correctly
+	// reference each property by its int32 key when setting the value.
+	srcKeys := make(map[string]int32, len(src.Property))
+	for _, p := range src.Property {
+		srcKeys[p.Id] = p.Key
+	}
+	specs := make([]types.VAppPropertySpec, 0, len(values))
+	for k, v := range values {
+		key, ok := srcKeys[k]
+		if !ok {
+			continue
+		} // skip properties not in the template
+		specs = append(specs, types.VAppPropertySpec{
+			ArrayUpdateSpec: types.ArrayUpdateSpec{Operation: "edit"},
+			Info:            &types.VAppPropertyInfo{Key: key, Id: k, Value: v},
+		})
+	}
+	if len(transport) == 0 {
+		transport = []string{"com.vmware.guestInfo"}
+	}
+	return &types.VmConfigSpec{
+		Property:                specs,
+		OvfEnvironmentTransport: transport,
+	}
+}
+
 func (c *Client) Destroy(ctx context.Context, vmName string) error {
 	vm, err := c.findVM(ctx, vmName)
 	if err != nil {
@@ -494,89 +702,9 @@ func (c *Client) Logout(ctx context.Context) error {
 	return c.vc.Logout(ctx)
 }
 
-// RetryableError marks a vCenter call failure as safe to retry. Network
-// errors, transport-level timeouts and 5xx SOAP faults should be wrapped in
-// this type by the call sites that produce them, so the resource-pool
-// fault-tolerance chain (retrySync + gobreaker) can distinguish them from
-// business errors (4xx, auth failure, object-not-found) that must NOT be
-// retried.
-type RetryableError struct{ Err error }
-
-func (e *RetryableError) Error() string { return e.Err.Error() }
-func (e *RetryableError) Unwrap() error { return e.Err }
-
-// MaybeRetryable classifies err as retryable when its message matches a
-// known transient transport pattern. vSphere SOAP faults come back as
-// strings from govmomi (the SDK does not expose strongly-typed fault codes
-// for every status), so a substring check is the cheapest correct-enough
-// filter here. Call sites that know a more specific classification (e.g.
-// Connect failing on a DNS error vs an auth failure) should wrap err
-// directly with &RetryableError{Err: err} instead of relying on this helper.
-func MaybeRetryable(err error) error {
-	if err == nil {
-		return nil
-	}
-	msg := err.Error()
-	for _, needle := range []string{
-		"connection refused",
-		"connection reset",
-		"connection closed",
-		"i/o timeout",
-		"context deadline exceeded",
-		"EOF",
-		"reset by peer",
-		"no route to host",
-		"network is unreachable",
-		"temporarily unavailable",
-	} {
-		if containsCI(msg, needle) {
-			return &RetryableError{Err: err}
-		}
-	}
-	return err
-}
-
-// containsCI is a case-insensitive substring check; avoiding strings.ToLower
-// allocations keeps the call path allocation-free for the hot error path.
-func containsCI(s, needle string) bool {
-	if len(needle) == 0 {
-		return true
-	}
-	if len(needle) > len(s) {
-		return false
-	}
-	for i := 0; i+len(needle) <= len(s); i++ {
-		match := true
-		for j := 0; j < len(needle); j++ {
-			a, b := s[i+j], needle[j]
-			if a >= 'A' && a <= 'Z' {
-				a += 32
-			}
-			if b >= 'A' && b <= 'Z' {
-				b += 32
-			}
-			if a != b {
-				match = false
-				break
-			}
-		}
-		if match {
-			return true
-		}
-	}
-	return false
-}
-
 // NetworkInfo describes a network/portgroup available to the deploy form.
 // Type is "standard" for standard vSwitch portgroups, "distributed" for dvPort
 // groups. DVSName is the parent distributed switch name (empty for standard).
-//
-// Path is the managed-object reference string (e.g. "Network:network-12"), NOT a
-// human path: it is the opaque identifier the deploy form sends back as
-// targetNetwork and the ONLY value that resolves a network unambiguously.
-// Same-named standard portgroups on different hosts are distinct Network MOs, so a
-// name/inventory-path would be ambiguous (find.MultipleFoundError); the moref is
-// unique. Name/Type/DVSName are for display.
 type NetworkInfo struct {
 	Name    string
 	Path    string
@@ -592,67 +720,41 @@ func (c *Client) ListNetworks(ctx context.Context) ([]NetworkInfo, error) {
 	// Create a container view over Network objects (covers both standard portgroups
 	// and dvPortgroup). A flat container at the root captures all datacenters.
 	cv, err := m.CreateContainerView(ctx, c.vc.ServiceContent.RootFolder,
-		[]string{"Network", "DistributedVirtualSwitch"}, true)
+		[]string{"Network", "DistributedVirtualPortgroup"}, true)
 	if err != nil {
 		return nil, fmt.Errorf("vcenter: create network container view: %w", err)
 	}
-	defer func() { _ = cv.Destroy(ctx) }()
+	defer cv.Destroy(ctx)
 
-	// Retrieve standard Network objects. PropertyCollector's kind match is
-	// polymorphic — dvPortgroups ARE Networks — so filter to exact-type rows,
-	// or every dvPG would show once here (mislabeled "standard") and again in
-	// the distributed section below (#96).
+	// Retrieve standard Network objects.
 	var stdNets []mo.Network
-	if err := cv.Retrieve(ctx, []string{"Network"}, []string{"name"}, &stdNets); err != nil {
+	if err := cv.Retrieve(ctx, []string{"Network"}, []string{"name", "summary"}, &stdNets); err != nil {
 		return nil, fmt.Errorf("vcenter: retrieve networks: %w", err)
 	}
-	stdNets = keepExactType(stdNets, "Network")
 
-	// Retrieve dvPortgroup objects (parent DVS ref via config.distributedVirtualSwitch).
+	// Retrieve dvPortgroup objects (includes parent DVS name via config.distributedVirtualSwitch).
 	var dvPGs []mo.DistributedVirtualPortgroup
 	if err := cv.Retrieve(ctx, []string{"DistributedVirtualPortgroup"},
 		[]string{"name", "config"}, &dvPGs); err != nil {
 		return nil, fmt.Errorf("vcenter: retrieve dvportgroups: %w", err)
 	}
 
-	// Resolve DVS display names so DVSName carries the switch's actual name,
-	// not its moref value ("dvs-21").
-	var dvss []mo.DistributedVirtualSwitch
-	if err := cv.Retrieve(ctx, []string{"DistributedVirtualSwitch"},
-		[]string{"name"}, &dvss); err != nil {
-		return nil, fmt.Errorf("vcenter: retrieve dvswitches: %w", err)
-	}
-	dvsNameByRef := make(map[string]string, len(dvss))
-	for _, sw := range dvss {
-		dvsNameByRef[sw.Self.Value] = sw.Name
-	}
-
 	out := make([]NetworkInfo, 0, len(stdNets)+len(dvPGs))
 	for _, n := range stdNets {
 		out = append(out, NetworkInfo{
 			Name: n.Name,
-			Path: n.Self.String(), // moref — the unambiguous, resolvable identifier
+			Path: n.Name,
 			Type: "standard",
 		})
 	}
 	for _, pg := range dvPGs {
-		// Uplink portgroups are physical trunks, never a valid NIC target for
-		// a deployed VM.
-		if pg.Config.Uplink != nil && *pg.Config.Uplink {
-			continue
-		}
 		dvsName := ""
 		if pg.Config.DistributedVirtualSwitch != nil {
-			ref := pg.Config.DistributedVirtualSwitch.Value
-			if name, ok := dvsNameByRef[ref]; ok {
-				dvsName = name
-			} else {
-				dvsName = ref // fallback: still unambiguous, if ugly
-			}
+			dvsName = pg.Config.DistributedVirtualSwitch.Value
 		}
 		out = append(out, NetworkInfo{
 			Name:    pg.Name,
-			Path:    pg.Self.String(), // moref — see standard case
+			Path:    pg.Name,
 			Type:    "distributed",
 			DVSName: dvsName,
 		})
@@ -663,7 +765,7 @@ func (c *Client) ListNetworks(ctx context.Context) ([]NetworkInfo, error) {
 // buildNetworkDevice constructs a VirtualDeviceConfigSpec that replaces the
 // source template's first NIC with the requested network (standard portgroup or
 // dvPortgroup). Returns nil when the source VM has no NIC (no-op).
-func (c *Client) buildNetworkDevice(ctx context.Context, src *object.VirtualMachine, networkID string) (*types.VirtualDeviceConfigSpec, error) {
+func (c *Client) buildNetworkDevice(ctx context.Context, finder *find.Finder, src *object.VirtualMachine, networkPath string) (*types.VirtualDeviceConfigSpec, error) {
 	var mvm mo.VirtualMachine
 	if err := src.Properties(ctx, src.Reference(), []string{"config.hardware.device"}, &mvm); err != nil {
 		return nil, fmt.Errorf("vcenter: read source devices: %w", err)
@@ -681,21 +783,14 @@ func (c *Client) buildNetworkDevice(ctx context.Context, src *object.VirtualMach
 		return nil, nil // no NIC to remap
 	}
 
-	// Resolve the target network by its managed-object reference (networkID is the
-	// moref string from ListNetworks). Resolving by moref is unambiguous; resolving
-	// by bare name would hit find.MultipleFoundError when same-named standard
-	// portgroups exist on multiple hosts, failing the clone mid-flight.
-	var ref types.ManagedObjectReference
-	if !ref.FromString(networkID) {
-		return nil, fmt.Errorf("vcenter: invalid network reference %q", networkID)
-	}
-	net, ok := object.NewReference(c.vc.Client, ref).(object.NetworkReference)
-	if !ok {
-		return nil, fmt.Errorf("vcenter: %q is not a network", networkID)
+	// Resolve the target network object (standard portgroup or dvPortgroup).
+	net, err := finder.Network(ctx, networkPath)
+	if err != nil {
+		return nil, fmt.Errorf("vcenter: network %q: %w", networkPath, err)
 	}
 	backing, err := net.EthernetCardBackingInfo(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("vcenter: network backing %q: %w", networkID, err)
+		return nil, fmt.Errorf("vcenter: network backing %q: %w", networkPath, err)
 	}
 
 	// Clone the source NIC and swap its backing.
@@ -707,4 +802,190 @@ func (c *Client) buildNetworkDevice(ctx context.Context, src *object.VirtualMach
 		Operation: types.VirtualDeviceConfigSpecOperationEdit,
 		Device:    srcNIC.(types.BaseVirtualDevice),
 	}, nil
+}
+
+type VMHardware struct {
+	CPU          int32
+	MemoryMB     int32
+	DiskKB       int64
+	NetworkLabel string
+}
+type ReconfigSpec struct {
+	CPU       *int32
+	MemoryMB  *int32
+	DiskKB    *int64
+	PortGroup *string
+	VAppProps map[string]string
+}
+
+func (c *Client) ReconfigVM(ctx context.Context, vmName string, spec ReconfigSpec) error {
+	vm, err := c.findVM(ctx, vmName)
+	if err != nil {
+		return fmt.Errorf("find vm: %w", err)
+	}
+	cs := types.VirtualMachineConfigSpec{}
+	if spec.CPU != nil {
+		cs.NumCPUs = *spec.CPU
+	}
+	if spec.MemoryMB != nil {
+		cs.MemoryMB = int64(*spec.MemoryMB)
+	}
+	if spec.DiskKB != nil {
+		devs, _ := vm.Device(ctx)
+		for _, d := range devs.SelectByType(&types.VirtualDisk{}) {
+			if vd, ok := d.(*types.VirtualDisk); ok {
+				vd.CapacityInKB = *spec.DiskKB
+				cs.DeviceChange = append(cs.DeviceChange, &types.VirtualDeviceConfigSpec{Operation: types.VirtualDeviceConfigSpecOperationEdit, Device: vd})
+				break
+			}
+		}
+	}
+	if spec.PortGroup != nil {
+		c.applyNet(ctx, vm, *spec.PortGroup, &cs)
+	}
+	if len(spec.VAppProps) > 0 {
+		specs := make([]types.VAppPropertySpec, 0, len(spec.VAppProps))
+		for k, v := range spec.VAppProps {
+			specs = append(specs, types.VAppPropertySpec{ArrayUpdateSpec: types.ArrayUpdateSpec{Operation: types.ArrayUpdateOperationEdit}, Info: &types.VAppPropertyInfo{Key: 0, Id: k, Value: v}})
+		}
+		cs.VAppConfig = &types.VmConfigSpec{Property: specs}
+	}
+	task, _ := vm.Reconfigure(ctx, cs)
+	return task.Wait(ctx)
+}
+func (c *Client) applyNet(ctx context.Context, vm *object.VirtualMachine, pp string, cs *types.VirtualMachineConfigSpec) {
+	finder := find.NewFinder(c.vc.Client, false)
+	netRef, _ := finder.Network(ctx, pp)
+	if netRef == nil {
+		return
+	}
+	backing, _ := netRef.EthernetCardBackingInfo(ctx)
+	devs, _ := vm.Device(ctx)
+	for _, d := range devs.SelectByType(&types.VirtualEthernetCard{}) {
+		if nic, ok := d.(types.BaseVirtualEthernetCard); ok {
+			nic.GetVirtualEthernetCard().Backing = backing
+			cs.DeviceChange = append(cs.DeviceChange, &types.VirtualDeviceConfigSpec{Operation: types.VirtualDeviceConfigSpecOperationEdit, Device: nic.(types.BaseVirtualDevice)})
+			break
+		}
+	}
+}
+func (c *Client) GetVMHardware(ctx context.Context, vmName string) (*VMHardware, error) {
+	vm, _ := c.findVM(ctx, vmName)
+	var mvm mo.VirtualMachine
+	vm.Properties(ctx, vm.Reference(), []string{"summary.config.numCpu", "summary.config.memorySizeMB", "summary.storage.committed", "summary.storage.uncommitted"}, &mvm)
+	return &VMHardware{CPU: int32(mvm.Summary.Config.NumCpu), MemoryMB: int32(mvm.Summary.Config.MemorySizeMB), DiskKB: mvm.Summary.Storage.Committed + mvm.Summary.Storage.Uncommitted}, nil
+}
+func (c *Client) GetVAppProperties(ctx context.Context, vmName string) ([]OVFProperty, error) {
+	vm, _ := c.findVM(ctx, vmName)
+	var mvm mo.VirtualMachine
+	vm.Properties(ctx, vm.Reference(), []string{"config.vAppConfig"}, &mvm)
+	if mvm.Config == nil || mvm.Config.VAppConfig == nil {
+		return nil, nil
+	}
+	vci, ok := mvm.Config.VAppConfig.(*types.VmConfigInfo)
+	if !ok {
+		return nil, nil
+	}
+	out := make([]OVFProperty, 0, len(vci.Property))
+	for _, p := range vci.Property {
+		out = append(out, OVFProperty{Key: p.Id, DefaultValue: p.Value})
+	}
+	return out, nil
+}
+
+type InstantCloneSpec struct {
+	ParentVM, Name, ResourcePool, Datastore, Folder, Network string
+	ExtraConfig                                              map[string]string
+	BiosUUID                                                 string
+}
+
+func (c *Client) InstantClone(ctx context.Context, spec InstantCloneSpec) (*VMInfo, error) {
+	src, _ := c.findVM(ctx, spec.ParentVM)
+	finder := find.NewFinder(c.vc.Client, true)
+	dc, _ := finder.DefaultDatacenter(ctx)
+	finder.SetDatacenter(dc)
+	relocate := &types.VirtualMachineRelocateSpec{}
+	if spec.ResourcePool != "" {
+		p, _ := finder.ResourcePool(ctx, spec.ResourcePool)
+		if p != nil {
+			relocate.Pool = types.NewReference(p.Reference())
+		}
+	}
+	if spec.Datastore != "" {
+		d, _ := finder.Datastore(ctx, spec.Datastore)
+		if d != nil {
+			relocate.Datastore = types.NewReference(d.Reference())
+		}
+	}
+	if spec.Network != "" {
+		nd, _ := c.buildNetworkDevice(ctx, finder, src, spec.Network)
+		if nd != nil {
+			relocate.DeviceChange = append(relocate.DeviceChange, nd)
+		}
+	}
+	var config []types.BaseOptionValue
+	for k, v := range spec.ExtraConfig {
+		config = append(config, &types.OptionValue{Key: k, Value: v})
+	}
+	cs := &types.VirtualMachineInstantCloneSpec{Name: spec.Name, Location: *relocate}
+	if len(config) > 0 {
+		cs.Config = config
+	}
+	if spec.BiosUUID != "" {
+		cs.BiosUuid = spec.BiosUUID
+	}
+	req := &types.InstantClone_Task{This: src.Reference(), Spec: *cs}
+	resp, _ := methods.InstantClone_Task(ctx, c.vc.Client.RoundTripper, req)
+	task := object.NewTask(c.vc.Client, resp.Returnval)
+	task.Wait(ctx)
+	return c.vmInfo(ctx, spec.Name)
+}
+func (c *Client) ListRunningVMs(ctx context.Context) ([]VMInfo, error) {
+	m := view.NewManager(c.vc.Client)
+	v, _ := m.CreateContainerView(ctx, c.vc.ServiceContent.RootFolder, []string{"VirtualMachine"}, true)
+	defer v.Destroy(ctx)
+	var vms []mo.VirtualMachine
+	v.Retrieve(ctx, []string{"VirtualMachine"}, []string{"summary"}, &vms)
+	var out []VMInfo
+	for _, vm := range vms {
+		if vm.Summary.Runtime.PowerState != "poweredOn" || vm.Summary.Config.Template {
+			continue
+		}
+		out = append(out, VMInfo{Name: vm.Summary.Config.Name, PowerState: string(vm.Summary.Runtime.PowerState), UUID: vm.Summary.Config.Uuid})
+	}
+	return out, nil
+}
+func (c *Client) CheckInstantCloneCompatible(ctx context.Context, vmName string) error {
+	vm, _ := c.findVM(ctx, vmName)
+	req := &types.CheckInstantClone_Task{This: vm.Reference(), Spec: types.VirtualMachineInstantCloneSpec{Name: "_ck_", Location: types.VirtualMachineRelocateSpec{}}}
+	_, err := methods.CheckInstantClone_Task(ctx, c.vc.Client.RoundTripper, req)
+	return err
+}
+func (c *Client) RemoveSerialPorts(ctx context.Context, vmName string) error {
+	vm, err := c.findVM(ctx, vmName)
+	if err != nil {
+		return fmt.Errorf("find vm: %w", err)
+	}
+	devs, err := vm.Device(ctx)
+	fmt.Printf("[RemoveSerialPorts] vm=%q devices=%d\n", vmName, len(devs))
+	if err != nil {
+		return fmt.Errorf("get devices: %w", err)
+	}
+	var changes []types.BaseVirtualDeviceConfigSpec
+	for _, d := range devs {
+		if _, ok := d.(*types.VirtualSerialPort); ok {
+			fmt.Printf("[RemoveSerialPorts] FOUND serial port on %q\n", vmName)
+		}
+		if _, ok := d.(*types.VirtualSerialPort); ok {
+			changes = append(changes, &types.VirtualDeviceConfigSpec{Operation: types.VirtualDeviceConfigSpecOperationRemove, Device: d})
+		}
+	}
+	if len(changes) == 0 {
+		return nil
+	}
+	task, err := vm.Reconfigure(ctx, types.VirtualMachineConfigSpec{DeviceChange: changes})
+	if err != nil {
+		return fmt.Errorf("reconfigure: %w", err)
+	}
+	return task.Wait(ctx)
 }

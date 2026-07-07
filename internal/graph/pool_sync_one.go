@@ -14,7 +14,6 @@ import (
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
-	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 )
 
 // syncOnePool is the single shared entry point for "sync one pool". It is
@@ -104,7 +103,7 @@ func (r *Resolver) syncOnePool(ctx context.Context, pool *ent.ResourcePool) (syn
 			if err != nil {
 				log.Printf("pool-sync [%s] attempt %d pool=%s: connect failed err=%q elapsed=%s",
 					source, attempts, poolName, err, time.Since(attemptStart))
-				return vcenter.MaybeRetryable(err)
+				return err
 			}
 			defer func() { _ = conn.Logout(ctx) }()
 
@@ -112,7 +111,7 @@ func (r *Resolver) syncOnePool(ctx context.Context, pool *ent.ResourcePool) (syn
 			if _, err := conn.Inventory(ctx); err != nil {
 				log.Printf("pool-sync [%s] attempt %d pool=%s: inventory() failed err=%q elapsed=%s",
 					source, attempts, poolName, err, time.Since(attemptStart))
-				return vcenter.MaybeRetryable(err)
+				return err
 			}
 			log.Printf("pool-sync [%s] attempt %d pool=%s: inventory() ok elapsed=%s",
 				source, attempts, poolName, time.Since(attemptStart))
@@ -123,7 +122,7 @@ func (r *Resolver) syncOnePool(ctx context.Context, pool *ent.ResourcePool) (syn
 			if err != nil {
 				log.Printf("pool-sync [%s] attempt %d pool=%s: FullInventory() failed err=%q elapsed=%s",
 					source, attempts, poolName, err, time.Since(fullStart))
-				return vcenter.MaybeRetryable(err)
+				return err
 			}
 			storagePolicyStatus := "absent"
 			for _, dc := range inventory {

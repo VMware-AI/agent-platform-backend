@@ -7,8 +7,10 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
+	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplatefamily"
 	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplateversion"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
@@ -83,6 +85,40 @@ func (r *mutationResolver) AddOvaTemplateVersion(ctx context.Context, input mode
 	return &model.AddOvaTemplateVersionPayload{Version: toModelOvaVersion(v, input.FamilyID)}, nil
 }
 
+// DeleteOvaTemplateFamily deletes a template family and all its versions.
+// Refuses if any deployed agent still references this template.
+func (r *mutationResolver) DeleteOvaTemplateFamily(ctx context.Context, id string) (bool, error) {
+	fid, err := uuid.Parse(id)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid id")
+	}
+	_, err = r.Ent.OvaTemplateFamily.Get(ctx, fid)
+	if err != nil {
+		return false, fmt.Errorf("template not found: %w", err)
+	}
+	count, err := r.Ent.Agent.Query().Where(agent.TemplateFamilyID(fid)).Count(ctx)
+	if err != nil {
+		return false, fmt.Errorf("check agents: %w", err)
+	}
+	if count > 0 {
+		return false, gqlerror.Errorf("cannot delete: %d agent(s) still reference this template", count)
+	}
+	tx, err := r.Ent.Tx(ctx)
+	if err != nil {
+		return false, fmt.Errorf("start tx: %w", err)
+	}
+	if _, err := tx.OvaTemplateVersion.Delete().Where(ovatemplateversion.HasFamilyWith(ovatemplatefamily.ID(fid))).Exec(ctx); err != nil {
+		return false, rollback(tx, fmt.Errorf("delete versions: %w", err))
+	}
+	if err := tx.OvaTemplateFamily.DeleteOneID(fid).Exec(ctx); err != nil {
+		return false, rollback(tx, fmt.Errorf("delete family: %w", err))
+	}
+	if err := tx.Commit(); err != nil {
+		return false, fmt.Errorf("commit: %w", err)
+	}
+	return true, nil
+}
+
 // LatestVersion returns the version string of the family's most recently created
 // version, or nil when the family has none. When the list resolver eager-loaded
 // the versions (obj.Versions non-nil), it derives from them (no extra query);
@@ -146,6 +182,45 @@ func (r *ovaTemplateVersionResolver) FamilyID(ctx context.Context, obj *model.Ov
 		return "", err
 	}
 	return fam.ID.String(), nil
+}
+
+// OvfProperties reads live vApp/OVF properties from the VM template in vCenter
+// by iterating all resource pools to find the template's vAppConfig.
+func (r *ovaTemplateVersionResolver) OvfProperties(ctx context.Context, obj *model.OvaTemplateVersion) ([]model.OVFProperty, error) {
+	if obj.OvaIdentifier == "" {
+		return []model.OVFProperty{}, nil
+	}
+	pools, err := r.Ent.ResourcePool.Query().All(ctx)
+	if err != nil {
+		return []model.OVFProperty{}, nil
+	}
+	for _, pool := range pools {
+		conn, err := r.connectPool(ctx, pool)
+		if err != nil {
+			continue
+		}
+		props, err := conn.GetTemplateVAppProperties(ctx, obj.OvaIdentifier)
+		_ = conn.Logout(ctx)
+		if err != nil || len(props) == 0 {
+			continue
+		}
+		out := make([]model.OVFProperty, len(props))
+		for i, p := range props {
+			out[i] = model.OVFProperty{
+				Key:          p.Key,
+				Label:        p.Label,
+				Type:         p.Type,
+				DefaultValue: strPtr(p.DefaultValue),
+				Description:  p.Description,
+				Required:     p.Required,
+				Password:     p.Password,
+				Values:       p.Values,
+				Category:     p.Category,
+			}
+		}
+		return out, nil
+	}
+	return []model.OVFProperty{}, nil
 }
 
 // OvaTemplateFamilies is a filtered/sorted/paged connection of marketplace

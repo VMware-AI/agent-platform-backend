@@ -65,6 +65,7 @@ type Agent struct {
 	TemplateVersionID *string           `json:"templateVersionId,omitempty"`
 	ResourcePoolID    *string           `json:"resourcePoolId,omitempty"`
 	Credentials       *AgentCredentials `json:"credentials,omitempty"`
+	VMResources       *AgentVMResources `json:"vmResources,omitempty"`
 	CreatedAt         time.Time         `json:"createdAt"`
 	UpdatedAt         time.Time         `json:"updatedAt"`
 	OwnerUserID       uuid.UUID         `json:"-"`
@@ -93,7 +94,10 @@ type AgentConnection struct {
 }
 
 type AgentCredentials struct {
-	Username string `json:"username"`
+	Username     string `json:"username"`
+	IP           string `json:"ip"`
+	SSHCommand   string `json:"sshCommand"`
+	PasswordHint string `json:"passwordHint"`
 }
 
 type AgentFilter struct {
@@ -102,6 +106,16 @@ type AgentFilter struct {
 	NameKeyword  *string      `json:"nameKeyword,omitempty"`
 	KeyKeyword   *string      `json:"keyKeyword,omitempty"`
 	OwnerKeyword *string      `json:"ownerKeyword,omitempty"`
+}
+
+type AgentNetworkInput struct {
+	PortGroup *string `json:"portGroup,omitempty"`
+}
+
+type AgentResourceInput struct {
+	CPU    *int `json:"cpu,omitempty"`
+	Memory *int `json:"memory,omitempty"`
+	Disk   *int `json:"disk,omitempty"`
 }
 
 type AgentSnapshot struct {
@@ -145,6 +159,14 @@ type AgentUsageRow struct {
 	TotalTokens  int     `json:"totalTokens"`
 	Requests     int     `json:"requests"`
 	Cost         float64 `json:"cost"`
+}
+
+type AgentVMResources struct {
+	CPU            int            `json:"cpu"`
+	Memory         int            `json:"memory"`
+	Disk           int            `json:"disk"`
+	NetworkLabel   string         `json:"networkLabel"`
+	VAppProperties []VAppProperty `json:"vAppProperties"`
 }
 
 type Artifact struct {
@@ -412,16 +434,21 @@ type Department struct {
 }
 
 type DeployAgentInput struct {
-	Name               string   `json:"name"`
-	TemplateFamilyID   string   `json:"templateFamilyId"`
-	TemplateVersionID  string   `json:"templateVersionId"`
-	ResourcePoolID     string   `json:"resourcePoolId"`
-	DepartmentID       *string  `json:"departmentId,omitempty"`
-	TargetResourcePool *string  `json:"targetResourcePool,omitempty"`
-	Hostname           *string  `json:"hostname,omitempty"`
-	MaxBudget          *float64 `json:"maxBudget,omitempty"`
-	TargetNetwork      *string  `json:"targetNetwork,omitempty"`
-	InitialPassword    *string  `json:"initialPassword,omitempty"`
+	Name               string             `json:"name"`
+	TemplateFamilyID   string             `json:"templateFamilyId"`
+	TemplateVersionID  string             `json:"templateVersionId"`
+	ResourcePoolID     string             `json:"resourcePoolId"`
+	DepartmentID       *string            `json:"departmentId,omitempty"`
+	TargetResourcePool *string            `json:"targetResourcePool,omitempty"`
+	Hostname           *string            `json:"hostname,omitempty"`
+	MaxBudget          *float64           `json:"maxBudget,omitempty"`
+	TargetNetwork      *string            `json:"targetNetwork,omitempty"`
+	OvfProperties      []OVFPropertyInput `json:"ovfProperties,omitempty"`
+	KeySource          KeySource          `json:"keySource"`
+	ExistingKeyID      *string            `json:"existingKeyId,omitempty"`
+	Notes              *string            `json:"notes,omitempty"`
+	CloneMode          CloneMode          `json:"cloneMode"`
+	InstantCloneParent *string            `json:"instantCloneParent,omitempty"`
 }
 
 type DeployedAgent struct {
@@ -691,6 +718,23 @@ type ModelUsageRow struct {
 type Mutation struct {
 }
 
+type OVFProperty struct {
+	Key          string   `json:"key"`
+	Label        string   `json:"label"`
+	Type         string   `json:"type"`
+	DefaultValue *string  `json:"defaultValue,omitempty"`
+	Description  string   `json:"description"`
+	Required     bool     `json:"required"`
+	Password     bool     `json:"password"`
+	Values       []string `json:"values"`
+	Category     string   `json:"category"`
+}
+
+type OVFPropertyInput struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
 type OvaTemplateFamily struct {
 	ID            string               `json:"id"`
 	Name          string               `json:"name"`
@@ -724,12 +768,13 @@ type OvaTemplateFamilySort struct {
 }
 
 type OvaTemplateVersion struct {
-	ID            string    `json:"id"`
-	FamilyID      string    `json:"familyId"`
-	Version       string    `json:"version"`
-	OvaIdentifier string    `json:"ovaIdentifier"`
-	Notes         *string   `json:"notes,omitempty"`
-	CreatedAt     time.Time `json:"createdAt"`
+	ID            string        `json:"id"`
+	FamilyID      string        `json:"familyId"`
+	Version       string        `json:"version"`
+	OvaIdentifier string        `json:"ovaIdentifier"`
+	Notes         *string       `json:"notes,omitempty"`
+	CreatedAt     time.Time     `json:"createdAt"`
+	OvfProperties []OVFProperty `json:"ovfProperties"`
 }
 
 type OvaTemplateVersionConnection struct {
@@ -1183,6 +1228,16 @@ type UserSort struct {
 	Direction SortDirection `json:"direction"`
 }
 
+type VAppProperty struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type VAppPropertyInput struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
 type VMTemplate struct {
 	Name string `json:"name"`
 	UUID string `json:"uuid"`
@@ -1525,6 +1580,61 @@ func (e BudgetScope) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type CloneMode string
+
+const (
+	CloneModeFull    CloneMode = "full"
+	CloneModeInstant CloneMode = "instant"
+)
+
+var AllCloneMode = []CloneMode{
+	CloneModeFull,
+	CloneModeInstant,
+}
+
+func (e CloneMode) IsValid() bool {
+	switch e {
+	case CloneModeFull, CloneModeInstant:
+		return true
+	}
+	return false
+}
+
+func (e CloneMode) String() string {
+	return string(e)
+}
+
+func (e *CloneMode) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = CloneMode(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid CloneMode", str)
+	}
+	return nil
+}
+
+func (e CloneMode) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *CloneMode) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e CloneMode) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type ConnectionStatus string
 
 const (
@@ -1746,6 +1856,61 @@ func (e *InstallMethod) UnmarshalJSON(b []byte) error {
 }
 
 func (e InstallMethod) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type KeySource string
+
+const (
+	KeySourceNew      KeySource = "new"
+	KeySourceExisting KeySource = "existing"
+)
+
+var AllKeySource = []KeySource{
+	KeySourceNew,
+	KeySourceExisting,
+}
+
+func (e KeySource) IsValid() bool {
+	switch e {
+	case KeySourceNew, KeySourceExisting:
+		return true
+	}
+	return false
+}
+
+func (e KeySource) String() string {
+	return string(e)
+}
+
+func (e *KeySource) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = KeySource(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid KeySource", str)
+	}
+	return nil
+}
+
+func (e KeySource) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *KeySource) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e KeySource) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

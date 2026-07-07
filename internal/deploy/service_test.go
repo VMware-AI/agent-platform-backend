@@ -2,6 +2,7 @@ package deploy
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -74,6 +75,10 @@ func (f *fakeVC) PowerOn(_ context.Context, vm string) error {
 func (f *fakeVC) Destroy(_ context.Context, vm string) error {
 	f.destroyed = append(f.destroyed, vm)
 	return nil
+}
+
+func (f *fakeVC) DeployOVF(_ context.Context, _ vcenter.OVFDeploySpec) (*vcenter.VMInfo, error) {
+	return nil, fmt.Errorf("not implemented")
 }
 
 func TestProvision_FullLifecycle(t *testing.T) {

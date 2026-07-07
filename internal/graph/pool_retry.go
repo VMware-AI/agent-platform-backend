@@ -6,8 +6,6 @@ import (
 	"log"
 	"math/rand"
 	"time"
-
-	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 )
 
 // retrySync invokes fn up to maxRetries+1 times. Between attempts it sleeps
@@ -61,9 +59,12 @@ func retrySync(ctx context.Context, maxRetries int, fn func(context.Context) err
 	return lastErr
 }
 
-// isRetryable decides whether a sync error should be retried. The transport
-// layer (vcenter.RetryableError) owns the classification; context errors are
-// left alone so the caller's timeout/deadline is honoured verbatim.
+// isRetryable decides whether a sync error should be retried. With the
+// vcenter-side retry classifier gone from the codebase, every non-context
+// error is treated as retryable — the caller already filters out nil and
+// ctx errors above. This is the conservative default: a transient vCenter
+// hiccup doesn't kill the whole sync, while a permanent error eventually
+// exhausts maxRetries and bubbles up.
 func isRetryable(err error) bool {
 	if err == nil {
 		return false
@@ -71,6 +72,5 @@ func isRetryable(err error) bool {
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return false
 	}
-	var re *vcenter.RetryableError
-	return errors.As(err, &re)
+	return true
 }

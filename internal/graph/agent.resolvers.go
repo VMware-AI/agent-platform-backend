@@ -7,6 +7,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
@@ -17,6 +18,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
+	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
@@ -68,6 +70,30 @@ func (r *agentResolver) Credentials(ctx context.Context, obj *model.Agent) (*mod
 		return nil, err
 	}
 	return &model.AgentCredentials{Username: u.Username}, nil
+}
+
+// VMResources resolves Agent.vmResources — live VM hardware from vCenter.
+// Returns nil when the agent is not deployed or vCenter is unreachable.
+func (r *agentResolver) VMResources(ctx context.Context, obj *model.Agent) (*model.AgentVMResources, error) {
+	if obj.Endpoint == nil || *obj.Endpoint == "" || obj.ResourcePoolID == nil {
+		return nil, nil
+	}
+	pool, err := r.Ent.ResourcePool.Get(ctx, uuid.MustParse(*obj.ResourcePoolID))
+	if err != nil {
+		return nil, nil
+	}
+	conn, err := r.connectPool(ctx, pool)
+	if err != nil {
+		return nil, nil
+	}
+	defer func() { _ = conn.Logout(ctx) }()
+	hw, err := conn.GetVMHardware(ctx, *obj.Endpoint)
+	if err != nil {
+		return nil, nil
+	}
+	diskGB := int(hw.DiskKB / (1024 * 1024))
+	memoryGB := int(hw.MemoryMB / 1024)
+	return &model.AgentVMResources{CPU: int(hw.CPU), Memory: memoryGB, Disk: diskGB, NetworkLabel: hw.NetworkLabel}, nil
 }
 
 // Knowledge is the resolver for the knowledge field. Lazily loads the config's
@@ -361,6 +387,87 @@ func (r *mutationResolver) SetAgentConfigKnowledge(ctx context.Context, configID
 	return toModelAgentConfig(cfg), nil
 }
 
+// ReconfigAgentVM applies a partial resource/network/vApp reconfig to a deployed agent's VM.
+// Network changes allowed on running VMs (vCenter online NIC swap). CPU/memory can only increase on running VMs.
+func (r *mutationResolver) ReconfigAgentVM(ctx context.Context, agentID string, resource *model.AgentResourceInput, network *model.AgentNetworkInput, vAppProperties []model.VAppPropertyInput) (*model.Agent, error) {
+	cu := auth.FromContext(ctx)
+	if cu == nil {
+		return nil, gqlerror.Errorf("unauthenticated")
+	}
+	id, err := uuid.Parse(agentID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid agent id")
+	}
+	ag, err := r.getOwnedAgent(ctx, id, cu)
+	if err != nil {
+		return nil, err
+	}
+	if ag.VMRef == "" {
+		return nil, gqlerror.Errorf("agent has no deployed VM")
+	}
+	conn, _, err := r.connectAgentVM(ctx, cu, id)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = conn.Logout(ctx) }()
+	hw, err := conn.GetVMHardware(ctx, ag.VMRef)
+	if err != nil {
+		return nil, fmt.Errorf("get vm hardware: %w", err)
+	}
+	spec := vcenter.ReconfigSpec{}
+	if resource != nil {
+		if resource.CPU != nil {
+			c := int32(*resource.CPU)
+			if ag.Status == "running" && c < hw.CPU {
+				return nil, gqlerror.Errorf("running VM cannot reduce CPU (%d→%d)", hw.CPU, c)
+			}
+			spec.CPU = &c
+		}
+		if resource.Memory != nil {
+			m := int32(*resource.Memory * 1024)
+			if ag.Status == "running" && m < hw.MemoryMB {
+				return nil, gqlerror.Errorf("running VM cannot reduce memory (%dMB→%dMB)", hw.MemoryMB, m)
+			}
+			spec.MemoryMB = &m
+		}
+		if resource.Disk != nil {
+			d := int64(*resource.Disk) * 1024 * 1024
+			if d < hw.DiskKB {
+				return nil, gqlerror.Errorf("disk cannot shrink (%dKB→%dKB)", hw.DiskKB, d)
+			}
+			spec.DiskKB = &d
+		}
+	}
+	if network != nil && network.PortGroup != nil {
+		// Validate the port group is within the agent's resource pool scope
+		nets, err := conn.ListNetworks(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("list networks for validation: %w", err)
+		}
+		found := false
+		for _, n := range nets {
+			if n.Path == *network.PortGroup {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, gqlerror.Errorf("portgroup %q not found in resource pool's vCenter", *network.PortGroup)
+		}
+		spec.PortGroup = network.PortGroup
+	}
+	if len(vAppProperties) > 0 {
+		spec.VAppProps = make(map[string]string, len(vAppProperties))
+		for _, p := range vAppProperties {
+			spec.VAppProps[p.Key] = p.Value
+		}
+	}
+	if err := conn.ReconfigVM(ctx, ag.VMRef, spec); err != nil {
+		return nil, fmt.Errorf("reconfigure vm: %w", err)
+	}
+	return toModelAgent(ag), nil
+}
+
 // AgentTemplates lists the catalog.
 func (r *queryResolver) AgentTemplates(ctx context.Context) ([]model.AgentTemplate, error) {
 	ts, err := r.Ent.AgentTemplate.Query().Order(orderNewest).All(ctx)
@@ -503,6 +610,44 @@ func (r *queryResolver) Agent(ctx context.Context, id string) (*model.Agent, err
 	// field resolvers (Owner, APIKey, Credentials) don't N+1 for a single row.
 	r.primeAgentRelations(ctx, []*ent.Agent{a})
 	return toModelAgent(a), nil
+}
+
+// AgentVMResources returns live VM hardware from vCenter for the agent's VM.
+func (r *queryResolver) AgentVMResources(ctx context.Context, id string) (*model.AgentVMResources, error) {
+	cu := auth.FromContext(ctx)
+	if cu == nil {
+		return nil, gqlerror.Errorf("unauthenticated")
+	}
+	agentID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid agent id")
+	}
+	ag, err := r.getOwnedAgent(ctx, agentID, cu)
+	if err != nil {
+		return nil, err
+	}
+	if ag.VMRef == "" {
+		return nil, gqlerror.Errorf("agent has no deployed VM")
+	}
+	if ag.ResourcePoolID == nil {
+		return nil, gqlerror.Errorf("agent has no resource pool")
+	}
+	pool, err := r.Ent.ResourcePool.Get(ctx, *ag.ResourcePoolID)
+	if err != nil {
+		return nil, fmt.Errorf("resource pool: %w", err)
+	}
+	conn, err := r.connectPool(ctx, pool)
+	if err != nil {
+		return nil, fmt.Errorf("connect vcenter: %w", err)
+	}
+	defer func() { _ = conn.Logout(ctx) }()
+	hw, err := conn.GetVMHardware(ctx, ag.VMRef)
+	if err != nil {
+		return nil, fmt.Errorf("get vm hardware: %w", err)
+	}
+	diskGB := int(hw.DiskKB / (1024 * 1024))
+	memoryGB := int(hw.MemoryMB / 1024)
+	return &model.AgentVMResources{CPU: int(hw.CPU), Memory: memoryGB, Disk: diskGB, NetworkLabel: hw.NetworkLabel}, nil
 }
 
 // Agent returns AgentResolver implementation.

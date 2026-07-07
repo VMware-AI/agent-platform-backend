@@ -65,6 +65,21 @@ addOvaTemplateVersion(input: AddOvaTemplateVersionInput!): AddOvaTemplateVersion
 |----------|------|----------|---------|
 | `input` | `AddOvaTemplateVersionInput!` | yes | — |
 
+### `deleteOvaTemplateFamily`
+
+Delete a template family and all its versions. Admin only.
+
+```graphql
+deleteOvaTemplateFamily(id: ID!): Boolean!
+```
+
+- **Returns:** `Boolean!`
+- **Auth:** `@hasRole(any: [admin])`
+
+| Argument | Type | Required | Default |
+|----------|------|----------|---------|
+| `id` | `ID!` | yes | — |
+
 ## Types
 
 ### AddOvaTemplateVersionPayload
@@ -82,6 +97,24 @@ addOvaTemplateVersion(input: AddOvaTemplateVersionInput!): AddOvaTemplateVersion
 | Field | Type | Description |
 |-------|------|-------------|
 | `family` | `OvaTemplateFamily!` | — |
+
+### OVFProperty
+
+*Object*
+
+A single vApp / OVF user-configurable property from a VM template's vAppConfig. The deploy form renders these dynamically.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `key` | `String!` | — |
+| `label` | `String!` | — |
+| `type` | `String!` | "string" \| "password" \| "boolean" \| "int" \| "real" \| "ip" |
+| `defaultValue` | `String` | — |
+| `description` | `String!` | — |
+| `required` | `Boolean!` | — |
+| `password` | `Boolean!` | — |
+| `values` | `[String!]!` | enum choices, empty for non-enum types |
+| `category` | `String!` | — |
 
 ### OvaTemplateFamily
 
@@ -125,6 +158,7 @@ addOvaTemplateVersion(input: AddOvaTemplateVersionInput!): AddOvaTemplateVersion
 | `ovaIdentifier` | `String!` | — |
 | `notes` | `String` | — |
 | `createdAt` | `Time!` | — |
+| `ovfProperties` | `[OVFProperty!]!` | vApp / OVF user-configurable properties from the linked VM template. Populated live from vCenter's vAppConfig when available; empty otherwise. |
 
 ### OvaTemplateVersionConnection
 

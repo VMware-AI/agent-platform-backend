@@ -21,6 +21,7 @@ import (
 // testability.
 type VMProvisioner interface {
 	CloneFromTemplate(ctx context.Context, spec vcenter.CloneSpec) (*vcenter.VMInfo, error)
+	DeployOVF(ctx context.Context, spec vcenter.OVFDeploySpec) (*vcenter.VMInfo, error)
 	SetGuestinfo(ctx context.Context, vmName string, kv map[string]string) error
 	PowerOn(ctx context.Context, vmName string) error
 	Destroy(ctx context.Context, vmName string) error
@@ -64,15 +65,6 @@ type Request struct {
 	// KnowledgeRoot is the VM dir the daemon unpacks knowledge packs to (LLD-11 K4,
 	// per-kind via AgentTemplate). Only injected when packs are present.
 	KnowledgeRoot string
-	// webadmin self-service contract (agent-manager-daemon deploy/ova README
-	// "Deploy-time contract"): a one-time credential seed + the in-VM upgrade
-	// wiring, stamped as guestinfo.agentmgr.* for cloud-init's bootstrap.json.
-	// All optional — the daemon applies its own defaults for absent keys — and
-	// consumed by the VM-local webadmin, so none require the enroll channel.
-	//
-	// InitialPassword is SENSITIVE (never log, never persist): the webadmin
-	// seeds it into the VM's UI + OS credentials at first boot, one-time.
-	InitialPassword string
 	// AgentPkgName is the agent package base name (guestinfo agent_name; the
 	// daemon resolves {pkg_base_url}/{name}-{version}.tar.gz). NOT the display
 	// name in AgentName above.
@@ -90,6 +82,21 @@ type Request struct {
 	// AgentKeepVersions is how many installed versions the VM retains when
 	// pruning after an upgrade (daemon default 3). 0 = don't stamp.
 	AgentKeepVersions int
+	// OVFProperties carries user-provided vApp/OVF property values from the deploy
+	// form. guestinfo.* keys are injected as VM ExtraConfig at clone time.
+	OVFProperties map[string]string
+	// ContentLibraryItemID, when set, switches from CloneFromTemplate to OVF deploy
+	// via vCenter's content-library deploy pipeline (native OVF environment).
+	ContentLibraryItemID string
+	// HostMoRef is the target host managed object reference for OVF deploy.
+	HostMoRef string
+	// FolderMoRef is the target VM folder managed object reference for OVF deploy.
+	FolderMoRef string
+	// ExistingKey, when set, reuses an existing gateway virtual key instead of
+	// issuing a new one. The key must be unbound (not attached to any agent).
+	ExistingKey string
+	// ExistingKeyToken is the gateway's hashed key identifier for reconciliation.
+	ExistingKeyToken string
 }
 
 // Result carries the issued secret (returned once), the rendered userdata, and
@@ -129,16 +136,24 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 		// "smart" complexity router alias is no longer the entry point.
 	}
 
-	// 1) Issue the gateway key (cheap and revocable — do it before the VM).
-	key, err := s.Gateway.GenerateKey(ctx, gateway.GenerateKeyRequest{
-		UserID:    req.UserID,
-		TeamID:    req.TeamID,
-		Models:    models,
-		MaxBudget: req.MaxBudget,
-		Metadata:  map[string]string{"agent": req.AgentName},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("deploy: issue key: %w", err)
+	// 1) Issue or reuse gateway key.
+	var key gateway.KeyResponse
+	if req.ExistingKey != "" {
+		// Reuse an existing unbound virtual key — no GenerateKey call.
+		key.Key = req.ExistingKey
+		key.Token = req.ExistingKeyToken
+	} else {
+		k, err := s.Gateway.GenerateKey(ctx, gateway.GenerateKeyRequest{
+			UserID:    req.UserID,
+			TeamID:    req.TeamID,
+			Models:    models,
+			MaxBudget: req.MaxBudget,
+			Metadata:  map[string]string{"agent": req.AgentName},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("deploy: issue key: %w", err)
+		}
+		key = *k
 	}
 
 	// Dev mode: skip VM provisioning, return the key immediately.
@@ -146,22 +161,51 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 		return &Result{VirtualKey: key.Key, VirtualKeyToken: key.Token, VMName: req.VMName}, nil
 	}
 
-	// 2) Clone the agent VM from the OVA template, powered off so guestinfo is
-	//    set before first boot.
-	if _, err := s.VCenter.CloneFromTemplate(ctx, vcenter.CloneSpec{
-		Template:     req.Template,
-		Name:         req.VMName,
-		ResourcePool: req.ResourcePool,
-		Network:      req.Network,
-		PowerOn:      false,
-	}); err != nil {
-		s.revokeKey(ctx, key.Key) // no VM to clean up yet
-		return nil, fmt.Errorf("deploy: clone template: %w", err)
+	// 2) Deploy the agent VM. Two paths:
+	//    a) OVF deploy from content library (native OVF environment → guest reads ovf-env.xml).
+	//    b) Clone from VM template (guestinfo/cloud-init injection).
+	if req.ContentLibraryItemID != "" {
+		if _, err := s.VCenter.DeployOVF(ctx, vcenter.OVFDeploySpec{
+			LibraryItemID: req.ContentLibraryItemID,
+			Name:          req.VMName,
+			ResourcePool:  "resgroup-10",
+			Host:          req.HostMoRef,
+			Folder:        req.FolderMoRef,
+			Datastore:     "",
+			Properties:    req.OVFProperties,
+			Network:       req.Network,
+		}); err != nil {
+			s.revokeKey(ctx, key.Key)
+			return nil, fmt.Errorf("deploy: OVF deploy: %w", err)
+		}
+	} else {
+		if _, err := s.VCenter.CloneFromTemplate(ctx, vcenter.CloneSpec{
+			Template:       req.Template,
+			Name:           req.VMName,
+			ResourcePool:   req.ResourcePool,
+			Network:        req.Network,
+			PowerOn:        false,
+			ExtraConfig:    req.OVFProperties,
+			VAppProperties: req.OVFProperties,
+		}); err != nil {
+			s.revokeKey(ctx, key.Key) // no VM to clean up yet
+			return nil, fmt.Errorf("deploy: clone template: %w", err)
+		}
 	}
 
 	// 3) Inject per-VM cloud-init via guestinfo.
-	userdata := buildUserdata(s.GatewayURL, key.Key, req.Hostname, req.DefaultConfig, req.ConfigPath)
+	userdata := buildUserdata(s.GatewayURL, key.Key, req.Hostname, req.DefaultConfig, req.ConfigPath, req.OVFProperties)
 	gi := map[string]string{"userdata": userdata}
+	// Static IP: inject network-config so VMware's cloud-init datasource
+	// picks it up. Also set a fresh instance-id to force cloud-init to run.
+	if req.OVFProperties != nil && req.OVFProperties["guestinfo.ip_mode"] == "static" {
+		nc := buildNetplanConfig(req.OVFProperties)
+		if nc != "" {
+			gi["network-config"] = nc
+		}
+		// Fresh instance-id forces cloud-init to treat this as a new instance.
+		gi["instance-id"] = req.VMName
+	}
 	if req.Hostname != "" {
 		gi["metadata"] = buildMetadata(req.Hostname)
 	}
@@ -188,13 +232,8 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 	// webadmin deploy-time contract: credential seed + in-VM upgrade wiring.
 	// Stamped independent of the enroll channel — the VM-local webadmin consumes
 	// these at first boot; absent keys fall back to the daemon's defaults.
-	// initial_password is one-time by design and agent_pkg_base_url may embed
-	// read-only mirror credentials: neither value may ever be logged (guestinfo
-	// itself is a VM-readable, low-trust channel — the UI prompts the user to
-	// change the seeded password right after first login).
-	if req.InitialPassword != "" {
-		gi["agentmgr.initial_password"] = req.InitialPassword
-	}
+	// agent_pkg_base_url may embed read-only mirror credentials: never log it
+	// (guestinfo is a VM-readable, low-trust channel).
 	if req.AgentPkgName != "" {
 		gi["agentmgr.agent_name"] = req.AgentPkgName
 	}
@@ -247,14 +286,139 @@ func (s *Service) revokeKey(ctx context.Context, key string) {
 // buildUserdata renders the cloud-init that drops the gateway env (LLD-05 §3)
 // and, when an inline default_config is present, embeds it as a second
 // write_files entry so the VM gets its config without any network fetch (LLD-09).
-func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string) string {
+// buildNetplanConfig renders a netplan YAML for static IP configuration.
+// validIP returns true for dotted-quad IPv4 addresses.
+func validIP(s string) bool {
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c >= '0' && c <= '9' {
+			continue
+		}
+		if c == '.' {
+			continue
+		}
+		return false
+	}
+	return len(s) >= 7 && len(s) <= 15
+}
+
+func buildNetplanConfig(props map[string]string) string {
+	ip := props["guestinfo.static_ip"]
+	if ip == "" || !validIP(ip) {
+		return ""
+	}
+	mask := props["guestinfo.netmask"]
+	if mask == "" {
+		mask = "255.255.255.0"
+	}
+	cidr := toCIDR(ip, mask)
+	gw := props["guestinfo.gateway"]
+	if gw != "" && !validIP(gw) {
+		gw = ""
+	}
+	dns := props["guestinfo.dns"]
+	if dns != "" && !validIP(dns) {
+		dns = ""
+	}
+
+	var b strings.Builder
+	b.WriteString("network: {version: 2, renderer: networkd}\n")
+	b.WriteString("ethernets:\n")
+	b.WriteString("  id0:\n")
+	b.WriteString("    match:\n")
+	b.WriteString("      name: e*\n")
+	b.WriteString("    dhcp4: false\n")
+	b.WriteString(fmt.Sprintf("    addresses: [%s]\n", cidr))
+	if gw != "" {
+		b.WriteString(fmt.Sprintf("    routes: [{to: default, via: %s}]\n", gw))
+	}
+	if dns != "" {
+		b.WriteString(fmt.Sprintf("    nameservers: {addresses: [%s]}\n", dns))
+	}
+	return b.String()
+}
+
+func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, ovfProps map[string]string) string {
 	base := strings.TrimRight(gatewayURL, "/")
 	var b strings.Builder
 	b.WriteString("#cloud-config\n")
 	if hostname != "" {
 		fmt.Fprintf(&b, "hostname: %s\n", hostname)
 	}
+
+	// OS user/password/SSH from OVF vApp properties — must come before write_files.
+	if ovfProps != nil {
+		pw := ovfProps["password"]
+		user := ovfProps["guestinfo.runas_user"]
+		sshKey := ovfProps["public-keys"]
+
+		if pw != "" {
+			fmt.Fprintf(&b, "password: %s\n", pw)
+			b.WriteString("ssh_pwauth: true\n")
+			b.WriteString("chpasswd:\n")
+			b.WriteString("  expire: false\n")
+			b.WriteString("  list:\n")
+			fmt.Fprintf(&b, "    - ubuntu:%s\n", pw)
+			if user != "" {
+				fmt.Fprintf(&b, "    - %s:%s\n", user, pw)
+			}
+		}
+		if user != "" {
+			b.WriteString("users:\n")
+			fmt.Fprintf(&b, "  - name: %s\n", user)
+			b.WriteString("    lock_passwd: false\n")
+			b.WriteString("    shell: /bin/bash\n")
+			b.WriteString("    sudo: ALL=(ALL) ALL\n")
+			if sshKey != "" {
+				b.WriteString("    ssh_authorized_keys:\n")
+				b.WriteString("      - " + sshKey + "\n")
+			}
+		} else if sshKey != "" {
+			b.WriteString("ssh_authorized_keys:\n")
+			b.WriteString("  - " + sshKey + "\n")
+		}
+	}
+
+	// All write_files entries must come after the write_files: header.
 	b.WriteString("write_files:\n")
+
+	// No netplan needed — CustomizationSpec handles IP natively (vCenter/VMware Tools).
+	// Cloud-init netplan would conflict with vCenter guest customization.
+	if false {
+		ip := ovfProps["guestinfo.static_ip"]
+		mask := ovfProps["guestinfo.netmask"]
+		if mask == "" {
+			mask = "255.255.255.0"
+		}
+		cidr := toCIDR(ip, mask)
+		gw := ovfProps["guestinfo.gateway"]
+		dns := ovfProps["guestinfo.dns"]
+
+		b.WriteString("  - path: /etc/netplan/01-static.yaml\n")
+		b.WriteString("    permissions: \"0644\"\n")
+		b.WriteString("    content: |\n")
+		b.WriteString("      network: {version: 2, renderer: networkd}\n")
+		b.WriteString("      ethernets:\n")
+		b.WriteString("        eth0:\n")
+		b.WriteString("          dhcp4: false\n")
+		b.WriteString("          addresses: [")
+		b.WriteString(cidr)
+		b.WriteString("]\n")
+		if gw != "" {
+			b.WriteString("          routes: [{to: default, via: ")
+			b.WriteString(gw)
+			b.WriteString("}]\n")
+		}
+		if dns != "" {
+			b.WriteString("          nameservers: {addresses: [")
+			b.WriteString(dns)
+			b.WriteString("]}\n")
+		}
+		b.WriteString("  - path: /etc/netplan/01-static.yaml.license\n")
+		b.WriteString("    permissions: \"0644\"\n")
+		b.WriteString("    content: auto-deployed by agent platform\n")
+	}
+
 	b.WriteString("  - path: /etc/agent/llm-gateway.env\n")
 	b.WriteString("    permissions: \"0640\"\n")
 	b.WriteString("    owner: root:agent\n")
@@ -275,7 +439,27 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string) 
 			b.WriteString("\n")
 		}
 	}
+
 	return b.String()
+}
+
+// toCIDR converts an IP and netmask to CIDR notation (e.g. 172.16.85.199 + 255.255.255.0 → 172.16.85.199/24).
+func toCIDR(ip, mask string) string {
+	parts := strings.Split(mask, ".")
+	if len(parts) != 4 {
+		return ip + "/24"
+	}
+	ones := 0
+	for _, p := range parts {
+		var b int
+		fmt.Sscanf(p, "%d", &b)
+		for i := 7; i >= 0; i-- {
+			if b&(1<<uint(i)) != 0 {
+				ones++
+			}
+		}
+	}
+	return fmt.Sprintf("%s/%d", ip, ones)
 }
 
 func buildMetadata(hostname string) string {

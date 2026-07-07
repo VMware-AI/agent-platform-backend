@@ -150,8 +150,8 @@ func (r *Resolver) probeOneProviderModel(ctx context.Context, pm *ent.ProviderMo
 
 	// Probe every spec independently (errgroup parallel; bounded by 5s each).
 	type specResult struct {
-		idx  int
-		res  specProbeResult
+		idx int
+		res specProbeResult
 	}
 	results := make([]specResult, len(specs))
 	g, gctx := errgroup.WithContext(ctx)

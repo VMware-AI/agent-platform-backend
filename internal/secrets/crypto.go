@@ -129,13 +129,12 @@ func decryptWith(activeAEAD cipher.AEAD, encoded, defaultKeyID string) (plaintex
 	return string(out), keyID, nil
 }
 
-// legacyEncrypt / legacyDecrypt preserve the v0 envelope shape exactly so
-// that rows written before this code change decrypt back to the same bytes
-// (the existing static-resolver tests, which round-trip through the cipher
-// directly, keep passing). DBStore.Put writes v1 only; the legacy pair is
-// kept here for the test suite that exercises the format transitions.
-
-func legacyEncrypt(aead cipher.AEAD, plaintext string) (string, error) {
+// encrypt / decrypt are the v0 (legacy, single-key) envelope primitives,
+// retained so pre-rotation rows (and tests that round-trip through the
+// cipher directly) keep working unchanged. New writes go through
+// encryptWith / decryptWith, which embed a key_id for rotation; these
+// remain here so v0 rows remain decryptable after a key rotation cycle.
+func encrypt(aead cipher.AEAD, plaintext string) (string, error) {
 	if plaintext == "" {
 		return "", nil
 	}
@@ -147,7 +146,7 @@ func legacyEncrypt(aead cipher.AEAD, plaintext string) (string, error) {
 	return base64.StdEncoding.EncodeToString(sealed), nil
 }
 
-func legacyDecrypt(aead cipher.AEAD, encoded string) (string, error) {
+func decrypt(aead cipher.AEAD, encoded string) (string, error) {
 	if encoded == "" {
 		return "", nil
 	}
@@ -160,11 +159,11 @@ func legacyDecrypt(aead cipher.AEAD, encoded string) (string, error) {
 		return "", errors.New("secrets: ciphertext too short")
 	}
 	nonce, ciphertext := raw[:ns], raw[ns:]
-	out, err := aead.Open(nil, nonce, ciphertext, nil)
+	plaintext, err := aead.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
 		return "", fmt.Errorf("secrets: decrypt failed (wrong key or corrupt data): %w", err)
 	}
-	return string(out), nil
+	return string(plaintext), nil
 }
 
 // newAEAD derives a 32-byte AES-256 key from the operator-provided passphrase
