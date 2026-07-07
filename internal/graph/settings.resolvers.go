@@ -27,7 +27,13 @@ func (r *mutationResolver) UpdatePlatformSettings(ctx context.Context, input mod
 		r.audit(ctx, "platform_settings.update", "setting", settingKeyAgentUser, true, actorID(auth.FromContext(ctx)))
 	}
 	if input.PackageSourceURL != nil {
-		if err := r.setSetting(ctx, settingKeyAgentPkgURL, strings.TrimSpace(*input.PackageSourceURL)); err != nil {
+		v := strings.TrimSpace(*input.PackageSourceURL)
+		if v != "" { // empty clears the setting; anything else must be a usable mirror URL
+			if err := validatePackageSourceURL(v); err != nil {
+				return nil, gqlerror.Errorf("%v", err)
+			}
+		}
+		if err := r.setSetting(ctx, settingKeyAgentPkgURL, v); err != nil {
 			return nil, err
 		}
 	}

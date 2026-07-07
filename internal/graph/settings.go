@@ -129,6 +129,30 @@ func injectCreds(rawURL, user, pass string) string {
 	return u.String()
 }
 
+// validatePackageSourceURL guards the mutation boundary (LLD-16 OQ-2): the value is
+// later stamped into guestinfo and fetched by the in-VM daemon, so a typo here would
+// otherwise only surface as a FetchError inside the VM, several hops from the cause.
+// Credentials must come via the separate user/password fields — an embedded userinfo
+// would be silently overwritten by injectCreds.
+func validatePackageSourceURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("packageSourceUrl is not a valid URL: %v", err)
+	}
+	switch u.Scheme {
+	case "ftp", "http", "https":
+	default:
+		return fmt.Errorf("packageSourceUrl must be ftp/http/https (got %q)", u.Scheme)
+	}
+	if u.Host == "" {
+		return fmt.Errorf("packageSourceUrl is missing a host")
+	}
+	if u.User != nil {
+		return fmt.Errorf("packageSourceUrl must not embed credentials — use packageSourceUser/packageSourcePassword")
+	}
+	return nil
+}
+
 // setPackageSourcePassword stores the mirror password encrypted (secrets.Store) and
 // records its ref under agent_pkg_pass_ref, deleting any prior secret. An empty
 // password clears it. Requires a writable secret store (the prod DBStore is one); a

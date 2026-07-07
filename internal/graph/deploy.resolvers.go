@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
 	"github.com/VMware-AI/agent-platform-backend/ent/rotationcommand"
@@ -109,9 +110,13 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	// First-boot install target from the catalog (LLD-16 §3; OQ-3: catalog version is
 	// the default). "" when no catalog entry / no pinned version → the daemon skips
 	// first-boot auto-install (assumes the OVA/operator pre-installed the agent).
+	// A real DB error also degrades to "" (deploy still proceeds) but is logged —
+	// silently treating it as "not pinned" would make the missing agent untraceable.
 	agentVersion := ""
 	if tpl, terr := r.Ent.AgentTemplate.Query().Where(agenttemplate.Kind(ag.AgentType)).Only(ctx); terr == nil {
 		agentVersion = tpl.Version
+	} else if !ent.IsNotFound(terr) {
+		log.Printf("deploy: catalog version lookup for kind %q failed (deploying without agent_version): %v", ag.AgentType, terr)
 	}
 	res, err := svc.Provision(provCtx, deploy.Request{
 		AgentName: ag.Name,
