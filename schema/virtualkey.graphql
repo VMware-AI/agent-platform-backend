@@ -1,7 +1,4 @@
-# Per-agent-per-org LiteLLM virtual keys (refactored 2026-07, was per-user).
-# See LLD-04 / LLD-07 §8. Secret returned ONCE on issue/regenerate via the
-# IssuedVirtualKey wrapper; the persistent maskedKey preview is exposed on
-# every VirtualKey read.
+# Per-user LiteLLM virtual keys. See LLD-04 / LLD-07 §8. Secret returned ONCE on issue.
 
 enum VirtualKeyStatus {
   active
@@ -9,155 +6,48 @@ enum VirtualKeyStatus {
   revoked
 }
 
-# RoutePermission — frontend multi-select enum mapped to /v1/* paths
-# (LiteLLM design doc §4.2). The form's "Allow All Routes" switch, when ON,
-# OMITS the allowed_routes field entirely; when OFF, the form picks one or
-# more of these and translates to ["/v1/chat/completions", ...].
-enum RoutePermission {
-  CHAT
-  EMBEDDINGS
-  IMAGES
-  AUDIO
-}
-
 type VirtualKey {
   id: ID!
-  # Human-readable label. Required since 2026-07 refactor.
-  name: String!
-  # Persistent, safe-to-display preview of the secret (e.g. "sk-aBcD...XyZ").
-  # Always populated; updated alongside any secret change.
-  maskedKey: String!
-  # Organization this key belongs to. Required. Drives both tenant
-  # isolation and LiteLLM team routing.
-  organizationId: String!
-  # Nested object: the modelGateway that issued this key. Maps to the ent
-  # `model_gateway_id` column (renamed from `gateway_connection_id`).
-  # Required since per-agent-per-org refactor — every VirtualKey is bound
-  # to exactly one modelGateway. The frontend renders this as the
-  # "gateway" pill on the operator console.
-  modelGateway: ModelGateway!
+  alias: String
+  userId: ID!
   agentId: ID
+  teamId: String
   models: [String!]!
   maxBudget: Float
   status: VirtualKeyStatus!
   expiresAt: Time
-  # Human-readable remaining-lifetime, derived from expiresAt for display
-  # (e.g. "30d", "12h", "" when no expiry). Computed by the resolver; not
-  # persisted as a separate column.
-  duration: String
   createdAt: Time!
-  updatedAt: Time!
-  # Per-key rate-limit / quota controls (LiteLLM design doc §4.2).
-  maxParallelRequests: Int
-  tpmLimit: Int
-  rpmLimit: Int
-  rpmLimitType: String
-  tpmLimitType: String
-  budgetDuration: String
-  # allowed_routes — empty list means "no restriction" (the frontend's
-  # "Allow All Routes" switch ON translates to omit-this-field; ON → omit,
-  # OFF → fill with /v1/chat/completions etc).
-  allowedRoutes: [String!]!
-  # Operational metadata (LiteLLM design doc §4.2).
-  tags: [String!]!
-  blocked: Boolean!
-  keyType: String!
-  autoRotate: Boolean!
-  rotationInterval: String
-  # Live spend + last-active (refreshed by the periodic worker; the
-  # console's progress bar reads these directly).
-  spend: Float!
-  lastActiveAt: Time
 }
 
-# Returned only at issue / regenerate time — carries the secret, which is
-# never queryable again. The virtualKey.maskedKey field is also populated
-# here so the operator sees the preview in the same response.
+# Returned only at issue time — carries the secret, which is never queryable again.
 type IssuedVirtualKey {
   virtualKey: VirtualKey!
   secret: String!
 }
 
-# Limit-type enum — LiteLLM's per-key quota vocabulary. Optional; if unset,
-# LiteLLM defaults to "best_effort" or similar per its own config.
-enum LimitType {
-  guaranteed_throughput
-  best_effort
-}
-
 input IssueVirtualKeyInput {
-  # Required. Drives tenant scope + LiteLLM team routing.
-  organizationId: String!
-  # Required. Human-readable label.
-  name: String!
-  # Required. References the GatewayConnection that issues this key and
-  # will receive every model+route check. Resolver verifies each entry in
-  # `models` against the gateway's live model list (gatewayAvailableModels)
-  # before mint.
-  modelGateway: ID!
-  # Optional. Can be left unbound at issue and later set via
-  # associateVirtualKeyAgent(virtualKeyId, agentId).
+  userId: ID!
   agentId: ID
-  # Friendly duration input. Accepts "<n>d" / "<n>h" / "<n>w" / "<n>m".
-  # When set, server computes expiresAt = now + duration. If both duration
-  # and expiresAt are provided, duration takes precedence (expiresAt is
-  # silently overridden; logged once at server side).
-  duration: String
-  expiresAt: Time
-  # Optional. Models named MUST be a subset of `modelGateway`'s live model
-  # list (verified server-side via gatewayAvailableModels). Resolver 400s
-  # on stale names. Empty = omit (litellm default = no restriction).
+  teamId: String
   models: [String!]
   maxBudget: Float
-  budgetDuration: String
-  maxParallelRequests: Int
   rpmLimit: Int
   tpmLimit: Int
-  rpmLimitType: String
-  tpmLimitType: String
-  # allowedRoutes — when the form's "Allow All Routes" switch is ON, the
-  # frontend OMITS this field. When OFF, it sends the explicit list.
-  allowedRoutes: [String!]
-  tags: [String!]
-  blocked: Boolean
-  # Operational / catalog metadata (LiteLLM design doc §4.2).
-  keyType: String
-  autoRotate: Boolean
-  rotationInterval: String
+  alias: String
+  # Optional expiry; when set, the key stops working at the gateway after this time.
+  expiresAt: Time
 }
 
 extend type Query {
-  # Real-time model list for a modelGateway (calls LiteLLM /model/list on
-  # demand — no cache). Frontend uses this to populate the issue form's
-  # "Models" multi-select after the operator picks a modelGateway.
-  # @hasRole: read_only or admin (matches virtualKeys permissioning).
-  gatewayAvailableModels(gatewayConnectionId: ID!): [String!]!
-    @hasRole(any: [admin, read_only])
-
-  # organizationId, agentId, and modelGateway are independent optional
-  # filters; all null → all keys in the current tenant. Multiple set →
-  # intersection.
-  virtualKeys(organizationId: ID, agentId: ID, modelGateway: ID): [VirtualKey!]!
-    @hasRole(any: [admin, read_only])
+  virtualKeys(userId: ID): [VirtualKey!]! @hasRole(any: [admin, read_only])
 }
 
 extend type Mutation {
-  issueVirtualKey(input: IssueVirtualKeyInput!): IssuedVirtualKey!
-    @hasPermission(perm: "key:manage")
-  revokeVirtualKey(id: ID!): Boolean!
-    @hasPermission(perm: "key:manage")
+  issueVirtualKey(input: IssueVirtualKeyInput!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
+  revokeVirtualKey(id: ID!): Boolean! @hasPermission(perm: "key:manage")
   # Rotate the key's secret at the gateway, keeping its governance row/binding.
-  # Returns the new secret ONCE (the old one stops working after litellm's
-  # grace). The maskedKey on the returned VirtualKey is updated to match the
-  # new secret. LLD-04 §3.
-  regenerateVirtualKey(id: ID!): IssuedVirtualKey!
-    @hasPermission(perm: "key:manage")
+  # Returns the new secret ONCE (the old one stops working after litellm's grace). LLD-04 §3.
+  regenerateVirtualKey(id: ID!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
   # Toggle enabled/disabled (distinct from revoke, which is terminal).
-  setVirtualKeyEnabled(id: ID!, enabled: Boolean!): VirtualKey!
-    @hasPermission(perm: "key:manage")
-  # Bind (or rebind) an existing VirtualKey to an agent. Enforces the 1:1
-  # active-key-per-agent invariant (DB partial unique index is the
-  # authoritative gate; the resolver also pre-checks for a clean 409).
-  associateVirtualKeyAgent(virtualKeyId: ID!, agentId: ID!): VirtualKey!
-    @hasPermission(perm: "key:manage")
+  setVirtualKeyEnabled(id: ID!, enabled: Boolean!): VirtualKey! @hasPermission(perm: "key:manage")
 }
