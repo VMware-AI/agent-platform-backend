@@ -32,6 +32,8 @@ type RotationCommand struct {
 	Status rotationcommand.Status `json:"status,omitempty"`
 	// Reason holds the value of the "reason" field.
 	Reason string `json:"reason,omitempty"`
+	// TargetVersion holds the value of the "target_version" field.
+	TargetVersion string `json:"target_version,omitempty"`
 	// DispatchedAt holds the value of the "dispatched_at" field.
 	DispatchedAt *time.Time `json:"dispatched_at,omitempty"`
 	// AckedAt holds the value of the "acked_at" field.
@@ -56,7 +58,7 @@ func (*RotationCommand) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case rotationcommand.FieldTenantID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case rotationcommand.FieldCommandID, rotationcommand.FieldKind, rotationcommand.FieldStatus, rotationcommand.FieldReason, rotationcommand.FieldResultFingerprint, rotationcommand.FieldSecretRef, rotationcommand.FieldError:
+		case rotationcommand.FieldCommandID, rotationcommand.FieldKind, rotationcommand.FieldStatus, rotationcommand.FieldReason, rotationcommand.FieldTargetVersion, rotationcommand.FieldResultFingerprint, rotationcommand.FieldSecretRef, rotationcommand.FieldError:
 			values[i] = new(sql.NullString)
 		case rotationcommand.FieldCreatedAt, rotationcommand.FieldUpdatedAt, rotationcommand.FieldDispatchedAt, rotationcommand.FieldAckedAt, rotationcommand.FieldCompletedAt:
 			values[i] = new(sql.NullTime)
@@ -124,6 +126,12 @@ func (_m *RotationCommand) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field reason", values[i])
 			} else if value.Valid {
 				_m.Reason = value.String
+			}
+		case rotationcommand.FieldTargetVersion:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field target_version", values[i])
+			} else if value.Valid {
+				_m.TargetVersion = value.String
 			}
 		case rotationcommand.FieldDispatchedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -227,6 +235,9 @@ func (_m *RotationCommand) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("reason=")
 	builder.WriteString(_m.Reason)
+	builder.WriteString(", ")
+	builder.WriteString("target_version=")
+	builder.WriteString(_m.TargetVersion)
 	builder.WriteString(", ")
 	if v := _m.DispatchedAt; v != nil {
 		builder.WriteString("dispatched_at=")

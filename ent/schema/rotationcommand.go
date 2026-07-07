@@ -24,11 +24,14 @@ func (RotationCommand) Fields() []ent.Field {
 		// Idempotence key the daemon dedups on (string form of id).
 		field.String("command_id").NotEmpty().Unique(),
 		field.UUID("agent_id", uuid.UUID{}),
-		field.Enum("kind").Values("rotate_ui_password", "rotate_os_password"),
+		field.Enum("kind").Values("rotate_ui_password", "rotate_os_password", "upgrade"),
 		field.Enum("status").
 			Values("pending", "dispatched", "acked", "completed", "failed").
 			Default("pending"),
 		field.String("reason").Optional(), // max_age | manual | lifecycle:* | suspected_leak
+		// Target agent version for kind=upgrade (LLD-16 §4, platform pull upgrade).
+		// Carried to the daemon in the command's params; empty for rotations.
+		field.String("target_version").Optional(),
 		field.Time("dispatched_at").Optional().Nillable(),
 		field.Time("acked_at").Optional().Nillable(),
 		field.Time("completed_at").Optional().Nillable(),
