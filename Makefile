@@ -1,4 +1,4 @@
-.PHONY: generate schema-dump apidocs docs docs-check build test lint run tidy migrate-diff migrate-apply migrate-status release-images
+.PHONY: generate schema-dump apidocs docs docs-check build test lint run tidy migrate-diff migrate-apply migrate-status release-images postman
 
 # Image build/push settings.
 IMAGE     ?= agent-platform-backend
@@ -55,21 +55,19 @@ lint:
 	gofmt -l .
 	go vet ./...
 
-# Versioned migrations (prod; dev/sqlite still auto-migrate).
-# Generate a migration after a schema change. Uses Ent's native Atlas
-# integration (./ent/migrate/main.go), not the atlas-provider-ent plugin.
-# ATLAS_DEV_URL = a throwaway dev postgres used to compute the diff.
-migrate-diff:
-	@test -n "$(name)" || { echo "usage: make migrate-diff name=<change>"; exit 1; }
-	go run -mod=mod ./ent/migrate/main.go $(name)
+# Versioned migrations are disabled during the dev (iteration) phase. The
+# dev environment relies on `ent.Client.Schema.Create()` for fresh-DB
+# bootstrap; versioned SQL migrations + the CI drift gate are restored when
+# the maintainer declares a release phase (CLAUDE.md §2). The migrate-*
+# targets intentionally fail loud so a stray call surfaces the suspension.
+migrate-diff migrate-apply migrate-status:
+	@echo "migrations are disabled during the dev phase (see CLAUDE.md §2)" >&2
+	@exit 1
 
-# Apply pending migrations to DATABASE_URL:
-migrate-apply:
-	atlas migrate apply --env ent --url "$(DATABASE_URL)"
-
-# Show applied/pending status + drift:
-migrate-status:
-	atlas migrate status --env ent --url "$(DATABASE_URL)"
+# Regenerate postman/agent-platform-backend.postman_collection.json from
+# internal/graph/testdata/client_operations/*.graphql.
+postman:
+	python3 tools/postmangen/main.py
 
 # Multi-arch build + push to $(REGISTRY). Tags :$(TAG) (versioned) + :latest.
 # Always pushes — pushes are not undo-able; keep prod tags deliberate.
