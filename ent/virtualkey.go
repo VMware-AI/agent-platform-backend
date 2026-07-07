@@ -27,52 +27,24 @@ type VirtualKey struct {
 	LitellmKey string `json:"-"`
 	// LitellmToken holds the value of the "litellm_token" field.
 	LitellmToken string `json:"litellm_token,omitempty"`
-	// MaskedKey holds the value of the "masked_key" field.
-	MaskedKey string `json:"-"`
-	// Name holds the value of the "name" field.
-	Name string `json:"name,omitempty"`
-	// OrganizationID holds the value of the "organization_id" field.
-	OrganizationID string `json:"organization_id,omitempty"`
+	// Alias holds the value of the "alias" field.
+	Alias string `json:"alias,omitempty"`
+	// UserID holds the value of the "user_id" field.
+	UserID uuid.UUID `json:"user_id,omitempty"`
 	// AgentID holds the value of the "agent_id" field.
 	AgentID *uuid.UUID `json:"agent_id,omitempty"`
-	// ModelGatewayID holds the value of the "model_gateway_id" field.
-	ModelGatewayID uuid.UUID `json:"model_gateway_id,omitempty"`
+	// TeamID holds the value of the "team_id" field.
+	TeamID string `json:"team_id,omitempty"`
+	// GatewayConnectionID holds the value of the "gateway_connection_id" field.
+	GatewayConnectionID *uuid.UUID `json:"gateway_connection_id,omitempty"`
 	// Models holds the value of the "models" field.
 	Models []string `json:"models,omitempty"`
 	// MaxBudget holds the value of the "max_budget" field.
 	MaxBudget float64 `json:"max_budget,omitempty"`
-	// MaxParallelRequests holds the value of the "max_parallel_requests" field.
-	MaxParallelRequests int `json:"max_parallel_requests,omitempty"`
-	// TpmLimit holds the value of the "tpm_limit" field.
-	TpmLimit int `json:"tpm_limit,omitempty"`
-	// RpmLimit holds the value of the "rpm_limit" field.
-	RpmLimit int `json:"rpm_limit,omitempty"`
-	// TpmLimitType holds the value of the "tpm_limit_type" field.
-	TpmLimitType string `json:"tpm_limit_type,omitempty"`
-	// RpmLimitType holds the value of the "rpm_limit_type" field.
-	RpmLimitType string `json:"rpm_limit_type,omitempty"`
-	// BudgetDuration holds the value of the "budget_duration" field.
-	BudgetDuration string `json:"budget_duration,omitempty"`
 	// Status holds the value of the "status" field.
 	Status virtualkey.Status `json:"status,omitempty"`
 	// ExpiresAt holds the value of the "expires_at" field.
-	ExpiresAt *time.Time `json:"expires_at,omitempty"`
-	// AllowedRoutes holds the value of the "allowed_routes" field.
-	AllowedRoutes []string `json:"allowed_routes,omitempty"`
-	// Tags holds the value of the "tags" field.
-	Tags []string `json:"tags,omitempty"`
-	// Blocked holds the value of the "blocked" field.
-	Blocked bool `json:"blocked,omitempty"`
-	// KeyType holds the value of the "key_type" field.
-	KeyType string `json:"key_type,omitempty"`
-	// AutoRotate holds the value of the "auto_rotate" field.
-	AutoRotate bool `json:"auto_rotate,omitempty"`
-	// RotationInterval holds the value of the "rotation_interval" field.
-	RotationInterval string `json:"rotation_interval,omitempty"`
-	// LastActiveAt holds the value of the "last_active_at" field.
-	LastActiveAt *time.Time `json:"last_active_at,omitempty"`
-	// Spend holds the value of the "spend" field.
-	Spend        int `json:"spend,omitempty"`
+	ExpiresAt    *time.Time `json:"expires_at,omitempty"`
 	selectValues sql.SelectValues
 }
 
@@ -81,21 +53,17 @@ func (*VirtualKey) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case virtualkey.FieldAgentID:
+		case virtualkey.FieldAgentID, virtualkey.FieldGatewayConnectionID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case virtualkey.FieldModels, virtualkey.FieldAllowedRoutes, virtualkey.FieldTags:
+		case virtualkey.FieldModels:
 			values[i] = new([]byte)
-		case virtualkey.FieldBlocked, virtualkey.FieldAutoRotate:
-			values[i] = new(sql.NullBool)
 		case virtualkey.FieldMaxBudget:
 			values[i] = new(sql.NullFloat64)
-		case virtualkey.FieldMaxParallelRequests, virtualkey.FieldTpmLimit, virtualkey.FieldRpmLimit, virtualkey.FieldSpend:
-			values[i] = new(sql.NullInt64)
-		case virtualkey.FieldLitellmKey, virtualkey.FieldLitellmToken, virtualkey.FieldMaskedKey, virtualkey.FieldName, virtualkey.FieldOrganizationID, virtualkey.FieldTpmLimitType, virtualkey.FieldRpmLimitType, virtualkey.FieldBudgetDuration, virtualkey.FieldStatus, virtualkey.FieldKeyType, virtualkey.FieldRotationInterval:
+		case virtualkey.FieldLitellmKey, virtualkey.FieldLitellmToken, virtualkey.FieldAlias, virtualkey.FieldTeamID, virtualkey.FieldStatus:
 			values[i] = new(sql.NullString)
-		case virtualkey.FieldCreatedAt, virtualkey.FieldUpdatedAt, virtualkey.FieldExpiresAt, virtualkey.FieldLastActiveAt:
+		case virtualkey.FieldCreatedAt, virtualkey.FieldUpdatedAt, virtualkey.FieldExpiresAt:
 			values[i] = new(sql.NullTime)
-		case virtualkey.FieldID, virtualkey.FieldModelGatewayID:
+		case virtualkey.FieldID, virtualkey.FieldUserID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -142,23 +110,17 @@ func (_m *VirtualKey) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.LitellmToken = value.String
 			}
-		case virtualkey.FieldMaskedKey:
+		case virtualkey.FieldAlias:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field masked_key", values[i])
+				return fmt.Errorf("unexpected type %T for field alias", values[i])
 			} else if value.Valid {
-				_m.MaskedKey = value.String
+				_m.Alias = value.String
 			}
-		case virtualkey.FieldName:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field name", values[i])
-			} else if value.Valid {
-				_m.Name = value.String
-			}
-		case virtualkey.FieldOrganizationID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field organization_id", values[i])
-			} else if value.Valid {
-				_m.OrganizationID = value.String
+		case virtualkey.FieldUserID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field user_id", values[i])
+			} else if value != nil {
+				_m.UserID = *value
 			}
 		case virtualkey.FieldAgentID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -167,11 +129,18 @@ func (_m *VirtualKey) assignValues(columns []string, values []any) error {
 				_m.AgentID = new(uuid.UUID)
 				*_m.AgentID = *value.S.(*uuid.UUID)
 			}
-		case virtualkey.FieldModelGatewayID:
-			if value, ok := values[i].(*uuid.UUID); !ok {
-				return fmt.Errorf("unexpected type %T for field model_gateway_id", values[i])
-			} else if value != nil {
-				_m.ModelGatewayID = *value
+		case virtualkey.FieldTeamID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field team_id", values[i])
+			} else if value.Valid {
+				_m.TeamID = value.String
+			}
+		case virtualkey.FieldGatewayConnectionID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field gateway_connection_id", values[i])
+			} else if value.Valid {
+				_m.GatewayConnectionID = new(uuid.UUID)
+				*_m.GatewayConnectionID = *value.S.(*uuid.UUID)
 			}
 		case virtualkey.FieldModels:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -187,42 +156,6 @@ func (_m *VirtualKey) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.MaxBudget = value.Float64
 			}
-		case virtualkey.FieldMaxParallelRequests:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field max_parallel_requests", values[i])
-			} else if value.Valid {
-				_m.MaxParallelRequests = int(value.Int64)
-			}
-		case virtualkey.FieldTpmLimit:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field tpm_limit", values[i])
-			} else if value.Valid {
-				_m.TpmLimit = int(value.Int64)
-			}
-		case virtualkey.FieldRpmLimit:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field rpm_limit", values[i])
-			} else if value.Valid {
-				_m.RpmLimit = int(value.Int64)
-			}
-		case virtualkey.FieldTpmLimitType:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field tpm_limit_type", values[i])
-			} else if value.Valid {
-				_m.TpmLimitType = value.String
-			}
-		case virtualkey.FieldRpmLimitType:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field rpm_limit_type", values[i])
-			} else if value.Valid {
-				_m.RpmLimitType = value.String
-			}
-		case virtualkey.FieldBudgetDuration:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field budget_duration", values[i])
-			} else if value.Valid {
-				_m.BudgetDuration = value.String
-			}
 		case virtualkey.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
@@ -235,59 +168,6 @@ func (_m *VirtualKey) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.ExpiresAt = new(time.Time)
 				*_m.ExpiresAt = value.Time
-			}
-		case virtualkey.FieldAllowedRoutes:
-			if value, ok := values[i].(*[]byte); !ok {
-				return fmt.Errorf("unexpected type %T for field allowed_routes", values[i])
-			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &_m.AllowedRoutes); err != nil {
-					return fmt.Errorf("unmarshal field allowed_routes: %w", err)
-				}
-			}
-		case virtualkey.FieldTags:
-			if value, ok := values[i].(*[]byte); !ok {
-				return fmt.Errorf("unexpected type %T for field tags", values[i])
-			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &_m.Tags); err != nil {
-					return fmt.Errorf("unmarshal field tags: %w", err)
-				}
-			}
-		case virtualkey.FieldBlocked:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field blocked", values[i])
-			} else if value.Valid {
-				_m.Blocked = value.Bool
-			}
-		case virtualkey.FieldKeyType:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field key_type", values[i])
-			} else if value.Valid {
-				_m.KeyType = value.String
-			}
-		case virtualkey.FieldAutoRotate:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field auto_rotate", values[i])
-			} else if value.Valid {
-				_m.AutoRotate = value.Bool
-			}
-		case virtualkey.FieldRotationInterval:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field rotation_interval", values[i])
-			} else if value.Valid {
-				_m.RotationInterval = value.String
-			}
-		case virtualkey.FieldLastActiveAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field last_active_at", values[i])
-			} else if value.Valid {
-				_m.LastActiveAt = new(time.Time)
-				*_m.LastActiveAt = value.Time
-			}
-		case virtualkey.FieldSpend:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field spend", values[i])
-			} else if value.Valid {
-				_m.Spend = int(value.Int64)
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -336,45 +216,30 @@ func (_m *VirtualKey) String() string {
 	builder.WriteString("litellm_token=")
 	builder.WriteString(_m.LitellmToken)
 	builder.WriteString(", ")
-	builder.WriteString("masked_key=<sensitive>")
+	builder.WriteString("alias=")
+	builder.WriteString(_m.Alias)
 	builder.WriteString(", ")
-	builder.WriteString("name=")
-	builder.WriteString(_m.Name)
-	builder.WriteString(", ")
-	builder.WriteString("organization_id=")
-	builder.WriteString(_m.OrganizationID)
+	builder.WriteString("user_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.UserID))
 	builder.WriteString(", ")
 	if v := _m.AgentID; v != nil {
 		builder.WriteString("agent_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")
-	builder.WriteString("model_gateway_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.ModelGatewayID))
+	builder.WriteString("team_id=")
+	builder.WriteString(_m.TeamID)
+	builder.WriteString(", ")
+	if v := _m.GatewayConnectionID; v != nil {
+		builder.WriteString("gateway_connection_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("models=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Models))
 	builder.WriteString(", ")
 	builder.WriteString("max_budget=")
 	builder.WriteString(fmt.Sprintf("%v", _m.MaxBudget))
-	builder.WriteString(", ")
-	builder.WriteString("max_parallel_requests=")
-	builder.WriteString(fmt.Sprintf("%v", _m.MaxParallelRequests))
-	builder.WriteString(", ")
-	builder.WriteString("tpm_limit=")
-	builder.WriteString(fmt.Sprintf("%v", _m.TpmLimit))
-	builder.WriteString(", ")
-	builder.WriteString("rpm_limit=")
-	builder.WriteString(fmt.Sprintf("%v", _m.RpmLimit))
-	builder.WriteString(", ")
-	builder.WriteString("tpm_limit_type=")
-	builder.WriteString(_m.TpmLimitType)
-	builder.WriteString(", ")
-	builder.WriteString("rpm_limit_type=")
-	builder.WriteString(_m.RpmLimitType)
-	builder.WriteString(", ")
-	builder.WriteString("budget_duration=")
-	builder.WriteString(_m.BudgetDuration)
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Status))
@@ -383,32 +248,6 @@ func (_m *VirtualKey) String() string {
 		builder.WriteString("expires_at=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
-	builder.WriteString(", ")
-	builder.WriteString("allowed_routes=")
-	builder.WriteString(fmt.Sprintf("%v", _m.AllowedRoutes))
-	builder.WriteString(", ")
-	builder.WriteString("tags=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Tags))
-	builder.WriteString(", ")
-	builder.WriteString("blocked=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Blocked))
-	builder.WriteString(", ")
-	builder.WriteString("key_type=")
-	builder.WriteString(_m.KeyType)
-	builder.WriteString(", ")
-	builder.WriteString("auto_rotate=")
-	builder.WriteString(fmt.Sprintf("%v", _m.AutoRotate))
-	builder.WriteString(", ")
-	builder.WriteString("rotation_interval=")
-	builder.WriteString(_m.RotationInterval)
-	builder.WriteString(", ")
-	if v := _m.LastActiveAt; v != nil {
-		builder.WriteString("last_active_at=")
-		builder.WriteString(v.Format(time.ANSIC))
-	}
-	builder.WriteString(", ")
-	builder.WriteString("spend=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Spend))
 	builder.WriteByte(')')
 	return builder.String()
 }

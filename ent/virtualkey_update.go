@@ -71,44 +71,36 @@ func (_u *VirtualKeyUpdate) ClearLitellmToken() *VirtualKeyUpdate {
 	return _u
 }
 
-// SetMaskedKey sets the "masked_key" field.
-func (_u *VirtualKeyUpdate) SetMaskedKey(v string) *VirtualKeyUpdate {
-	_u.mutation.SetMaskedKey(v)
+// SetAlias sets the "alias" field.
+func (_u *VirtualKeyUpdate) SetAlias(v string) *VirtualKeyUpdate {
+	_u.mutation.SetAlias(v)
 	return _u
 }
 
-// SetNillableMaskedKey sets the "masked_key" field if the given value is not nil.
-func (_u *VirtualKeyUpdate) SetNillableMaskedKey(v *string) *VirtualKeyUpdate {
+// SetNillableAlias sets the "alias" field if the given value is not nil.
+func (_u *VirtualKeyUpdate) SetNillableAlias(v *string) *VirtualKeyUpdate {
 	if v != nil {
-		_u.SetMaskedKey(*v)
+		_u.SetAlias(*v)
 	}
 	return _u
 }
 
-// SetName sets the "name" field.
-func (_u *VirtualKeyUpdate) SetName(v string) *VirtualKeyUpdate {
-	_u.mutation.SetName(v)
+// ClearAlias clears the value of the "alias" field.
+func (_u *VirtualKeyUpdate) ClearAlias() *VirtualKeyUpdate {
+	_u.mutation.ClearAlias()
 	return _u
 }
 
-// SetNillableName sets the "name" field if the given value is not nil.
-func (_u *VirtualKeyUpdate) SetNillableName(v *string) *VirtualKeyUpdate {
+// SetUserID sets the "user_id" field.
+func (_u *VirtualKeyUpdate) SetUserID(v uuid.UUID) *VirtualKeyUpdate {
+	_u.mutation.SetUserID(v)
+	return _u
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (_u *VirtualKeyUpdate) SetNillableUserID(v *uuid.UUID) *VirtualKeyUpdate {
 	if v != nil {
-		_u.SetName(*v)
-	}
-	return _u
-}
-
-// SetOrganizationID sets the "organization_id" field.
-func (_u *VirtualKeyUpdate) SetOrganizationID(v string) *VirtualKeyUpdate {
-	_u.mutation.SetOrganizationID(v)
-	return _u
-}
-
-// SetNillableOrganizationID sets the "organization_id" field if the given value is not nil.
-func (_u *VirtualKeyUpdate) SetNillableOrganizationID(v *string) *VirtualKeyUpdate {
-	if v != nil {
-		_u.SetOrganizationID(*v)
+		_u.SetUserID(*v)
 	}
 	return _u
 }
@@ -133,17 +125,43 @@ func (_u *VirtualKeyUpdate) ClearAgentID() *VirtualKeyUpdate {
 	return _u
 }
 
-// SetModelGatewayID sets the "model_gateway_id" field.
-func (_u *VirtualKeyUpdate) SetModelGatewayID(v uuid.UUID) *VirtualKeyUpdate {
-	_u.mutation.SetModelGatewayID(v)
+// SetTeamID sets the "team_id" field.
+func (_u *VirtualKeyUpdate) SetTeamID(v string) *VirtualKeyUpdate {
+	_u.mutation.SetTeamID(v)
 	return _u
 }
 
-// SetNillableModelGatewayID sets the "model_gateway_id" field if the given value is not nil.
-func (_u *VirtualKeyUpdate) SetNillableModelGatewayID(v *uuid.UUID) *VirtualKeyUpdate {
+// SetNillableTeamID sets the "team_id" field if the given value is not nil.
+func (_u *VirtualKeyUpdate) SetNillableTeamID(v *string) *VirtualKeyUpdate {
 	if v != nil {
-		_u.SetModelGatewayID(*v)
+		_u.SetTeamID(*v)
 	}
+	return _u
+}
+
+// ClearTeamID clears the value of the "team_id" field.
+func (_u *VirtualKeyUpdate) ClearTeamID() *VirtualKeyUpdate {
+	_u.mutation.ClearTeamID()
+	return _u
+}
+
+// SetGatewayConnectionID sets the "gateway_connection_id" field.
+func (_u *VirtualKeyUpdate) SetGatewayConnectionID(v uuid.UUID) *VirtualKeyUpdate {
+	_u.mutation.SetGatewayConnectionID(v)
+	return _u
+}
+
+// SetNillableGatewayConnectionID sets the "gateway_connection_id" field if the given value is not nil.
+func (_u *VirtualKeyUpdate) SetNillableGatewayConnectionID(v *uuid.UUID) *VirtualKeyUpdate {
+	if v != nil {
+		_u.SetGatewayConnectionID(*v)
+	}
+	return _u
+}
+
+// ClearGatewayConnectionID clears the value of the "gateway_connection_id" field.
+func (_u *VirtualKeyUpdate) ClearGatewayConnectionID() *VirtualKeyUpdate {
+	_u.mutation.ClearGatewayConnectionID()
 	return _u
 }
 
@@ -192,147 +210,6 @@ func (_u *VirtualKeyUpdate) ClearMaxBudget() *VirtualKeyUpdate {
 	return _u
 }
 
-// SetMaxParallelRequests sets the "max_parallel_requests" field.
-func (_u *VirtualKeyUpdate) SetMaxParallelRequests(v int) *VirtualKeyUpdate {
-	_u.mutation.ResetMaxParallelRequests()
-	_u.mutation.SetMaxParallelRequests(v)
-	return _u
-}
-
-// SetNillableMaxParallelRequests sets the "max_parallel_requests" field if the given value is not nil.
-func (_u *VirtualKeyUpdate) SetNillableMaxParallelRequests(v *int) *VirtualKeyUpdate {
-	if v != nil {
-		_u.SetMaxParallelRequests(*v)
-	}
-	return _u
-}
-
-// AddMaxParallelRequests adds value to the "max_parallel_requests" field.
-func (_u *VirtualKeyUpdate) AddMaxParallelRequests(v int) *VirtualKeyUpdate {
-	_u.mutation.AddMaxParallelRequests(v)
-	return _u
-}
-
-// ClearMaxParallelRequests clears the value of the "max_parallel_requests" field.
-func (_u *VirtualKeyUpdate) ClearMaxParallelRequests() *VirtualKeyUpdate {
-	_u.mutation.ClearMaxParallelRequests()
-	return _u
-}
-
-// SetTpmLimit sets the "tpm_limit" field.
-func (_u *VirtualKeyUpdate) SetTpmLimit(v int) *VirtualKeyUpdate {
-	_u.mutation.ResetTpmLimit()
-	_u.mutation.SetTpmLimit(v)
-	return _u
-}
-
-// SetNillableTpmLimit sets the "tpm_limit" field if the given value is not nil.
-func (_u *VirtualKeyUpdate) SetNillableTpmLimit(v *int) *VirtualKeyUpdate {
-	if v != nil {
-		_u.SetTpmLimit(*v)
-	}
-	return _u
-}
-
-// AddTpmLimit adds value to the "tpm_limit" field.
-func (_u *VirtualKeyUpdate) AddTpmLimit(v int) *VirtualKeyUpdate {
-	_u.mutation.AddTpmLimit(v)
-	return _u
-}
-
-// ClearTpmLimit clears the value of the "tpm_limit" field.
-func (_u *VirtualKeyUpdate) ClearTpmLimit() *VirtualKeyUpdate {
-	_u.mutation.ClearTpmLimit()
-	return _u
-}
-
-// SetRpmLimit sets the "rpm_limit" field.
-func (_u *VirtualKeyUpdate) SetRpmLimit(v int) *VirtualKeyUpdate {
-	_u.mutation.ResetRpmLimit()
-	_u.mutation.SetRpmLimit(v)
-	return _u
-}
-
-// SetNillableRpmLimit sets the "rpm_limit" field if the given value is not nil.
-func (_u *VirtualKeyUpdate) SetNillableRpmLimit(v *int) *VirtualKeyUpdate {
-	if v != nil {
-		_u.SetRpmLimit(*v)
-	}
-	return _u
-}
-
-// AddRpmLimit adds value to the "rpm_limit" field.
-func (_u *VirtualKeyUpdate) AddRpmLimit(v int) *VirtualKeyUpdate {
-	_u.mutation.AddRpmLimit(v)
-	return _u
-}
-
-// ClearRpmLimit clears the value of the "rpm_limit" field.
-func (_u *VirtualKeyUpdate) ClearRpmLimit() *VirtualKeyUpdate {
-	_u.mutation.ClearRpmLimit()
-	return _u
-}
-
-// SetTpmLimitType sets the "tpm_limit_type" field.
-func (_u *VirtualKeyUpdate) SetTpmLimitType(v string) *VirtualKeyUpdate {
-	_u.mutation.SetTpmLimitType(v)
-	return _u
-}
-
-// SetNillableTpmLimitType sets the "tpm_limit_type" field if the given value is not nil.
-func (_u *VirtualKeyUpdate) SetNillableTpmLimitType(v *string) *VirtualKeyUpdate {
-	if v != nil {
-		_u.SetTpmLimitType(*v)
-	}
-	return _u
-}
-
-// ClearTpmLimitType clears the value of the "tpm_limit_type" field.
-func (_u *VirtualKeyUpdate) ClearTpmLimitType() *VirtualKeyUpdate {
-	_u.mutation.ClearTpmLimitType()
-	return _u
-}
-
-// SetRpmLimitType sets the "rpm_limit_type" field.
-func (_u *VirtualKeyUpdate) SetRpmLimitType(v string) *VirtualKeyUpdate {
-	_u.mutation.SetRpmLimitType(v)
-	return _u
-}
-
-// SetNillableRpmLimitType sets the "rpm_limit_type" field if the given value is not nil.
-func (_u *VirtualKeyUpdate) SetNillableRpmLimitType(v *string) *VirtualKeyUpdate {
-	if v != nil {
-		_u.SetRpmLimitType(*v)
-	}
-	return _u
-}
-
-// ClearRpmLimitType clears the value of the "rpm_limit_type" field.
-func (_u *VirtualKeyUpdate) ClearRpmLimitType() *VirtualKeyUpdate {
-	_u.mutation.ClearRpmLimitType()
-	return _u
-}
-
-// SetBudgetDuration sets the "budget_duration" field.
-func (_u *VirtualKeyUpdate) SetBudgetDuration(v string) *VirtualKeyUpdate {
-	_u.mutation.SetBudgetDuration(v)
-	return _u
-}
-
-// SetNillableBudgetDuration sets the "budget_duration" field if the given value is not nil.
-func (_u *VirtualKeyUpdate) SetNillableBudgetDuration(v *string) *VirtualKeyUpdate {
-	if v != nil {
-		_u.SetBudgetDuration(*v)
-	}
-	return _u
-}
-
-// ClearBudgetDuration clears the value of the "budget_duration" field.
-func (_u *VirtualKeyUpdate) ClearBudgetDuration() *VirtualKeyUpdate {
-	_u.mutation.ClearBudgetDuration()
-	return _u
-}
-
 // SetStatus sets the "status" field.
 func (_u *VirtualKeyUpdate) SetStatus(v virtualkey.Status) *VirtualKeyUpdate {
 	_u.mutation.SetStatus(v)
@@ -364,151 +241,6 @@ func (_u *VirtualKeyUpdate) SetNillableExpiresAt(v *time.Time) *VirtualKeyUpdate
 // ClearExpiresAt clears the value of the "expires_at" field.
 func (_u *VirtualKeyUpdate) ClearExpiresAt() *VirtualKeyUpdate {
 	_u.mutation.ClearExpiresAt()
-	return _u
-}
-
-// SetAllowedRoutes sets the "allowed_routes" field.
-func (_u *VirtualKeyUpdate) SetAllowedRoutes(v []string) *VirtualKeyUpdate {
-	_u.mutation.SetAllowedRoutes(v)
-	return _u
-}
-
-// AppendAllowedRoutes appends value to the "allowed_routes" field.
-func (_u *VirtualKeyUpdate) AppendAllowedRoutes(v []string) *VirtualKeyUpdate {
-	_u.mutation.AppendAllowedRoutes(v)
-	return _u
-}
-
-// ClearAllowedRoutes clears the value of the "allowed_routes" field.
-func (_u *VirtualKeyUpdate) ClearAllowedRoutes() *VirtualKeyUpdate {
-	_u.mutation.ClearAllowedRoutes()
-	return _u
-}
-
-// SetTags sets the "tags" field.
-func (_u *VirtualKeyUpdate) SetTags(v []string) *VirtualKeyUpdate {
-	_u.mutation.SetTags(v)
-	return _u
-}
-
-// AppendTags appends value to the "tags" field.
-func (_u *VirtualKeyUpdate) AppendTags(v []string) *VirtualKeyUpdate {
-	_u.mutation.AppendTags(v)
-	return _u
-}
-
-// ClearTags clears the value of the "tags" field.
-func (_u *VirtualKeyUpdate) ClearTags() *VirtualKeyUpdate {
-	_u.mutation.ClearTags()
-	return _u
-}
-
-// SetBlocked sets the "blocked" field.
-func (_u *VirtualKeyUpdate) SetBlocked(v bool) *VirtualKeyUpdate {
-	_u.mutation.SetBlocked(v)
-	return _u
-}
-
-// SetNillableBlocked sets the "blocked" field if the given value is not nil.
-func (_u *VirtualKeyUpdate) SetNillableBlocked(v *bool) *VirtualKeyUpdate {
-	if v != nil {
-		_u.SetBlocked(*v)
-	}
-	return _u
-}
-
-// SetKeyType sets the "key_type" field.
-func (_u *VirtualKeyUpdate) SetKeyType(v string) *VirtualKeyUpdate {
-	_u.mutation.SetKeyType(v)
-	return _u
-}
-
-// SetNillableKeyType sets the "key_type" field if the given value is not nil.
-func (_u *VirtualKeyUpdate) SetNillableKeyType(v *string) *VirtualKeyUpdate {
-	if v != nil {
-		_u.SetKeyType(*v)
-	}
-	return _u
-}
-
-// SetAutoRotate sets the "auto_rotate" field.
-func (_u *VirtualKeyUpdate) SetAutoRotate(v bool) *VirtualKeyUpdate {
-	_u.mutation.SetAutoRotate(v)
-	return _u
-}
-
-// SetNillableAutoRotate sets the "auto_rotate" field if the given value is not nil.
-func (_u *VirtualKeyUpdate) SetNillableAutoRotate(v *bool) *VirtualKeyUpdate {
-	if v != nil {
-		_u.SetAutoRotate(*v)
-	}
-	return _u
-}
-
-// SetRotationInterval sets the "rotation_interval" field.
-func (_u *VirtualKeyUpdate) SetRotationInterval(v string) *VirtualKeyUpdate {
-	_u.mutation.SetRotationInterval(v)
-	return _u
-}
-
-// SetNillableRotationInterval sets the "rotation_interval" field if the given value is not nil.
-func (_u *VirtualKeyUpdate) SetNillableRotationInterval(v *string) *VirtualKeyUpdate {
-	if v != nil {
-		_u.SetRotationInterval(*v)
-	}
-	return _u
-}
-
-// ClearRotationInterval clears the value of the "rotation_interval" field.
-func (_u *VirtualKeyUpdate) ClearRotationInterval() *VirtualKeyUpdate {
-	_u.mutation.ClearRotationInterval()
-	return _u
-}
-
-// SetLastActiveAt sets the "last_active_at" field.
-func (_u *VirtualKeyUpdate) SetLastActiveAt(v time.Time) *VirtualKeyUpdate {
-	_u.mutation.SetLastActiveAt(v)
-	return _u
-}
-
-// SetNillableLastActiveAt sets the "last_active_at" field if the given value is not nil.
-func (_u *VirtualKeyUpdate) SetNillableLastActiveAt(v *time.Time) *VirtualKeyUpdate {
-	if v != nil {
-		_u.SetLastActiveAt(*v)
-	}
-	return _u
-}
-
-// ClearLastActiveAt clears the value of the "last_active_at" field.
-func (_u *VirtualKeyUpdate) ClearLastActiveAt() *VirtualKeyUpdate {
-	_u.mutation.ClearLastActiveAt()
-	return _u
-}
-
-// SetSpend sets the "spend" field.
-func (_u *VirtualKeyUpdate) SetSpend(v int) *VirtualKeyUpdate {
-	_u.mutation.ResetSpend()
-	_u.mutation.SetSpend(v)
-	return _u
-}
-
-// SetNillableSpend sets the "spend" field if the given value is not nil.
-func (_u *VirtualKeyUpdate) SetNillableSpend(v *int) *VirtualKeyUpdate {
-	if v != nil {
-		_u.SetSpend(*v)
-	}
-	return _u
-}
-
-// AddSpend adds value to the "spend" field.
-func (_u *VirtualKeyUpdate) AddSpend(v int) *VirtualKeyUpdate {
-	_u.mutation.AddSpend(v)
-	return _u
-}
-
-// ClearSpend clears the value of the "spend" field.
-func (_u *VirtualKeyUpdate) ClearSpend() *VirtualKeyUpdate {
-	_u.mutation.ClearSpend()
 	return _u
 }
 
@@ -560,21 +292,6 @@ func (_u *VirtualKeyUpdate) check() error {
 			return &ValidationError{Name: "litellm_key", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.litellm_key": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.MaskedKey(); ok {
-		if err := virtualkey.MaskedKeyValidator(v); err != nil {
-			return &ValidationError{Name: "masked_key", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.masked_key": %w`, err)}
-		}
-	}
-	if v, ok := _u.mutation.Name(); ok {
-		if err := virtualkey.NameValidator(v); err != nil {
-			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.name": %w`, err)}
-		}
-	}
-	if v, ok := _u.mutation.OrganizationID(); ok {
-		if err := virtualkey.OrganizationIDValidator(v); err != nil {
-			return &ValidationError{Name: "organization_id", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.organization_id": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := virtualkey.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.status": %w`, err)}
@@ -613,14 +330,14 @@ func (_u *VirtualKeyUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if _u.mutation.LitellmTokenCleared() {
 		_spec.ClearField(virtualkey.FieldLitellmToken, field.TypeString)
 	}
-	if value, ok := _u.mutation.MaskedKey(); ok {
-		_spec.SetField(virtualkey.FieldMaskedKey, field.TypeString, value)
+	if value, ok := _u.mutation.Alias(); ok {
+		_spec.SetField(virtualkey.FieldAlias, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.Name(); ok {
-		_spec.SetField(virtualkey.FieldName, field.TypeString, value)
+	if _u.mutation.AliasCleared() {
+		_spec.ClearField(virtualkey.FieldAlias, field.TypeString)
 	}
-	if value, ok := _u.mutation.OrganizationID(); ok {
-		_spec.SetField(virtualkey.FieldOrganizationID, field.TypeString, value)
+	if value, ok := _u.mutation.UserID(); ok {
+		_spec.SetField(virtualkey.FieldUserID, field.TypeUUID, value)
 	}
 	if value, ok := _u.mutation.AgentID(); ok {
 		_spec.SetField(virtualkey.FieldAgentID, field.TypeUUID, value)
@@ -628,8 +345,17 @@ func (_u *VirtualKeyUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if _u.mutation.AgentIDCleared() {
 		_spec.ClearField(virtualkey.FieldAgentID, field.TypeUUID)
 	}
-	if value, ok := _u.mutation.ModelGatewayID(); ok {
-		_spec.SetField(virtualkey.FieldModelGatewayID, field.TypeUUID, value)
+	if value, ok := _u.mutation.TeamID(); ok {
+		_spec.SetField(virtualkey.FieldTeamID, field.TypeString, value)
+	}
+	if _u.mutation.TeamIDCleared() {
+		_spec.ClearField(virtualkey.FieldTeamID, field.TypeString)
+	}
+	if value, ok := _u.mutation.GatewayConnectionID(); ok {
+		_spec.SetField(virtualkey.FieldGatewayConnectionID, field.TypeUUID, value)
+	}
+	if _u.mutation.GatewayConnectionIDCleared() {
+		_spec.ClearField(virtualkey.FieldGatewayConnectionID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.Models(); ok {
 		_spec.SetField(virtualkey.FieldModels, field.TypeJSON, value)
@@ -651,51 +377,6 @@ func (_u *VirtualKeyUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if _u.mutation.MaxBudgetCleared() {
 		_spec.ClearField(virtualkey.FieldMaxBudget, field.TypeFloat64)
 	}
-	if value, ok := _u.mutation.MaxParallelRequests(); ok {
-		_spec.SetField(virtualkey.FieldMaxParallelRequests, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedMaxParallelRequests(); ok {
-		_spec.AddField(virtualkey.FieldMaxParallelRequests, field.TypeInt, value)
-	}
-	if _u.mutation.MaxParallelRequestsCleared() {
-		_spec.ClearField(virtualkey.FieldMaxParallelRequests, field.TypeInt)
-	}
-	if value, ok := _u.mutation.TpmLimit(); ok {
-		_spec.SetField(virtualkey.FieldTpmLimit, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedTpmLimit(); ok {
-		_spec.AddField(virtualkey.FieldTpmLimit, field.TypeInt, value)
-	}
-	if _u.mutation.TpmLimitCleared() {
-		_spec.ClearField(virtualkey.FieldTpmLimit, field.TypeInt)
-	}
-	if value, ok := _u.mutation.RpmLimit(); ok {
-		_spec.SetField(virtualkey.FieldRpmLimit, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedRpmLimit(); ok {
-		_spec.AddField(virtualkey.FieldRpmLimit, field.TypeInt, value)
-	}
-	if _u.mutation.RpmLimitCleared() {
-		_spec.ClearField(virtualkey.FieldRpmLimit, field.TypeInt)
-	}
-	if value, ok := _u.mutation.TpmLimitType(); ok {
-		_spec.SetField(virtualkey.FieldTpmLimitType, field.TypeString, value)
-	}
-	if _u.mutation.TpmLimitTypeCleared() {
-		_spec.ClearField(virtualkey.FieldTpmLimitType, field.TypeString)
-	}
-	if value, ok := _u.mutation.RpmLimitType(); ok {
-		_spec.SetField(virtualkey.FieldRpmLimitType, field.TypeString, value)
-	}
-	if _u.mutation.RpmLimitTypeCleared() {
-		_spec.ClearField(virtualkey.FieldRpmLimitType, field.TypeString)
-	}
-	if value, ok := _u.mutation.BudgetDuration(); ok {
-		_spec.SetField(virtualkey.FieldBudgetDuration, field.TypeString, value)
-	}
-	if _u.mutation.BudgetDurationCleared() {
-		_spec.ClearField(virtualkey.FieldBudgetDuration, field.TypeString)
-	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(virtualkey.FieldStatus, field.TypeEnum, value)
 	}
@@ -704,58 +385,6 @@ func (_u *VirtualKeyUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if _u.mutation.ExpiresAtCleared() {
 		_spec.ClearField(virtualkey.FieldExpiresAt, field.TypeTime)
-	}
-	if value, ok := _u.mutation.AllowedRoutes(); ok {
-		_spec.SetField(virtualkey.FieldAllowedRoutes, field.TypeJSON, value)
-	}
-	if value, ok := _u.mutation.AppendedAllowedRoutes(); ok {
-		_spec.AddModifier(func(u *sql.UpdateBuilder) {
-			sqljson.Append(u, virtualkey.FieldAllowedRoutes, value)
-		})
-	}
-	if _u.mutation.AllowedRoutesCleared() {
-		_spec.ClearField(virtualkey.FieldAllowedRoutes, field.TypeJSON)
-	}
-	if value, ok := _u.mutation.Tags(); ok {
-		_spec.SetField(virtualkey.FieldTags, field.TypeJSON, value)
-	}
-	if value, ok := _u.mutation.AppendedTags(); ok {
-		_spec.AddModifier(func(u *sql.UpdateBuilder) {
-			sqljson.Append(u, virtualkey.FieldTags, value)
-		})
-	}
-	if _u.mutation.TagsCleared() {
-		_spec.ClearField(virtualkey.FieldTags, field.TypeJSON)
-	}
-	if value, ok := _u.mutation.Blocked(); ok {
-		_spec.SetField(virtualkey.FieldBlocked, field.TypeBool, value)
-	}
-	if value, ok := _u.mutation.KeyType(); ok {
-		_spec.SetField(virtualkey.FieldKeyType, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.AutoRotate(); ok {
-		_spec.SetField(virtualkey.FieldAutoRotate, field.TypeBool, value)
-	}
-	if value, ok := _u.mutation.RotationInterval(); ok {
-		_spec.SetField(virtualkey.FieldRotationInterval, field.TypeString, value)
-	}
-	if _u.mutation.RotationIntervalCleared() {
-		_spec.ClearField(virtualkey.FieldRotationInterval, field.TypeString)
-	}
-	if value, ok := _u.mutation.LastActiveAt(); ok {
-		_spec.SetField(virtualkey.FieldLastActiveAt, field.TypeTime, value)
-	}
-	if _u.mutation.LastActiveAtCleared() {
-		_spec.ClearField(virtualkey.FieldLastActiveAt, field.TypeTime)
-	}
-	if value, ok := _u.mutation.Spend(); ok {
-		_spec.SetField(virtualkey.FieldSpend, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedSpend(); ok {
-		_spec.AddField(virtualkey.FieldSpend, field.TypeInt, value)
-	}
-	if _u.mutation.SpendCleared() {
-		_spec.ClearField(virtualkey.FieldSpend, field.TypeInt)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
@@ -819,44 +448,36 @@ func (_u *VirtualKeyUpdateOne) ClearLitellmToken() *VirtualKeyUpdateOne {
 	return _u
 }
 
-// SetMaskedKey sets the "masked_key" field.
-func (_u *VirtualKeyUpdateOne) SetMaskedKey(v string) *VirtualKeyUpdateOne {
-	_u.mutation.SetMaskedKey(v)
+// SetAlias sets the "alias" field.
+func (_u *VirtualKeyUpdateOne) SetAlias(v string) *VirtualKeyUpdateOne {
+	_u.mutation.SetAlias(v)
 	return _u
 }
 
-// SetNillableMaskedKey sets the "masked_key" field if the given value is not nil.
-func (_u *VirtualKeyUpdateOne) SetNillableMaskedKey(v *string) *VirtualKeyUpdateOne {
+// SetNillableAlias sets the "alias" field if the given value is not nil.
+func (_u *VirtualKeyUpdateOne) SetNillableAlias(v *string) *VirtualKeyUpdateOne {
 	if v != nil {
-		_u.SetMaskedKey(*v)
+		_u.SetAlias(*v)
 	}
 	return _u
 }
 
-// SetName sets the "name" field.
-func (_u *VirtualKeyUpdateOne) SetName(v string) *VirtualKeyUpdateOne {
-	_u.mutation.SetName(v)
+// ClearAlias clears the value of the "alias" field.
+func (_u *VirtualKeyUpdateOne) ClearAlias() *VirtualKeyUpdateOne {
+	_u.mutation.ClearAlias()
 	return _u
 }
 
-// SetNillableName sets the "name" field if the given value is not nil.
-func (_u *VirtualKeyUpdateOne) SetNillableName(v *string) *VirtualKeyUpdateOne {
+// SetUserID sets the "user_id" field.
+func (_u *VirtualKeyUpdateOne) SetUserID(v uuid.UUID) *VirtualKeyUpdateOne {
+	_u.mutation.SetUserID(v)
+	return _u
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (_u *VirtualKeyUpdateOne) SetNillableUserID(v *uuid.UUID) *VirtualKeyUpdateOne {
 	if v != nil {
-		_u.SetName(*v)
-	}
-	return _u
-}
-
-// SetOrganizationID sets the "organization_id" field.
-func (_u *VirtualKeyUpdateOne) SetOrganizationID(v string) *VirtualKeyUpdateOne {
-	_u.mutation.SetOrganizationID(v)
-	return _u
-}
-
-// SetNillableOrganizationID sets the "organization_id" field if the given value is not nil.
-func (_u *VirtualKeyUpdateOne) SetNillableOrganizationID(v *string) *VirtualKeyUpdateOne {
-	if v != nil {
-		_u.SetOrganizationID(*v)
+		_u.SetUserID(*v)
 	}
 	return _u
 }
@@ -881,17 +502,43 @@ func (_u *VirtualKeyUpdateOne) ClearAgentID() *VirtualKeyUpdateOne {
 	return _u
 }
 
-// SetModelGatewayID sets the "model_gateway_id" field.
-func (_u *VirtualKeyUpdateOne) SetModelGatewayID(v uuid.UUID) *VirtualKeyUpdateOne {
-	_u.mutation.SetModelGatewayID(v)
+// SetTeamID sets the "team_id" field.
+func (_u *VirtualKeyUpdateOne) SetTeamID(v string) *VirtualKeyUpdateOne {
+	_u.mutation.SetTeamID(v)
 	return _u
 }
 
-// SetNillableModelGatewayID sets the "model_gateway_id" field if the given value is not nil.
-func (_u *VirtualKeyUpdateOne) SetNillableModelGatewayID(v *uuid.UUID) *VirtualKeyUpdateOne {
+// SetNillableTeamID sets the "team_id" field if the given value is not nil.
+func (_u *VirtualKeyUpdateOne) SetNillableTeamID(v *string) *VirtualKeyUpdateOne {
 	if v != nil {
-		_u.SetModelGatewayID(*v)
+		_u.SetTeamID(*v)
 	}
+	return _u
+}
+
+// ClearTeamID clears the value of the "team_id" field.
+func (_u *VirtualKeyUpdateOne) ClearTeamID() *VirtualKeyUpdateOne {
+	_u.mutation.ClearTeamID()
+	return _u
+}
+
+// SetGatewayConnectionID sets the "gateway_connection_id" field.
+func (_u *VirtualKeyUpdateOne) SetGatewayConnectionID(v uuid.UUID) *VirtualKeyUpdateOne {
+	_u.mutation.SetGatewayConnectionID(v)
+	return _u
+}
+
+// SetNillableGatewayConnectionID sets the "gateway_connection_id" field if the given value is not nil.
+func (_u *VirtualKeyUpdateOne) SetNillableGatewayConnectionID(v *uuid.UUID) *VirtualKeyUpdateOne {
+	if v != nil {
+		_u.SetGatewayConnectionID(*v)
+	}
+	return _u
+}
+
+// ClearGatewayConnectionID clears the value of the "gateway_connection_id" field.
+func (_u *VirtualKeyUpdateOne) ClearGatewayConnectionID() *VirtualKeyUpdateOne {
+	_u.mutation.ClearGatewayConnectionID()
 	return _u
 }
 
@@ -940,147 +587,6 @@ func (_u *VirtualKeyUpdateOne) ClearMaxBudget() *VirtualKeyUpdateOne {
 	return _u
 }
 
-// SetMaxParallelRequests sets the "max_parallel_requests" field.
-func (_u *VirtualKeyUpdateOne) SetMaxParallelRequests(v int) *VirtualKeyUpdateOne {
-	_u.mutation.ResetMaxParallelRequests()
-	_u.mutation.SetMaxParallelRequests(v)
-	return _u
-}
-
-// SetNillableMaxParallelRequests sets the "max_parallel_requests" field if the given value is not nil.
-func (_u *VirtualKeyUpdateOne) SetNillableMaxParallelRequests(v *int) *VirtualKeyUpdateOne {
-	if v != nil {
-		_u.SetMaxParallelRequests(*v)
-	}
-	return _u
-}
-
-// AddMaxParallelRequests adds value to the "max_parallel_requests" field.
-func (_u *VirtualKeyUpdateOne) AddMaxParallelRequests(v int) *VirtualKeyUpdateOne {
-	_u.mutation.AddMaxParallelRequests(v)
-	return _u
-}
-
-// ClearMaxParallelRequests clears the value of the "max_parallel_requests" field.
-func (_u *VirtualKeyUpdateOne) ClearMaxParallelRequests() *VirtualKeyUpdateOne {
-	_u.mutation.ClearMaxParallelRequests()
-	return _u
-}
-
-// SetTpmLimit sets the "tpm_limit" field.
-func (_u *VirtualKeyUpdateOne) SetTpmLimit(v int) *VirtualKeyUpdateOne {
-	_u.mutation.ResetTpmLimit()
-	_u.mutation.SetTpmLimit(v)
-	return _u
-}
-
-// SetNillableTpmLimit sets the "tpm_limit" field if the given value is not nil.
-func (_u *VirtualKeyUpdateOne) SetNillableTpmLimit(v *int) *VirtualKeyUpdateOne {
-	if v != nil {
-		_u.SetTpmLimit(*v)
-	}
-	return _u
-}
-
-// AddTpmLimit adds value to the "tpm_limit" field.
-func (_u *VirtualKeyUpdateOne) AddTpmLimit(v int) *VirtualKeyUpdateOne {
-	_u.mutation.AddTpmLimit(v)
-	return _u
-}
-
-// ClearTpmLimit clears the value of the "tpm_limit" field.
-func (_u *VirtualKeyUpdateOne) ClearTpmLimit() *VirtualKeyUpdateOne {
-	_u.mutation.ClearTpmLimit()
-	return _u
-}
-
-// SetRpmLimit sets the "rpm_limit" field.
-func (_u *VirtualKeyUpdateOne) SetRpmLimit(v int) *VirtualKeyUpdateOne {
-	_u.mutation.ResetRpmLimit()
-	_u.mutation.SetRpmLimit(v)
-	return _u
-}
-
-// SetNillableRpmLimit sets the "rpm_limit" field if the given value is not nil.
-func (_u *VirtualKeyUpdateOne) SetNillableRpmLimit(v *int) *VirtualKeyUpdateOne {
-	if v != nil {
-		_u.SetRpmLimit(*v)
-	}
-	return _u
-}
-
-// AddRpmLimit adds value to the "rpm_limit" field.
-func (_u *VirtualKeyUpdateOne) AddRpmLimit(v int) *VirtualKeyUpdateOne {
-	_u.mutation.AddRpmLimit(v)
-	return _u
-}
-
-// ClearRpmLimit clears the value of the "rpm_limit" field.
-func (_u *VirtualKeyUpdateOne) ClearRpmLimit() *VirtualKeyUpdateOne {
-	_u.mutation.ClearRpmLimit()
-	return _u
-}
-
-// SetTpmLimitType sets the "tpm_limit_type" field.
-func (_u *VirtualKeyUpdateOne) SetTpmLimitType(v string) *VirtualKeyUpdateOne {
-	_u.mutation.SetTpmLimitType(v)
-	return _u
-}
-
-// SetNillableTpmLimitType sets the "tpm_limit_type" field if the given value is not nil.
-func (_u *VirtualKeyUpdateOne) SetNillableTpmLimitType(v *string) *VirtualKeyUpdateOne {
-	if v != nil {
-		_u.SetTpmLimitType(*v)
-	}
-	return _u
-}
-
-// ClearTpmLimitType clears the value of the "tpm_limit_type" field.
-func (_u *VirtualKeyUpdateOne) ClearTpmLimitType() *VirtualKeyUpdateOne {
-	_u.mutation.ClearTpmLimitType()
-	return _u
-}
-
-// SetRpmLimitType sets the "rpm_limit_type" field.
-func (_u *VirtualKeyUpdateOne) SetRpmLimitType(v string) *VirtualKeyUpdateOne {
-	_u.mutation.SetRpmLimitType(v)
-	return _u
-}
-
-// SetNillableRpmLimitType sets the "rpm_limit_type" field if the given value is not nil.
-func (_u *VirtualKeyUpdateOne) SetNillableRpmLimitType(v *string) *VirtualKeyUpdateOne {
-	if v != nil {
-		_u.SetRpmLimitType(*v)
-	}
-	return _u
-}
-
-// ClearRpmLimitType clears the value of the "rpm_limit_type" field.
-func (_u *VirtualKeyUpdateOne) ClearRpmLimitType() *VirtualKeyUpdateOne {
-	_u.mutation.ClearRpmLimitType()
-	return _u
-}
-
-// SetBudgetDuration sets the "budget_duration" field.
-func (_u *VirtualKeyUpdateOne) SetBudgetDuration(v string) *VirtualKeyUpdateOne {
-	_u.mutation.SetBudgetDuration(v)
-	return _u
-}
-
-// SetNillableBudgetDuration sets the "budget_duration" field if the given value is not nil.
-func (_u *VirtualKeyUpdateOne) SetNillableBudgetDuration(v *string) *VirtualKeyUpdateOne {
-	if v != nil {
-		_u.SetBudgetDuration(*v)
-	}
-	return _u
-}
-
-// ClearBudgetDuration clears the value of the "budget_duration" field.
-func (_u *VirtualKeyUpdateOne) ClearBudgetDuration() *VirtualKeyUpdateOne {
-	_u.mutation.ClearBudgetDuration()
-	return _u
-}
-
 // SetStatus sets the "status" field.
 func (_u *VirtualKeyUpdateOne) SetStatus(v virtualkey.Status) *VirtualKeyUpdateOne {
 	_u.mutation.SetStatus(v)
@@ -1112,151 +618,6 @@ func (_u *VirtualKeyUpdateOne) SetNillableExpiresAt(v *time.Time) *VirtualKeyUpd
 // ClearExpiresAt clears the value of the "expires_at" field.
 func (_u *VirtualKeyUpdateOne) ClearExpiresAt() *VirtualKeyUpdateOne {
 	_u.mutation.ClearExpiresAt()
-	return _u
-}
-
-// SetAllowedRoutes sets the "allowed_routes" field.
-func (_u *VirtualKeyUpdateOne) SetAllowedRoutes(v []string) *VirtualKeyUpdateOne {
-	_u.mutation.SetAllowedRoutes(v)
-	return _u
-}
-
-// AppendAllowedRoutes appends value to the "allowed_routes" field.
-func (_u *VirtualKeyUpdateOne) AppendAllowedRoutes(v []string) *VirtualKeyUpdateOne {
-	_u.mutation.AppendAllowedRoutes(v)
-	return _u
-}
-
-// ClearAllowedRoutes clears the value of the "allowed_routes" field.
-func (_u *VirtualKeyUpdateOne) ClearAllowedRoutes() *VirtualKeyUpdateOne {
-	_u.mutation.ClearAllowedRoutes()
-	return _u
-}
-
-// SetTags sets the "tags" field.
-func (_u *VirtualKeyUpdateOne) SetTags(v []string) *VirtualKeyUpdateOne {
-	_u.mutation.SetTags(v)
-	return _u
-}
-
-// AppendTags appends value to the "tags" field.
-func (_u *VirtualKeyUpdateOne) AppendTags(v []string) *VirtualKeyUpdateOne {
-	_u.mutation.AppendTags(v)
-	return _u
-}
-
-// ClearTags clears the value of the "tags" field.
-func (_u *VirtualKeyUpdateOne) ClearTags() *VirtualKeyUpdateOne {
-	_u.mutation.ClearTags()
-	return _u
-}
-
-// SetBlocked sets the "blocked" field.
-func (_u *VirtualKeyUpdateOne) SetBlocked(v bool) *VirtualKeyUpdateOne {
-	_u.mutation.SetBlocked(v)
-	return _u
-}
-
-// SetNillableBlocked sets the "blocked" field if the given value is not nil.
-func (_u *VirtualKeyUpdateOne) SetNillableBlocked(v *bool) *VirtualKeyUpdateOne {
-	if v != nil {
-		_u.SetBlocked(*v)
-	}
-	return _u
-}
-
-// SetKeyType sets the "key_type" field.
-func (_u *VirtualKeyUpdateOne) SetKeyType(v string) *VirtualKeyUpdateOne {
-	_u.mutation.SetKeyType(v)
-	return _u
-}
-
-// SetNillableKeyType sets the "key_type" field if the given value is not nil.
-func (_u *VirtualKeyUpdateOne) SetNillableKeyType(v *string) *VirtualKeyUpdateOne {
-	if v != nil {
-		_u.SetKeyType(*v)
-	}
-	return _u
-}
-
-// SetAutoRotate sets the "auto_rotate" field.
-func (_u *VirtualKeyUpdateOne) SetAutoRotate(v bool) *VirtualKeyUpdateOne {
-	_u.mutation.SetAutoRotate(v)
-	return _u
-}
-
-// SetNillableAutoRotate sets the "auto_rotate" field if the given value is not nil.
-func (_u *VirtualKeyUpdateOne) SetNillableAutoRotate(v *bool) *VirtualKeyUpdateOne {
-	if v != nil {
-		_u.SetAutoRotate(*v)
-	}
-	return _u
-}
-
-// SetRotationInterval sets the "rotation_interval" field.
-func (_u *VirtualKeyUpdateOne) SetRotationInterval(v string) *VirtualKeyUpdateOne {
-	_u.mutation.SetRotationInterval(v)
-	return _u
-}
-
-// SetNillableRotationInterval sets the "rotation_interval" field if the given value is not nil.
-func (_u *VirtualKeyUpdateOne) SetNillableRotationInterval(v *string) *VirtualKeyUpdateOne {
-	if v != nil {
-		_u.SetRotationInterval(*v)
-	}
-	return _u
-}
-
-// ClearRotationInterval clears the value of the "rotation_interval" field.
-func (_u *VirtualKeyUpdateOne) ClearRotationInterval() *VirtualKeyUpdateOne {
-	_u.mutation.ClearRotationInterval()
-	return _u
-}
-
-// SetLastActiveAt sets the "last_active_at" field.
-func (_u *VirtualKeyUpdateOne) SetLastActiveAt(v time.Time) *VirtualKeyUpdateOne {
-	_u.mutation.SetLastActiveAt(v)
-	return _u
-}
-
-// SetNillableLastActiveAt sets the "last_active_at" field if the given value is not nil.
-func (_u *VirtualKeyUpdateOne) SetNillableLastActiveAt(v *time.Time) *VirtualKeyUpdateOne {
-	if v != nil {
-		_u.SetLastActiveAt(*v)
-	}
-	return _u
-}
-
-// ClearLastActiveAt clears the value of the "last_active_at" field.
-func (_u *VirtualKeyUpdateOne) ClearLastActiveAt() *VirtualKeyUpdateOne {
-	_u.mutation.ClearLastActiveAt()
-	return _u
-}
-
-// SetSpend sets the "spend" field.
-func (_u *VirtualKeyUpdateOne) SetSpend(v int) *VirtualKeyUpdateOne {
-	_u.mutation.ResetSpend()
-	_u.mutation.SetSpend(v)
-	return _u
-}
-
-// SetNillableSpend sets the "spend" field if the given value is not nil.
-func (_u *VirtualKeyUpdateOne) SetNillableSpend(v *int) *VirtualKeyUpdateOne {
-	if v != nil {
-		_u.SetSpend(*v)
-	}
-	return _u
-}
-
-// AddSpend adds value to the "spend" field.
-func (_u *VirtualKeyUpdateOne) AddSpend(v int) *VirtualKeyUpdateOne {
-	_u.mutation.AddSpend(v)
-	return _u
-}
-
-// ClearSpend clears the value of the "spend" field.
-func (_u *VirtualKeyUpdateOne) ClearSpend() *VirtualKeyUpdateOne {
-	_u.mutation.ClearSpend()
 	return _u
 }
 
@@ -1321,21 +682,6 @@ func (_u *VirtualKeyUpdateOne) check() error {
 			return &ValidationError{Name: "litellm_key", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.litellm_key": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.MaskedKey(); ok {
-		if err := virtualkey.MaskedKeyValidator(v); err != nil {
-			return &ValidationError{Name: "masked_key", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.masked_key": %w`, err)}
-		}
-	}
-	if v, ok := _u.mutation.Name(); ok {
-		if err := virtualkey.NameValidator(v); err != nil {
-			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.name": %w`, err)}
-		}
-	}
-	if v, ok := _u.mutation.OrganizationID(); ok {
-		if err := virtualkey.OrganizationIDValidator(v); err != nil {
-			return &ValidationError{Name: "organization_id", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.organization_id": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := virtualkey.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.status": %w`, err)}
@@ -1391,14 +737,14 @@ func (_u *VirtualKeyUpdateOne) sqlSave(ctx context.Context) (_node *VirtualKey, 
 	if _u.mutation.LitellmTokenCleared() {
 		_spec.ClearField(virtualkey.FieldLitellmToken, field.TypeString)
 	}
-	if value, ok := _u.mutation.MaskedKey(); ok {
-		_spec.SetField(virtualkey.FieldMaskedKey, field.TypeString, value)
+	if value, ok := _u.mutation.Alias(); ok {
+		_spec.SetField(virtualkey.FieldAlias, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.Name(); ok {
-		_spec.SetField(virtualkey.FieldName, field.TypeString, value)
+	if _u.mutation.AliasCleared() {
+		_spec.ClearField(virtualkey.FieldAlias, field.TypeString)
 	}
-	if value, ok := _u.mutation.OrganizationID(); ok {
-		_spec.SetField(virtualkey.FieldOrganizationID, field.TypeString, value)
+	if value, ok := _u.mutation.UserID(); ok {
+		_spec.SetField(virtualkey.FieldUserID, field.TypeUUID, value)
 	}
 	if value, ok := _u.mutation.AgentID(); ok {
 		_spec.SetField(virtualkey.FieldAgentID, field.TypeUUID, value)
@@ -1406,8 +752,17 @@ func (_u *VirtualKeyUpdateOne) sqlSave(ctx context.Context) (_node *VirtualKey, 
 	if _u.mutation.AgentIDCleared() {
 		_spec.ClearField(virtualkey.FieldAgentID, field.TypeUUID)
 	}
-	if value, ok := _u.mutation.ModelGatewayID(); ok {
-		_spec.SetField(virtualkey.FieldModelGatewayID, field.TypeUUID, value)
+	if value, ok := _u.mutation.TeamID(); ok {
+		_spec.SetField(virtualkey.FieldTeamID, field.TypeString, value)
+	}
+	if _u.mutation.TeamIDCleared() {
+		_spec.ClearField(virtualkey.FieldTeamID, field.TypeString)
+	}
+	if value, ok := _u.mutation.GatewayConnectionID(); ok {
+		_spec.SetField(virtualkey.FieldGatewayConnectionID, field.TypeUUID, value)
+	}
+	if _u.mutation.GatewayConnectionIDCleared() {
+		_spec.ClearField(virtualkey.FieldGatewayConnectionID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.Models(); ok {
 		_spec.SetField(virtualkey.FieldModels, field.TypeJSON, value)
@@ -1429,51 +784,6 @@ func (_u *VirtualKeyUpdateOne) sqlSave(ctx context.Context) (_node *VirtualKey, 
 	if _u.mutation.MaxBudgetCleared() {
 		_spec.ClearField(virtualkey.FieldMaxBudget, field.TypeFloat64)
 	}
-	if value, ok := _u.mutation.MaxParallelRequests(); ok {
-		_spec.SetField(virtualkey.FieldMaxParallelRequests, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedMaxParallelRequests(); ok {
-		_spec.AddField(virtualkey.FieldMaxParallelRequests, field.TypeInt, value)
-	}
-	if _u.mutation.MaxParallelRequestsCleared() {
-		_spec.ClearField(virtualkey.FieldMaxParallelRequests, field.TypeInt)
-	}
-	if value, ok := _u.mutation.TpmLimit(); ok {
-		_spec.SetField(virtualkey.FieldTpmLimit, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedTpmLimit(); ok {
-		_spec.AddField(virtualkey.FieldTpmLimit, field.TypeInt, value)
-	}
-	if _u.mutation.TpmLimitCleared() {
-		_spec.ClearField(virtualkey.FieldTpmLimit, field.TypeInt)
-	}
-	if value, ok := _u.mutation.RpmLimit(); ok {
-		_spec.SetField(virtualkey.FieldRpmLimit, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedRpmLimit(); ok {
-		_spec.AddField(virtualkey.FieldRpmLimit, field.TypeInt, value)
-	}
-	if _u.mutation.RpmLimitCleared() {
-		_spec.ClearField(virtualkey.FieldRpmLimit, field.TypeInt)
-	}
-	if value, ok := _u.mutation.TpmLimitType(); ok {
-		_spec.SetField(virtualkey.FieldTpmLimitType, field.TypeString, value)
-	}
-	if _u.mutation.TpmLimitTypeCleared() {
-		_spec.ClearField(virtualkey.FieldTpmLimitType, field.TypeString)
-	}
-	if value, ok := _u.mutation.RpmLimitType(); ok {
-		_spec.SetField(virtualkey.FieldRpmLimitType, field.TypeString, value)
-	}
-	if _u.mutation.RpmLimitTypeCleared() {
-		_spec.ClearField(virtualkey.FieldRpmLimitType, field.TypeString)
-	}
-	if value, ok := _u.mutation.BudgetDuration(); ok {
-		_spec.SetField(virtualkey.FieldBudgetDuration, field.TypeString, value)
-	}
-	if _u.mutation.BudgetDurationCleared() {
-		_spec.ClearField(virtualkey.FieldBudgetDuration, field.TypeString)
-	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(virtualkey.FieldStatus, field.TypeEnum, value)
 	}
@@ -1482,58 +792,6 @@ func (_u *VirtualKeyUpdateOne) sqlSave(ctx context.Context) (_node *VirtualKey, 
 	}
 	if _u.mutation.ExpiresAtCleared() {
 		_spec.ClearField(virtualkey.FieldExpiresAt, field.TypeTime)
-	}
-	if value, ok := _u.mutation.AllowedRoutes(); ok {
-		_spec.SetField(virtualkey.FieldAllowedRoutes, field.TypeJSON, value)
-	}
-	if value, ok := _u.mutation.AppendedAllowedRoutes(); ok {
-		_spec.AddModifier(func(u *sql.UpdateBuilder) {
-			sqljson.Append(u, virtualkey.FieldAllowedRoutes, value)
-		})
-	}
-	if _u.mutation.AllowedRoutesCleared() {
-		_spec.ClearField(virtualkey.FieldAllowedRoutes, field.TypeJSON)
-	}
-	if value, ok := _u.mutation.Tags(); ok {
-		_spec.SetField(virtualkey.FieldTags, field.TypeJSON, value)
-	}
-	if value, ok := _u.mutation.AppendedTags(); ok {
-		_spec.AddModifier(func(u *sql.UpdateBuilder) {
-			sqljson.Append(u, virtualkey.FieldTags, value)
-		})
-	}
-	if _u.mutation.TagsCleared() {
-		_spec.ClearField(virtualkey.FieldTags, field.TypeJSON)
-	}
-	if value, ok := _u.mutation.Blocked(); ok {
-		_spec.SetField(virtualkey.FieldBlocked, field.TypeBool, value)
-	}
-	if value, ok := _u.mutation.KeyType(); ok {
-		_spec.SetField(virtualkey.FieldKeyType, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.AutoRotate(); ok {
-		_spec.SetField(virtualkey.FieldAutoRotate, field.TypeBool, value)
-	}
-	if value, ok := _u.mutation.RotationInterval(); ok {
-		_spec.SetField(virtualkey.FieldRotationInterval, field.TypeString, value)
-	}
-	if _u.mutation.RotationIntervalCleared() {
-		_spec.ClearField(virtualkey.FieldRotationInterval, field.TypeString)
-	}
-	if value, ok := _u.mutation.LastActiveAt(); ok {
-		_spec.SetField(virtualkey.FieldLastActiveAt, field.TypeTime, value)
-	}
-	if _u.mutation.LastActiveAtCleared() {
-		_spec.ClearField(virtualkey.FieldLastActiveAt, field.TypeTime)
-	}
-	if value, ok := _u.mutation.Spend(); ok {
-		_spec.SetField(virtualkey.FieldSpend, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedSpend(); ok {
-		_spec.AddField(virtualkey.FieldSpend, field.TypeInt, value)
-	}
-	if _u.mutation.SpendCleared() {
-		_spec.ClearField(virtualkey.FieldSpend, field.TypeInt)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &VirtualKey{config: _u.config}
