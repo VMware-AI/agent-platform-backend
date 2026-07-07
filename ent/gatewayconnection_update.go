@@ -83,40 +83,6 @@ func (_u *GatewayConnectionUpdate) ClearMasterKeyRef() *GatewayConnectionUpdate 
 	return _u
 }
 
-// SetPublicURL sets the "public_url" field.
-func (_u *GatewayConnectionUpdate) SetPublicURL(v string) *GatewayConnectionUpdate {
-	_u.mutation.SetPublicURL(v)
-	return _u
-}
-
-// SetNillablePublicURL sets the "public_url" field if the given value is not nil.
-func (_u *GatewayConnectionUpdate) SetNillablePublicURL(v *string) *GatewayConnectionUpdate {
-	if v != nil {
-		_u.SetPublicURL(*v)
-	}
-	return _u
-}
-
-// ClearPublicURL clears the value of the "public_url" field.
-func (_u *GatewayConnectionUpdate) ClearPublicURL() *GatewayConnectionUpdate {
-	_u.mutation.ClearPublicURL()
-	return _u
-}
-
-// SetIsDefault sets the "is_default" field.
-func (_u *GatewayConnectionUpdate) SetIsDefault(v bool) *GatewayConnectionUpdate {
-	_u.mutation.SetIsDefault(v)
-	return _u
-}
-
-// SetNillableIsDefault sets the "is_default" field if the given value is not nil.
-func (_u *GatewayConnectionUpdate) SetNillableIsDefault(v *bool) *GatewayConnectionUpdate {
-	if v != nil {
-		_u.SetIsDefault(*v)
-	}
-	return _u
-}
-
 // SetLastSyncedAt sets the "last_synced_at" field.
 func (_u *GatewayConnectionUpdate) SetLastSyncedAt(v time.Time) *GatewayConnectionUpdate {
 	_u.mutation.SetLastSyncedAt(v)
@@ -291,15 +257,6 @@ func (_u *GatewayConnectionUpdate) sqlSave(ctx context.Context) (_node int, err 
 	if _u.mutation.MasterKeyRefCleared() {
 		_spec.ClearField(gatewayconnection.FieldMasterKeyRef, field.TypeString)
 	}
-	if value, ok := _u.mutation.PublicURL(); ok {
-		_spec.SetField(gatewayconnection.FieldPublicURL, field.TypeString, value)
-	}
-	if _u.mutation.PublicURLCleared() {
-		_spec.ClearField(gatewayconnection.FieldPublicURL, field.TypeString)
-	}
-	if value, ok := _u.mutation.IsDefault(); ok {
-		_spec.SetField(gatewayconnection.FieldIsDefault, field.TypeBool, value)
-	}
 	if value, ok := _u.mutation.LastSyncedAt(); ok {
 		_spec.SetField(gatewayconnection.FieldLastSyncedAt, field.TypeTime, value)
 	}
@@ -394,40 +351,6 @@ func (_u *GatewayConnectionUpdateOne) SetNillableMasterKeyRef(v *string) *Gatewa
 // ClearMasterKeyRef clears the value of the "master_key_ref" field.
 func (_u *GatewayConnectionUpdateOne) ClearMasterKeyRef() *GatewayConnectionUpdateOne {
 	_u.mutation.ClearMasterKeyRef()
-	return _u
-}
-
-// SetPublicURL sets the "public_url" field.
-func (_u *GatewayConnectionUpdateOne) SetPublicURL(v string) *GatewayConnectionUpdateOne {
-	_u.mutation.SetPublicURL(v)
-	return _u
-}
-
-// SetNillablePublicURL sets the "public_url" field if the given value is not nil.
-func (_u *GatewayConnectionUpdateOne) SetNillablePublicURL(v *string) *GatewayConnectionUpdateOne {
-	if v != nil {
-		_u.SetPublicURL(*v)
-	}
-	return _u
-}
-
-// ClearPublicURL clears the value of the "public_url" field.
-func (_u *GatewayConnectionUpdateOne) ClearPublicURL() *GatewayConnectionUpdateOne {
-	_u.mutation.ClearPublicURL()
-	return _u
-}
-
-// SetIsDefault sets the "is_default" field.
-func (_u *GatewayConnectionUpdateOne) SetIsDefault(v bool) *GatewayConnectionUpdateOne {
-	_u.mutation.SetIsDefault(v)
-	return _u
-}
-
-// SetNillableIsDefault sets the "is_default" field if the given value is not nil.
-func (_u *GatewayConnectionUpdateOne) SetNillableIsDefault(v *bool) *GatewayConnectionUpdateOne {
-	if v != nil {
-		_u.SetIsDefault(*v)
-	}
 	return _u
 }
 
@@ -634,15 +557,6 @@ func (_u *GatewayConnectionUpdateOne) sqlSave(ctx context.Context) (_node *Gatew
 	}
 	if _u.mutation.MasterKeyRefCleared() {
 		_spec.ClearField(gatewayconnection.FieldMasterKeyRef, field.TypeString)
-	}
-	if value, ok := _u.mutation.PublicURL(); ok {
-		_spec.SetField(gatewayconnection.FieldPublicURL, field.TypeString, value)
-	}
-	if _u.mutation.PublicURLCleared() {
-		_spec.ClearField(gatewayconnection.FieldPublicURL, field.TypeString)
-	}
-	if value, ok := _u.mutation.IsDefault(); ok {
-		_spec.SetField(gatewayconnection.FieldIsDefault, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.LastSyncedAt(); ok {
 		_spec.SetField(gatewayconnection.FieldLastSyncedAt, field.TypeTime, value)

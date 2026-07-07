@@ -44,7 +44,7 @@ func (r *Resolver) resolvePoolSecretRef(ctx context.Context, label string, usern
 // one-field key: the form sends a raw key, the backend writes it to the secret
 // store and persists ONLY the ref — plaintext never lands in the DB. An explicit
 // existing ref is the alternative; set=false when neither is given. label = the
-// secret-store item name (caller-qualified, e.g. "upstream/<name>").
+// secret-store item name (caller-qualified, e.g. "provider_model/<name>").
 //
 // minted is true ONLY when this call freshly Put a new secret (raw-key path) — NOT
 // for a caller-supplied existing ref. See resolvePoolSecretRef and

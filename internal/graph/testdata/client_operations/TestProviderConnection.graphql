@@ -1,0 +1,3 @@
+mutation TestProviderConnection($name: String!) {
+  testProviderConnection(name: $name)
+}

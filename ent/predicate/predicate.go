@@ -57,6 +57,9 @@ type Permission func(*sql.Selector)
 // PlatformSecret is the predicate function for platformsecret builders.
 type PlatformSecret func(*sql.Selector)
 
+// ProviderModel is the predicate function for providermodel builders.
+type ProviderModel func(*sql.Selector)
+
 // RequestLog is the predicate function for requestlog builders.
 type RequestLog func(*sql.Selector)
 
@@ -69,12 +72,6 @@ type Role func(*sql.Selector)
 // RotationCommand is the predicate function for rotationcommand builders.
 type RotationCommand func(*sql.Selector)
 
-// RouterTier is the predicate function for routertier builders.
-type RouterTier func(*sql.Selector)
-
-// Setting is the predicate function for setting builders.
-type Setting func(*sql.Selector)
-
 // Skill is the predicate function for skill builders.
 type Skill func(*sql.Selector)
 
@@ -83,9 +80,6 @@ type Tenant func(*sql.Selector)
 
 // TokenUsage is the predicate function for tokenusage builders.
 type TokenUsage func(*sql.Selector)
-
-// Upstream is the predicate function for upstream builders.
-type Upstream func(*sql.Selector)
 
 // User is the predicate function for user builders.
 type User func(*sql.Selector)

@@ -25,21 +25,6 @@ import (
 // durationRE matches forms like "30d", "12h", "2w", "90m".
 var durationRE = regexp.MustCompile(`^(\d+)([dhwm])$`)
 
-// redactKey returns a safe-to-display preview of an API key.
-//
-//	"sk-aBcDeFgHiJkLmNoPqRsTuVwXyZ" → "sk-aBcD...XyZ"  (head 6 + "..." + tail 4)
-//	< 12 chars                     → full string verbatim.
-//
-// Inline copy of gateway.redactKey (package-private). Single source of
-// truth is in internal/gateway/client.go; if that signature changes,
-// mirror it here.
-func redactKey(plain string) string {
-	if len(plain) < 12 {
-		return plain
-	}
-	return plain[:6] + "..." + plain[len(plain)-4:]
-}
-
 // parseDuration returns time.Duration for "Nd"/"Nh"/"Nw"/"Nm" forms.
 // Returns (0, false) when the input does not match.
 func parseDuration(s string) (time.Duration, bool) {
@@ -78,6 +63,14 @@ func vkDerefStr(p *string, def string) string {
 	return *p
 }
 
+// vkDerefFloat64 returns *p if non-nil, else def.
+func vkDerefFloat64(p *float64, def float64) float64 {
+	if p == nil {
+		return def
+	}
+	return *p
+}
+
 // vkDerefInt returns *p if non-nil, else def.
 func vkDerefInt(p *int, def int) int {
 	if p == nil {
@@ -86,12 +79,14 @@ func vkDerefInt(p *int, def int) int {
 	return *p
 }
 
-// vkDerefFloat64 returns *p if non-nil, else def.
-func vkDerefFloat64(p *float64, def float64) float64 {
-	if p == nil {
-		return def
+// redactKey is a local copy of gateway.redactKey (which is unexported).
+// Used to populate masked_key on VirtualKey at Issue / Regenerate.
+// Format: head 6 + "..." + tail 4; < 12 chars returned verbatim.
+func redactKey(plain string) string {
+	if len(plain) < 12 {
+		return plain
 	}
-	return *p
+	return plain[:6] + "..." + plain[len(plain)-4:]
 }
 
 // IssueVirtualKey creates a new LiteLLM key for an organization, bound to
@@ -382,12 +377,12 @@ func (r *mutationResolver) SetVirtualKeyEnabled(ctx context.Context, id string, 
 // AssociateVirtualKeyAgent binds (or rebinds) an existing key to an agent.
 // Enforces the 1:1 active-key-per-agent invariant (DB partial unique index
 // is the authoritative race gate; pre-check provides a clean 409).
-func (r *mutationResolver) AssociateVirtualKeyAgent(ctx context.Context, virtualKeyId string, agentId string) (*model.VirtualKey, error) {
-	vkID, err := uuid.Parse(virtualKeyId)
+func (r *mutationResolver) AssociateVirtualKeyAgent(ctx context.Context, virtualKeyID string, agentID string) (*model.VirtualKey, error) {
+	vkID, err := uuid.Parse(virtualKeyID)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid virtualKeyId")
 	}
-	aID, err := uuid.Parse(agentId)
+	aID, err := uuid.Parse(agentID)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid agentId")
 	}
@@ -411,17 +406,40 @@ func (r *mutationResolver) AssociateVirtualKeyAgent(ctx context.Context, virtual
 	return toModelVirtualKey(ctx, r.Resolver, updated)
 }
 
+// GatewayAvailableModels returns the live model list advertised by the
+// given modelGateway. Real-time: every call hits LiteLLM /model/list on
+// demand (no cache). Used by the operator-console issue form to populate
+// the "Models" multi-select after the operator picks a modelGateway.
+func (r *queryResolver) GatewayAvailableModels(ctx context.Context, gatewayConnectionID string) ([]string, error) {
+	mgID, err := uuid.Parse(gatewayConnectionID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid gatewayConnectionId")
+	}
+	conn, err := r.Ent.GatewayConnection.Get(ctx, mgID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, gqlerror.Errorf("model gateway not found")
+		}
+		return nil, err
+	}
+	gw := r.buildGatewayKeyClient(ctx, conn)
+	if gw == nil {
+		return nil, gqlerror.Errorf("model gateway client unavailable")
+	}
+	return gw.ListAvailableModels(ctx)
+}
+
 // VirtualKeys lists keys with three optional filters: organizationId,
 // agentId, modelGateway. All null → all keys in current tenant. Multiple
 // set → intersection. Secrets are never returned (only maskedKey on each
 // row).
-func (r *queryResolver) VirtualKeys(ctx context.Context, organizationId *string, agentId *string, modelGateway *string) ([]model.VirtualKey, error) {
+func (r *queryResolver) VirtualKeys(ctx context.Context, organizationID *string, agentID *string, modelGateway *string) ([]model.VirtualKey, error) {
 	q := r.Ent.VirtualKey.Query()
-	if organizationId != nil {
-		q = q.Where(virtualkey.OrganizationIDEQ(*organizationId))
+	if organizationID != nil {
+		q = q.Where(virtualkey.OrganizationIDEQ(*organizationID))
 	}
-	if agentId != nil {
-		aID, err := uuid.Parse(*agentId)
+	if agentID != nil {
+		aID, err := uuid.Parse(*agentID)
 		if err != nil {
 			return nil, gqlerror.Errorf("invalid agentId")
 		}
@@ -452,27 +470,4 @@ func (r *queryResolver) VirtualKeys(ctx context.Context, organizationId *string,
 		out = append(out, *mapped)
 	}
 	return out, nil
-}
-
-// GatewayAvailableModels returns the live model list advertised by the
-// given modelGateway. Real-time: every call hits LiteLLM /model/list on
-// demand (no cache). Used by the operator-console issue form to populate
-// the "Models" multi-select after the operator picks a modelGateway.
-func (r *queryResolver) GatewayAvailableModels(ctx context.Context, gatewayConnectionId string) ([]string, error) {
-	mgID, err := uuid.Parse(gatewayConnectionId)
-	if err != nil {
-		return nil, gqlerror.Errorf("invalid gatewayConnectionId")
-	}
-	conn, err := r.Ent.GatewayConnection.Get(ctx, mgID)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, gqlerror.Errorf("model gateway not found")
-		}
-		return nil, err
-	}
-	gw := r.buildGatewayKeyClient(ctx, conn)
-	if gw == nil {
-		return nil, gqlerror.Errorf("model gateway client unavailable")
-	}
-	return gw.ListAvailableModels(ctx)
 }

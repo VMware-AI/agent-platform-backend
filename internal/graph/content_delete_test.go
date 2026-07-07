@@ -3,12 +3,13 @@ package graph
 import (
 	"context"
 	"testing"
-
-	"github.com/VMware-AI/agent-platform-backend/ent/upstream"
 )
 
-// #36 coverage (low): DeleteSkill / DeleteImage / DeleteUpstream destructive
-// mutations had 0% coverage. Happy path (row gone) + invalid-id branch.
+// #36 coverage (low): DeleteSkill / DeleteImage destructive mutations had 0%
+// coverage. Happy path (row gone) + invalid-id branch. (DeleteProviderModel
+// was previously covered by TestDeleteUpstream here; that tested the since-
+// removed `DeleteUpstream` alias, now exercised through TestDeleteProviderModel
+// in gateway_routing_keys_test.go.)
 
 func TestDeleteSkill(t *testing.T) {
 	r, cleanup := newTestResolver(t)
@@ -48,27 +49,6 @@ func TestDeleteImage(t *testing.T) {
 		t.Error("image should be gone")
 	}
 	if _, err := mr.DeleteImage(ctx, "bad"); err == nil {
-		t.Error("invalid id must error")
-	}
-}
-
-func TestDeleteUpstream(t *testing.T) {
-	r, cleanup := newTestResolver(t)
-	defer cleanup()
-	ctx := context.Background()
-	mr := &mutationResolver{r}
-
-	u, err := r.Ent.Upstream.Create().SetName("tier-fast").SetProvider(upstream.ProviderVllm).SetModel("qwen").Save(ctx)
-	if err != nil {
-		t.Fatalf("seed upstream: %v", err)
-	}
-	if ok, err := mr.DeleteUpstream(ctx, u.ID.String()); err != nil || !ok {
-		t.Fatalf("DeleteUpstream: ok=%v err=%v", ok, err)
-	}
-	if _, err := r.Ent.Upstream.Get(ctx, u.ID); err == nil {
-		t.Error("upstream should be gone")
-	}
-	if _, err := mr.DeleteUpstream(ctx, "bad"); err == nil {
 		t.Error("invalid id must error")
 	}
 }

@@ -25,10 +25,6 @@ const (
 	FieldEndpoint = "endpoint"
 	// FieldMasterKeyRef holds the string denoting the master_key_ref field in the database.
 	FieldMasterKeyRef = "master_key_ref"
-	// FieldPublicURL holds the string denoting the public_url field in the database.
-	FieldPublicURL = "public_url"
-	// FieldIsDefault holds the string denoting the is_default field in the database.
-	FieldIsDefault = "is_default"
 	// FieldLastSyncedAt holds the string denoting the last_synced_at field in the database.
 	FieldLastSyncedAt = "last_synced_at"
 	// FieldBackendModelCount holds the string denoting the backend_model_count field in the database.
@@ -49,8 +45,6 @@ var Columns = []string{
 	FieldName,
 	FieldEndpoint,
 	FieldMasterKeyRef,
-	FieldPublicURL,
-	FieldIsDefault,
 	FieldLastSyncedAt,
 	FieldBackendModelCount,
 	FieldStatus,
@@ -78,8 +72,6 @@ var (
 	NameValidator func(string) error
 	// EndpointValidator is a validator for the "endpoint" field. It is called by the builders before save.
 	EndpointValidator func(string) error
-	// DefaultIsDefault holds the default value on creation for the "is_default" field.
-	DefaultIsDefault bool
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -171,16 +163,6 @@ func ByEndpoint(opts ...sql.OrderTermOption) OrderOption {
 // ByMasterKeyRef orders the results by the master_key_ref field.
 func ByMasterKeyRef(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMasterKeyRef, opts...).ToFunc()
-}
-
-// ByPublicURL orders the results by the public_url field.
-func ByPublicURL(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldPublicURL, opts...).ToFunc()
-}
-
-// ByIsDefault orders the results by the is_default field.
-func ByIsDefault(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldIsDefault, opts...).ToFunc()
 }
 
 // ByLastSyncedAt orders the results by the last_synced_at field.

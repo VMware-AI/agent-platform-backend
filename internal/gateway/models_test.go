@@ -40,40 +40,6 @@ func TestNewModel(t *testing.T) {
 	}
 }
 
-func TestUpsertComplexityRouter(t *testing.T) {
-	var gotBody map[string]any
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		_ = json.Unmarshal(body, &gotBody)
-		_, _ = w.Write([]byte(`{"model_name":"smart"}`))
-	}))
-	defer srv.Close()
-	c, _ := NewHTTPClient(srv.URL, "sk-master")
-
-	err := c.UpsertComplexityRouter(context.Background(), RouterSpec{
-		ModelName: "smart",
-		Tiers: map[string]string{
-			"SIMPLE": "tier-fast", "MEDIUM": "tier-mid", "COMPLEX": "tier-heavy", "REASONING": "tier-reason",
-		},
-		DefaultModel: "tier-mid",
-	})
-	if err != nil {
-		t.Fatalf("UpsertComplexityRouter: %v", err)
-	}
-	if gotBody["model_name"] != "smart" {
-		t.Fatalf("model_name = %v", gotBody["model_name"])
-	}
-	params, _ := gotBody["litellm_params"].(map[string]any)
-	if params["model"] != "auto_router/complexity_router" {
-		t.Fatalf("router model wrong: %+v", params)
-	}
-	cfg, _ := params["complexity_router_config"].(map[string]any)
-	tiers, _ := cfg["tiers"].(map[string]any)
-	if tiers["SIMPLE"] != "tier-fast" || tiers["REASONING"] != "tier-reason" {
-		t.Fatalf("tiers not sent correctly: %+v", tiers)
-	}
-}
-
 func TestTestConnection(t *testing.T) {
 	ok := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/models" || r.Header.Get("Authorization") != "Bearer sk-master" {

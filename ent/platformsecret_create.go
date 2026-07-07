@@ -96,6 +96,20 @@ func (_c *PlatformSecretCreate) SetNillableAPIKey(v *string) *PlatformSecretCrea
 	return _c
 }
 
+// SetKeyID sets the "key_id" field.
+func (_c *PlatformSecretCreate) SetKeyID(v string) *PlatformSecretCreate {
+	_c.mutation.SetKeyID(v)
+	return _c
+}
+
+// SetNillableKeyID sets the "key_id" field if the given value is not nil.
+func (_c *PlatformSecretCreate) SetNillableKeyID(v *string) *PlatformSecretCreate {
+	if v != nil {
+		_c.SetKeyID(*v)
+	}
+	return _c
+}
+
 // Mutation returns the PlatformSecretMutation object of the builder.
 func (_c *PlatformSecretCreate) Mutation() *PlatformSecretMutation {
 	return _c.mutation
@@ -150,6 +164,10 @@ func (_c *PlatformSecretCreate) defaults() {
 	if _, ok := _c.mutation.APIKey(); !ok {
 		v := platformsecret.DefaultAPIKey
 		_c.mutation.SetAPIKey(v)
+	}
+	if _, ok := _c.mutation.KeyID(); !ok {
+		v := platformsecret.DefaultKeyID
+		_c.mutation.SetKeyID(v)
 	}
 }
 
@@ -218,6 +236,10 @@ func (_c *PlatformSecretCreate) createSpec() (*PlatformSecret, *sqlgraph.CreateS
 	if value, ok := _c.mutation.APIKey(); ok {
 		_spec.SetField(platformsecret.FieldAPIKey, field.TypeString, value)
 		_node.APIKey = value
+	}
+	if value, ok := _c.mutation.KeyID(); ok {
+		_spec.SetField(platformsecret.FieldKeyID, field.TypeString, value)
+		_node.KeyID = value
 	}
 	return _node, _spec
 }

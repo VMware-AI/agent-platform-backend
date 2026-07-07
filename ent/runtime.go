@@ -22,17 +22,15 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplateversion"
 	"github.com/VMware-AI/agent-platform-backend/ent/permission"
 	"github.com/VMware-AI/agent-platform-backend/ent/platformsecret"
+	"github.com/VMware-AI/agent-platform-backend/ent/providermodel"
 	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/ent/role"
 	"github.com/VMware-AI/agent-platform-backend/ent/rotationcommand"
-	"github.com/VMware-AI/agent-platform-backend/ent/routertier"
 	"github.com/VMware-AI/agent-platform-backend/ent/schema"
-	"github.com/VMware-AI/agent-platform-backend/ent/setting"
 	"github.com/VMware-AI/agent-platform-backend/ent/skill"
 	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
 	"github.com/VMware-AI/agent-platform-backend/ent/tokenusage"
-	"github.com/VMware-AI/agent-platform-backend/ent/upstream"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
@@ -279,10 +277,6 @@ func init() {
 	gatewayconnectionDescEndpoint := gatewayconnectionFields[2].Descriptor()
 	// gatewayconnection.EndpointValidator is a validator for the "endpoint" field. It is called by the builders before save.
 	gatewayconnection.EndpointValidator = gatewayconnectionDescEndpoint.Validators[0].(func(string) error)
-	// gatewayconnectionDescIsDefault is the schema descriptor for is_default field.
-	gatewayconnectionDescIsDefault := gatewayconnectionFields[5].Descriptor()
-	// gatewayconnection.DefaultIsDefault holds the default value on creation for the is_default field.
-	gatewayconnection.DefaultIsDefault = gatewayconnectionDescIsDefault.Default.(bool)
 	// gatewayconnectionDescID is the schema descriptor for id field.
 	gatewayconnectionDescID := gatewayconnectionFields[0].Descriptor()
 	// gatewayconnection.DefaultID holds the default value on creation for the id field.
@@ -475,6 +469,33 @@ func init() {
 	platformsecretDescAPIKey := platformsecretFields[3].Descriptor()
 	// platformsecret.DefaultAPIKey holds the default value on creation for the api_key field.
 	platformsecret.DefaultAPIKey = platformsecretDescAPIKey.Default.(string)
+	// platformsecretDescKeyID is the schema descriptor for key_id field.
+	platformsecretDescKeyID := platformsecretFields[4].Descriptor()
+	// platformsecret.DefaultKeyID holds the default value on creation for the key_id field.
+	platformsecret.DefaultKeyID = platformsecretDescKeyID.Default.(string)
+	providermodelMixin := schema.ProviderModel{}.Mixin()
+	providermodelMixinFields0 := providermodelMixin[0].Fields()
+	_ = providermodelMixinFields0
+	providermodelFields := schema.ProviderModel{}.Fields()
+	_ = providermodelFields
+	// providermodelDescCreatedAt is the schema descriptor for created_at field.
+	providermodelDescCreatedAt := providermodelMixinFields0[0].Descriptor()
+	// providermodel.DefaultCreatedAt holds the default value on creation for the created_at field.
+	providermodel.DefaultCreatedAt = providermodelDescCreatedAt.Default.(func() time.Time)
+	// providermodelDescUpdatedAt is the schema descriptor for updated_at field.
+	providermodelDescUpdatedAt := providermodelMixinFields0[1].Descriptor()
+	// providermodel.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	providermodel.DefaultUpdatedAt = providermodelDescUpdatedAt.Default.(func() time.Time)
+	// providermodel.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	providermodel.UpdateDefaultUpdatedAt = providermodelDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// providermodelDescName is the schema descriptor for name field.
+	providermodelDescName := providermodelFields[1].Descriptor()
+	// providermodel.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	providermodel.NameValidator = providermodelDescName.Validators[0].(func(string) error)
+	// providermodelDescID is the schema descriptor for id field.
+	providermodelDescID := providermodelFields[0].Descriptor()
+	// providermodel.DefaultID holds the default value on creation for the id field.
+	providermodel.DefaultID = providermodelDescID.Default.(func() uuid.UUID)
 	requestlogFields := schema.RequestLog{}.Fields()
 	_ = requestlogFields
 	// requestlogDescRequestID is the schema descriptor for request_id field.
@@ -600,52 +621,6 @@ func init() {
 	rotationcommandDescID := rotationcommandFields[0].Descriptor()
 	// rotationcommand.DefaultID holds the default value on creation for the id field.
 	rotationcommand.DefaultID = rotationcommandDescID.Default.(func() uuid.UUID)
-	routertierMixin := schema.RouterTier{}.Mixin()
-	routertierMixinFields0 := routertierMixin[0].Fields()
-	_ = routertierMixinFields0
-	routertierFields := schema.RouterTier{}.Fields()
-	_ = routertierFields
-	// routertierDescCreatedAt is the schema descriptor for created_at field.
-	routertierDescCreatedAt := routertierMixinFields0[0].Descriptor()
-	// routertier.DefaultCreatedAt holds the default value on creation for the created_at field.
-	routertier.DefaultCreatedAt = routertierDescCreatedAt.Default.(func() time.Time)
-	// routertierDescUpdatedAt is the schema descriptor for updated_at field.
-	routertierDescUpdatedAt := routertierMixinFields0[1].Descriptor()
-	// routertier.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	routertier.DefaultUpdatedAt = routertierDescUpdatedAt.Default.(func() time.Time)
-	// routertier.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	routertier.UpdateDefaultUpdatedAt = routertierDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// routertierDescModelAlias is the schema descriptor for model_alias field.
-	routertierDescModelAlias := routertierFields[2].Descriptor()
-	// routertier.ModelAliasValidator is a validator for the "model_alias" field. It is called by the builders before save.
-	routertier.ModelAliasValidator = routertierDescModelAlias.Validators[0].(func(string) error)
-	// routertierDescID is the schema descriptor for id field.
-	routertierDescID := routertierFields[0].Descriptor()
-	// routertier.DefaultID holds the default value on creation for the id field.
-	routertier.DefaultID = routertierDescID.Default.(func() uuid.UUID)
-	settingMixin := schema.Setting{}.Mixin()
-	settingMixinFields0 := settingMixin[0].Fields()
-	_ = settingMixinFields0
-	settingFields := schema.Setting{}.Fields()
-	_ = settingFields
-	// settingDescCreatedAt is the schema descriptor for created_at field.
-	settingDescCreatedAt := settingMixinFields0[0].Descriptor()
-	// setting.DefaultCreatedAt holds the default value on creation for the created_at field.
-	setting.DefaultCreatedAt = settingDescCreatedAt.Default.(func() time.Time)
-	// settingDescUpdatedAt is the schema descriptor for updated_at field.
-	settingDescUpdatedAt := settingMixinFields0[1].Descriptor()
-	// setting.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	setting.DefaultUpdatedAt = settingDescUpdatedAt.Default.(func() time.Time)
-	// setting.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	setting.UpdateDefaultUpdatedAt = settingDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// settingDescKey is the schema descriptor for key field.
-	settingDescKey := settingFields[1].Descriptor()
-	// setting.KeyValidator is a validator for the "key" field. It is called by the builders before save.
-	setting.KeyValidator = settingDescKey.Validators[0].(func(string) error)
-	// settingDescID is the schema descriptor for id field.
-	settingDescID := settingFields[0].Descriptor()
-	// setting.DefaultID holds the default value on creation for the id field.
-	setting.DefaultID = settingDescID.Default.(func() uuid.UUID)
 	skillMixin := schema.Skill{}.Mixin()
 	skillMixinFields0 := skillMixin[0].Fields()
 	_ = skillMixinFields0
@@ -730,37 +705,6 @@ func init() {
 	tokenusageDescID := tokenusageFields[0].Descriptor()
 	// tokenusage.DefaultID holds the default value on creation for the id field.
 	tokenusage.DefaultID = tokenusageDescID.Default.(func() uuid.UUID)
-	upstreamMixin := schema.Upstream{}.Mixin()
-	upstreamMixinFields0 := upstreamMixin[0].Fields()
-	_ = upstreamMixinFields0
-	upstreamFields := schema.Upstream{}.Fields()
-	_ = upstreamFields
-	// upstreamDescCreatedAt is the schema descriptor for created_at field.
-	upstreamDescCreatedAt := upstreamMixinFields0[0].Descriptor()
-	// upstream.DefaultCreatedAt holds the default value on creation for the created_at field.
-	upstream.DefaultCreatedAt = upstreamDescCreatedAt.Default.(func() time.Time)
-	// upstreamDescUpdatedAt is the schema descriptor for updated_at field.
-	upstreamDescUpdatedAt := upstreamMixinFields0[1].Descriptor()
-	// upstream.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	upstream.DefaultUpdatedAt = upstreamDescUpdatedAt.Default.(func() time.Time)
-	// upstream.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	upstream.UpdateDefaultUpdatedAt = upstreamDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// upstreamDescName is the schema descriptor for name field.
-	upstreamDescName := upstreamFields[1].Descriptor()
-	// upstream.NameValidator is a validator for the "name" field. It is called by the builders before save.
-	upstream.NameValidator = upstreamDescName.Validators[0].(func(string) error)
-	// upstreamDescModel is the schema descriptor for model field.
-	upstreamDescModel := upstreamFields[5].Descriptor()
-	// upstream.ModelValidator is a validator for the "model" field. It is called by the builders before save.
-	upstream.ModelValidator = upstreamDescModel.Validators[0].(func(string) error)
-	// upstreamDescEnabled is the schema descriptor for enabled field.
-	upstreamDescEnabled := upstreamFields[6].Descriptor()
-	// upstream.DefaultEnabled holds the default value on creation for the enabled field.
-	upstream.DefaultEnabled = upstreamDescEnabled.Default.(bool)
-	// upstreamDescID is the schema descriptor for id field.
-	upstreamDescID := upstreamFields[0].Descriptor()
-	// upstream.DefaultID holds the default value on creation for the id field.
-	upstream.DefaultID = upstreamDescID.Default.(func() uuid.UUID)
 	userMixin := schema.User{}.Mixin()
 	userMixinFields0 := userMixin[0].Fields()
 	_ = userMixinFields0
@@ -819,6 +763,34 @@ func init() {
 	virtualkeyDescLitellmKey := virtualkeyFields[1].Descriptor()
 	// virtualkey.LitellmKeyValidator is a validator for the "litellm_key" field. It is called by the builders before save.
 	virtualkey.LitellmKeyValidator = virtualkeyDescLitellmKey.Validators[0].(func(string) error)
+	// virtualkeyDescMaskedKey is the schema descriptor for masked_key field.
+	virtualkeyDescMaskedKey := virtualkeyFields[3].Descriptor()
+	// virtualkey.MaskedKeyValidator is a validator for the "masked_key" field. It is called by the builders before save.
+	virtualkey.MaskedKeyValidator = virtualkeyDescMaskedKey.Validators[0].(func(string) error)
+	// virtualkeyDescName is the schema descriptor for name field.
+	virtualkeyDescName := virtualkeyFields[4].Descriptor()
+	// virtualkey.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	virtualkey.NameValidator = virtualkeyDescName.Validators[0].(func(string) error)
+	// virtualkeyDescOrganizationID is the schema descriptor for organization_id field.
+	virtualkeyDescOrganizationID := virtualkeyFields[5].Descriptor()
+	// virtualkey.OrganizationIDValidator is a validator for the "organization_id" field. It is called by the builders before save.
+	virtualkey.OrganizationIDValidator = virtualkeyDescOrganizationID.Validators[0].(func(string) error)
+	// virtualkeyDescBlocked is the schema descriptor for blocked field.
+	virtualkeyDescBlocked := virtualkeyFields[20].Descriptor()
+	// virtualkey.DefaultBlocked holds the default value on creation for the blocked field.
+	virtualkey.DefaultBlocked = virtualkeyDescBlocked.Default.(bool)
+	// virtualkeyDescKeyType is the schema descriptor for key_type field.
+	virtualkeyDescKeyType := virtualkeyFields[21].Descriptor()
+	// virtualkey.DefaultKeyType holds the default value on creation for the key_type field.
+	virtualkey.DefaultKeyType = virtualkeyDescKeyType.Default.(string)
+	// virtualkeyDescAutoRotate is the schema descriptor for auto_rotate field.
+	virtualkeyDescAutoRotate := virtualkeyFields[22].Descriptor()
+	// virtualkey.DefaultAutoRotate holds the default value on creation for the auto_rotate field.
+	virtualkey.DefaultAutoRotate = virtualkeyDescAutoRotate.Default.(bool)
+	// virtualkeyDescSpend is the schema descriptor for spend field.
+	virtualkeyDescSpend := virtualkeyFields[25].Descriptor()
+	// virtualkey.DefaultSpend holds the default value on creation for the spend field.
+	virtualkey.DefaultSpend = virtualkeyDescSpend.Default.(int)
 	// virtualkeyDescID is the schema descriptor for id field.
 	virtualkeyDescID := virtualkeyFields[0].Descriptor()
 	// virtualkey.DefaultID holds the default value on creation for the id field.

@@ -1,0 +1,5 @@
+mutation BlockProviderModelSpec($input: ProviderModelSpecBlockInput!) {
+  blockProviderModelSpec(input: $input) {
+    ...ProviderModelFields
+  }
+}

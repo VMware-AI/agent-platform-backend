@@ -98,7 +98,8 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 	}
 	models := req.Models
 	if len(models) == 0 {
-		models = []string{gateway.DefaultRouterModel} // difficulty router by default (LLD-04)
+		// Default to empty — models are operator-curated per agent, and the
+		// "smart" complexity router alias is no longer the entry point.
 	}
 
 	// 1) Issue the gateway key (cheap and revocable — do it before the VM).

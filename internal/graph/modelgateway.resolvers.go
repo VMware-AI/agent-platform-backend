@@ -9,6 +9,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
@@ -164,11 +165,7 @@ func (r *mutationResolver) TestNewModelGatewayConnection(ctx context.Context, in
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid endpoint or master key: %v", err)
 	}
-	var mgr gateway.ModelManager = c
-	if r.GatewayClientFor != nil {
-		mgr = r.GatewayClientFor(ctx, input.Endpoint, input.MasterKey)
-	}
-	status := probeGatewayConnectionStatus(ctx, mgr)
+	status := probeGatewayConnectionStatus(ctx, c)
 	ok := status == gatewayconnection.StatusConnected
 	r.audit(ctx, "model_gateway.test_dry_run", "gateway_connection", input.Endpoint, ok, actorID(auth.FromContext(ctx)))
 	return &model.ModelGatewayTestResult{
@@ -263,4 +260,22 @@ func (r *queryResolver) ModelGatewaySyncSummary(ctx context.Context) (*model.Mod
 		SuccessCount: success,
 		FailedCount:  failed,
 	}, nil
+}
+
+// ModelGatewayByID is the resolver for the modelGatewayById field.
+// 0.1.x: 单条 lookup,供 ProviderModel 表单 dropdown / 详情展示。
+// masterKey 不暴露(toModelGateway 不映射 masterKey 字段)。
+func (r *queryResolver) ModelGatewayByID(ctx context.Context, id string) (*model.ModelGateway, error) {
+	gid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid id %q", id)
+	}
+	g, err := r.Ent.GatewayConnection.Get(ctx, gid)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, gqlerror.Errorf("model gateway %q not found", id)
+		}
+		return nil, err
+	}
+	return r.toModelGateway(g), nil
 }

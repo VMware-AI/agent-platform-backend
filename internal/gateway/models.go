@@ -29,9 +29,6 @@ type ModelManager interface {
 	NewModel(ctx context.Context, spec ModelSpec) error
 	// DeleteModel removes a deployment (POST /model/delete).
 	DeleteModel(ctx context.Context, modelID string) error
-	// UpsertComplexityRouter configures the rule-based difficulty router (the
-	// "smart" model): tier -> model alias. Simple→cheap, hard→strong.
-	UpsertComplexityRouter(ctx context.Context, spec RouterSpec) error
 }
 
 // ModelInfo is one entry from the gateway's /models listing. The fields are
@@ -42,22 +39,126 @@ type ModelInfo struct {
 	ModelName string `json:"model_name"`
 }
 
-// ModelSpec is one litellm model_list entry (an upstream/alias).
+// ModelSpec is one litellm model_list entry (a provider model / alias).
+//
+// All litellm_params fields supported by the /model/new, /model/update and
+// /model/{id}/update wire endpoints are mirrored here. Numeric and bool
+// fields are pointers so the wire builder can distinguish "unset" (skip the
+// key) from "explicit zero / false" (emit the key); specJSON in the graph
+// package uses the same convention so the pass-through is one-to-one.
 type ModelSpec struct {
-	ModelName string   // outward alias, e.g. tier-fast
-	Model     string   // litellm_params.model, e.g. openai/qwen-7b
-	APIBase   string   // litellm_params.api_base
-	APIKey    string   // litellm_params.api_key (resolved secret, in memory only)
-	Tags      []string // optional tag-based routing
-	// ModelID pins litellm's model_info.id to a caller-owned id (we use the Upstream
-	// row id) so the deployment can later be deleted deterministically via
-	// /model/delete {"id": ...}. Verified against a real litellm: it honors a custom
-	// model_info.id and delete-by-that-id succeeds. Empty → litellm assigns its own.
-	ModelID string
+	ModelName string // outward alias, e.g. tier-fast
+	ModelID   string // pins litellm's model_info.id so /model/delete can target it later
+
+	// litellm_params (all optional; empty/zero/nil ⇒ omit from wire body)
+	Model                          string
+	APIBase                        string
+	APIKey                         string
+	CustomLlmProvider              string
+	Organization                   string
+	Tpm                            *int
+	Rpm                            *int
+	DefaultAPIKeyTpmLimit          *int
+	DefaultAPIKeyRpmLimit          *int
+	MaxBudget                      *float64
+	BudgetDuration                 string
+	UseInPassThrough               *bool
+	UseChatCompletionsAPI          *bool
+	MergeReasoningContentInChoices *bool
+	Tags                           []string
+	InputCostPerToken              *float64
+	OutputCostPerToken             *float64
+	CacheReadInputTokenCost        *float64
+	CacheCreationInputTokenCost    *float64
 }
 
-// DefaultRouterModel is the default alias of the Complexity Router model.
-const DefaultRouterModel = "smart"
+// LitellmParamsFromSpec renders s into a wire body for litellm's litellm_params
+// object. Empty / zero / nil fields are skipped so the request shape stays
+// minimal (avoiding litellm's "silent drop" behaviour when an unsupported
+// combination is supplied — e.g. model=MiniMax-M2.5 without custom_llm_provider).
+// Shared by NewModel / PushModelUpdate / PatchModel to keep the wire contract
+// consistent across all three endpoints. Exported so the graph layer's
+// partial-update helper can render the same body shape.
+func LitellmParamsFromSpec(s ModelSpec) map[string]any {
+	p := map[string]any{}
+	if s.Model != "" {
+		p["model"] = s.Model
+	}
+	if s.APIBase != "" {
+		p["api_base"] = s.APIBase
+	}
+	if s.APIKey != "" {
+		p["api_key"] = s.APIKey
+	}
+	if s.CustomLlmProvider != "" {
+		p["custom_llm_provider"] = s.CustomLlmProvider
+	}
+	if s.Organization != "" {
+		p["organization"] = s.Organization
+	}
+	if s.Tpm != nil {
+		p["tpm"] = *s.Tpm
+	}
+	if s.Rpm != nil {
+		p["rpm"] = *s.Rpm
+	}
+	if s.DefaultAPIKeyTpmLimit != nil {
+		p["default_api_key_tpm_limit"] = *s.DefaultAPIKeyTpmLimit
+	}
+	if s.DefaultAPIKeyRpmLimit != nil {
+		p["default_api_key_rpm_limit"] = *s.DefaultAPIKeyRpmLimit
+	}
+	if s.MaxBudget != nil {
+		p["max_budget"] = *s.MaxBudget
+	}
+	if s.BudgetDuration != "" {
+		p["budget_duration"] = s.BudgetDuration
+	}
+	if s.UseInPassThrough != nil {
+		p["use_in_pass_through"] = *s.UseInPassThrough
+	}
+	if s.UseChatCompletionsAPI != nil {
+		p["use_chat_completions_api"] = *s.UseChatCompletionsAPI
+	}
+	if s.MergeReasoningContentInChoices != nil {
+		p["merge_reasoning_content_in_choices"] = *s.MergeReasoningContentInChoices
+	}
+	if s.InputCostPerToken != nil {
+		p["input_cost_per_token"] = *s.InputCostPerToken
+	}
+	if s.OutputCostPerToken != nil {
+		p["output_cost_per_token"] = *s.OutputCostPerToken
+	}
+	if s.CacheReadInputTokenCost != nil {
+		p["cache_read_input_token_cost"] = *s.CacheReadInputTokenCost
+	}
+	if s.CacheCreationInputTokenCost != nil {
+		p["cache_creation_input_token_cost"] = *s.CacheCreationInputTokenCost
+	}
+	// Note: s.Tags is NOT a litellm_params field — it belongs in model_info
+	// (see NewModel body). Routed there explicitly to preserve the original
+	// wire shape; pushing it under litellm_params would change semantics.
+	return p
+}
+
+// ModelInfoFromSpec renders the top-level model_info object. Today only the
+// pin id + optional routing tags live there; if litellm adds more model_info
+// fields, route them through this helper to keep NewModel / PatchModel in
+// sync. Exported so the graph layer's partial-update helper can render the
+// same body shape.
+func ModelInfoFromSpec(s ModelSpec) map[string]any {
+	mi := map[string]any{}
+	if s.ModelID != "" {
+		mi["id"] = s.ModelID
+	}
+	if len(s.Tags) > 0 {
+		mi["tags"] = s.Tags
+	}
+	if len(mi) == 0 {
+		return nil
+	}
+	return mi
+}
 
 // RoutingStrategy is the global load-balancing strategy that litellm is currently
 // configured to use (the `routing_strategy` field of the `current_values` block
@@ -78,13 +179,6 @@ type RoutingStrategy string
 // is best-effort metadata, not a hard contract.
 var ErrUnknownRoutingStrategy = errors.New("gateway: unknown routing strategy")
 
-// RouterSpec configures the Complexity Router "smart" model.
-type RouterSpec struct {
-	ModelName    string            // usually "smart"
-	Tiers        map[string]string // SIMPLE/MEDIUM/COMPLEX/REASONING -> model alias
-	DefaultModel string            // fallback when no tier matches
-}
-
 // TestConnection reuses c.get so the retry + error-class semantics stay
 // consistent with ListModels (same endpoint, /models). A transient 5xx now
 // retries 3× instead of failing on the first hit.
@@ -100,26 +194,12 @@ func (c *HTTPClient) NewModel(ctx context.Context, spec ModelSpec) error {
 	if spec.ModelName == "" || spec.Model == "" {
 		return fmt.Errorf("NewModel: model_name and model are required")
 	}
-	params := map[string]any{"model": spec.Model}
-	if spec.APIBase != "" {
-		params["api_base"] = spec.APIBase
-	}
-	if spec.APIKey != "" {
-		params["api_key"] = spec.APIKey
-	}
 	body := map[string]any{
 		"model_name":     spec.ModelName,
-		"litellm_params": params,
+		"litellm_params": LitellmParamsFromSpec(spec),
 	}
-	modelInfo := map[string]any{}
-	if spec.ModelID != "" {
-		modelInfo["id"] = spec.ModelID // pin the id so DeleteModel can target it later
-	}
-	if len(spec.Tags) > 0 {
-		modelInfo["tags"] = spec.Tags
-	}
-	if len(modelInfo) > 0 {
-		body["model_info"] = modelInfo
+	if mi := ModelInfoFromSpec(spec); mi != nil {
+		body["model_info"] = mi
 	}
 	var resp struct {
 		ModelName string `json:"model_name"`
@@ -143,42 +223,6 @@ func (c *HTTPClient) DeleteModel(ctx context.Context, modelID string) error {
 	return c.post(ctx, "/model/delete", map[string]any{"id": modelID}, nil)
 }
 
-// UpsertComplexityRouter configures the rule-based difficulty router. litellm's
-// /model/new is reused (auto_router/complexity_router is itself a model). The
-// response's model_name is checked against the request — a server-side reject
-// (e.g. invalid tier enum) returns 200 with no body in some litellm versions,
-// so the check guards against silent partial-config.
-func (c *HTTPClient) UpsertComplexityRouter(ctx context.Context, spec RouterSpec) error {
-	if len(spec.Tiers) == 0 {
-		return fmt.Errorf("UpsertComplexityRouter: tiers required")
-	}
-	name := spec.ModelName
-	if name == "" {
-		name = DefaultRouterModel
-	}
-	cfg := map[string]any{"tiers": spec.Tiers}
-	params := map[string]any{
-		"model":                    "auto_router/complexity_router",
-		"complexity_router_config": cfg,
-	}
-	if spec.DefaultModel != "" {
-		params["complexity_router_default_model"] = spec.DefaultModel
-	}
-	var resp struct {
-		ModelName string `json:"model_name"`
-	}
-	if err := c.post(ctx, "/model/new", map[string]any{
-		"model_name":     name,
-		"litellm_params": params,
-	}, &resp); err != nil {
-		return err
-	}
-	if resp.ModelName == "" {
-		return fmt.Errorf("%w: UpsertComplexityRouter response missing model_name", ErrMalformedResponse)
-	}
-	return nil
-}
-
 // ListModels calls GET /models and decodes the response's "data" array. A
 // transport / decode / non-2xx error bubbles up; callers (probeGatewayBackendModelCount)
 // decide whether to fail the broader operation. An empty/missing "data" array
@@ -188,6 +232,20 @@ func (c *HTTPClient) ListModels(ctx context.Context) ([]ModelInfo, error) {
 		Data []ModelInfo `json:"data"`
 	}
 	if err := c.get(ctx, "/models", &out); err != nil {
+		return nil, err
+	}
+	return out.Data, nil
+}
+
+// ListModelsAt calls GET {path} and decodes the response's "data" array of
+// {id, model_name}. Use this for non-/models endpoints (e.g. <apiBase>/v1/models
+// for OpenAI-compatible upstreams that require the /v1 prefix). Same retry /
+// decode / error semantics as ListModels.
+func (c *HTTPClient) ListModelsAt(ctx context.Context, path string) ([]ModelInfo, error) {
+	var out struct {
+		Data []ModelInfo `json:"data"`
+	}
+	if err := c.get(ctx, path, &out); err != nil {
 		return nil, err
 	}
 	return out.Data, nil

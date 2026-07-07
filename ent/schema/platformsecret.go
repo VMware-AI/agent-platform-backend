@@ -12,6 +12,12 @@ import (
 // plaintext; username is stored in clear for operability. Credentials survive
 // backend restarts (this replaced the in-memory StaticResolver and the external
 // Vaultwarden dependency).
+//
+// key_id records which encryption key sealed the password/api_key columns —
+// it enables key rotation: a row can be re-encrypted with a newer active key
+// without stranding older ciphertexts (which still decrypt under their
+// original key, looked up by this id). Empty / "default" = legacy ciphertext
+// sealed by the single SECRETS_ENCRYPTION_KEY pre-rotation feature.
 type PlatformSecret struct {
 	ent.Schema
 }
@@ -24,6 +30,11 @@ func (PlatformSecret) Fields() []ent.Field {
 		field.String("username").Optional().Default(""),
 		field.String("password").Optional().Default("").Sensitive(),
 		field.String("api_key").Optional().Default("").Sensitive(),
+		// Which encryption key sealed the columns above. "default" = the
+		// pre-rotation single-key era. New rows written under a rotation
+		// carry the active key's id; the rotation worker migrates older
+		// rows in place.
+		field.String("key_id").Optional().Default("default"),
 	}
 }
 

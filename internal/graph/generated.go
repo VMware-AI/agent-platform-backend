@@ -384,7 +384,6 @@ type ComplexityRoot struct {
 		Tpm                            func(childComplexity int) int
 		UseChatCompletionsAPI          func(childComplexity int) int
 		UseInPassThrough               func(childComplexity int) int
-		UseLitellmProxy                func(childComplexity int) int
 	}
 
 	Membership struct {
@@ -506,78 +505,79 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddMembership                 func(childComplexity int, userID string, departmentID string, role *model.MembershipRole) int
-		AddOvaTemplateVersion         func(childComplexity int, input model.AddOvaTemplateVersionInput) int
-		AddProviderModelSpec          func(childComplexity int, input model.AddProviderModelSpecInput) int
-		AssignUserRole                func(childComplexity int, userID string, roleID string) int
-		AssignUsersToRole             func(childComplexity int, input model.AssignUsersToRoleInput) int
-		AssociateVirtualKeyAgent      func(childComplexity int, virtualKeyID string, agentID string) int
-		BlockProviderModelSpec        func(childComplexity int, input model.ProviderModelSpecBlockInput) int
-		ChangePassword                func(childComplexity int, oldPassword string, newPassword string) int
-		CreateAgent                   func(childComplexity int, input model.CreateAgentInput) int
-		CreateAgentConfig             func(childComplexity int, input model.CreateAgentConfigInput) int
-		CreateCustomRole              func(childComplexity int, input model.CreateCustomRoleInput) int
-		CreateDepartment              func(childComplexity int, input model.CreateDepartmentInput) int
-		CreateModelGateway            func(childComplexity int, input model.ModelGatewayInput) int
-		CreateModelRoute              func(childComplexity int, input model.CreateModelRouteInput) int
-		CreateOvaTemplateFamily       func(childComplexity int, input model.CreateOvaTemplateFamilyInput) int
-		CreateProviderModel           func(childComplexity int, input model.CreateProviderModelInput) int
-		CreateResourcePool            func(childComplexity int, input model.CreateResourcePoolInput) int
-		CreateUser                    func(childComplexity int, input model.CreateUserInput) int
-		DeleteAgentConfig             func(childComplexity int, id string) int
-		DeleteArtifact                func(childComplexity int, id string) int
-		DeleteCustomRole              func(childComplexity int, id string) int
-		DeleteDepartment              func(childComplexity int, id string) int
-		DeleteImage                   func(childComplexity int, id string) int
-		DeleteModelGateway            func(childComplexity int, id string) int
-		DeleteModelRoute              func(childComplexity int, id string) int
-		DeleteProviderModel           func(childComplexity int, id string) int
-		DeleteProviderModelSpec       func(childComplexity int, input model.ProviderModelSpecIDInput) int
-		DeleteResourcePool            func(childComplexity int, id string) int
-		DeleteSkill                   func(childComplexity int, id string) int
-		DeleteUser                    func(childComplexity int, id string) int
-		DeployAgent                   func(childComplexity int, input model.DeployAgentInput) int
-		IssueVirtualKey               func(childComplexity int, input model.IssueVirtualKeyInput) int
-		Login                         func(childComplexity int, input model.LoginInput) int
-		Logout                        func(childComplexity int) int
-		RecordRequestLog              func(childComplexity int, input model.RecordRequestLogInput) int
-		RecordTokenUsage              func(childComplexity int, input model.RecordTokenUsageInput) int
-		RecycleAgent                  func(childComplexity int, input model.RecycleAgentInput) int
-		RefreshProviderModelStatus    func(childComplexity int, id string) int
-		RegenerateVirtualKey          func(childComplexity int, id string) int
-		RemoveMembership              func(childComplexity int, userID string, departmentID string) int
-		RemoveUserRole                func(childComplexity int, userID string, roleID string) int
-		RequestRotation               func(childComplexity int, agentID string, kind model.RotationKind) int
-		ResetUserPassword             func(childComplexity int, id string) int
-		RevertAgentSnapshot           func(childComplexity int, input model.RevertAgentSnapshotInput) int
-		RevokeAgentEnrollment         func(childComplexity int, agentID string) int
-		RevokeVirtualKey              func(childComplexity int, id string) int
-		SetAgentConfigKnowledge       func(childComplexity int, configID string, knowledgeArtifactIds []string) int
-		SetAgentStatus                func(childComplexity int, id string, status model.AgentStatus) int
-		SetDefaultAgentConfig         func(childComplexity int, id string) int
-		SetModelRouteEnabled          func(childComplexity int, id string, enabled bool) int
-		SetRolePermissions            func(childComplexity int, roleID string, permissionKeys []string) int
-		SetVirtualKeyEnabled          func(childComplexity int, id string, enabled bool) int
-		SnapshotAgent                 func(childComplexity int, input model.SnapshotAgentInput) int
-		SyncModelGatewayConnection    func(childComplexity int, id string) int
-		SyncResourcePool              func(childComplexity int, id string) int
-		SyncRouterSettings            func(childComplexity int) int
-		TestNewModelGatewayConnection func(childComplexity int, input model.TestModelGatewayConnectionInput) int
-		TestProviderConnection        func(childComplexity int, name string) int
-		TestResourcePoolConnection    func(childComplexity int, input model.TestResourcePoolConnectionInput) int
-		ToggleUserEnabled             func(childComplexity int, id string) int
-		UpdateAgentConfig             func(childComplexity int, id string, input model.UpdateAgentConfigInput) int
-		UpdateModelGateway            func(childComplexity int, id string, input model.ModelGatewayInput) int
-		UpdateModelRoute              func(childComplexity int, id string, input model.UpdateModelRouteInput) int
-		UpdateProviderModel           func(childComplexity int, input model.UpdateProviderModelInput) int
-		UpdateProviderModelSpec       func(childComplexity int, input model.UpdateProviderModelSpecInput) int
-		UpdateResourcePool            func(childComplexity int, id string, input model.UpdateResourcePoolInput) int
-		UpdateUser                    func(childComplexity int, id string, input model.UpdateUserInput) int
-		UpsertAgentTemplate           func(childComplexity int, input model.UpsertAgentTemplateInput) int
-		UpsertArtifact                func(childComplexity int, input model.UpsertArtifactInput) int
-		UpsertImage                   func(childComplexity int, input model.UpsertImageInput) int
-		UpsertPermission              func(childComplexity int, key string, description *string) int
-		UpsertSkill                   func(childComplexity int, input model.UpsertSkillInput) int
+		AddMembership                  func(childComplexity int, userID string, departmentID string, role *model.MembershipRole) int
+		AddOvaTemplateVersion          func(childComplexity int, input model.AddOvaTemplateVersionInput) int
+		AddProviderModelSpec           func(childComplexity int, input model.AddProviderModelSpecInput) int
+		AssignUserRole                 func(childComplexity int, userID string, roleID string) int
+		AssignUsersToRole              func(childComplexity int, input model.AssignUsersToRoleInput) int
+		AssociateVirtualKeyAgent       func(childComplexity int, virtualKeyID string, agentID string) int
+		BlockProviderModelSpec         func(childComplexity int, input model.ProviderModelSpecBlockInput) int
+		ChangePassword                 func(childComplexity int, oldPassword string, newPassword string) int
+		CreateAgent                    func(childComplexity int, input model.CreateAgentInput) int
+		CreateAgentConfig              func(childComplexity int, input model.CreateAgentConfigInput) int
+		CreateCustomRole               func(childComplexity int, input model.CreateCustomRoleInput) int
+		CreateDepartment               func(childComplexity int, input model.CreateDepartmentInput) int
+		CreateModelGateway             func(childComplexity int, input model.ModelGatewayInput) int
+		CreateModelRoute               func(childComplexity int, input model.CreateModelRouteInput) int
+		CreateOvaTemplateFamily        func(childComplexity int, input model.CreateOvaTemplateFamilyInput) int
+		CreateProviderModel            func(childComplexity int, input model.CreateProviderModelInput) int
+		CreateResourcePool             func(childComplexity int, input model.CreateResourcePoolInput) int
+		CreateUser                     func(childComplexity int, input model.CreateUserInput) int
+		DeleteAgentConfig              func(childComplexity int, id string) int
+		DeleteArtifact                 func(childComplexity int, id string) int
+		DeleteCustomRole               func(childComplexity int, id string) int
+		DeleteDepartment               func(childComplexity int, id string) int
+		DeleteImage                    func(childComplexity int, id string) int
+		DeleteModelGateway             func(childComplexity int, id string) int
+		DeleteModelRoute               func(childComplexity int, id string) int
+		DeleteProviderModel            func(childComplexity int, id string) int
+		DeleteProviderModelSpec        func(childComplexity int, input model.ProviderModelSpecIDInput) int
+		DeleteResourcePool             func(childComplexity int, id string) int
+		DeleteSkill                    func(childComplexity int, id string) int
+		DeleteUser                     func(childComplexity int, id string) int
+		DeployAgent                    func(childComplexity int, input model.DeployAgentInput) int
+		IssueVirtualKey                func(childComplexity int, input model.IssueVirtualKeyInput) int
+		Login                          func(childComplexity int, input model.LoginInput) int
+		Logout                         func(childComplexity int) int
+		RecordRequestLog               func(childComplexity int, input model.RecordRequestLogInput) int
+		RecordTokenUsage               func(childComplexity int, input model.RecordTokenUsageInput) int
+		RecycleAgent                   func(childComplexity int, input model.RecycleAgentInput) int
+		RefreshProviderModelStatus     func(childComplexity int, id string) int
+		RegenerateVirtualKey           func(childComplexity int, id string) int
+		RemoveMembership               func(childComplexity int, userID string, departmentID string) int
+		RemoveUserRole                 func(childComplexity int, userID string, roleID string) int
+		RequestRotation                func(childComplexity int, agentID string, kind model.RotationKind) int
+		ResetUserPassword              func(childComplexity int, id string) int
+		RevertAgentSnapshot            func(childComplexity int, input model.RevertAgentSnapshotInput) int
+		RevokeAgentEnrollment          func(childComplexity int, agentID string) int
+		RevokeVirtualKey               func(childComplexity int, id string) int
+		SetAgentConfigKnowledge        func(childComplexity int, configID string, knowledgeArtifactIds []string) int
+		SetAgentStatus                 func(childComplexity int, id string, status model.AgentStatus) int
+		SetDefaultAgentConfig          func(childComplexity int, id string) int
+		SetModelRouteEnabled           func(childComplexity int, id string, enabled bool) int
+		SetRolePermissions             func(childComplexity int, roleID string, permissionKeys []string) int
+		SetVirtualKeyEnabled           func(childComplexity int, id string, enabled bool) int
+		SnapshotAgent                  func(childComplexity int, input model.SnapshotAgentInput) int
+		SyncModelGatewayConnection     func(childComplexity int, id string) int
+		SyncResourcePool               func(childComplexity int, id string) int
+		SyncRouterSettings             func(childComplexity int) int
+		TestNewModelGatewayConnection  func(childComplexity int, input model.TestModelGatewayConnectionInput) int
+		TestPrivateModelSpecConnection func(childComplexity int, input model.TestPrivateModelSpecConnectionInput) int
+		TestProviderConnection         func(childComplexity int, name string) int
+		TestResourcePoolConnection     func(childComplexity int, input model.TestResourcePoolConnectionInput) int
+		ToggleUserEnabled              func(childComplexity int, id string) int
+		UpdateAgentConfig              func(childComplexity int, id string, input model.UpdateAgentConfigInput) int
+		UpdateModelGateway             func(childComplexity int, id string, input model.ModelGatewayInput) int
+		UpdateModelRoute               func(childComplexity int, id string, input model.UpdateModelRouteInput) int
+		UpdateProviderModel            func(childComplexity int, input model.UpdateProviderModelInput) int
+		UpdateProviderModelSpec        func(childComplexity int, input model.UpdateProviderModelSpecInput) int
+		UpdateResourcePool             func(childComplexity int, id string, input model.UpdateResourcePoolInput) int
+		UpdateUser                     func(childComplexity int, id string, input model.UpdateUserInput) int
+		UpsertAgentTemplate            func(childComplexity int, input model.UpsertAgentTemplateInput) int
+		UpsertArtifact                 func(childComplexity int, input model.UpsertArtifactInput) int
+		UpsertImage                    func(childComplexity int, input model.UpsertImageInput) int
+		UpsertPermission               func(childComplexity int, key string, description *string) int
+		UpsertSkill                    func(childComplexity int, input model.UpsertSkillInput) int
 	}
 
 	OvaTemplateFamily struct {
@@ -632,6 +632,13 @@ type ComplexityRoot struct {
 	PlacementRef struct {
 		Name func(childComplexity int) int
 		Path func(childComplexity int) int
+	}
+
+	PrivateModelSpecTestResult struct {
+		Message   func(childComplexity int) int
+		ModelList func(childComplexity int) int
+		Success   func(childComplexity int) int
+		TestedAt  func(childComplexity int) int
 	}
 
 	ProviderModel struct {
@@ -1007,6 +1014,7 @@ type MutationResolver interface {
 	BlockProviderModelSpec(ctx context.Context, input model.ProviderModelSpecBlockInput) (*model.ProviderModel, error)
 	TestProviderConnection(ctx context.Context, name string) (providermodel.Status, error)
 	RefreshProviderModelStatus(ctx context.Context, id string) (*model.ProviderModel, error)
+	TestPrivateModelSpecConnection(ctx context.Context, input model.TestPrivateModelSpecConnectionInput) (*model.PrivateModelSpecTestResult, error)
 	CreateCustomRole(ctx context.Context, input model.CreateCustomRoleInput) (*model.CustomRole, error)
 	DeleteCustomRole(ctx context.Context, id string) (bool, error)
 	UpsertPermission(ctx context.Context, key string, description *string) (*model.Permission, error)
@@ -2417,12 +2425,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.LitellmParams.UseInPassThrough(childComplexity), true
-	case "LitellmParams.useLitellmProxy":
-		if e.ComplexityRoot.LitellmParams.UseLitellmProxy == nil {
-			break
-		}
-
-		return e.ComplexityRoot.LitellmParams.UseLitellmProxy(childComplexity), true
 
 	case "Membership.departmentId":
 		if e.ComplexityRoot.Membership.DepartmentID == nil {
@@ -3511,6 +3513,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.TestNewModelGatewayConnection(childComplexity, args["input"].(model.TestModelGatewayConnectionInput)), true
+	case "Mutation.testPrivateModelSpecConnection":
+		if e.ComplexityRoot.Mutation.TestPrivateModelSpecConnection == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_testPrivateModelSpecConnection_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.TestPrivateModelSpecConnection(childComplexity, args["input"].(model.TestPrivateModelSpecConnectionInput)), true
 	case "Mutation.testProviderConnection":
 		if e.ComplexityRoot.Mutation.TestProviderConnection == nil {
 			break
@@ -3881,6 +3894,31 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.PlacementRef.Path(childComplexity), true
+
+	case "PrivateModelSpecTestResult.message":
+		if e.ComplexityRoot.PrivateModelSpecTestResult.Message == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PrivateModelSpecTestResult.Message(childComplexity), true
+	case "PrivateModelSpecTestResult.modelList":
+		if e.ComplexityRoot.PrivateModelSpecTestResult.ModelList == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PrivateModelSpecTestResult.ModelList(childComplexity), true
+	case "PrivateModelSpecTestResult.success":
+		if e.ComplexityRoot.PrivateModelSpecTestResult.Success == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PrivateModelSpecTestResult.Success(childComplexity), true
+	case "PrivateModelSpecTestResult.testedAt":
+		if e.ComplexityRoot.PrivateModelSpecTestResult.TestedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PrivateModelSpecTestResult.TestedAt(childComplexity), true
 
 	case "ProviderModel.createdAt":
 		if e.ComplexityRoot.ProviderModel.CreatedAt == nil {
@@ -5400,6 +5438,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputSnapshotAgentInput,
 		ec.unmarshalInputSpendReportInput,
 		ec.unmarshalInputTestModelGatewayConnectionInput,
+		ec.unmarshalInputTestPrivateModelSpecConnectionInput,
 		ec.unmarshalInputTestResourcePoolConnectionInput,
 		ec.unmarshalInputUpdateAgentConfigInput,
 		ec.unmarshalInputUpdateModelRouteInput,
@@ -6942,7 +6981,6 @@ type LitellmParams {
   maxBudget: Float
   budgetDuration: String
   useInPassThrough: Boolean!
-  useLitellmProxy: Boolean!
   useChatCompletionsApi: Boolean!
   mergeReasoningContentInChoices: Boolean!
   tags: [String!]!
@@ -6981,7 +7019,6 @@ input LitellmParamsInput {
   maxBudget: Float
   budgetDuration: String
   useInPassThrough: Boolean
-  useLitellmProxy: Boolean
   useChatCompletionsApi: Boolean
   mergeReasoningContentInChoices: Boolean
   tags: [String!]
@@ -7099,6 +7136,27 @@ extend type Mutation {
   # 原有 probe / refresh(返回 4 档 status;ProviderModel 实体)
   testProviderConnection(name: String!): ProviderModelStatus! @hasRole(any: [admin])
   refreshProviderModelStatus(id: ID!): ProviderModel! @hasRole(any: [admin])
+
+  # 0.1.x: dry-run probe of a private model spec's apiBase+apiKey against the
+  # upstream provider's /v1/models. Pre-save — no row read, no secret write.
+  # 供 ProviderModel 增改表单的"Test Connection"按钮调用(per-spec 一对一)。
+  testPrivateModelSpecConnection(
+    input: TestPrivateModelSpecConnectionInput!
+  ): PrivateModelSpecTestResult! @hasRole(any: [admin])
+}
+
+# 0.1.x: TestPrivateModelSpecConnection 入参(apiBase + apiKey 直接传,不经 secret store)
+input TestPrivateModelSpecConnectionInput {
+  apiBase: String!
+  apiKey: String!
+}
+
+# 0.1.x: TestPrivateModelSpecConnection 返回 — success/message + 上游 /v1/models 返回的 model id 列表
+type PrivateModelSpecTestResult {
+  success: Boolean!
+  message: String!
+  modelList: [String!]!   # 上游 data[].id;失败时 []
+  testedAt: Time!
 }
 `, BuiltIn: false},
 	{Name: "../../schema/rbac.graphql", Input: `# Fine-grained custom roles & permissions (角色与权限页). See LLD-01 §1.2/§4.2.
@@ -8279,8 +8337,6 @@ func (ec *executionContext) childFields_LitellmParams(ctx context.Context, field
 		return ec.fieldContext_LitellmParams_budgetDuration(ctx, field)
 	case "useInPassThrough":
 		return ec.fieldContext_LitellmParams_useInPassThrough(ctx, field)
-	case "useLitellmProxy":
-		return ec.fieldContext_LitellmParams_useLitellmProxy(ctx, field)
 	case "useChatCompletionsApi":
 		return ec.fieldContext_LitellmParams_useChatCompletionsApi(ctx, field)
 	case "mergeReasoningContentInChoices":
@@ -8641,6 +8697,20 @@ func (ec *executionContext) childFields_PlacementRef(ctx context.Context, field 
 		return ec.fieldContext_PlacementRef_path(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type PlacementRef", field.Name)
+}
+
+func (ec *executionContext) childFields_PrivateModelSpecTestResult(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "success":
+		return ec.fieldContext_PrivateModelSpecTestResult_success(ctx, field)
+	case "message":
+		return ec.fieldContext_PrivateModelSpecTestResult_message(ctx, field)
+	case "modelList":
+		return ec.fieldContext_PrivateModelSpecTestResult_modelList(ctx, field)
+	case "testedAt":
+		return ec.fieldContext_PrivateModelSpecTestResult_testedAt(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type PrivateModelSpecTestResult", field.Name)
 }
 
 func (ec *executionContext) childFields_ProviderModel(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -10157,6 +10227,20 @@ func (ec *executionContext) field_Mutation_testNewModelGatewayConnection_args(ct
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
 		func(ctx context.Context, v any) (model.TestModelGatewayConnectionInput, error) {
 			return ec.unmarshalNTestModelGatewayConnectionInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTestModelGatewayConnectionInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_testPrivateModelSpecConnection_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.TestPrivateModelSpecConnectionInput, error) {
+			return ec.unmarshalNTestPrivateModelSpecConnectionInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTestPrivateModelSpecConnectionInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -16172,29 +16256,6 @@ func (ec *executionContext) fieldContext_LitellmParams_useInPassThrough(_ contex
 	return graphql.NewScalarFieldContext("LitellmParams", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
-func (ec *executionContext) _LitellmParams_useLitellmProxy(ctx context.Context, field graphql.CollectedField, obj *model.LitellmParams) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_LitellmParams_useLitellmProxy(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.UseLitellmProxy, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
-			return ec.marshalNBoolean2bool(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_LitellmParams_useLitellmProxy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("LitellmParams", field, false, false, errors.New("field of type Boolean does not have child fields"))
-}
-
 func (ec *executionContext) _LitellmParams_useChatCompletionsApi(ctx context.Context, field graphql.CollectedField, obj *model.LitellmParams) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -21426,6 +21487,68 @@ func (ec *executionContext) fieldContext_Mutation_refreshProviderModelStatus(ctx
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_testPrivateModelSpecConnection(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_testPrivateModelSpecConnection(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().TestPrivateModelSpecConnection(ctx, fc.Args["input"].(model.TestPrivateModelSpecConnectionInput))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.PrivateModelSpecTestResult
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.PrivateModelSpecTestResult
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.PrivateModelSpecTestResult) graphql.Marshaler {
+			return ec.marshalNPrivateModelSpecTestResult2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPrivateModelSpecTestResult(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_testPrivateModelSpecConnection(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PrivateModelSpecTestResult(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_testPrivateModelSpecConnection_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_createCustomRole(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -23220,6 +23343,98 @@ func (ec *executionContext) _PlacementRef_path(ctx context.Context, field graphq
 }
 func (ec *executionContext) fieldContext_PlacementRef_path(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("PlacementRef", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _PrivateModelSpecTestResult_success(ctx context.Context, field graphql.CollectedField, obj *model.PrivateModelSpecTestResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PrivateModelSpecTestResult_success(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Success, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_PrivateModelSpecTestResult_success(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PrivateModelSpecTestResult", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _PrivateModelSpecTestResult_message(ctx context.Context, field graphql.CollectedField, obj *model.PrivateModelSpecTestResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PrivateModelSpecTestResult_message(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Message, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_PrivateModelSpecTestResult_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PrivateModelSpecTestResult", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _PrivateModelSpecTestResult_modelList(ctx context.Context, field graphql.CollectedField, obj *model.PrivateModelSpecTestResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PrivateModelSpecTestResult_modelList(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ModelList, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []string) graphql.Marshaler {
+			return ec.marshalNString2ᚕstringᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_PrivateModelSpecTestResult_modelList(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PrivateModelSpecTestResult", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _PrivateModelSpecTestResult_testedAt(ctx context.Context, field graphql.CollectedField, obj *model.PrivateModelSpecTestResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PrivateModelSpecTestResult_testedAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TestedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_PrivateModelSpecTestResult_testedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PrivateModelSpecTestResult", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
 func (ec *executionContext) _ProviderModel_id(ctx context.Context, field graphql.CollectedField, obj *model.ProviderModel) (ret graphql.Marshaler) {
@@ -31981,7 +32196,7 @@ func (ec *executionContext) unmarshalInputLitellmParamsInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"apiKey", "apiKeyRef", "apiBase", "model", "customLlmProvider", "organization", "tpm", "rpm", "defaultApiKeyTpmLimit", "defaultApiKeyRpmLimit", "maxBudget", "budgetDuration", "useInPassThrough", "useLitellmProxy", "useChatCompletionsApi", "mergeReasoningContentInChoices", "tags", "inputCostPerToken", "outputCostPerToken", "cacheReadInputTokenCost", "cacheCreationInputTokenCost"}
+	fieldsInOrder := [...]string{"apiKey", "apiKeyRef", "apiBase", "model", "customLlmProvider", "organization", "tpm", "rpm", "defaultApiKeyTpmLimit", "defaultApiKeyRpmLimit", "maxBudget", "budgetDuration", "useInPassThrough", "useChatCompletionsApi", "mergeReasoningContentInChoices", "tags", "inputCostPerToken", "outputCostPerToken", "cacheReadInputTokenCost", "cacheCreationInputTokenCost"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -32079,13 +32294,6 @@ func (ec *executionContext) unmarshalInputLitellmParamsInput(ctx context.Context
 				return it, err
 			}
 			it.UseInPassThrough = data
-		case "useLitellmProxy":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("useLitellmProxy"))
-			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.UseLitellmProxy = data
 		case "useChatCompletionsApi":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("useChatCompletionsApi"))
 			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
@@ -33246,6 +33454,43 @@ func (ec *executionContext) unmarshalInputTestModelGatewayConnectionInput(ctx co
 				return it, err
 			}
 			it.MasterKey = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputTestPrivateModelSpecConnectionInput(ctx context.Context, obj any) (model.TestPrivateModelSpecConnectionInput, error) {
+	var it model.TestPrivateModelSpecConnectionInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"apiBase", "apiKey"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "apiBase":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("apiBase"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.APIBase = data
+		case "apiKey":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("apiKey"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.APIKey = data
 		}
 	}
 	return it, nil
@@ -36618,11 +36863,6 @@ func (ec *executionContext) _LitellmParams(ctx context.Context, sel ast.Selectio
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "useLitellmProxy":
-			out.Values[i] = ec._LitellmParams_useLitellmProxy(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "useChatCompletionsApi":
 			out.Values[i] = ec._LitellmParams_useChatCompletionsApi(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -37948,6 +38188,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "testPrivateModelSpecConnection":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_testPrivateModelSpecConnection(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "createCustomRole":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createCustomRole(ctx, field)
@@ -38554,6 +38801,60 @@ func (ec *executionContext) _PlacementRef(ctx context.Context, sel ast.Selection
 		case "path":
 			out.Values[i] = ec._PlacementRef_path(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var privateModelSpecTestResultImplementors = []string{"PrivateModelSpecTestResult"}
+
+func (ec *executionContext) _PrivateModelSpecTestResult(ctx context.Context, sel ast.SelectionSet, obj *model.PrivateModelSpecTestResult) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, privateModelSpecTestResultImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PrivateModelSpecTestResult")
+		case "success":
+			out.Values[i] = ec._PrivateModelSpecTestResult_success(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "message":
+			out.Values[i] = ec._PrivateModelSpecTestResult_message(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "modelList":
+			out.Values[i] = ec._PrivateModelSpecTestResult_modelList(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "testedAt":
+			out.Values[i] = ec._PrivateModelSpecTestResult_testedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		default:
@@ -43503,6 +43804,20 @@ func (ec *executionContext) marshalNPlacementRef2ᚕgithubᚗcomᚋVMwareᚑAI�
 	return ret
 }
 
+func (ec *executionContext) marshalNPrivateModelSpecTestResult2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPrivateModelSpecTestResult(ctx context.Context, sel ast.SelectionSet, v model.PrivateModelSpecTestResult) graphql.Marshaler {
+	return ec._PrivateModelSpecTestResult(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPrivateModelSpecTestResult2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPrivateModelSpecTestResult(ctx context.Context, sel ast.SelectionSet, v *model.PrivateModelSpecTestResult) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PrivateModelSpecTestResult(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNProviderModel2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐProviderModel(ctx context.Context, sel ast.SelectionSet, v model.ProviderModel) graphql.Marshaler {
 	return ec._ProviderModel(ctx, sel, &v)
 }
@@ -44075,6 +44390,11 @@ func (ec *executionContext) marshalNSyncResourcePoolPayload2ᚖgithubᚗcomᚋVM
 
 func (ec *executionContext) unmarshalNTestModelGatewayConnectionInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTestModelGatewayConnectionInput(ctx context.Context, v any) (model.TestModelGatewayConnectionInput, error) {
 	res, err := ec.unmarshalInputTestModelGatewayConnectionInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNTestPrivateModelSpecConnectionInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐTestPrivateModelSpecConnectionInput(ctx context.Context, v any) (model.TestPrivateModelSpecConnectionInput, error) {
+	res, err := ec.unmarshalInputTestPrivateModelSpecConnectionInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
