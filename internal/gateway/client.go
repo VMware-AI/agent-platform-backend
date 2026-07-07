@@ -642,19 +642,3 @@ func (b *circuitBreaker) record(failureSentinel error) {
 		b.openUntil = b.now().Add(b.cooldown)
 	}
 }
-
-// redactKey returns a safe-to-display preview of an API key.
-//
-//	"sk-aBcDeFgHiJkLmNoPqRsTuVwXyZ" → "sk-aBcD...XyZ"  (head 6 + "..." + tail 4)
-//	< 12 chars                     → full string verbatim (no information to redact)
-//
-// Format keeps the LiteLLM "sk-" prefix recognizable for operators without
-// leaking the secret body. NOT itself a secret — pure projection. Used by
-// VirtualKey.Issue / Regenerate to populate the persistent masked_key column
-// (ent/schema/virtualkey.go:masked_key).
-func redactKey(plain string) string {
-	if len(plain) < 12 {
-		return plain
-	}
-	return plain[:6] + "..." + plain[len(plain)-4:]
-}
