@@ -603,7 +603,9 @@ type ComplexityRoot struct {
 	}
 
 	PlatformSettings struct {
-		AgentUser func(childComplexity int) int
+		AgentUser         func(childComplexity int) int
+		PackageSourceURL  func(childComplexity int) int
+		PackageSourceUser func(childComplexity int) int
 	}
 
 	Query struct {
@@ -3736,6 +3738,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.PlatformSettings.AgentUser(childComplexity), true
+	case "PlatformSettings.packageSourceUrl":
+		if e.ComplexityRoot.PlatformSettings.PackageSourceURL == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PlatformSettings.PackageSourceURL(childComplexity), true
+	case "PlatformSettings.packageSourceUser":
+		if e.ComplexityRoot.PlatformSettings.PackageSourceUser == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PlatformSettings.PackageSourceUser(childComplexity), true
 
 	case "Query.agent":
 		if e.ComplexityRoot.Query.Agent == nil {
@@ -7110,11 +7124,20 @@ directive @goField(
 type PlatformSettings {
   # OS user that runs installed agents on the VM. Defaults to "agent" when unset.
   agentUser: String!
+  # Internal agent-package mirror base URL (e.g. ftp://mirror.internal/agents) and its
+  # read-only username. The password is write-only (stored encrypted, never returned).
+  packageSourceUrl: String!
+  packageSourceUser: String!
 }
 
 input UpdatePlatformSettingsInput {
   # When provided, sets the agent OS user; omitted = unchanged. Must be non-empty.
   agentUser: String
+  # Package mirror (LLD-16 OQ-2). Each field: omitted = unchanged; empty string clears
+  # it. packageSourcePassword is write-only and stored encrypted (secrets).
+  packageSourceUrl: String
+  packageSourceUser: String
+  packageSourcePassword: String
 }
 
 extend type Query {
@@ -8155,6 +8178,10 @@ func (ec *executionContext) childFields_PlatformSettings(ctx context.Context, fi
 	switch field.Name {
 	case "agentUser":
 		return ec.fieldContext_PlatformSettings_agentUser(ctx, field)
+	case "packageSourceUrl":
+		return ec.fieldContext_PlatformSettings_packageSourceUrl(ctx, field)
+	case "packageSourceUser":
+		return ec.fieldContext_PlatformSettings_packageSourceUser(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type PlatformSettings", field.Name)
 }
@@ -22263,6 +22290,52 @@ func (ec *executionContext) fieldContext_PlatformSettings_agentUser(_ context.Co
 	return graphql.NewScalarFieldContext("PlatformSettings", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _PlatformSettings_packageSourceUrl(ctx context.Context, field graphql.CollectedField, obj *model.PlatformSettings) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PlatformSettings_packageSourceUrl(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.PackageSourceURL, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_PlatformSettings_packageSourceUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PlatformSettings", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _PlatformSettings_packageSourceUser(ctx context.Context, field graphql.CollectedField, obj *model.PlatformSettings) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PlatformSettings_packageSourceUser(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.PackageSourceUser, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_PlatformSettings_packageSourceUser(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PlatformSettings", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _Query_me(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -31696,7 +31769,7 @@ func (ec *executionContext) unmarshalInputUpdatePlatformSettingsInput(ctx contex
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"agentUser"}
+	fieldsInOrder := [...]string{"agentUser", "packageSourceUrl", "packageSourceUser", "packageSourcePassword"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -31710,6 +31783,27 @@ func (ec *executionContext) unmarshalInputUpdatePlatformSettingsInput(ctx contex
 				return it, err
 			}
 			it.AgentUser = data
+		case "packageSourceUrl":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("packageSourceUrl"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PackageSourceURL = data
+		case "packageSourceUser":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("packageSourceUser"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PackageSourceUser = data
+		case "packageSourcePassword":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("packageSourcePassword"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PackageSourcePassword = data
 		}
 	}
 	return it, nil
@@ -36774,6 +36868,16 @@ func (ec *executionContext) _PlatformSettings(ctx context.Context, sel ast.Selec
 			out.Values[i] = graphql.MarshalString("PlatformSettings")
 		case "agentUser":
 			out.Values[i] = ec._PlatformSettings_agentUser(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "packageSourceUrl":
+			out.Values[i] = ec._PlatformSettings_packageSourceUrl(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "packageSourceUser":
+			out.Values[i] = ec._PlatformSettings_packageSourceUser(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

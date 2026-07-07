@@ -5,11 +5,20 @@
 type PlatformSettings {
   # OS user that runs installed agents on the VM. Defaults to "agent" when unset.
   agentUser: String!
+  # Internal agent-package mirror base URL (e.g. ftp://mirror.internal/agents) and its
+  # read-only username. The password is write-only (stored encrypted, never returned).
+  packageSourceUrl: String!
+  packageSourceUser: String!
 }
 
 input UpdatePlatformSettingsInput {
   # When provided, sets the agent OS user; omitted = unchanged. Must be non-empty.
   agentUser: String
+  # Package mirror (LLD-16 OQ-2). Each field: omitted = unchanged; empty string clears
+  # it. packageSourcePassword is write-only and stored encrypted (secrets).
+  packageSourceUrl: String
+  packageSourceUser: String
+  packageSourcePassword: String
 }
 
 extend type Query {

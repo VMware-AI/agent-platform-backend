@@ -2,12 +2,14 @@ package graph
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/url"
 	"strings"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/setting"
+	"github.com/VMware-AI/agent-platform-backend/internal/secrets"
 )
 
 // Platform setting keys (LLD-13) — a small fixed vocabulary stored in the Setting
@@ -125,4 +127,34 @@ func injectCreds(rawURL, user, pass string) string {
 		u.User = url.User(user)
 	}
 	return u.String()
+}
+
+// setPackageSourcePassword stores the mirror password encrypted (secrets.Store) and
+// records its ref under agent_pkg_pass_ref, deleting any prior secret. An empty
+// password clears it. Requires a writable secret store (the prod DBStore is one); a
+// read-only Resolver returns an error rather than silently dropping the password.
+func (r *Resolver) setPackageSourcePassword(ctx context.Context, pass string) error {
+	store, ok := r.Secrets.(secrets.Store)
+	if !ok {
+		return fmt.Errorf("secret store is read-only; cannot set package-source password")
+	}
+	oldRef := r.getSetting(ctx, settingKeyAgentPkgPassRef, "")
+	newRef := ""
+	if strings.TrimSpace(pass) != "" {
+		ref, err := store.Put(ctx, "agent-pkg-source", secrets.Credential{Password: pass})
+		if err != nil {
+			return err
+		}
+		newRef = ref
+	}
+	if err := r.setSetting(ctx, settingKeyAgentPkgPassRef, newRef); err != nil {
+		return err
+	}
+	// Best-effort cleanup of the superseded secret; never fail the update over it.
+	if oldRef != "" && oldRef != newRef {
+		if err := store.Delete(ctx, oldRef); err != nil {
+			log.Printf("setPackageSourcePassword: delete old secret failed: %v", err)
+		}
+	}
+	return nil
 }

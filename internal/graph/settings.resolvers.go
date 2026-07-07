@@ -26,14 +26,36 @@ func (r *mutationResolver) UpdatePlatformSettings(ctx context.Context, input mod
 		}
 		r.audit(ctx, "platform_settings.update", "setting", settingKeyAgentUser, true, actorID(auth.FromContext(ctx)))
 	}
+	if input.PackageSourceURL != nil {
+		if err := r.setSetting(ctx, settingKeyAgentPkgURL, strings.TrimSpace(*input.PackageSourceURL)); err != nil {
+			return nil, err
+		}
+	}
+	if input.PackageSourceUser != nil {
+		if err := r.setSetting(ctx, settingKeyAgentPkgUser, strings.TrimSpace(*input.PackageSourceUser)); err != nil {
+			return nil, err
+		}
+	}
+	if input.PackageSourcePassword != nil {
+		if err := r.setPackageSourcePassword(ctx, *input.PackageSourcePassword); err != nil {
+			return nil, err
+		}
+	}
+	if input.PackageSourceURL != nil || input.PackageSourceUser != nil || input.PackageSourcePassword != nil {
+		r.audit(ctx, "platform_settings.update", "setting", "agent_pkg_source", true, actorID(auth.FromContext(ctx)))
+	}
 	return &model.PlatformSettings{
-		AgentUser: r.getSetting(ctx, settingKeyAgentUser, defaultAgentUser),
+		AgentUser:         r.getSetting(ctx, settingKeyAgentUser, defaultAgentUser),
+		PackageSourceURL:  r.getSetting(ctx, settingKeyAgentPkgURL, ""),
+		PackageSourceUser: r.getSetting(ctx, settingKeyAgentPkgUser, ""),
 	}, nil
 }
 
 // PlatformSettings is the resolver for the platformSettings field.
 func (r *queryResolver) PlatformSettings(ctx context.Context) (*model.PlatformSettings, error) {
 	return &model.PlatformSettings{
-		AgentUser: r.getSetting(ctx, settingKeyAgentUser, defaultAgentUser),
+		AgentUser:         r.getSetting(ctx, settingKeyAgentUser, defaultAgentUser),
+		PackageSourceURL:  r.getSetting(ctx, settingKeyAgentPkgURL, ""),
+		PackageSourceUser: r.getSetting(ctx, settingKeyAgentPkgUser, ""),
 	}, nil
 }

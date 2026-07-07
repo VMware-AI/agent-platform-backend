@@ -674,7 +674,9 @@ type PlacementRef struct {
 }
 
 type PlatformSettings struct {
-	AgentUser string `json:"agentUser"`
+	AgentUser         string `json:"agentUser"`
+	PackageSourceURL  string `json:"packageSourceUrl"`
+	PackageSourceUser string `json:"packageSourceUser"`
 }
 
 type Query struct {
@@ -967,7 +969,10 @@ type UpdateModelRouteInput struct {
 }
 
 type UpdatePlatformSettingsInput struct {
-	AgentUser *string `json:"agentUser,omitempty"`
+	AgentUser             *string `json:"agentUser,omitempty"`
+	PackageSourceURL      *string `json:"packageSourceUrl,omitempty"`
+	PackageSourceUser     *string `json:"packageSourceUser,omitempty"`
+	PackageSourcePassword *string `json:"packageSourcePassword,omitempty"`
 }
 
 type UpdateResourcePoolInput struct {

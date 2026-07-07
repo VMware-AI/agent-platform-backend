@@ -765,6 +765,8 @@ type PlacementRef {
 }
 type PlatformSettings {
 	agentUser: String!
+	packageSourceUrl: String!
+	packageSourceUser: String!
 }
 type Query {
 	me: User!
@@ -1116,6 +1118,9 @@ input UpdateModelRouteInput {
 }
 input UpdatePlatformSettingsInput {
 	agentUser: String
+	packageSourceUrl: String
+	packageSourceUser: String
+	packageSourcePassword: String
 }
 input UpdateResourcePoolInput {
 	name: String
