@@ -3,6 +3,8 @@ package graph
 import (
 	"context"
 	"log"
+	"net/url"
+	"strings"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/setting"
@@ -13,6 +15,13 @@ import (
 const (
 	settingKeyAgentUser = "agent_user"
 	defaultAgentUser    = "agent"
+
+	// Package source (LLD-16 OQ-2): operator-configurable internal mirror, editable in
+	// the console. url + user are plain settings; the password is stored encrypted
+	// (secrets) and referenced by agent_pkg_pass_ref.
+	settingKeyAgentPkgURL     = "agent_pkg_url"
+	settingKeyAgentPkgUser    = "agent_pkg_user"
+	settingKeyAgentPkgPassRef = "agent_pkg_pass_ref"
 )
 
 // getSetting returns the stored value for key, or def when the row is absent or
@@ -70,5 +79,50 @@ func (r *Resolver) renderInstallVars(ctx context.Context) map[string]string {
 		vars[k] = v
 	}
 	vars["AGENT_USER"] = r.getSetting(ctx, settingKeyAgentUser, defaultAgentUser)
+	// Package mirror: DB platform settings (console-configurable, OQ-2) take
+	// precedence over the startup env; resolveAgentPkgBaseURL falls back to env.
+	if base := r.resolveAgentPkgBaseURL(ctx); base != "" {
+		vars["AGENT_PKG_BASE_URL"] = base
+	}
 	return vars
+}
+
+// resolveAgentPkgBaseURL builds the internal agent-package mirror base. DB platform
+// settings (OQ-2, console-editable) win; when the url setting is unset it falls back
+// to the startup env value (r.AgentPkgBaseURL) for backward compat. url + user are
+// plain settings; the password is stored encrypted (secrets) under agent_pkg_pass_ref.
+// Assembles ftp://user:pass@host/path. NEVER log the result (may embed credentials).
+func (r *Resolver) resolveAgentPkgBaseURL(ctx context.Context) string {
+	base := r.getSetting(ctx, settingKeyAgentPkgURL, "")
+	if base == "" {
+		return r.AgentPkgBaseURL // env fallback (may already embed credentials)
+	}
+	user := r.getSetting(ctx, settingKeyAgentPkgUser, "")
+	if user == "" {
+		return strings.TrimRight(base, "/") // no credentials configured
+	}
+	pass := ""
+	if ref := r.getSetting(ctx, settingKeyAgentPkgPassRef, ""); ref != "" && r.Secrets != nil {
+		if cred, err := r.Secrets.Resolve(ctx, ref); err == nil {
+			pass = cred.Password
+		}
+	}
+	return injectCreds(base, user, pass)
+}
+
+// injectCreds inserts user[:pass]@ userinfo into a scheme://host/... URL, trimming a
+// trailing slash. On a malformed URL it returns the input unchanged (best effort —
+// the daemon validates the final URL before use).
+func injectCreds(rawURL, user, pass string) string {
+	trimmed := strings.TrimRight(rawURL, "/")
+	u, err := url.Parse(trimmed)
+	if err != nil || u.Host == "" {
+		return trimmed
+	}
+	if pass != "" {
+		u.User = url.UserPassword(user, pass)
+	} else {
+		u.User = url.User(user)
+	}
+	return u.String()
 }

@@ -142,7 +142,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		InitialPassword:   derefString(input.InitialPassword),
 		AgentPkgName:      ag.AgentType,
 		AgentVersion:      agentVersion,
-		AgentPkgBaseURL:   r.AgentPkgBaseURL,
+		AgentPkgBaseURL:   r.resolveAgentPkgBaseURL(ctx), // DB pkg-source (OQ-2) → env fallback
 		AgentKeepVersions: r.AgentKeepVersions,
 	})
 	if err != nil {
