@@ -384,7 +384,6 @@ type ComplexityRoot struct {
 		Tpm                            func(childComplexity int) int
 		UseChatCompletionsAPI          func(childComplexity int) int
 		UseInPassThrough               func(childComplexity int) int
-		UseLitellmProxy                func(childComplexity int) int
 	}
 
 	Membership struct {
@@ -2417,12 +2416,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.LitellmParams.UseInPassThrough(childComplexity), true
-	case "LitellmParams.useLitellmProxy":
-		if e.ComplexityRoot.LitellmParams.UseLitellmProxy == nil {
-			break
-		}
-
-		return e.ComplexityRoot.LitellmParams.UseLitellmProxy(childComplexity), true
 
 	case "Membership.departmentId":
 		if e.ComplexityRoot.Membership.DepartmentID == nil {
@@ -6942,7 +6935,6 @@ type LitellmParams {
   maxBudget: Float
   budgetDuration: String
   useInPassThrough: Boolean!
-  useLitellmProxy: Boolean!
   useChatCompletionsApi: Boolean!
   mergeReasoningContentInChoices: Boolean!
   tags: [String!]!
@@ -6981,7 +6973,6 @@ input LitellmParamsInput {
   maxBudget: Float
   budgetDuration: String
   useInPassThrough: Boolean
-  useLitellmProxy: Boolean
   useChatCompletionsApi: Boolean
   mergeReasoningContentInChoices: Boolean
   tags: [String!]
@@ -8279,8 +8270,6 @@ func (ec *executionContext) childFields_LitellmParams(ctx context.Context, field
 		return ec.fieldContext_LitellmParams_budgetDuration(ctx, field)
 	case "useInPassThrough":
 		return ec.fieldContext_LitellmParams_useInPassThrough(ctx, field)
-	case "useLitellmProxy":
-		return ec.fieldContext_LitellmParams_useLitellmProxy(ctx, field)
 	case "useChatCompletionsApi":
 		return ec.fieldContext_LitellmParams_useChatCompletionsApi(ctx, field)
 	case "mergeReasoningContentInChoices":
@@ -16169,29 +16158,6 @@ func (ec *executionContext) _LitellmParams_useInPassThrough(ctx context.Context,
 	)
 }
 func (ec *executionContext) fieldContext_LitellmParams_useInPassThrough(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("LitellmParams", field, false, false, errors.New("field of type Boolean does not have child fields"))
-}
-
-func (ec *executionContext) _LitellmParams_useLitellmProxy(ctx context.Context, field graphql.CollectedField, obj *model.LitellmParams) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_LitellmParams_useLitellmProxy(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.UseLitellmProxy, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
-			return ec.marshalNBoolean2bool(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_LitellmParams_useLitellmProxy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("LitellmParams", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
@@ -31981,7 +31947,7 @@ func (ec *executionContext) unmarshalInputLitellmParamsInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"apiKey", "apiKeyRef", "apiBase", "model", "customLlmProvider", "organization", "tpm", "rpm", "defaultApiKeyTpmLimit", "defaultApiKeyRpmLimit", "maxBudget", "budgetDuration", "useInPassThrough", "useLitellmProxy", "useChatCompletionsApi", "mergeReasoningContentInChoices", "tags", "inputCostPerToken", "outputCostPerToken", "cacheReadInputTokenCost", "cacheCreationInputTokenCost"}
+	fieldsInOrder := [...]string{"apiKey", "apiKeyRef", "apiBase", "model", "customLlmProvider", "organization", "tpm", "rpm", "defaultApiKeyTpmLimit", "defaultApiKeyRpmLimit", "maxBudget", "budgetDuration", "useInPassThrough", "useChatCompletionsApi", "mergeReasoningContentInChoices", "tags", "inputCostPerToken", "outputCostPerToken", "cacheReadInputTokenCost", "cacheCreationInputTokenCost"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -32079,13 +32045,6 @@ func (ec *executionContext) unmarshalInputLitellmParamsInput(ctx context.Context
 				return it, err
 			}
 			it.UseInPassThrough = data
-		case "useLitellmProxy":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("useLitellmProxy"))
-			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.UseLitellmProxy = data
 		case "useChatCompletionsApi":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("useChatCompletionsApi"))
 			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
@@ -36615,11 +36574,6 @@ func (ec *executionContext) _LitellmParams(ctx context.Context, sel ast.Selectio
 			}
 		case "useInPassThrough":
 			out.Values[i] = ec._LitellmParams_useInPassThrough(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "useLitellmProxy":
-			out.Values[i] = ec._LitellmParams_useLitellmProxy(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
