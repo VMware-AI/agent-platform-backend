@@ -109,6 +109,26 @@ func (_u *PlatformSecretUpdate) ClearAPIKey() *PlatformSecretUpdate {
 	return _u
 }
 
+// SetKeyID sets the "key_id" field.
+func (_u *PlatformSecretUpdate) SetKeyID(v string) *PlatformSecretUpdate {
+	_u.mutation.SetKeyID(v)
+	return _u
+}
+
+// SetNillableKeyID sets the "key_id" field if the given value is not nil.
+func (_u *PlatformSecretUpdate) SetNillableKeyID(v *string) *PlatformSecretUpdate {
+	if v != nil {
+		_u.SetKeyID(*v)
+	}
+	return _u
+}
+
+// ClearKeyID clears the value of the "key_id" field.
+func (_u *PlatformSecretUpdate) ClearKeyID() *PlatformSecretUpdate {
+	_u.mutation.ClearKeyID()
+	return _u
+}
+
 // Mutation returns the PlatformSecretMutation object of the builder.
 func (_u *PlatformSecretUpdate) Mutation() *PlatformSecretMutation {
 	return _u.mutation
@@ -201,6 +221,12 @@ func (_u *PlatformSecretUpdate) sqlSave(ctx context.Context) (_node int, err err
 	}
 	if _u.mutation.APIKeyCleared() {
 		_spec.ClearField(platformsecret.FieldAPIKey, field.TypeString)
+	}
+	if value, ok := _u.mutation.KeyID(); ok {
+		_spec.SetField(platformsecret.FieldKeyID, field.TypeString, value)
+	}
+	if _u.mutation.KeyIDCleared() {
+		_spec.ClearField(platformsecret.FieldKeyID, field.TypeString)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
@@ -301,6 +327,26 @@ func (_u *PlatformSecretUpdateOne) SetNillableAPIKey(v *string) *PlatformSecretU
 // ClearAPIKey clears the value of the "api_key" field.
 func (_u *PlatformSecretUpdateOne) ClearAPIKey() *PlatformSecretUpdateOne {
 	_u.mutation.ClearAPIKey()
+	return _u
+}
+
+// SetKeyID sets the "key_id" field.
+func (_u *PlatformSecretUpdateOne) SetKeyID(v string) *PlatformSecretUpdateOne {
+	_u.mutation.SetKeyID(v)
+	return _u
+}
+
+// SetNillableKeyID sets the "key_id" field if the given value is not nil.
+func (_u *PlatformSecretUpdateOne) SetNillableKeyID(v *string) *PlatformSecretUpdateOne {
+	if v != nil {
+		_u.SetKeyID(*v)
+	}
+	return _u
+}
+
+// ClearKeyID clears the value of the "key_id" field.
+func (_u *PlatformSecretUpdateOne) ClearKeyID() *PlatformSecretUpdateOne {
+	_u.mutation.ClearKeyID()
 	return _u
 }
 
@@ -426,6 +472,12 @@ func (_u *PlatformSecretUpdateOne) sqlSave(ctx context.Context) (_node *Platform
 	}
 	if _u.mutation.APIKeyCleared() {
 		_spec.ClearField(platformsecret.FieldAPIKey, field.TypeString)
+	}
+	if value, ok := _u.mutation.KeyID(); ok {
+		_spec.SetField(platformsecret.FieldKeyID, field.TypeString, value)
+	}
+	if _u.mutation.KeyIDCleared() {
+		_spec.ClearField(platformsecret.FieldKeyID, field.TypeString)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &PlatformSecret{config: _u.config}

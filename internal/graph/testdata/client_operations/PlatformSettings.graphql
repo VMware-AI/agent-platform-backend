@@ -1,9 +1,0 @@
-fragment PlatformSettingsFields on PlatformSettings {
-    agentUser
-  }
-
-  query PlatformSettings {
-    platformSettings {
-      ...PlatformSettingsFields
-    }
-  }

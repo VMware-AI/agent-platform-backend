@@ -1,3 +1,0 @@
-mutation DeleteGatewayConnectionEntry($id: ID!) {
-    deleteGatewayConnection(id: $id)
-  }

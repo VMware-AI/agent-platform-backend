@@ -37,3 +37,13 @@ models:
         type: github.com/google/uuid.UUID
       VirtualKeyID:
         type: "*github.com/google/uuid.UUID"
+  # GraphQL `ProviderModel` 自定义生成 model(internal/graph/model)。
+  # 因为 0.1.x 重设计后有 modelGateway 关联对象 + modelSpecs JSON 数组 + additionalProp1
+  # 等需要从 ent JSON 反序列化的字段,不能直接绑 ent 类型。toModelProviderModel(在
+  # provider-model.resolvers.go 内)负责 ent row → wire model 投影,包括 modelGateway
+  # 关联字段加载与 modelSpecs JSON 反序列化。
+  ProviderModelStatus:
+    model:
+      - github.com/VMware-AI/agent-platform-backend/ent/providermodel.Status
+      - github.com/VMware-AI/agent-platform-backend/ent/providermodel/providermodel.go
+  # ModelHealth / AdditionalProp1 是 GraphQL 端新增类型,默认在 internal/graph/model 自动生成。

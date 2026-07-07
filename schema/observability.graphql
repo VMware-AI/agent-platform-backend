@@ -113,7 +113,7 @@ input RequestMetricsFilter {
 extend type Query {
   requestLogs(filter: RequestLogFilter, page: PageInput): RequestLogConnection! @hasPermission(perm: "audit:view")
   requestMetrics(from: Time!, to: Time!, granularity: RequestMetricsBucketGranularity!, filter: RequestMetricsFilter): RequestMetrics! @hasPermission(perm: "audit:view")
-  # Upstream health across every configured gateway (fan-out to litellm /health).
+  # Provider-model health across every configured gateway (fan-out to litellm /health).
   gatewayHealth: [GatewayHealth!]! @hasPermission(perm: "audit:view")
 }
 

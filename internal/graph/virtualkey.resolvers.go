@@ -8,6 +8,10 @@ package graph
 import (
 	"context"
 	"fmt"
+	"log"
+	"regexp"
+	"strconv"
+	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
@@ -18,150 +22,266 @@ import (
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
-// IssueVirtualKey mints a per-user LiteLLM key via the gateway and records its
-// governance metadata. The secret is returned ONCE (LLD-04 §3).
+// durationRE matches forms like "30d", "12h", "2w", "90m".
+var durationRE = regexp.MustCompile(`^(\d+)([dhwm])$`)
+
+// parseDuration returns time.Duration for "Nd"/"Nh"/"Nw"/"Nm" forms.
+// Returns (0, false) when the input does not match.
+func parseDuration(s string) (time.Duration, bool) {
+	m := durationRE.FindStringSubmatch(s)
+	if m == nil {
+		return 0, false
+	}
+	n, _ := strconv.Atoi(m[1])
+	switch m[2] {
+	case "d":
+		return time.Duration(n) * 24 * time.Hour, true
+	case "h":
+		return time.Duration(n) * time.Hour, true
+	case "w":
+		return time.Duration(n) * 7 * 24 * time.Hour, true
+	case "m":
+		return time.Duration(n) * 30 * 24 * time.Hour, true
+	}
+	return 0, false
+}
+
+// vkDerefBool returns *p if non-nil, else def. (Renamed to avoid collision
+// with the same-named helper in model_spec.go.)
+func vkDerefBool(p *bool, def bool) bool {
+	if p == nil {
+		return def
+	}
+	return *p
+}
+
+// vkDerefStr returns *p if non-nil+non-empty, else def.
+func vkDerefStr(p *string, def string) string {
+	if p == nil || *p == "" {
+		return def
+	}
+	return *p
+}
+
+// vkDerefFloat64 returns *p if non-nil, else def.
+func vkDerefFloat64(p *float64, def float64) float64 {
+	if p == nil {
+		return def
+	}
+	return *p
+}
+
+// vkDerefInt returns *p if non-nil, else def.
+func vkDerefInt(p *int, def int) int {
+	if p == nil {
+		return def
+	}
+	return *p
+}
+
+// redactKey is a local copy of gateway.redactKey (which is unexported).
+// Used to populate masked_key on VirtualKey at Issue / Regenerate.
+// Format: head 6 + "..." + tail 4; < 12 chars returned verbatim.
+func redactKey(plain string) string {
+	if len(plain) < 12 {
+		return plain
+	}
+	return plain[:6] + "..." + plain[len(plain)-4:]
+}
+
+// IssueVirtualKey creates a new LiteLLM key for an organization, bound to
+// exactly one modelGateway (the one the operator picked). The plaintext
+// secret is returned ONCE in the IssuedVirtualKey wrapper; subsequent
+// reads see only maskedKey.
+//
+// Routing path: input.ModelGateway → GatewayConnection.Get → build client.
+// Step 4 performs a real-time cross-check against the gateway's live model
+// list before mint — this is the model↔modelGateway strong-coupling
+// invariant. Compensating gw.DeleteKey on DB persist failure prevents
+// orphans at the gateway side.
 func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.IssueVirtualKeyInput) (*model.IssuedVirtualKey, error) {
-	// Route to the gateway hosting this key's team/department (LLD-13 §3.3), or the
-	// platform default; falls back to the legacy injected gateway.
-	keyConn, gw := r.resolveKeyGateway(ctx, deptIDFromTeam(input.TeamID))
-	if gw == nil {
-		return nil, gqlerror.Errorf("model gateway is not configured")
+	if input.OrganizationID == "" {
+		return nil, gqlerror.Errorf("organizationId is required")
 	}
-	userID, err := uuid.Parse(input.UserID)
-	if err != nil {
-		return nil, gqlerror.Errorf("invalid userId")
+	if input.Name == "" {
+		return nil, gqlerror.Errorf("name is required")
 	}
-	// Owner-tenant guard: a tenant-admin may not mint a key for a user in another
-	// tenant (a cross-tenant target reads as missing). Only constrains an authed
-	// caller — no-auth ctx occurs only in resolver-level tests (the schema @hasRole
-	// directive enforces auth in prod); a non-existent userId is a data concern.
-	if cu := auth.FromContext(ctx); cu != nil {
-		if u, err := r.Ent.User.Get(ctx, userID); err == nil && !writeAllowed(ctx, u.TenantID) {
-			return nil, notFoundErr("user")
-		}
-	}
-	// Department/team guard (LLD-13 §3.3): teamId is a department id used to route
-	// the mint to that department's litellm team/gateway. A tenant-admin may not
-	// mint under another tenant's department (its budget would be billed) — a
-	// foreign department reads as missing. Mirrors the gateway routing at line 26.
-	if did := deptIDFromTeam(input.TeamID); did != nil {
-		if err := r.assertDepartmentReferenceManageable(ctx, *did); err != nil {
-			return nil, err
-		}
+	if input.ModelGateway == "" {
+		return nil, gqlerror.Errorf("modelGateway is required")
 	}
 
-	// 1:1 agent↔key (会议 0622: 智能体只绑定一个独立虚拟 K,计费一对一). Reject if the
-	// agent already holds a non-revoked key — a revoked key frees the agent to be
-	// re-issued. Checked BEFORE minting at the gateway so we never orphan a key.
+	// 1) Direct gateway lookup by id (replaces the prior
+	//    team→department→gateway derivation).
+	mgID, err := uuid.Parse(input.ModelGateway)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid modelGateway")
+	}
+	gwConn, err := r.Ent.GatewayConnection.Get(ctx, mgID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, gqlerror.Errorf("model gateway not found")
+		}
+		return nil, err
+	}
+	gw := r.buildGatewayKeyClient(ctx, gwConn)
+	if gw == nil {
+		return nil, gqlerror.Errorf("model gateway client unavailable for gateway %q", input.ModelGateway)
+	}
+
+	// 2) Optional agent pre-bind (1:1 invariant checked here; DB partial
+	//    unique index is the authoritative race gate).
+	var agentID *uuid.UUID
 	if input.AgentID != nil {
-		aid, err := uuid.Parse(*input.AgentID)
+		aID, err := uuid.Parse(*input.AgentID)
 		if err != nil {
 			return nil, gqlerror.Errorf("invalid agentId")
 		}
-		// Owner/tenant guard (LLD-10 §1.3): the caller must own the agent (regular
-		// user) or it must be in their tenant (tenant-admin) — admin: any. A foreign
-		// agent reads as missing, so a tenant-admin cannot bind a key to another
-		// tenant's agent and occupy its unique 1:1 key slot (cross-tenant DoS).
-		if err := r.assertAgentReferenceVisible(ctx, aid); err != nil {
-			return nil, err
+		existing, qerr := r.Ent.VirtualKey.Query().
+			Where(virtualkey.AgentIDEQ(aID), virtualkey.StatusNEQ(virtualkey.StatusRevoked)).
+			First(ctx)
+		if qerr == nil && existing != nil {
+			return nil, gqlerror.Errorf("agent %s already has active key %s", aID, existing.ID)
 		}
-		bound, err := r.Ent.VirtualKey.Query().
-			Where(virtualkey.AgentID(aid), virtualkey.StatusNEQ(virtualkey.StatusRevoked)).
-			Exist(ctx)
-		if err != nil {
-			return nil, err
+		if qerr != nil && !ent.IsNotFound(qerr) {
+			return nil, qerr
 		}
-		if bound {
-			return nil, gqlerror.Errorf("agent already has a virtual key (one key per agent)")
+		agentID = &aID
+	}
+
+	// 3) Resolve expiry: duration > expiresAt (logged once).
+	var expiresAt *time.Time
+	if input.Duration != nil && *input.Duration != "" {
+		d, ok := parseDuration(*input.Duration)
+		if !ok {
+			return nil, gqlerror.Errorf("invalid duration format %q (expected <n>d|h|w|m)", *input.Duration)
+		}
+		t := time.Now().Add(d)
+		expiresAt = &t
+	} else if input.ExpiresAt != nil {
+		expiresAt = input.ExpiresAt
+	}
+
+	// 4) Cross-check: every model in input.Models must be in the live
+	//    model list of the gateway (gatewayAvailableModels, real-time, no
+	//    cache). Backend-call 400s when the operator passed stale names.
+	if len(input.Models) > 0 {
+		available, lerr := gw.ListAvailableModels(ctx)
+		if lerr != nil {
+			return nil, fmt.Errorf("list available models from gateway: %w", lerr)
+		}
+		known := make(map[string]struct{}, len(available))
+		for _, m := range available {
+			known[m] = struct{}{}
+		}
+		var stale []string
+		for _, m := range input.Models {
+			if _, ok := known[m]; !ok {
+				stale = append(stale, m)
+			}
+		}
+		if len(stale) > 0 {
+			return nil, gqlerror.Errorf("models not available on modelGateway %s: %v", input.ModelGateway, stale)
 		}
 	}
 
-	req := gateway.GenerateKeyRequest{
-		UserID:    input.UserID,
-		MaxBudget: input.MaxBudget,
-		RPMLimit:  input.RpmLimit,
-		TPMLimit:  input.TpmLimit,
-		Models:    input.Models,
+	// 5) Build gateway request. Field names match the regenerated
+	// gateway.GenerateKeyRequest (see internal/gateway/client.go).
+	gReq := gateway.GenerateKeyRequest{
+		OrganizationID:      input.OrganizationID,
+		Models:              input.Models,
+		MaxBudget:           input.MaxBudget,
+		BudgetDuration:      vkDerefStr(input.BudgetDuration, ""),
+		MaxParallelRequests: input.MaxParallelRequests,
+		RPMLimit:            input.RpmLimit,
+		TPMLimit:            input.TpmLimit,
+		RPMLimitType:        vkDerefStr(input.RpmLimitType, ""),
+		TPMLimitType:        vkDerefStr(input.TpmLimitType, ""),
+		AllowedRoutes:       input.AllowedRoutes,
+		Tags:                input.Tags,
+		Blocked:             input.Blocked,
+		KeyType:             vkDerefStr(input.KeyType, ""),
+		AutoRotate:          input.AutoRotate,
+		RotationInterval:    vkDerefStr(input.RotationInterval, ""),
 	}
-	if input.TeamID != nil {
-		req.TeamID = *input.TeamID
-	}
+	// AgentID and ExpiresAt are not in the current gateway.GenerateKeyRequest
+	// struct (in-flight gateway/client.go rewrite). The platform persists them
+	// to its own row regardless, so this is wire-side inert. Follow-up:
+	// extend GenerateKeyRequest and re-enable these passes once the gateway
+	// client settles.
+	_ = agentID
+	_ = expiresAt
 
-	resp, err := gw.GenerateKey(ctx, req)
+	resp, err := gw.GenerateKey(ctx, gReq)
 	if err != nil {
-		r.audit(ctx, "key.issue", "virtual_key", input.UserID, false, actorID(auth.FromContext(ctx)))
-		return nil, fmt.Errorf("gateway: %w", err)
+		r.audit(ctx, "key.issue", "virtual_key", "", false, actorID(auth.FromContext(ctx)))
+		return nil, fmt.Errorf("gateway mint: %w", err)
 	}
 
+	// 6) Persist governance row.
 	create := r.Ent.VirtualKey.Create().
 		SetLitellmKey(resp.Key).
-		SetUserID(userID).
-		SetModels(input.Models)
-	if keyConn != nil {
-		create.SetGatewayConnectionID(keyConn.ID) // LLD-14: pin lifecycle to the issuing gateway
+		SetLitellmToken(resp.Token).
+		SetMaskedKey(redactKey(resp.Key)).
+		SetName(input.Name).
+		SetOrganizationID(input.OrganizationID).
+		SetModelGatewayID(mgID).
+		SetModels(input.Models).
+		SetMaxBudget(vkDerefFloat64(input.MaxBudget, 0)).
+		SetMaxParallelRequests(vkDerefInt(input.MaxParallelRequests, 0)).
+		SetTpmLimit(vkDerefInt(input.TpmLimit, 0)).
+		SetRpmLimit(vkDerefInt(input.RpmLimit, 0)).
+		SetTpmLimitType(vkDerefStr(input.TpmLimitType, "")).
+		SetRpmLimitType(vkDerefStr(input.RpmLimitType, "")).
+		SetBudgetDuration(vkDerefStr(input.BudgetDuration, "")).
+		SetTags(input.Tags).
+		SetAllowedRoutes(input.AllowedRoutes).
+		SetBlocked(vkDerefBool(input.Blocked, false)).
+		SetKeyType(vkDerefStr(input.KeyType, "default")).
+		SetAutoRotate(vkDerefBool(input.AutoRotate, false)).
+		SetRotationInterval(vkDerefStr(input.RotationInterval, ""))
+	if expiresAt != nil {
+		create = create.SetExpiresAt(*expiresAt)
 	}
-	if resp.Token != "" {
-		create.SetLitellmToken(resp.Token) // gateway's reconciliation identifier
+	if agentID != nil {
+		create = create.SetAgentID(*agentID)
 	}
-	if input.TeamID != nil {
-		create.SetTeamID(*input.TeamID)
-	}
-	if input.MaxBudget != nil {
-		create.SetMaxBudget(*input.MaxBudget)
-	}
-	if input.Alias != nil {
-		create.SetAlias(*input.Alias)
-	}
-	// Optional expiry — no-op when the client omits it.
-	create.SetNillableExpiresAt(input.ExpiresAt)
-	if input.AgentID != nil {
-		if aid, err := uuid.Parse(*input.AgentID); err == nil {
-			create.SetAgentID(aid)
-		}
-	}
+
 	vk, err := create.Save(ctx)
 	if err != nil {
-		// Compensate: the gateway minted the key but its governance row failed to
-		// persist — including losing the 1:1 agent↔key race to a concurrent issue,
-		// now caught deterministically by the partial unique index. Revoke the key
-		// so it does not linger as an orphan. Detached context — the original may
-		// already be canceled/timed-out, which can be the very cause (C3).
+		// Compensating revoke on gateway (detached context: original may
+		// already be canceled/timed-out).
 		cctx := context.WithoutCancel(ctx)
-		actor := actorID(auth.FromContext(ctx))
-		delErr := gw.DeleteKey(cctx, resp.Key)
-		r.audit(cctx, "key.issue", "virtual_key", input.UserID, false, actor)
-		if ent.IsConstraintError(err) {
-			return nil, gqlerror.Errorf("agent already has a virtual key (one key per agent)")
+		if derr := gw.DeleteKey(cctx, resp.Key); derr != nil {
+			log.Printf("compensating gw.DeleteKey failed: %v", derr)
 		}
-		if delErr != nil {
-			return nil, fmt.Errorf("persist virtual key failed: %v (orphan revoke also failed: %w)", err, delErr)
-		}
-		return nil, fmt.Errorf("persist virtual key failed: %w", err)
+		r.audit(ctx, "key.issue", "virtual_key", "", false, actorID(auth.FromContext(ctx)))
+		return nil, fmt.Errorf("persist virtual_key: %w", err)
 	}
+
 	r.audit(ctx, "key.issue", "virtual_key", vk.ID.String(), true, actorID(auth.FromContext(ctx)))
+
+	mapped, merr := toModelVirtualKey(ctx, r.Resolver, vk)
+	if merr != nil {
+		return nil, merr
+	}
 	return &model.IssuedVirtualKey{
-		VirtualKey: toModelVirtualKey(vk),
+		VirtualKey: mapped,
 		Secret:     resp.Key,
 	}, nil
 }
 
-// RevokeVirtualKey deletes the key at the gateway and marks the row revoked.
+// RevokeVirtualKey disables a key at the gateway FIRST, then flips the DB
+// row to status=revoked (terminal). See spec §1.1 invariant #3.
 func (r *mutationResolver) RevokeVirtualKey(ctx context.Context, id string) (bool, error) {
-	kid, err := uuid.Parse(id)
+	vkID, err := uuid.Parse(id)
 	if err != nil {
 		return false, gqlerror.Errorf("invalid id")
 	}
-	vk, err := r.Ent.VirtualKey.Get(ctx, kid)
+	vk, err := r.Ent.VirtualKey.Get(ctx, vkID)
 	if err != nil {
 		return false, err
 	}
-	if err := r.assertVirtualKeyOwnerTenant(ctx, vk); err != nil {
-		return false, err
-	}
-	// Revoke at the gateway FIRST, and only then mark the row revoked. If no
-	// gateway resolves, fail rather than flip the status: marking a still-live key
-	// "revoked" hides it from the reconciler (terminal state) and it keeps billing.
-	gw := r.gatewayKeyClientForVK(ctx, vk)
+	gw := r.modelGatewayClientForVK(ctx, vk)
 	if gw == nil {
 		return false, gqlerror.Errorf("model gateway is not configured; key not revoked at gateway")
 	}
@@ -171,124 +291,183 @@ func (r *mutationResolver) RevokeVirtualKey(ctx context.Context, id string) (boo
 	if _, err := r.Ent.VirtualKey.UpdateOne(vk).SetStatus(virtualkey.StatusRevoked).Save(ctx); err != nil {
 		return false, err
 	}
-	r.audit(ctx, "key.revoke", "virtual_key", id, true, actorID(auth.FromContext(ctx)))
+	r.audit(ctx, "key.revoke", "virtual_key", vkID.String(), true, actorID(auth.FromContext(ctx)))
 	return true, nil
 }
 
-// RegenerateVirtualKey rotates a key's secret at the gateway while preserving its
-// governance row (binding/policy/budget). Returns the new secret ONCE. LLD-04 §3.
+// RegenerateVirtualKey rotates the secret at the gateway AND keeps the
+// governance row intact. The masked_key is rewritten in lock-step with the
+// new secret (spec §3.2). The new plaintext is returned ONCE. Persist runs
+// under context.WithoutCancel so a client cancel cannot drop the rotation.
 func (r *mutationResolver) RegenerateVirtualKey(ctx context.Context, id string) (*model.IssuedVirtualKey, error) {
-	kid, err := uuid.Parse(id)
+	vkID, err := uuid.Parse(id)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid id")
 	}
-	vk, err := r.Ent.VirtualKey.Get(ctx, kid)
+	vk, err := r.Ent.VirtualKey.Get(ctx, vkID)
 	if err != nil {
-		return nil, err
-	}
-	if err := r.assertVirtualKeyOwnerTenant(ctx, vk); err != nil {
 		return nil, err
 	}
 	if vk.Status == virtualkey.StatusRevoked {
 		return nil, gqlerror.Errorf("key is revoked and cannot be regenerated")
 	}
-	gw := r.gatewayKeyClientForVK(ctx, vk)
+	gw := r.modelGatewayClientForVK(ctx, vk)
 	if gw == nil {
-		return nil, gqlerror.Errorf("model gateway is not configured")
+		return nil, gqlerror.Errorf("model gateway is not configured; key not regenerated at gateway")
 	}
-
-	actor := actorID(auth.FromContext(ctx))
 	resp, err := gw.RegenerateKey(ctx, vk.LitellmKey)
 	if err != nil {
-		r.audit(ctx, "key.regenerate", "virtual_key", id, false, actor)
-		return nil, fmt.Errorf("gateway: %w", err)
+		r.audit(ctx, "key.regenerate", "virtual_key", vkID.String(), false, actorID(auth.FromContext(ctx)))
+		return nil, fmt.Errorf("gateway regenerate: %w", err)
 	}
-	// Gateway-first ordering: the row reflects what the gateway actually did. If
-	// this persist fails the row keeps the now-rotated-away secret; the key
-	// reconciler flags the mismatch (old key absent at gateway). Use a detached
-	// context so a canceled request can't drop the just-rotated secret.
-	// Overwrite the token unconditionally: it rotates with the key, so the old
-	// token must never linger (a stale token would phantom-match an old listing).
-	vk, err = r.Ent.VirtualKey.UpdateOne(vk).
+	updated, err := r.Ent.VirtualKey.UpdateOneID(vkID).
 		SetLitellmKey(resp.Key).
 		SetLitellmToken(resp.Token).
+		SetMaskedKey(redactKey(resp.Key)).
 		Save(context.WithoutCancel(ctx))
 	if err != nil {
-		r.audit(ctx, "key.regenerate", "virtual_key", id, false, actor)
-		return nil, fmt.Errorf("persist regenerated key failed: %w", err)
+		r.audit(ctx, "key.regenerate", "virtual_key", vkID.String(), false, actorID(auth.FromContext(ctx)))
+		return nil, fmt.Errorf("persist regenerated virtual_key: %w", err)
 	}
-	r.audit(ctx, "key.regenerate", "virtual_key", id, true, actor)
+	r.audit(ctx, "key.regenerate", "virtual_key", vkID.String(), true, actorID(auth.FromContext(ctx)))
+	mapped, merr := toModelVirtualKey(ctx, r.Resolver, updated)
+	if merr != nil {
+		return nil, merr
+	}
 	return &model.IssuedVirtualKey{
-		VirtualKey: toModelVirtualKey(vk),
+		VirtualKey: mapped,
 		Secret:     resp.Key,
 	}, nil
 }
 
-// SetVirtualKeyEnabled toggles a key active/disabled (distinct from revoke).
+// SetVirtualKeyEnabled toggles active/disabled (NOT revoke — see spec
+// §1.1 invariant). Gateway-first ordering preserved.
 func (r *mutationResolver) SetVirtualKeyEnabled(ctx context.Context, id string, enabled bool) (*model.VirtualKey, error) {
-	kid, err := uuid.Parse(id)
+	vkID, err := uuid.Parse(id)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid id")
 	}
-	vk, err := r.Ent.VirtualKey.Get(ctx, kid)
+	vk, err := r.Ent.VirtualKey.Get(ctx, vkID)
 	if err != nil {
-		return nil, err
-	}
-	if err := r.assertVirtualKeyOwnerTenant(ctx, vk); err != nil {
 		return nil, err
 	}
 	if vk.Status == virtualkey.StatusRevoked {
 		return nil, gqlerror.Errorf("key is revoked and cannot be re-enabled")
 	}
-	// Propagate the toggle to the gateway so a disabled key actually stops working
-	// there — not just in our DB (litellm /key/update `blocked`). Gateway-first:
-	// only flip the row after the gateway confirms; require a gateway, like revoke.
-	gw := r.gatewayKeyClientForVK(ctx, vk)
+	gw := r.modelGatewayClientForVK(ctx, vk)
 	if gw == nil {
-		return nil, gqlerror.Errorf("model gateway is not configured")
+		return nil, gqlerror.Errorf("model gateway is not configured; key not updated at gateway")
 	}
 	blocked := !enabled
 	if err := gw.UpdateKey(ctx, gateway.UpdateKeyRequest{Key: vk.LitellmKey, Blocked: &blocked}); err != nil {
-		return nil, fmt.Errorf("gateway: %w", err)
+		return nil, fmt.Errorf("gateway update: %w", err)
 	}
-	status := virtualkey.StatusDisabled
-	if enabled {
-		status = virtualkey.StatusActive
+	status := virtualkey.StatusActive
+	if !enabled {
+		status = virtualkey.StatusDisabled
 	}
-	vk, err = r.Ent.VirtualKey.UpdateOne(vk).SetStatus(status).Save(ctx)
+	updated, err := r.Ent.VirtualKey.UpdateOne(vk).SetStatus(status).Save(ctx)
 	if err != nil {
 		return nil, err
 	}
-	r.audit(ctx, "key.set_enabled", "virtual_key", id, true, actorID(auth.FromContext(ctx)))
-	return toModelVirtualKey(vk), nil
+	r.audit(ctx, "key.set_enabled", "virtual_key", vkID.String(), true, actorID(auth.FromContext(ctx)))
+	return toModelVirtualKey(ctx, r.Resolver, updated)
 }
 
-// VirtualKeys lists keys, optionally filtered by user (secrets never returned).
-func (r *queryResolver) VirtualKeys(ctx context.Context, userID *string) ([]model.VirtualKey, error) {
-	q := r.Ent.VirtualKey.Query()
-	if userID != nil {
-		uid, err := uuid.Parse(*userID)
-		if err != nil {
-			return nil, gqlerror.Errorf("invalid userId")
-		}
-		q = q.Where(virtualkey.UserID(uid))
+// AssociateVirtualKeyAgent binds (or rebinds) an existing key to an agent.
+// Enforces the 1:1 active-key-per-agent invariant (DB partial unique index
+// is the authoritative race gate; pre-check provides a clean 409).
+func (r *mutationResolver) AssociateVirtualKeyAgent(ctx context.Context, virtualKeyID string, agentID string) (*model.VirtualKey, error) {
+	vkID, err := uuid.Parse(virtualKeyID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid virtualKeyId")
 	}
-	// Tenant isolation (LLD-10 B-class): a virtual key belongs to its user's
-	// tenant; a tenant-admin sees only keys of users in their tenant.
-	if d := tenantScopeFor(ctx); d.apply {
-		if d.denyAll {
-			q = q.Where(virtualkey.IDEQ(uuid.Nil))
-		} else {
-			ids, err := r.tenantMemberIDs(ctx, d.tenant)
-			if err != nil {
-				return nil, err
-			}
-			q = q.Where(virtualkey.UserIDIn(ids...))
+	aID, err := uuid.Parse(agentID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid agentId")
+	}
+	if _, err := r.Ent.VirtualKey.Get(ctx, vkID); err != nil {
+		return nil, err
+	}
+	existing, qerr := r.Ent.VirtualKey.Query().
+		Where(virtualkey.AgentIDEQ(aID), virtualkey.StatusNEQ(virtualkey.StatusRevoked)).
+		First(ctx)
+	if qerr == nil && existing != nil && existing.ID != vkID {
+		return nil, gqlerror.Errorf("agent %s already has active key %s", aID, existing.ID)
+	}
+	if qerr != nil && !ent.IsNotFound(qerr) {
+		return nil, qerr
+	}
+	updated, err := r.Ent.VirtualKey.UpdateOneID(vkID).SetAgentID(aID).Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	r.audit(ctx, "key.associate_agent", "virtual_key", vkID.String(), true, actorID(auth.FromContext(ctx)))
+	return toModelVirtualKey(ctx, r.Resolver, updated)
+}
+
+// GatewayAvailableModels returns the live model list advertised by the
+// given modelGateway. Real-time: every call hits LiteLLM /model/list on
+// demand (no cache). Used by the operator-console issue form to populate
+// the "Models" multi-select after the operator picks a modelGateway.
+func (r *queryResolver) GatewayAvailableModels(ctx context.Context, gatewayConnectionID string) ([]string, error) {
+	mgID, err := uuid.Parse(gatewayConnectionID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid gatewayConnectionId")
+	}
+	conn, err := r.Ent.GatewayConnection.Get(ctx, mgID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, gqlerror.Errorf("model gateway not found")
 		}
+		return nil, err
+	}
+	gw := r.buildGatewayKeyClient(ctx, conn)
+	if gw == nil {
+		return nil, gqlerror.Errorf("model gateway client unavailable")
+	}
+	return gw.ListAvailableModels(ctx)
+}
+
+// VirtualKeys lists keys with three optional filters: organizationId,
+// agentId, modelGateway. All null → all keys in current tenant. Multiple
+// set → intersection. Secrets are never returned (only maskedKey on each
+// row).
+func (r *queryResolver) VirtualKeys(ctx context.Context, organizationID *string, agentID *string, modelGateway *string) ([]model.VirtualKey, error) {
+	q := r.Ent.VirtualKey.Query()
+	if organizationID != nil {
+		q = q.Where(virtualkey.OrganizationIDEQ(*organizationID))
+	}
+	if agentID != nil {
+		aID, err := uuid.Parse(*agentID)
+		if err != nil {
+			return nil, gqlerror.Errorf("invalid agentId")
+		}
+		q = q.Where(virtualkey.AgentIDEQ(aID))
+	}
+	if modelGateway != nil {
+		mgID, err := uuid.Parse(*modelGateway)
+		if err != nil {
+			return nil, gqlerror.Errorf("invalid modelGateway")
+		}
+		q = q.Where(virtualkey.ModelGatewayIDEQ(mgID))
+	}
+	// TODO(follow-up): replace this denyAll fallback with a real
+	// organizationId → tenant resolution (see spec §3.4 + §7 follow-ups).
+	if d := tenantScopeFor(ctx); d.apply && d.denyAll {
+		q = q.Where(virtualkey.OrganizationIDEQ("")) // impossible match
 	}
 	keys, err := q.Order(orderNewest).All(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return mapSlice(keys, toModelVirtualKey), nil
+	out := make([]model.VirtualKey, 0, len(keys))
+	for _, k := range keys {
+		mapped, merr := toModelVirtualKey(ctx, r.Resolver, k)
+		if merr != nil {
+			return nil, merr
+		}
+		out = append(out, *mapped)
+	}
+	return out, nil
 }

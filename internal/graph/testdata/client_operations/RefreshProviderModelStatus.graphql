@@ -1,0 +1,5 @@
+mutation RefreshProviderModelStatus($id: ID!) {
+  refreshProviderModelStatus(id: $id) {
+    ...ProviderModelFields
+  }
+}

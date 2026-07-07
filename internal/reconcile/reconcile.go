@@ -48,15 +48,11 @@ type GatewayTarget struct {
 
 // Reconciler compares gateway keys/teams against governance rows.
 type Reconciler struct {
-	Ent     *ent.Client
-	Gateway Gateway
-	// GatewaysFunc, when set, resolves EVERY gateway to reconcile this cycle, each
-	// paired with the rows it owns (LLD-14 §3.4 / OQ-5). It replaces the old
-	// single-gateway resolver: instead of scanning one default gateway against all
-	// rows, the reconciler scans each gateway against only its own keys/teams. A
-	// nil/empty result skips the cycle. When set, it takes precedence over the
-	// legacy r.Gateway path (which remains for the single-gateway / injected-fake
-	// case).
+	Ent *ent.Client
+	// GatewaysFunc resolves EVERY gateway to reconcile this cycle, each
+	// paired with the rows it owns (LLD-14 §3.4 / OQ-5). The reconciler
+	// scans each gateway against only its own keys/teams. A nil/empty
+	// result skips the cycle.
 	GatewaysFunc func(context.Context) ([]GatewayTarget, error)
 	// Prune enables healing: delete gateway orphans + revoke stale DB rows. When
 	// false (default) the reconciler only reports.
@@ -80,17 +76,16 @@ type Report struct {
 	Revoked        int      // stale rows marked revoked (Prune only)
 }
 
-// ReconcileKeys runs one pass over ALL governance rows against r.Gateway. It is
-// the single-gateway/legacy entry point (also used by tests); the multi-gateway
-// path (runCycle + GatewaysFunc) calls reconcileKeysFor per gateway with a
-// pre-scoped row subset instead. Returns an error only when it cannot read both
-// sides; per-item heal failures are logged and counted, not fatal.
-func (r *Reconciler) ReconcileKeys(ctx context.Context) (*Report, error) {
+// ReconcileKeys runs one pass over ALL governance rows against the given
+// gateway. Used by the per-gateway path (runCycle) for a pre-scoped row
+// subset. Returns an error only when it cannot read both sides; per-item
+// heal failures are logged and counted, not fatal.
+func (r *Reconciler) ReconcileKeys(ctx context.Context, gw Gateway) (*Report, error) {
 	rows, err := r.Ent.VirtualKey.Query().All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list governance rows: %w", err)
 	}
-	return r.reconcileKeysFor(ctx, r.Gateway, rows)
+	return r.reconcileKeysFor(ctx, gw, rows)
 }
 
 // reconcileKeysFor diffs ONE gateway's listed keys against the GIVEN governance
@@ -157,15 +152,14 @@ type TeamReport struct {
 	Pruned        int      // orphan teams deleted at the gateway (Prune only)
 }
 
-// ReconcileTeams compares r.Gateway's teams against ALL department rows. Mirrors
-// ReconcileKeys: the single-gateway/legacy entry point; the multi-gateway path
-// calls reconcileTeamsFor per gateway with a pre-scoped department subset.
-func (r *Reconciler) ReconcileTeams(ctx context.Context) (*TeamReport, error) {
+// ReconcileTeams compares the given gateway's teams against ALL department
+// rows. Mirrors ReconcileKeys' per-item count/log behavior.
+func (r *Reconciler) ReconcileTeams(ctx context.Context, gw Gateway) (*TeamReport, error) {
 	depts, err := r.Ent.Department.Query().All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list departments: %w", err)
 	}
-	return r.reconcileTeamsFor(ctx, r.Gateway, depts)
+	return r.reconcileTeamsFor(ctx, gw, depts)
 }
 
 // reconcileTeamsFor diffs ONE gateway's teams against the GIVEN department subset
@@ -329,17 +323,5 @@ func (r *Reconciler) runCycle(ctx context.Context) {
 				log.Printf("reconcile teams cycle error: %v", err)
 			}
 		}
-		return
-	}
-	// Legacy single-gateway path: an injected r.Gateway reconciled against all rows
-	// (tests / a not-yet-migrated install with no GatewayConnection rows).
-	if r.Gateway == nil {
-		return
-	}
-	if _, err := r.ReconcileKeys(ctx); err != nil {
-		log.Printf("reconcile keys cycle error: %v", err)
-	}
-	if _, err := r.ReconcileTeams(ctx); err != nil {
-		log.Printf("reconcile teams cycle error: %v", err)
 	}
 }

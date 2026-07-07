@@ -482,12 +482,16 @@ func (c *HTTPClient) postOnce(ctx context.Context, path string, body, out any) (
 	c.breaker.record(nil)
 	if out != nil {
 		if err := json.Unmarshal(data, out); err != nil {
+			slog.WarnContext(ctx, "gateway decode error",
+				"base_url", c.baseURL, "path", path, "method", http.MethodPost, "err", err)
 			return false, &Error{
 				Method: http.MethodPost, Path: path,
 				Cause: fmt.Errorf("%w: %v", ErrMalformedResponse, err),
 			}
 		}
 	}
+	slog.InfoContext(ctx, "gateway request ok",
+		"base_url", c.baseURL, "method", http.MethodPost, "path", path, "status", resp.StatusCode)
 	return false, nil
 }
 

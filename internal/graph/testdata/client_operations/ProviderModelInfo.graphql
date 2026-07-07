@@ -1,0 +1,11 @@
+query ProviderModelInfo($filter: ProviderModelInfoFilterInput, $page: PageInput!, $sort: ProviderModelInfoSort) {
+  providerModelInfo(filter: $filter, page: $page, sort: $sort) {
+    data {
+      ...ProviderModelFields
+    }
+    total_count
+    current_page
+    total_pages
+    size
+  }
+}

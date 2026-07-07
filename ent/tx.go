@@ -46,6 +46,8 @@ type Tx struct {
 	Permission *PermissionClient
 	// PlatformSecret is the client for interacting with the PlatformSecret builders.
 	PlatformSecret *PlatformSecretClient
+	// ProviderModel is the client for interacting with the ProviderModel builders.
+	ProviderModel *ProviderModelClient
 	// RequestLog is the client for interacting with the RequestLog builders.
 	RequestLog *RequestLogClient
 	// ResourcePool is the client for interacting with the ResourcePool builders.
@@ -54,18 +56,12 @@ type Tx struct {
 	Role *RoleClient
 	// RotationCommand is the client for interacting with the RotationCommand builders.
 	RotationCommand *RotationCommandClient
-	// RouterTier is the client for interacting with the RouterTier builders.
-	RouterTier *RouterTierClient
-	// Setting is the client for interacting with the Setting builders.
-	Setting *SettingClient
 	// Skill is the client for interacting with the Skill builders.
 	Skill *SkillClient
 	// Tenant is the client for interacting with the Tenant builders.
 	Tenant *TenantClient
 	// TokenUsage is the client for interacting with the TokenUsage builders.
 	TokenUsage *TokenUsageClient
-	// Upstream is the client for interacting with the Upstream builders.
-	Upstream *UpstreamClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 	// VirtualKey is the client for interacting with the VirtualKey builders.
@@ -218,16 +214,14 @@ func (tx *Tx) init() {
 	tx.OvaTemplateVersion = NewOvaTemplateVersionClient(tx.config)
 	tx.Permission = NewPermissionClient(tx.config)
 	tx.PlatformSecret = NewPlatformSecretClient(tx.config)
+	tx.ProviderModel = NewProviderModelClient(tx.config)
 	tx.RequestLog = NewRequestLogClient(tx.config)
 	tx.ResourcePool = NewResourcePoolClient(tx.config)
 	tx.Role = NewRoleClient(tx.config)
 	tx.RotationCommand = NewRotationCommandClient(tx.config)
-	tx.RouterTier = NewRouterTierClient(tx.config)
-	tx.Setting = NewSettingClient(tx.config)
 	tx.Skill = NewSkillClient(tx.config)
 	tx.Tenant = NewTenantClient(tx.config)
 	tx.TokenUsage = NewTokenUsageClient(tx.config)
-	tx.Upstream = NewUpstreamClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 	tx.VirtualKey = NewVirtualKeyClient(tx.config)
 }
