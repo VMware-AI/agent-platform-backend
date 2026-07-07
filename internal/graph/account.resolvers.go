@@ -110,10 +110,6 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, id string, input mode
 }
 
 // DeleteUser removes a user and revokes its sessions.
-//
-// Virtual keys are NOT cascade-revoked on user delete — keys belong to the
-// organization, not the user (per-agent-per-org refactor, 2026-07). The
-// administrator must explicitly revoke them. See plan / spec §4.
 func (r *mutationResolver) DeleteUser(ctx context.Context, id string) (*model.DeleteUserPayload, error) {
 	uid, err := uuid.Parse(id)
 	if err != nil {
@@ -122,6 +118,12 @@ func (r *mutationResolver) DeleteUser(ctx context.Context, id string) (*model.De
 	if err := r.assertUserInCallerTenant(ctx, uid); err != nil {
 		return nil, err
 	}
+	// Revoke the user's live virtual keys BEFORE deleting the row — virtual_keys has
+	// no FK cascade on user_id, so deleting the user would otherwise leave its
+	// litellm keys live at the gateway (ungoverned, billable, and undetectable by
+	// reconcile once the row is gone). Best-effort: a gateway failure is logged +
+	// audited as an orphan but does not block the delete.
+	r.revokeUserKeys(ctx, uid)
 	if err := r.Ent.User.DeleteOneID(uid).Exec(ctx); err != nil {
 		if ent.IsNotFound(err) {
 			return nil, notFoundErr("user")

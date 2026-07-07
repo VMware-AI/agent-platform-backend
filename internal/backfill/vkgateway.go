@@ -7,10 +7,12 @@ package backfill
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
+	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 )
 
 // VKGatewayResult summarizes one VKGateway pass for the operator (counts only —
@@ -46,27 +48,28 @@ type VKGatewayResult struct {
 // rows) so the job's exit code surfaces partial failure; the DB is left in a valid
 // partial state that a re-run completes.
 func VKGateway(ctx context.Context, client *ent.Client) (VKGatewayResult, error) {
-	// Live gateways: every existing connection id. A key/department is only
-	// ever filled with a gateway that STILL exists, so a dangling
-	// department binding (a dept whose gateway was deleted — there is no
-	// FK between them) falls through to "no gateway" instead of persisting
-	// a stale id. This keeps the invariant "a persisted gateway_connection_id
-	// points at a live gateway at write time" and matches the T3
-	// reconciler's connForDept. With the platform-default retirement, the
-	// only fallback for an unbound department is "skip" (no other gateway
-	// to route to).
+	// Live gateways: every existing connection id, plus the platform default. A
+	// key/department is only ever filled with a gateway that STILL exists, so a
+	// dangling department binding (a dept whose gateway was deleted — there is no
+	// FK between them) falls through to the default instead of persisting a stale
+	// id. This keeps the invariant "a persisted gateway_connection_id points at a
+	// live gateway at write time" and matches the T3 reconciler's connForDept.
 	conns, err := client.GatewayConnection.Query().All(ctx)
 	if err != nil {
 		return VKGatewayResult{}, fmt.Errorf("load gateways: %w", err)
 	}
 	live := make(map[uuid.UUID]struct{}, len(conns))
+	var defaultID *uuid.UUID
 	for _, c := range conns {
 		live[c.ID] = struct{}{}
+		if c.IsDefault {
+			id := c.ID
+			defaultID = &id
+		}
 	}
 
-	// department id → its CURRENT gateway binding, kept only when that
-	// gateway is still live (a dangling binding is dropped → the key stays
-	// NULL).
+	// department id → its CURRENT gateway binding, kept only when that gateway is
+	// still live (a dangling binding is dropped → the key routes to default).
 	depts, err := client.Department.Query().All(ctx)
 	if err != nil {
 		return VKGatewayResult{}, fmt.Errorf("load departments: %w", err)
@@ -81,22 +84,48 @@ func VKGateway(ctx context.Context, client *ent.Client) (VKGatewayResult, error)
 		}
 	}
 
-	// Per-agent-per-org refactor (2026-07): no legacy rows need backfill
-	// (gateway_connection_id column dropped, model_gateway_id now required
-	// at issue time). Kept the entry point + result type so callers'
-	// command-line wiring stays intact; return zero counts.
-	_ = client
-	_ = deptGateway
-	return VKGatewayResult{}, nil
+	rows, err := client.VirtualKey.Query().
+		Where(
+			virtualkey.GatewayConnectionIDIsNil(),
+			virtualkey.StatusNEQ(virtualkey.StatusRevoked),
+		).
+		All(ctx)
+	if err != nil {
+		return VKGatewayResult{}, fmt.Errorf("load legacy keys: %w", err)
+	}
+
+	res := VKGatewayResult{Scanned: len(rows)}
+	for _, vk := range rows {
+		connID := deriveGateway(vk.TeamID, deptGateway, defaultID)
+		if connID == nil {
+			res.SkippedNoGateway++
+			continue
+		}
+		if _, err := client.VirtualKey.UpdateOneID(vk.ID).
+			SetGatewayConnectionID(*connID).
+			Save(ctx); err != nil {
+			// Log and continue — one bad row must not strand the rest; a re-run
+			// retries it. (vk.ID is a row id, not the secret, so it is safe to log.)
+			log.Printf("backfill: key %s update failed: %v", vk.ID, err)
+			res.Failed++
+			continue
+		}
+		res.Filled++
+	}
+	if res.Failed > 0 {
+		return res, fmt.Errorf("backfill: %d/%d key updates failed", res.Failed, res.Scanned)
+	}
+	return res, nil
 }
 
-// deriveGateway maps a key's team_id (= its department id) to the gateway
-// that should own it: the department's CURRENT live binding. nil when
-// the team_id is absent, not a uuid, or the department is unbound (no
-// platform default — the key stays NULL until a binding is configured).
-// deptGateway holds only live bindings (see caller), so this mirrors
-// the resolver's deptIDFromTeam → resolveDeptGateway selection.
-func deriveGateway(teamID string, deptGateway map[uuid.UUID]uuid.UUID) *uuid.UUID {
+// deriveGateway maps a key's team_id (= its department id) to the gateway that
+// should own it: the department's CURRENT live binding, else the platform default.
+// nil when neither resolves (team_id absent / not a uuid / department unbound or
+// bound to a deleted gateway, AND no default gateway). deptGateway holds only
+// live bindings (see caller), so this mirrors the resolver's deptIDFromTeam →
+// resolveDeptGateway selection with dangling bindings routed to default (LLD-14
+// §3.3), as the T3 reconciler does.
+func deriveGateway(teamID string, deptGateway map[uuid.UUID]uuid.UUID, defaultID *uuid.UUID) *uuid.UUID {
 	if teamID != "" {
 		if deptID, err := uuid.Parse(teamID); err == nil {
 			if gw, ok := deptGateway[deptID]; ok {
@@ -104,5 +133,5 @@ func deriveGateway(teamID string, deptGateway map[uuid.UUID]uuid.UUID) *uuid.UUI
 			}
 		}
 	}
-	return nil
+	return defaultID
 }
