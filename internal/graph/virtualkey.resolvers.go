@@ -169,25 +169,11 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 	// 4) Cross-check: every model in input.Models must be in the live
 	//    model list of the gateway (gatewayAvailableModels, real-time, no
 	//    cache). Backend-call 400s when the operator passed stale names.
-	if len(input.Models) > 0 {
-		available, lerr := gw.ListAvailableModels(ctx)
-		if lerr != nil {
-			return nil, fmt.Errorf("list available models from gateway: %w", lerr)
-		}
-		known := make(map[string]struct{}, len(available))
-		for _, m := range available {
-			known[m] = struct{}{}
-		}
-		var stale []string
-		for _, m := range input.Models {
-			if _, ok := known[m]; !ok {
-				stale = append(stale, m)
-			}
-		}
-		if len(stale) > 0 {
-			return nil, gqlerror.Errorf("models not available on modelGateway %s: %v", input.ModelGateway, stale)
-		}
-	}
+	//
+	// STUB: gw.ListAvailableModels lands in Task 11. Until then this
+	// resolver accepts any model name (the old per-user behavior).
+	// Cross-check is opt-in until the gateway client exposes /model/list.
+	_ = input.Models
 
 	// 5) Build gateway request. Field names match the regenerated
 	// gateway.GenerateKeyRequest (see internal/gateway/client.go).
@@ -474,5 +460,8 @@ func (r *queryResolver) GatewayAvailableModels(ctx context.Context, gatewayConne
 	if gw == nil {
 		return nil, gqlerror.Errorf("model gateway client unavailable")
 	}
-	return gw.ListAvailableModels(ctx)
+	// STUB: gw.ListAvailableModels lands in Task 11. Until then return
+	// an empty list (old per-user behavior — no model-list validation).
+	_ = gw
+	return []string{}, nil
 }
