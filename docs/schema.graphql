@@ -31,14 +31,6 @@ input AddOvaTemplateVersionInput {
 type AddOvaTemplateVersionPayload {
 	version: OvaTemplateVersion!
 }
-input AddProviderModelSpecInput {
-	providerModelId: ID!
-	spec: ModelSpecInput!
-}
-type AdditionalProp1 {
-	status: ModelHealth!
-	message: String
-}
 type Agent {
 	id: ID!
 	name: String!
@@ -246,15 +238,11 @@ input CreateDepartmentInput {
 }
 input CreateModelRouteInput {
 	name: String!
-	backendGatewayId: ID!
+	backendGatewayId: ID
 	gatewayName: String
 	supportedModels: [String!]
-	strategy: LoadBalancingStrategy
 	uiStrategy: ModelRouteStrategy
 	enabled: Boolean
-	fallbacks: [String!]
-	contextWindowFallbacks: [String!]
-	contentPolicyFallbacks: [String!]
 }
 input CreateOvaTemplateFamilyInput {
 	name: String!
@@ -274,11 +262,6 @@ input CreateOvaTemplateVersionInput {
 	version: String!
 	ovaIdentifier: String!
 	notes: String
-}
-input CreateProviderModelInput {
-	name: String!
-	modelGateway: ID!
-	modelSpecs: [ModelSpecInput!]!
 }
 input CreateResourcePoolInput {
 	name: String!
@@ -415,6 +398,16 @@ type EndpointHealth {
 	model: String!
 	apiBase: String
 }
+type GatewayConnection {
+	id: ID!
+	name: String!
+	endpoint: String!
+	publicUrl: String
+	isDefault: Boolean!
+	status: GatewayStatus!
+	loadBalanceStrategy: LoadBalancingStrategy!
+	createdAt: Time!
+}
 type GatewayHealth {
 	gatewayId: ID!
 	gatewayName: String!
@@ -431,6 +424,11 @@ type GatewaySpendStatus {
 	ok: Boolean!
 	error: String
 }
+enum GatewayStatus {
+	connected
+	disconnected
+	error
+}
 type Image {
 	id: ID!
 	repository: String!
@@ -445,80 +443,19 @@ enum InstallMethod {
 	unset
 }
 input IssueVirtualKeyInput {
-	organizationId: String!
-	name: String!
-	modelGateway: ID!
+	userId: ID!
 	agentId: ID
-	duration: String
-	expiresAt: Time
+	teamId: String
 	models: [String!]
 	maxBudget: Float
-	budgetDuration: String
-	maxParallelRequests: Int
 	rpmLimit: Int
 	tpmLimit: Int
-	rpmLimitType: String
-	tpmLimitType: String
-	allowedRoutes: [String!]
-	tags: [String!]
-	blocked: Boolean
-	keyType: String
-	autoRotate: Boolean
-	rotationInterval: String
+	alias: String
+	expiresAt: Time
 }
 type IssuedVirtualKey {
 	virtualKey: VirtualKey!
 	secret: String!
-}
-enum LimitType {
-	guaranteed_throughput
-	best_effort
-}
-type LitellmParams {
-	apiKey: String
-	apiKeyRef: String
-	apiBase: String
-	model: String!
-	customLlmProvider: String
-	organization: String
-	tpm: Int
-	rpm: Int
-	defaultApiKeyTpmLimit: Int
-	defaultApiKeyRpmLimit: Int
-	maxBudget: Float
-	budgetDuration: String
-	useInPassThrough: Boolean!
-	useLitellmProxy: Boolean!
-	useChatCompletionsApi: Boolean!
-	mergeReasoningContentInChoices: Boolean!
-	tags: [String!]!
-	inputCostPerToken: Float
-	outputCostPerToken: Float
-	cacheReadInputTokenCost: Float
-	cacheCreationInputTokenCost: Float
-}
-input LitellmParamsInput {
-	apiKey: String
-	apiKeyRef: String
-	apiBase: String
-	model: String!
-	customLlmProvider: String
-	organization: String
-	tpm: Int
-	rpm: Int
-	defaultApiKeyTpmLimit: Int
-	defaultApiKeyRpmLimit: Int
-	maxBudget: Float
-	budgetDuration: String
-	useInPassThrough: Boolean
-	useLitellmProxy: Boolean
-	useChatCompletionsApi: Boolean
-	mergeReasoningContentInChoices: Boolean
-	tags: [String!]
-	inputCostPerToken: Float
-	outputCostPerToken: Float
-	cacheReadInputTokenCost: Float
-	cacheCreationInputTokenCost: Float
 }
 enum LoadBalancingStrategy {
 	SIMPLE_SHUFFLE
@@ -634,27 +571,11 @@ type ModelGatewayTestResult {
 	message: String!
 	testedAt: Time!
 }
-enum ModelHealth {
-	healthy
-	unhealthy
-	unknown
-}
-type ModelInfo {
-	id: ID!
-	mode: String
-	blocked: Boolean!
-	additionalProp1: AdditionalProp1!
-}
-input ModelInfoInput {
-	id: ID
-	mode: String
-	blocked: Boolean = false
-}
 type ModelRoute {
 	id: ID!
 	name: String!
 	modelAlias: String!
-	backendGatewayId: ID!
+	backendGatewayId: ID
 	gatewayName: String!
 	upstreams: [String!]!
 	supportedModels: [String!]!
@@ -663,22 +584,11 @@ type ModelRoute {
 	enabled: Boolean!
 	createdAt: Time!
 	updatedAt: Time!
-	fallbacks: [String!]!
-	contextWindowFallbacks: [String!]!
-	contentPolicyFallbacks: [String!]!
 }
 enum ModelRouteStrategy {
 	ROUND_ROBIN
 	WEIGHTED_ROUND_ROBIN
 	RANDOM
-}
-type ModelSpec {
-	litellmParams: LitellmParams!
-	modelInfo: ModelInfo!
-}
-input ModelSpecInput {
-	litellmParams: LitellmParamsInput!
-	modelInfo: ModelInfoInput
 }
 type ModelUsage {
 	model: String!
@@ -728,11 +638,17 @@ type Mutation {
 	revertAgentSnapshot(input: RevertAgentSnapshotInput!): Boolean!
 	requestRotation(agentId: ID!, kind: RotationKind!): Boolean!
 	revokeAgentEnrollment(agentId: ID!): Boolean!
+	registerGatewayConnection(input: RegisterGatewayConnectionInput!): GatewayConnection! @hasRole(any: [admin])
+	testGatewayConnection(id: ID!): GatewayStatus! @hasRole(any: [admin])
+	deleteGatewayConnection(id: ID!): Boolean! @hasRole(any: [admin])
+	upsertUpstream(input: UpsertUpstreamInput!): Upstream! @hasRole(any: [admin])
+	deleteUpstream(id: ID!): Boolean! @hasRole(any: [admin])
+	upsertModelRoute(input: UpsertModelRouteInput!): ModelRoute! @hasRole(any: [admin])
 	createModelRoute(input: CreateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
 	updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
 	setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute! @hasRole(any: [admin])
 	deleteModelRoute(id: ID!): Boolean! @hasRole(any: [admin])
-	syncRouterSettings: Boolean! @hasRole(any: [admin])
+	setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier! @hasRole(any: [admin])
 	recordTokenUsage(input: RecordTokenUsageInput!): TokenUsage! @hasRole(any: [admin])
 	createModelGateway(input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
 	updateModelGateway(id: ID!, input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
@@ -742,15 +658,6 @@ type Mutation {
 	recordRequestLog(input: RecordRequestLogInput!): RequestLog! @hasRole(any: [admin])
 	createOvaTemplateFamily(input: CreateOvaTemplateFamilyInput!): CreateOvaTemplateFamilyPayload! @hasRole(any: [admin])
 	addOvaTemplateVersion(input: AddOvaTemplateVersionInput!): AddOvaTemplateVersionPayload! @hasRole(any: [admin])
-	createProviderModel(input: CreateProviderModelInput!): ProviderModel! @hasRole(any: [admin])
-	deleteProviderModel(id: ID!): Boolean! @hasRole(any: [admin])
-	addProviderModelSpec(input: AddProviderModelSpecInput!): ProviderModel! @hasRole(any: [admin])
-	updateProviderModelSpec(input: UpdateProviderModelSpecInput!): ProviderModel! @hasRole(any: [admin])
-	updateProviderModel(input: UpdateProviderModelInput!): ProviderModel! @hasRole(any: [admin])
-	deleteProviderModelSpec(input: ProviderModelSpecIdInput!): ProviderModel! @hasRole(any: [admin])
-	blockProviderModelSpec(input: ProviderModelSpecBlockInput!): ProviderModel! @hasRole(any: [admin])
-	testProviderConnection(name: String!): ProviderModelStatus! @hasRole(any: [admin])
-	refreshProviderModelStatus(id: ID!): ProviderModel! @hasRole(any: [admin])
 	createCustomRole(input: CreateCustomRoleInput!): CustomRole! @hasRole(any: [admin])
 	deleteCustomRole(id: ID!): Boolean! @hasRole(any: [admin])
 	upsertPermission(key: String!, description: String): Permission! @hasRole(any: [admin])
@@ -762,11 +669,11 @@ type Mutation {
 	deleteResourcePool(id: ID!): DeleteResourcePoolPayload! @hasRole(any: [admin])
 	testResourcePoolConnection(input: TestResourcePoolConnectionInput!): ResourcePoolConnectionTest! @hasRole(any: [admin])
 	syncResourcePool(id: ID!): SyncResourcePoolPayload! @hasRole(any: [admin])
+	updatePlatformSettings(input: UpdatePlatformSettingsInput!): PlatformSettings! @hasRole(any: [admin])
 	issueVirtualKey(input: IssueVirtualKeyInput!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
 	revokeVirtualKey(id: ID!): Boolean! @hasPermission(perm: "key:manage")
 	regenerateVirtualKey(id: ID!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
 	setVirtualKeyEnabled(id: ID!, enabled: Boolean!): VirtualKey! @hasPermission(perm: "key:manage")
-	associateVirtualKeyAgent(virtualKeyId: ID!, agentId: ID!): VirtualKey! @hasPermission(perm: "key:manage")
 }
 enum OvaTemplateColor {
 	BLUE
@@ -849,56 +756,8 @@ type PlacementRef {
 	name: String!
 	path: String
 }
-type ProviderModel {
-	id: ID!
-	name: String!
-	modelGateway: ModelGateway!
-	status: ProviderModelStatus!
-	createdAt: Time!
-	updatedAt: Time!
-	lastCheckedAt: Time
-	modelSpecs: [ModelSpec!]!
-}
-type ProviderModelInfoConnection {
-	data: [ProviderModel!]!
-	total_count: Int!
-	current_page: Int!
-	total_pages: Int!
-	size: Int!
-}
-input ProviderModelInfoFilterInput {
-	search: String
-	status: ProviderModelStatus
-}
-input ProviderModelInfoSort {
-	field: ProviderModelInfoSortField!
-	direction: SortDirection!
-}
-enum ProviderModelInfoSortField {
-	NAME
-	STATUS
-}
-enum ProviderModelProvider {
-	custom
-	deepseek
-	minimax
-	moonshot
-	openrouter
-	openai
-	anthropic
-}
-input ProviderModelSpecBlockInput {
-	specId: ID!
-	blocked: Boolean!
-}
-input ProviderModelSpecIdInput {
-	specId: ID!
-}
-enum ProviderModelStatus {
-	full_healthy
-	partial_outage
-	full_outage
-	unknown
+type PlatformSettings {
+	agentUser: String!
 }
 type Query {
 	me: User!
@@ -922,13 +781,15 @@ type Query {
 	vsphereResourcePools(resourcePoolId: ID!): [VsphereResourcePool!]! @hasRole(any: [admin])
 	vsphereNetworks(resourcePoolId: ID!): [VsphereNetwork!]! @hasRole(any: [admin])
 	agentSnapshots(agentId: ID!): [AgentSnapshot!]!
+	gatewayConnections: [GatewayConnection!]! @hasRole(any: [admin])
+	upstreams: [Upstream!]! @hasRole(any: [admin])
 	modelRoutes: [ModelRoute!]! @hasRole(any: [admin])
+	routerTiers: [RouterTier!]! @hasRole(any: [admin])
 	tokenUsage(userId: ID, page: PageInput): [TokenUsage!]! @hasPermission(perm: "metering:view")
 	meteringSummary(userId: ID): MeteringSummary! @hasPermission(perm: "metering:view")
 	meteringOverview(range: MeteringTimeRange = LAST_7_DAYS, userId: ID): MeteringOverview! @hasPermission(perm: "metering:view")
 	modelGateways(filter: ModelGatewayFilterInput, page: PageInput!, sort: ModelGatewaySort): ModelGatewayConnection! @hasRole(any: [admin])
 	modelGatewaySyncSummary: ModelGatewaySyncSummary! @hasRole(any: [admin])
-	modelGatewayById(id: ID!): ModelGateway! @hasRole(any: [admin])
 	spendReport(input: SpendReportInput!): SpendReport! @hasPermission(perm: "metering:view")
 	budgets(scope: BudgetScope!): [Budget!]! @hasPermission(perm: "metering:view")
 	requestLogs(filter: RequestLogFilter, page: PageInput): RequestLogConnection! @hasPermission(perm: "audit:view")
@@ -936,7 +797,6 @@ type Query {
 	gatewayHealth: [GatewayHealth!]! @hasPermission(perm: "audit:view")
 	ovaTemplateFamilies(filter: OvaTemplateFamilyFilter, pagination: Pagination, sort: OvaTemplateFamilySort): OvaTemplateFamilyConnection! @hasRole(any: [admin])
 	ovaTemplateVersions(familyId: ID, pagination: Pagination): OvaTemplateVersionConnection! @hasRole(any: [admin])
-	providerModelInfo(filter: ProviderModelInfoFilterInput, page: PageInput!, sort: ProviderModelInfoSort): ProviderModelInfoConnection! @hasRole(any: [admin])
 	customRoles: [CustomRole!]! @hasRole(any: [admin])
 	permissions: [Permission!]! @hasRole(any: [admin])
 	userRoles(userId: ID!): [CustomRole!]! @hasRole(any: [admin])
@@ -944,8 +804,8 @@ type Query {
 	resourcePool(id: ID!): ResourcePool @hasRole(any: [admin])
 	contentLibraries(resourcePoolId: ID!): [String!]! @hasRole(any: [admin])
 	contentLibraryItems(resourcePoolId: ID!, libraryName: String!): [ContentLibraryItem!]! @hasRole(any: [admin])
-	gatewayAvailableModels(gatewayConnectionId: ID!): [String!]! @hasRole(any: [admin,read_only])
-	virtualKeys(organizationId: ID, agentId: ID, modelGateway: ID): [VirtualKey!]! @hasRole(any: [admin,read_only])
+	platformSettings: PlatformSettings! @hasRole(any: [admin])
+	virtualKeys(userId: ID): [VirtualKey!]! @hasRole(any: [admin,read_only])
 }
 input RecordRequestLogInput {
 	requestId: String!
@@ -969,6 +829,15 @@ input RecordTokenUsageInput {
 input RecycleAgentInput {
 	agentId: ID!
 	confirm: Boolean!
+}
+input RegisterGatewayConnectionInput {
+	name: String!
+	endpoint: String!
+	masterKey: String
+	masterKeyRef: String
+	loadBalanceStrategy: LoadBalancingStrategy
+	publicUrl: String
+	isDefault: Boolean
 }
 type RequestLog {
 	id: ID!
@@ -1119,11 +988,16 @@ enum RotationKind {
 	rotate_ui_password
 	rotate_os_password
 }
-enum RoutePermission {
-	CHAT
-	EMBEDDINGS
-	IMAGES
-	AUDIO
+type RouterTier {
+	id: ID!
+	tier: RouterTierLevel!
+	modelAlias: String!
+}
+enum RouterTierLevel {
+	SIMPLE
+	MEDIUM
+	COMPLEX
+	REASONING
 }
 type Skill {
 	id: ID!
@@ -1223,18 +1097,9 @@ input UpdateModelRouteInput {
 	supportedModels: [String!]
 	uiStrategy: ModelRouteStrategy
 	enabled: Boolean
-	fallbacks: [String!]
-	contextWindowFallbacks: [String!]
-	contentPolicyFallbacks: [String!]
 }
-input UpdateProviderModelInput {
-	providerModelId: ID!
-	modelSpecs: [ModelSpecInput!]!
-}
-input UpdateProviderModelSpecInput {
-	specId: ID!
-	litellmParams: LitellmParamsInput!
-	modelInfo: ModelInfoInput!
+input UpdatePlatformSettingsInput {
+	agentUser: String
 }
 input UpdateResourcePoolInput {
 	name: String
@@ -1280,11 +1145,44 @@ input UpsertImageInput {
 	digest: String
 	signed: Boolean
 }
+input UpsertModelRouteInput {
+	name: String!
+	modelAlias: String!
+	backendGatewayId: ID
+	upstreams: [String!]
+	strategy: LoadBalancingStrategy
+	enabled: Boolean
+}
 input UpsertSkillInput {
 	name: String!
 	version: String!
 	description: String
 	uri: String!
+}
+input UpsertUpstreamInput {
+	name: String!
+	provider: UpstreamProvider!
+	apiBase: String
+	apiKey: String
+	apiKeyRef: String
+	model: String!
+	enabled: Boolean
+}
+type Upstream {
+	id: ID!
+	name: String!
+	provider: UpstreamProvider!
+	apiBase: String
+	model: String!
+	enabled: Boolean!
+	createdAt: Time!
+}
+enum UpstreamProvider {
+	vllm
+	openai
+	anthropic
+	minimax
+	codex
 }
 type User {
 	id: ID!
@@ -1330,32 +1228,15 @@ type VMTemplate {
 }
 type VirtualKey {
 	id: ID!
-	name: String!
-	maskedKey: String!
-	organizationId: String!
-	modelGateway: ModelGateway!
+	alias: String
+	userId: ID!
 	agentId: ID
+	teamId: String
 	models: [String!]!
 	maxBudget: Float
 	status: VirtualKeyStatus!
 	expiresAt: Time
-	duration: String
 	createdAt: Time!
-	updatedAt: Time!
-	maxParallelRequests: Int
-	tpmLimit: Int
-	rpmLimit: Int
-	rpmLimitType: String
-	tpmLimitType: String
-	budgetDuration: String
-	allowedRoutes: [String!]!
-	tags: [String!]!
-	blocked: Boolean!
-	keyType: String!
-	autoRotate: Boolean!
-	rotationInterval: String
-	spend: Float!
-	lastActiveAt: Time
 }
 enum VirtualKeyStatus {
 	active

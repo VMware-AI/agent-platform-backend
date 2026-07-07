@@ -38,7 +38,7 @@ requestMetrics(from: Time!, to: Time!, granularity: RequestMetricsBucketGranular
 
 ### `gatewayHealth`
 
-Provider-model health across every configured gateway (fan-out to litellm /health).
+Upstream health across every configured gateway (fan-out to litellm /health).
 
 ```graphql
 gatewayHealth: [GatewayHealth!]!
