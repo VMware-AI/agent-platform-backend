@@ -510,6 +510,7 @@ type ComplexityRoot struct {
 		RegisterGatewayConnection     func(childComplexity int, input model.RegisterGatewayConnectionInput) int
 		RemoveMembership              func(childComplexity int, userID string, departmentID string) int
 		RemoveUserRole                func(childComplexity int, userID string, roleID string) int
+		RequestAgentUpgrade           func(childComplexity int, agentID string, targetVersion string) int
 		RequestRotation               func(childComplexity int, agentID string, kind model.RotationKind) int
 		ResetUserPassword             func(childComplexity int, id string) int
 		RevertAgentSnapshot           func(childComplexity int, input model.RevertAgentSnapshotInput) int
@@ -536,6 +537,7 @@ type ComplexityRoot struct {
 		UpdatePlatformSettings        func(childComplexity int, input model.UpdatePlatformSettingsInput) int
 		UpdateResourcePool            func(childComplexity int, id string, input model.UpdateResourcePoolInput) int
 		UpdateUser                    func(childComplexity int, id string, input model.UpdateUserInput) int
+		UpgradeAgents                 func(childComplexity int, agentIds []string, targetVersion string) int
 		UpsertAgentTemplate           func(childComplexity int, input model.UpsertAgentTemplateInput) int
 		UpsertArtifact                func(childComplexity int, input model.UpsertArtifactInput) int
 		UpsertImage                   func(childComplexity int, input model.UpsertImageInput) int
@@ -945,6 +947,8 @@ type MutationResolver interface {
 	SnapshotAgent(ctx context.Context, input model.SnapshotAgentInput) (*model.AgentSnapshot, error)
 	RevertAgentSnapshot(ctx context.Context, input model.RevertAgentSnapshotInput) (bool, error)
 	RequestRotation(ctx context.Context, agentID string, kind model.RotationKind) (bool, error)
+	RequestAgentUpgrade(ctx context.Context, agentID string, targetVersion string) (bool, error)
+	UpgradeAgents(ctx context.Context, agentIds []string, targetVersion string) (int, error)
 	RevokeAgentEnrollment(ctx context.Context, agentID string) (bool, error)
 	RegisterGatewayConnection(ctx context.Context, input model.RegisterGatewayConnectionInput) (*model.GatewayConnection, error)
 	TestGatewayConnection(ctx context.Context, id string) (model.GatewayStatus, error)
@@ -3124,6 +3128,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.RemoveUserRole(childComplexity, args["userId"].(string), args["roleId"].(string)), true
+	case "Mutation.requestAgentUpgrade":
+		if e.ComplexityRoot.Mutation.RequestAgentUpgrade == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_requestAgentUpgrade_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.RequestAgentUpgrade(childComplexity, args["agentId"].(string), args["targetVersion"].(string)), true
 	case "Mutation.requestRotation":
 		if e.ComplexityRoot.Mutation.RequestRotation == nil {
 			break
@@ -3410,6 +3425,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.UpdateUser(childComplexity, args["id"].(string), args["input"].(model.UpdateUserInput)), true
+	case "Mutation.upgradeAgents":
+		if e.ComplexityRoot.Mutation.UpgradeAgents == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_upgradeAgents_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.UpgradeAgents(childComplexity, args["agentIds"].([]string), args["targetVersion"].(string)), true
 	case "Mutation.upsertAgentTemplate":
 		if e.ComplexityRoot.Mutation.UpsertAgentTemplate == nil {
 			break
@@ -5942,6 +5968,16 @@ extend type Mutation {
   # the agent-manager daemon executes it on its next heartbeat. No-op (true) if
   # a rotation of that kind is already in flight.
   requestRotation(agentId: ID!, kind: RotationKind!): Boolean!
+
+  # Owner or admin. Enqueue an agent upgrade to targetVersion (LLD-16 §4, platform
+  # pull upgrade); the daemon pulls + installs it on its next heartbeat. No-op (true)
+  # if an upgrade is already in flight. The command carries only the version — the
+  # package source stays the daemon's fixed trusted mirror.
+  requestAgentUpgrade(agentId: ID!, targetVersion: String!): Boolean!
+
+  # Admin fleet op: enqueue the same upgrade across many agents. Returns the number
+  # of upgrade commands actually enqueued (skips agents that already have one).
+  upgradeAgents(agentIds: [ID!]!, targetVersion: String!): Int!
 
   # Owner or admin. Revoke the agent VM's bearer credential — its next heartbeat
   # is rejected (LLD-08 §4.4). Idempotent.
@@ -9317,6 +9353,28 @@ func (ec *executionContext) field_Mutation_removeUserRole_args(ctx context.Conte
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_requestAgentUpgrade_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "agentId",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["agentId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "targetVersion",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNString2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["targetVersion"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_requestRotation_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -9782,6 +9840,28 @@ func (ec *executionContext) field_Mutation_updateUser_args(ctx context.Context, 
 		return nil, err
 	}
 	args["input"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_upgradeAgents_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "agentIds",
+		func(ctx context.Context, v any) ([]string, error) {
+			return ec.unmarshalNID2ᚕstringᚄ(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["agentIds"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "targetVersion",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNString2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["targetVersion"] = arg1
 	return args, nil
 }
 
@@ -18800,6 +18880,94 @@ func (ec *executionContext) fieldContext_Mutation_requestRotation(ctx context.Co
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_requestRotation_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_requestAgentUpgrade(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_requestAgentUpgrade(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().RequestAgentUpgrade(ctx, fc.Args["agentId"].(string), fc.Args["targetVersion"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_requestAgentUpgrade(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_requestAgentUpgrade_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_upgradeAgents(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_upgradeAgents(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().UpgradeAgents(ctx, fc.Args["agentIds"].([]string), fc.Args["targetVersion"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_upgradeAgents(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_upgradeAgents_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -35776,6 +35944,20 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "requestRotation":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_requestRotation(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "requestAgentUpgrade":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_requestAgentUpgrade(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "upgradeAgents":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_upgradeAgents(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

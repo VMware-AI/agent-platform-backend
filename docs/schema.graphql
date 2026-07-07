@@ -639,6 +639,8 @@ type Mutation {
 	snapshotAgent(input: SnapshotAgentInput!): AgentSnapshot!
 	revertAgentSnapshot(input: RevertAgentSnapshotInput!): Boolean!
 	requestRotation(agentId: ID!, kind: RotationKind!): Boolean!
+	requestAgentUpgrade(agentId: ID!, targetVersion: String!): Boolean!
+	upgradeAgents(agentIds: [ID!]!, targetVersion: String!): Int!
 	revokeAgentEnrollment(agentId: ID!): Boolean!
 	registerGatewayConnection(input: RegisterGatewayConnectionInput!): GatewayConnection! @hasRole(any: [admin])
 	testGatewayConnection(id: ID!): GatewayStatus! @hasRole(any: [admin])

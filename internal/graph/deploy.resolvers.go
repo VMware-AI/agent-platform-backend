@@ -364,6 +364,63 @@ func (r *mutationResolver) RequestRotation(ctx context.Context, agentID string, 
 	return true, nil
 }
 
+// RequestAgentUpgrade enqueues an agent upgrade to targetVersion (LLD-16 §4, platform
+// pull upgrade). Owner/admin; no-op (true) if an upgrade is already in flight. The
+// command carries only the version — the daemon fetches from its fixed trusted mirror.
+func (r *mutationResolver) RequestAgentUpgrade(ctx context.Context, agentID string, targetVersion string) (bool, error) {
+	cu := auth.FromContext(ctx)
+	if cu == nil {
+		return false, gqlerror.Errorf("unauthenticated")
+	}
+	if r.AgentMgr == nil {
+		return false, gqlerror.Errorf("agent-manager is not configured")
+	}
+	aid, err := uuid.Parse(agentID)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid agentId")
+	}
+	if _, err := r.getOwnedAgent(ctx, aid, cu); err != nil {
+		return false, err
+	}
+	if _, err := r.AgentMgr.RequestUpgrade(ctx, aid, targetVersion, cu.ID); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// UpgradeAgents enqueues the same upgrade across many agents (admin fleet op,
+// LLD-16 §4). Per-agent owner/admin check; returns the number of upgrade commands
+// actually enqueued (an agent that already has one in flight is a silent skip).
+// Stops and surfaces the first hard error (bad id / unauthorized / invalid version),
+// returning the count enqueued so far.
+func (r *mutationResolver) UpgradeAgents(ctx context.Context, agentIds []string, targetVersion string) (int, error) {
+	cu := auth.FromContext(ctx)
+	if cu == nil {
+		return 0, gqlerror.Errorf("unauthenticated")
+	}
+	if r.AgentMgr == nil {
+		return 0, gqlerror.Errorf("agent-manager is not configured")
+	}
+	enqueued := 0
+	for _, idStr := range agentIds {
+		aid, err := uuid.Parse(idStr)
+		if err != nil {
+			return enqueued, gqlerror.Errorf("invalid agentId %q", idStr)
+		}
+		if _, err := r.getOwnedAgent(ctx, aid, cu); err != nil {
+			return enqueued, err
+		}
+		cmd, err := r.AgentMgr.RequestUpgrade(ctx, aid, targetVersion, cu.ID)
+		if err != nil {
+			return enqueued, err
+		}
+		if cmd != nil { // nil = raced an in-flight upgrade (skip, not an error)
+			enqueued++
+		}
+	}
+	return enqueued, nil
+}
+
 // RevokeAgentEnrollment revokes the agent VM's bearer credential (LLD-08 §4.4).
 // Owner/admin; idempotent.
 func (r *mutationResolver) RevokeAgentEnrollment(ctx context.Context, agentID string) (bool, error) {
