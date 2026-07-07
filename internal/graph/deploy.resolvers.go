@@ -12,6 +12,7 @@ import (
 	"os"
 
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
+	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
 	"github.com/VMware-AI/agent-platform-backend/ent/rotationcommand"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
@@ -105,6 +106,13 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	// within our tracking, and rollback can clean up on a real error.
 	provCtx, cancelProv := context.WithTimeout(context.WithoutCancel(ctx), deployProvisionTimeout)
 	defer cancelProv()
+	// First-boot install target from the catalog (LLD-16 §3; OQ-3: catalog version is
+	// the default). "" when no catalog entry / no pinned version → the daemon skips
+	// first-boot auto-install (assumes the OVA/operator pre-installed the agent).
+	agentVersion := ""
+	if tpl, terr := r.Ent.AgentTemplate.Query().Where(agenttemplate.Kind(ag.AgentType)).Only(ctx); terr == nil {
+		agentVersion = tpl.Version
+	}
 	res, err := svc.Provision(provCtx, deploy.Request{
 		AgentName: ag.Name,
 		UserID:    ag.OwnerUserID.String(),
@@ -133,6 +141,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		// (agent.service, /opt/agent) until the catalog grows a per-kind source.
 		InitialPassword:   derefString(input.InitialPassword),
 		AgentPkgName:      ag.AgentType,
+		AgentVersion:      agentVersion,
 		AgentPkgBaseURL:   r.AgentPkgBaseURL,
 		AgentKeepVersions: r.AgentKeepVersions,
 	})
