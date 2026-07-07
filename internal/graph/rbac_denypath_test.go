@@ -115,17 +115,8 @@ func TestDenyPath_PermissionGatedOps(t *testing.T) {
 		},
 		{
 			// key:manage → admin, tenant-admin (rbac.go)
-			ops:  []string{"issueVirtualKey", "upsertRateLimitPolicy(key:manage variant)"},
+			ops:  []string{"issueVirtualKey"},
 			perm: auth.PermKeyManage,
-			grants: map[auth.Role]bool{
-				auth.RoleAdmin: true,
-			},
-		},
-		{
-			// route:manage → admin, tenant-admin (rbac.go). This is the directive the
-			// rate-limit-policy mutations actually carry in schema (route.manage).
-			ops:  []string{"upsertRateLimitPolicy", "setRateLimitPolicyEnabled", "deleteRateLimitPolicy"},
-			perm: auth.PermRouteManage,
 			grants: map[auth.Role]bool{
 				auth.RoleAdmin: true,
 			},

@@ -79,12 +79,6 @@ func (_u *ModelRouteUpdate) SetNillableGatewayConnectionID(v *uuid.UUID) *ModelR
 	return _u
 }
 
-// ClearGatewayConnectionID clears the value of the "gateway_connection_id" field.
-func (_u *ModelRouteUpdate) ClearGatewayConnectionID() *ModelRouteUpdate {
-	_u.mutation.ClearGatewayConnectionID()
-	return _u
-}
-
 // SetGatewayName sets the "gateway_name" field.
 func (_u *ModelRouteUpdate) SetGatewayName(v string) *ModelRouteUpdate {
 	_u.mutation.SetGatewayName(v)
@@ -162,6 +156,60 @@ func (_u *ModelRouteUpdate) SetNillableEnabled(v *bool) *ModelRouteUpdate {
 	if v != nil {
 		_u.SetEnabled(*v)
 	}
+	return _u
+}
+
+// SetFallbacks sets the "fallbacks" field.
+func (_u *ModelRouteUpdate) SetFallbacks(v []string) *ModelRouteUpdate {
+	_u.mutation.SetFallbacks(v)
+	return _u
+}
+
+// AppendFallbacks appends value to the "fallbacks" field.
+func (_u *ModelRouteUpdate) AppendFallbacks(v []string) *ModelRouteUpdate {
+	_u.mutation.AppendFallbacks(v)
+	return _u
+}
+
+// ClearFallbacks clears the value of the "fallbacks" field.
+func (_u *ModelRouteUpdate) ClearFallbacks() *ModelRouteUpdate {
+	_u.mutation.ClearFallbacks()
+	return _u
+}
+
+// SetContextWindowFallbacks sets the "context_window_fallbacks" field.
+func (_u *ModelRouteUpdate) SetContextWindowFallbacks(v []string) *ModelRouteUpdate {
+	_u.mutation.SetContextWindowFallbacks(v)
+	return _u
+}
+
+// AppendContextWindowFallbacks appends value to the "context_window_fallbacks" field.
+func (_u *ModelRouteUpdate) AppendContextWindowFallbacks(v []string) *ModelRouteUpdate {
+	_u.mutation.AppendContextWindowFallbacks(v)
+	return _u
+}
+
+// ClearContextWindowFallbacks clears the value of the "context_window_fallbacks" field.
+func (_u *ModelRouteUpdate) ClearContextWindowFallbacks() *ModelRouteUpdate {
+	_u.mutation.ClearContextWindowFallbacks()
+	return _u
+}
+
+// SetContentPolicyFallbacks sets the "content_policy_fallbacks" field.
+func (_u *ModelRouteUpdate) SetContentPolicyFallbacks(v []string) *ModelRouteUpdate {
+	_u.mutation.SetContentPolicyFallbacks(v)
+	return _u
+}
+
+// AppendContentPolicyFallbacks appends value to the "content_policy_fallbacks" field.
+func (_u *ModelRouteUpdate) AppendContentPolicyFallbacks(v []string) *ModelRouteUpdate {
+	_u.mutation.AppendContentPolicyFallbacks(v)
+	return _u
+}
+
+// ClearContentPolicyFallbacks clears the value of the "content_policy_fallbacks" field.
+func (_u *ModelRouteUpdate) ClearContentPolicyFallbacks() *ModelRouteUpdate {
+	_u.mutation.ClearContentPolicyFallbacks()
 	return _u
 }
 
@@ -261,9 +309,6 @@ func (_u *ModelRouteUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.GatewayConnectionID(); ok {
 		_spec.SetField(modelroute.FieldGatewayConnectionID, field.TypeUUID, value)
 	}
-	if _u.mutation.GatewayConnectionIDCleared() {
-		_spec.ClearField(modelroute.FieldGatewayConnectionID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.GatewayName(); ok {
 		_spec.SetField(modelroute.FieldGatewayName, field.TypeString, value)
 	}
@@ -289,6 +334,39 @@ func (_u *ModelRouteUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(modelroute.FieldEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.Fallbacks(); ok {
+		_spec.SetField(modelroute.FieldFallbacks, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedFallbacks(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, modelroute.FieldFallbacks, value)
+		})
+	}
+	if _u.mutation.FallbacksCleared() {
+		_spec.ClearField(modelroute.FieldFallbacks, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.ContextWindowFallbacks(); ok {
+		_spec.SetField(modelroute.FieldContextWindowFallbacks, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedContextWindowFallbacks(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, modelroute.FieldContextWindowFallbacks, value)
+		})
+	}
+	if _u.mutation.ContextWindowFallbacksCleared() {
+		_spec.ClearField(modelroute.FieldContextWindowFallbacks, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.ContentPolicyFallbacks(); ok {
+		_spec.SetField(modelroute.FieldContentPolicyFallbacks, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedContentPolicyFallbacks(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, modelroute.FieldContentPolicyFallbacks, value)
+		})
+	}
+	if _u.mutation.ContentPolicyFallbacksCleared() {
+		_spec.ClearField(modelroute.FieldContentPolicyFallbacks, field.TypeJSON)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
@@ -357,12 +435,6 @@ func (_u *ModelRouteUpdateOne) SetNillableGatewayConnectionID(v *uuid.UUID) *Mod
 	if v != nil {
 		_u.SetGatewayConnectionID(*v)
 	}
-	return _u
-}
-
-// ClearGatewayConnectionID clears the value of the "gateway_connection_id" field.
-func (_u *ModelRouteUpdateOne) ClearGatewayConnectionID() *ModelRouteUpdateOne {
-	_u.mutation.ClearGatewayConnectionID()
 	return _u
 }
 
@@ -443,6 +515,60 @@ func (_u *ModelRouteUpdateOne) SetNillableEnabled(v *bool) *ModelRouteUpdateOne 
 	if v != nil {
 		_u.SetEnabled(*v)
 	}
+	return _u
+}
+
+// SetFallbacks sets the "fallbacks" field.
+func (_u *ModelRouteUpdateOne) SetFallbacks(v []string) *ModelRouteUpdateOne {
+	_u.mutation.SetFallbacks(v)
+	return _u
+}
+
+// AppendFallbacks appends value to the "fallbacks" field.
+func (_u *ModelRouteUpdateOne) AppendFallbacks(v []string) *ModelRouteUpdateOne {
+	_u.mutation.AppendFallbacks(v)
+	return _u
+}
+
+// ClearFallbacks clears the value of the "fallbacks" field.
+func (_u *ModelRouteUpdateOne) ClearFallbacks() *ModelRouteUpdateOne {
+	_u.mutation.ClearFallbacks()
+	return _u
+}
+
+// SetContextWindowFallbacks sets the "context_window_fallbacks" field.
+func (_u *ModelRouteUpdateOne) SetContextWindowFallbacks(v []string) *ModelRouteUpdateOne {
+	_u.mutation.SetContextWindowFallbacks(v)
+	return _u
+}
+
+// AppendContextWindowFallbacks appends value to the "context_window_fallbacks" field.
+func (_u *ModelRouteUpdateOne) AppendContextWindowFallbacks(v []string) *ModelRouteUpdateOne {
+	_u.mutation.AppendContextWindowFallbacks(v)
+	return _u
+}
+
+// ClearContextWindowFallbacks clears the value of the "context_window_fallbacks" field.
+func (_u *ModelRouteUpdateOne) ClearContextWindowFallbacks() *ModelRouteUpdateOne {
+	_u.mutation.ClearContextWindowFallbacks()
+	return _u
+}
+
+// SetContentPolicyFallbacks sets the "content_policy_fallbacks" field.
+func (_u *ModelRouteUpdateOne) SetContentPolicyFallbacks(v []string) *ModelRouteUpdateOne {
+	_u.mutation.SetContentPolicyFallbacks(v)
+	return _u
+}
+
+// AppendContentPolicyFallbacks appends value to the "content_policy_fallbacks" field.
+func (_u *ModelRouteUpdateOne) AppendContentPolicyFallbacks(v []string) *ModelRouteUpdateOne {
+	_u.mutation.AppendContentPolicyFallbacks(v)
+	return _u
+}
+
+// ClearContentPolicyFallbacks clears the value of the "content_policy_fallbacks" field.
+func (_u *ModelRouteUpdateOne) ClearContentPolicyFallbacks() *ModelRouteUpdateOne {
+	_u.mutation.ClearContentPolicyFallbacks()
 	return _u
 }
 
@@ -572,9 +698,6 @@ func (_u *ModelRouteUpdateOne) sqlSave(ctx context.Context) (_node *ModelRoute, 
 	if value, ok := _u.mutation.GatewayConnectionID(); ok {
 		_spec.SetField(modelroute.FieldGatewayConnectionID, field.TypeUUID, value)
 	}
-	if _u.mutation.GatewayConnectionIDCleared() {
-		_spec.ClearField(modelroute.FieldGatewayConnectionID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.GatewayName(); ok {
 		_spec.SetField(modelroute.FieldGatewayName, field.TypeString, value)
 	}
@@ -600,6 +723,39 @@ func (_u *ModelRouteUpdateOne) sqlSave(ctx context.Context) (_node *ModelRoute, 
 	}
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(modelroute.FieldEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.Fallbacks(); ok {
+		_spec.SetField(modelroute.FieldFallbacks, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedFallbacks(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, modelroute.FieldFallbacks, value)
+		})
+	}
+	if _u.mutation.FallbacksCleared() {
+		_spec.ClearField(modelroute.FieldFallbacks, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.ContextWindowFallbacks(); ok {
+		_spec.SetField(modelroute.FieldContextWindowFallbacks, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedContextWindowFallbacks(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, modelroute.FieldContextWindowFallbacks, value)
+		})
+	}
+	if _u.mutation.ContextWindowFallbacksCleared() {
+		_spec.ClearField(modelroute.FieldContextWindowFallbacks, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.ContentPolicyFallbacks(); ok {
+		_spec.SetField(modelroute.FieldContentPolicyFallbacks, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedContentPolicyFallbacks(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, modelroute.FieldContentPolicyFallbacks, value)
+		})
+	}
+	if _u.mutation.ContentPolicyFallbacksCleared() {
+		_spec.ClearField(modelroute.FieldContentPolicyFallbacks, field.TypeJSON)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &ModelRoute{config: _u.config}

@@ -25,6 +25,8 @@ const (
 	FieldPassword = "password"
 	// FieldAPIKey holds the string denoting the api_key field in the database.
 	FieldAPIKey = "api_key"
+	// FieldKeyID holds the string denoting the key_id field in the database.
+	FieldKeyID = "key_id"
 	// Table holds the table name of the platformsecret in the database.
 	Table = "platform_secrets"
 )
@@ -38,6 +40,7 @@ var Columns = []string{
 	FieldUsername,
 	FieldPassword,
 	FieldAPIKey,
+	FieldKeyID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -65,6 +68,8 @@ var (
 	DefaultPassword string
 	// DefaultAPIKey holds the default value on creation for the "api_key" field.
 	DefaultAPIKey string
+	// DefaultKeyID holds the default value on creation for the "key_id" field.
+	DefaultKeyID string
 )
 
 // OrderOption defines the ordering options for the PlatformSecret queries.
@@ -103,4 +108,9 @@ func ByPassword(opts ...sql.OrderTermOption) OrderOption {
 // ByAPIKey orders the results by the api_key field.
 func ByAPIKey(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAPIKey, opts...).ToFunc()
+}
+
+// ByKeyID orders the results by the key_id field.
+func ByKeyID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKeyID, opts...).ToFunc()
 }

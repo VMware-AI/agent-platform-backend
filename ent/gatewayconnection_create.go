@@ -75,34 +75,6 @@ func (_c *GatewayConnectionCreate) SetNillableMasterKeyRef(v *string) *GatewayCo
 	return _c
 }
 
-// SetPublicURL sets the "public_url" field.
-func (_c *GatewayConnectionCreate) SetPublicURL(v string) *GatewayConnectionCreate {
-	_c.mutation.SetPublicURL(v)
-	return _c
-}
-
-// SetNillablePublicURL sets the "public_url" field if the given value is not nil.
-func (_c *GatewayConnectionCreate) SetNillablePublicURL(v *string) *GatewayConnectionCreate {
-	if v != nil {
-		_c.SetPublicURL(*v)
-	}
-	return _c
-}
-
-// SetIsDefault sets the "is_default" field.
-func (_c *GatewayConnectionCreate) SetIsDefault(v bool) *GatewayConnectionCreate {
-	_c.mutation.SetIsDefault(v)
-	return _c
-}
-
-// SetNillableIsDefault sets the "is_default" field if the given value is not nil.
-func (_c *GatewayConnectionCreate) SetNillableIsDefault(v *bool) *GatewayConnectionCreate {
-	if v != nil {
-		_c.SetIsDefault(*v)
-	}
-	return _c
-}
-
 // SetLastSyncedAt sets the "last_synced_at" field.
 func (_c *GatewayConnectionCreate) SetLastSyncedAt(v time.Time) *GatewayConnectionCreate {
 	_c.mutation.SetLastSyncedAt(v)
@@ -216,10 +188,6 @@ func (_c *GatewayConnectionCreate) defaults() {
 		v := gatewayconnection.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := _c.mutation.IsDefault(); !ok {
-		v := gatewayconnection.DefaultIsDefault
-		_c.mutation.SetIsDefault(v)
-	}
 	if _, ok := _c.mutation.Status(); !ok {
 		v := gatewayconnection.DefaultStatus
 		_c.mutation.SetStatus(v)
@@ -257,9 +225,6 @@ func (_c *GatewayConnectionCreate) check() error {
 		if err := gatewayconnection.EndpointValidator(v); err != nil {
 			return &ValidationError{Name: "endpoint", err: fmt.Errorf(`ent: validator failed for field "GatewayConnection.endpoint": %w`, err)}
 		}
-	}
-	if _, ok := _c.mutation.IsDefault(); !ok {
-		return &ValidationError{Name: "is_default", err: errors.New(`ent: missing required field "GatewayConnection.is_default"`)}
 	}
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "GatewayConnection.status"`)}
@@ -331,14 +296,6 @@ func (_c *GatewayConnectionCreate) createSpec() (*GatewayConnection, *sqlgraph.C
 	if value, ok := _c.mutation.MasterKeyRef(); ok {
 		_spec.SetField(gatewayconnection.FieldMasterKeyRef, field.TypeString, value)
 		_node.MasterKeyRef = value
-	}
-	if value, ok := _c.mutation.PublicURL(); ok {
-		_spec.SetField(gatewayconnection.FieldPublicURL, field.TypeString, value)
-		_node.PublicURL = value
-	}
-	if value, ok := _c.mutation.IsDefault(); ok {
-		_spec.SetField(gatewayconnection.FieldIsDefault, field.TypeBool, value)
-		_node.IsDefault = value
 	}
 	if value, ok := _c.mutation.LastSyncedAt(); ok {
 		_spec.SetField(gatewayconnection.FieldLastSyncedAt, field.TypeTime, value)

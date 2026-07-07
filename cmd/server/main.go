@@ -22,7 +22,6 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/catalog"
 	"github.com/VMware-AI/agent-platform-backend/internal/config"
-	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph"
 	"github.com/VMware-AI/agent-platform-backend/internal/httpx"
 	"github.com/VMware-AI/agent-platform-backend/internal/leader"
@@ -104,23 +103,41 @@ func main() {
 
 	// Single secrets backend for ALL environments (no dev/prod split): credentials
 	// are stored in the platform_secrets table, encrypted at rest under one
-	// symmetric key (SECRETS_ENCRYPTION_KEY). This persists across restarts (the old
-	// dev path used an in-memory store that lost secrets on restart) and gives one
-	// code path. The key is required — fail fast rather than start a server that
-	// cannot read or write any credential.
-	sec, err := secrets.NewDBStore(client, cfg.SecretsEncryptionKey)
+	// symmetric key (SECRETS_ENCRYPTION_KEY) — or under SECRETS_ENCRYPTION_KEYS in
+	// rotation mode (a comma-separated "id:passphrase,..." list whose first entry
+	// is the active key). This persists across restarts (the old dev path used
+	// an in-memory store that lost secrets on restart) and gives one code path.
+	// The key(s) are required — fail fast rather than start a server that cannot
+	// read or write any credential.
+	var sec *secrets.DBStore
+	if cfg.SecretsEncryptionKeys != "" {
+		keys, activeID, perr := secrets.ParseKeyConfig(cfg.SecretsEncryptionKeys)
+		if perr != nil {
+			log.Fatalf("secrets: SECRETS_ENCRYPTION_KEYS: %v", perr)
+		}
+		sec, err = secrets.NewDBStoreWithKeys(client, keys, activeID)
+	} else {
+		sec, err = secrets.NewDBStore(client, cfg.SecretsEncryptionKey)
+	}
 	if err != nil {
 		log.Fatalf("secrets: %v", err)
 	}
-	log.Printf("secrets: encrypted db-backed store (platform_secrets, AES-GCM)")
+	log.Printf("secrets: encrypted db-backed store (platform_secrets, AES-GCM); active key %q", sec.ActiveKeyID())
+
+	// Periodically re-encrypt platform_secrets rows sealed under a retired key
+	// onto the currently-active key. A no-op when only one key is configured
+	// (or when no rows are off-key). Disabled when SECRETS_ROTATION_INTERVAL_SECONDS=0.
+	rotCtx, stopRot := context.WithCancel(context.Background())
+	defer stopRot()
+	go secrets.RunRotationWorker(rotCtx, sec, client, time.Duration(cfg.SecretsRotationIntervalSeconds)*time.Second)
+
 	vcConnect := func(ctx context.Context, endpoint, user, pass string, insecure bool) (graph.VCenterClient, error) {
 		return vcenter.Connect(ctx, endpoint, user, pass, insecure)
 	}
 
 	// Static placeholder values for catalog install_command rendering. Only
 	// AGENT_PKG_BASE_URL (and then only when set, so an unconfigured mirror leaves
-	// the placeholder visible). AGENT_USER is NOT here — it is a DB platform
-	// setting resolved per-request (LLD-13), not a startup env.
+	// the placeholder visible) and AGENT_USER (set on the resolver; default "agent").
 	installVars := map[string]string{}
 	if cfg.AgentPkgBaseURL != "" {
 		installVars["AGENT_PKG_BASE_URL"] = cfg.AgentPkgBaseURL
@@ -132,32 +149,28 @@ func main() {
 	agentMgr := &agentmgr.Service{Ent: client, Secrets: sec}
 
 	resolver := &graph.Resolver{
-		Ent:             client,
-		Sessions:        sessions,
-		SessionTTL:      ttl,
-		SecureCookies:   cfg.Env == "prod",
-		Secrets:         sec,
-		InstallVars:     installVars,
-		VCenterConnect:  vcConnect,
-		LoginLimiter:    loginLimiter,
-		AgentMgr:        agentMgr,
-		ControlPlaneURL: os.Getenv("CONTROL_PLANE_URL"),
+		Ent:                 client,
+		Sessions:            sessions,
+		SessionTTL:          ttl,
+		SecureCookies:       cfg.Env == "prod",
+		Secrets:             sec,
+		SecretsAuditEnabled: cfg.SecretsAuditEnabled,
+		InstallVars:         installVars,
+		AgentUser:           os.Getenv("AGENT_USER"),
+		VCenterConnect:      vcConnect,
+		LoginLimiter:        loginLimiter,
+		AgentMgr:            agentMgr,
+		ControlPlaneURL:     os.Getenv("CONTROL_PLANE_URL"),
 		// webadmin deploy-time contract: mirror base + prune depth stamped into
 		// agent VMs at deploy (guestinfo.agentmgr.*).
 		AgentPkgBaseURL:   cfg.AgentPkgBaseURL,
 		AgentKeepVersions: cfg.AgentKeepVersions,
 		EnvScopeEnabled:   cfg.EnvScopeEnabled,
 	}
-	// DEV_MOCK_GATEWAY: local-dev shortcut only. Injecting the mock unconditionally
-	// would silently issue fake sk-mock- keys (and mark deploys successful) whenever
-	// no DB gateway is configured, and reconcile with Prune could revoke real keys
-	// against the mock's view. Default stays nil: resolvers fail fast with "gateway
-	// not configured" and resolve real gateways per department from the DB (LLD-13).
-	if v := os.Getenv("DEV_MOCK_GATEWAY"); v == "1" || v == "true" {
-		resolver.Gateway = gateway.NewMockClient()
-		resolver.GatewayURL = "http://localhost:4000"
-		log.Printf("DEV_MOCK_GATEWAY=1: using in-memory mock LiteLLM gateway (dev only)")
-	}
+	// DEV_MOCK_GATEWAY was retired alongside the legacy GatewayConnection
+	// surface (gatewayConnections query + registerGatewayConnection mutation
+	// and the r.Gateway / r.GatewayURL injection points). Production code
+	// now resolves gateways from the gateway_connections table only.
 	resolver.EnablePoolSync(
 		time.Duration(cfg.PoolSyncTimeoutSeconds)*time.Second,
 		cfg.PoolSyncMaxRetries,
@@ -227,6 +240,34 @@ func main() {
 		log.Printf("model-gateway auto-sync: every %s", time.Duration(cfg.ModelGatewaySyncIntervalSeconds)*time.Second)
 		go resolver.StartModelGatewayAutoSync(mgSyncCtx, time.Duration(cfg.ModelGatewaySyncIntervalSeconds)*time.Second, isLeader)
 	}
+
+	// Periodically probe every enabled ProviderModel against its upstream API
+	// and write the cached Active/Degraded/Melted/Unknown status back to the
+	// row. Default 60s; disabled with PROVIDER_PROBE_INTERVAL_SECONDS=0.
+	// See internal/graph/provider_model_probe.go and LiteLLM design doc §2.2.
+	// An upsert also kicks off a one-shot probe (probeProviderModelInBackground)
+	// so the operator sees the real status within seconds rather than waiting
+	// for the next tick.
+	probeCtx, stopProbe := context.WithCancel(context.Background())
+	defer stopProbe()
+	go resolver.StartProviderModelHealthProbe(probeCtx, time.Duration(cfg.ProviderProbeIntervalSeconds)*time.Second)
+
+	// Periodically re-aggregate every ModelRoute and POST the full
+	// router_settings payload to /config/update, grouped by
+	// backendGatewayId. Default 5m; disabled with
+	// ROUTER_SYNC_INTERVAL_SECONDS=0. See internal/graph/router_sync.go
+	// and LiteLLM design doc §3.2 "原子化路由策略全量覆盖刷新".
+	rsCtx, stopRS := context.WithCancel(context.Background())
+	defer stopRS()
+	go resolver.StartRouterSettingsSync(rsCtx, time.Duration(cfg.RouterSyncIntervalSeconds)*time.Second)
+
+	// Periodically read litellm /key/info for every active VirtualKey and
+	// persist spend + last_active_at back to the platform row. Drives the
+	// 消费进度 column on the 令牌管理 page (design doc §4.1). Default
+	// 5m; disabled with VK_SPEND_REFRESH_INTERVAL_SECONDS=0.
+	vkCtx, stopVK := context.WithCancel(context.Background())
+	defer stopVK()
+	go resolver.StartVirtualKeySpendRefresh(vkCtx, time.Duration(cfg.VirtualKeySpendRefreshIntervalSeconds)*time.Second)
 
 	es := graph.NewExecutableSchema(graph.Config{
 		Resolvers: resolver,

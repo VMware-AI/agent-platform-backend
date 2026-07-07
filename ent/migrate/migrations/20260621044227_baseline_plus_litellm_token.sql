@@ -26,10 +26,6 @@ CREATE INDEX "auditlog_action" ON "audit_logs" ("action");
 CREATE INDEX "auditlog_created_at" ON "audit_logs" ("created_at");
 -- Create "departments" table
 CREATE TABLE "departments" ("id" uuid NOT NULL, "created_at" timestamptz NOT NULL, "updated_at" timestamptz NOT NULL, "tenant_id" uuid NULL, "name" character varying NOT NULL, "litellm_team_id" character varying NULL, PRIMARY KEY ("id"));
--- Create "rate_limit_policies" table
-CREATE TABLE "rate_limit_policies" ("id" uuid NOT NULL, "created_at" timestamptz NOT NULL, "updated_at" timestamptz NOT NULL, "name" character varying NOT NULL, "rpm" bigint NULL, "tpm" bigint NULL, "enabled" boolean NOT NULL DEFAULT false, "tenant_id" uuid NULL, PRIMARY KEY ("id"));
--- Create index "rate_limit_policies_name_key" to table: "rate_limit_policies"
-CREATE UNIQUE INDEX "rate_limit_policies_name_key" ON "rate_limit_policies" ("name");
 -- Create "images" table
 CREATE TABLE "images" ("id" uuid NOT NULL, "created_at" timestamptz NOT NULL, "updated_at" timestamptz NOT NULL, "repository" character varying NOT NULL, "tag" character varying NOT NULL, "digest" character varying NULL, "signed" boolean NOT NULL DEFAULT false, PRIMARY KEY ("id"));
 -- Create "memberships" table
@@ -53,7 +49,7 @@ CREATE TABLE "skills" ("id" uuid NOT NULL, "created_at" timestamptz NOT NULL, "u
 -- Create "resource_pools" table
 CREATE TABLE "resource_pools" ("id" uuid NOT NULL, "created_at" timestamptz NOT NULL, "updated_at" timestamptz NOT NULL, "name" character varying NOT NULL, "kind" character varying NOT NULL DEFAULT 'vcenter', "endpoint" character varying NOT NULL, "status" character varying NOT NULL DEFAULT 'disconnected', "secret_ref" character varying NULL, "datacenter_count" bigint NOT NULL DEFAULT 0, "cluster_count" bigint NOT NULL DEFAULT 0, "host_count" bigint NOT NULL DEFAULT 0, "vm_count" bigint NOT NULL DEFAULT 0, "tenant_id" uuid NULL, PRIMARY KEY ("id"));
 -- Create "virtual_keys" table
-CREATE TABLE "virtual_keys" ("id" uuid NOT NULL, "created_at" timestamptz NOT NULL, "updated_at" timestamptz NOT NULL, "litellm_key" character varying NOT NULL, "litellm_token" character varying NULL, "alias" character varying NULL, "user_id" uuid NOT NULL, "agent_id" uuid NULL, "rate_limit_policy_id" uuid NULL, "team_id" character varying NULL, "models" jsonb NULL, "max_budget" double precision NULL, "status" character varying NOT NULL DEFAULT 'active', "expires_at" timestamptz NULL, PRIMARY KEY ("id"));
+CREATE TABLE "virtual_keys" ("id" uuid NOT NULL, "created_at" timestamptz NOT NULL, "updated_at" timestamptz NOT NULL, "litellm_key" character varying NOT NULL, "litellm_token" character varying NULL, "alias" character varying NULL, "user_id" uuid NOT NULL, "agent_id" uuid NULL, "team_id" character varying NULL, "models" jsonb NULL, "max_budget" double precision NULL, "status" character varying NOT NULL DEFAULT 'active', "expires_at" timestamptz NULL, PRIMARY KEY ("id"));
 -- Create index "virtualkey_user_id" to table: "virtual_keys"
 CREATE INDEX "virtualkey_user_id" ON "virtual_keys" ("user_id");
 -- Create "router_tiers" table

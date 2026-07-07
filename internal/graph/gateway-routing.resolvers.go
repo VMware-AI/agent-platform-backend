@@ -7,14 +7,9 @@ package graph
 
 import (
 	"context"
-	"fmt"
-	"log"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
-	"github.com/VMware-AI/agent-platform-backend/ent/gatewayconnection"
 	"github.com/VMware-AI/agent-platform-backend/ent/modelroute"
-	"github.com/VMware-AI/agent-platform-backend/ent/routertier"
-	"github.com/VMware-AI/agent-platform-backend/ent/upstream"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
@@ -22,298 +17,89 @@ import (
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
-// RegisterGatewayConnection is the resolver for the registerGatewayConnection field.
-func (r *mutationResolver) RegisterGatewayConnection(ctx context.Context, input model.RegisterGatewayConnectionInput) (*model.GatewayConnection, error) {
-	// Raw master key from the form → secret store; downstream uses the ref (明文不落库).
-	// Put happens OUTSIDE the tx below, so a failed insert/rollback must retire the
-	// freshly-minted ref itself (mintedRef) — the tx rollback can't undo the store.
-	mintedKeyRef, mintedKey := "", false
-	if ref, set, minted, err := r.resolveKeySecretRef(ctx, "gateway/"+input.Name, input.MasterKey, input.MasterKeyRef); err != nil {
-		return nil, err
-	} else if set {
-		input.MasterKeyRef = &ref
-		mintedKeyRef, mintedKey = ref, minted
-	}
-	// is_default (LLD-13 §3.3): an explicit request, OR auto-default the first-ever
-	// connection so the platform always has a default gateway once one exists (§7 OQ-1).
-	makeDefault := input.IsDefault != nil && *input.IsDefault
-	if !makeDefault {
-		if n, err := r.Ent.GatewayConnection.Query().Count(ctx); err == nil && n == 0 {
-			makeDefault = true
-		}
-	}
-
-	// Singleton invariant is now DB-enforced (partial unique index on is_default).
-	// That index forbids two true rows, so we must clear the previous default
-	// BEFORE inserting the new one — and do both in one txn — rather than the old
-	// insert-then-clear (which transiently held two trues and would now be
-	// rejected). Concurrent registers can't both win: the loser's commit trips the
-	// unique constraint.
-	tx, err := r.Ent.Tx(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if makeDefault {
-		if _, err := tx.GatewayConnection.Update().
-			Where(gatewayconnection.IsDefault(true)).
-			SetIsDefault(false).Save(ctx); err != nil {
-			rerr := rollback(tx, err)
-			r.cleanupMintedSecretOnErr(ctx, mintedKey, mintedKeyRef, rerr)
-			return nil, rerr
-		}
-	}
-	c := tx.GatewayConnection.Create().
-		SetName(input.Name).SetEndpoint(input.Endpoint).SetIsDefault(makeDefault)
-	if input.MasterKeyRef != nil {
-		c.SetMasterKeyRef(*input.MasterKeyRef)
-	}
-	if input.PublicURL != nil {
-		c.SetPublicURL(*input.PublicURL)
-	}
-	if input.LoadBalanceStrategy != nil {
-		c.SetLoadBalanceStrategy(gatewayconnection.LoadBalanceStrategy(string(*input.LoadBalanceStrategy)))
-	}
-	g, err := c.Save(ctx)
-	if err != nil {
-		// Insert failed (e.g. duplicate name trips the unique constraint). The tx
-		// rollback can't undo the out-of-tx store.Put, so retire the orphan here.
-		rerr := rollback(tx, err)
-		r.cleanupMintedSecretOnErr(ctx, mintedKey, mintedKeyRef, rerr)
-		return nil, rerr
-	}
-	if err := tx.Commit(); err != nil {
-		// Commit failed → the row was not persisted; the minted ref is orphaned.
-		r.cleanupMintedSecretOnErr(ctx, mintedKey, mintedKeyRef, err)
-		return nil, err
-	}
-	r.audit(ctx, "gateway.register", "gateway_connection", g.ID.String(), true, actorID(auth.FromContext(ctx)))
-	return toModelGatewayConnection(g), nil
-}
-
-// TestGatewayConnection is the resolver for the testGatewayConnection field.
-func (r *mutationResolver) TestGatewayConnection(ctx context.Context, id string) (model.GatewayStatus, error) {
-	gid, err := uuid.Parse(id)
-	if err != nil {
-		return "", gqlerror.Errorf("invalid id")
-	}
-	g, err := r.Ent.GatewayConnection.Get(ctx, gid)
-	if err != nil {
-		return "", err
-	}
-	status := gatewayconnection.StatusDisconnected
-	if mm := r.gatewayModelsForConn(ctx, g); mm != nil {
-		if err := mm.TestConnection(ctx); err == nil {
-			status = gatewayconnection.StatusConnected
-		} else {
-			status = gatewayconnection.StatusError
-		}
-	}
-	// Shared with the ModelGateway façade: a successful test also stamps
-	// last_synced_at, so both pages agree on "last synced". The legacy
-	// routing-page test does not probe loadBalancingStrategy or
-	// backendModelCount, so those columns are passed as nil (preserved on
-	// the row).
-	g, err = r.applyGatewayTestResult(ctx, g, status, nil, nil)
-	if err != nil {
-		return "", err
-	}
-	r.audit(ctx, "gateway.test", "gateway_connection", id, true, actorID(auth.FromContext(ctx)))
-	return model.GatewayStatus(string(g.Status)), nil
-}
-
-// DeleteGatewayConnection is the resolver for the deleteGatewayConnection field.
-func (r *mutationResolver) DeleteGatewayConnection(ctx context.Context, id string) (bool, error) {
-	if err := r.deleteGatewayByID(ctx, id); err != nil {
-		return false, err
-	}
-	r.audit(ctx, "gateway.delete", "gateway_connection", id, true, actorID(auth.FromContext(ctx)))
-	return true, nil
-}
-
-// UpsertUpstream is the resolver for the upsertUpstream field.
-func (r *mutationResolver) UpsertUpstream(ctx context.Context, input model.UpsertUpstreamInput) (*model.Upstream, error) {
-	// Raw upstream apiKey from the form → secret store; the rest of the flow (DB +
-	// litellm sync) consumes the ref (明文不落库).
-	mintedKeyRef, mintedKey := "", false
-	if ref, set, minted, err := r.resolveKeySecretRef(ctx, "upstream/"+input.Name, input.APIKey, input.APIKeyRef); err != nil {
-		return nil, err
-	} else if set {
-		input.APIKeyRef = &ref
-		mintedKeyRef, mintedKey = ref, minted
-	}
-	enabled := true
-	if input.Enabled != nil {
-		enabled = *input.Enabled
-	}
-	apply := func(setName bool) (*ent.Upstream, error) {
-		existing, err := r.Ent.Upstream.Query().Where(upstream.Name(input.Name)).Only(ctx)
-		if ent.IsNotFound(err) {
-			c := r.Ent.Upstream.Create().
-				SetName(input.Name).
-				SetProvider(upstream.Provider(input.Provider)).
-				SetModel(input.Model).
-				SetEnabled(enabled)
-			applyUpstreamOptionals(c.Mutation(), input)
-			return c.Save(ctx)
-		}
-		if err != nil {
-			return nil, err
-		}
-		u := r.Ent.Upstream.UpdateOne(existing).
-			SetProvider(upstream.Provider(input.Provider)).
-			SetModel(input.Model).
-			SetEnabled(enabled)
-		applyUpstreamOptionals(u.Mutation(), input)
-		return u.Save(ctx)
-	}
-	u, err := apply(true)
-	if err != nil {
-		// DB upsert failed after the apiKey was Put (e.g. a create racing the unique
-		// name) — retire the orphan. Past this point the row exists and owns the
-		// ref, so later gateway-sync failures must NOT delete it.
-		r.cleanupMintedSecretOnErr(ctx, mintedKey, mintedKeyRef, err)
-		return nil, err
-	}
-
-	// Sync the deployment into the default gateway's model pool, keyed by the
-	// Upstream row id (model_info.id). Clear any prior deployment for this id first
-	// so an update is clean (re-POSTing the same id is not an upsert); then push it
-	// only when enabled — a disabled upstream must NOT be left serving live, so it
-	// is removed from the pool instead (audit #29).
-	if mm := r.gatewayModels(ctx); mm != nil {
-		_ = mm.DeleteModel(ctx, u.ID.String()) // best-effort: clears any stale/absent deployment
-		if u.Enabled {
-			apiKey := ""
-			if input.APIKeyRef != nil && r.Secrets != nil {
-				cred, err := r.Secrets.Resolve(ctx, *input.APIKeyRef)
-				if err != nil {
-					return nil, fmt.Errorf("resolve upstream api key: %w", err)
-				}
-				apiKey = cred.APIKey
-				if apiKey == "" {
-					apiKey = cred.Password
-				}
-			}
-			if err := mm.NewModel(ctx, gateway.ModelSpec{
-				ModelID: u.ID.String(), ModelName: u.Name, Model: u.Model, APIBase: u.APIBase, APIKey: apiKey,
-			}); err != nil {
-				return nil, fmt.Errorf("sync upstream to gateway: %w", err)
-			}
-		}
-	}
-	r.audit(ctx, "upstream.upsert", "upstream", u.ID.String(), true, actorID(auth.FromContext(ctx)))
-	return toModelUpstream(u), nil
-}
-
-// DeleteUpstream is the resolver for the deleteUpstream field.
-func (r *mutationResolver) DeleteUpstream(ctx context.Context, id string) (bool, error) {
-	uid, err := uuid.Parse(id)
-	if err != nil {
-		return false, gqlerror.Errorf("invalid id")
-	}
-	if err := r.Ent.Upstream.DeleteOneID(uid).Exec(ctx); err != nil {
-		return false, err
-	}
-	// Remove the upstream's litellm model so the deployment doesn't outlive the row
-	// (an orphan model keeps serving + billing). Best-effort + non-silent: the row
-	// is already gone, so a gateway failure is logged as an orphan rather than
-	// rolled back (mirrors the key-revocation paths).
-	if mm := r.gatewayModels(ctx); mm != nil {
-		if err := mm.DeleteModel(ctx, uid.String()); err != nil {
-			log.Printf("delete upstream %s: orphan litellm model, delete failed: %v", uid, err)
-		}
-	}
-	r.audit(ctx, "upstream.delete", "upstream", id, true, actorID(auth.FromContext(ctx)))
-	return true, nil
-}
-
-// UpsertModelRoute is the resolver for the upsertModelRoute field.
-func (r *mutationResolver) UpsertModelRoute(ctx context.Context, input model.UpsertModelRouteInput) (*model.ModelRoute, error) {
-	enabled := true
-	if input.Enabled != nil {
-		enabled = *input.Enabled
-	}
-	var gwID *uuid.UUID
-	if input.BackendGatewayID != nil {
-		gid, err := uuid.Parse(*input.BackendGatewayID)
-		if err != nil {
-			return nil, gqlerror.Errorf("invalid backendGatewayId")
-		}
-		gwID = &gid
-	}
-	existing, err := r.Ent.ModelRoute.Query().Where(modelroute.Name(input.Name)).Only(ctx)
-	var mr *ent.ModelRoute
-	switch {
-	case ent.IsNotFound(err):
-		c := r.Ent.ModelRoute.Create().SetName(input.Name).SetModelAlias(input.ModelAlias).
-			SetEnabled(enabled).SetUpstreams(input.Upstreams).SetNillableGatewayConnectionID(gwID)
-		if input.Strategy != nil {
-			c.SetStrategy(modelroute.Strategy(string(*input.Strategy)))
-		}
-		mr, err = c.Save(ctx)
-	case err != nil:
-		return nil, err
-	default:
-		u := r.Ent.ModelRoute.UpdateOne(existing).SetModelAlias(input.ModelAlias).
-			SetEnabled(enabled).SetUpstreams(input.Upstreams).SetNillableGatewayConnectionID(gwID)
-		if input.Strategy != nil {
-			u.SetStrategy(modelroute.Strategy(string(*input.Strategy)))
-		}
-		mr, err = u.Save(ctx)
-	}
-	if err != nil {
-		return nil, err
-	}
-	r.audit(ctx, "model_route.upsert", "model_route", mr.ID.String(), true, actorID(auth.FromContext(ctx)))
-	return toModelModelRoute(mr), nil
-}
-
 // CreateModelRoute mints a new model route from the console 模型路由 create form.
-// Distinct from the name-keyed upsertModelRoute: this always inserts and returns
-// the route by its new id. model_alias defaults to the route name (the console
-// form has no separate alias); supportedModels are stored as the upstream group.
+// Always inserts (id-keyed); a duplicate name surfaces as a GraphQL error —
+// re-saving the same name goes through updateModelRoute. model_alias is set
+// to name (the console form has no separate alias); supportedModels are
+// stored as the upstream group. backendGatewayId is REQUIRED — a route
+// without a gateway has no router-settings push target. strategy is the
+// litellm LoadBalanceStrategy (omitted → ent default SIMPLE_SHUFFLE).
 func (r *mutationResolver) CreateModelRoute(ctx context.Context, input model.CreateModelRouteInput) (*model.ModelRoute, error) {
-	gwID, err := parseOptionalUUID(input.BackendGatewayID, "backendGatewayId")
+	gwID, err := parseRequiredUUID(input.BackendGatewayID, "backendGatewayId")
 	if err != nil {
+		return nil, err
+	}
+	if _, err := resolveLiveGateway(ctx, r.Ent, gwID); err != nil {
+		return nil, err
+	}
+	// Surface name-key collisions as a clear error rather than letting ent's
+	// duplicate-name constraint fire — the form layer can then prompt the
+	// operator to switch to updateModelRoute.
+	if _, err := r.Ent.ModelRoute.Query().Where(modelroute.Name(input.Name)).Only(ctx); err == nil {
+		return nil, gqlerror.Errorf("model_route %q already exists; use updateModelRoute to mutate it", input.Name)
+	} else if !ent.IsNotFound(err) {
 		return nil, err
 	}
 	c := r.Ent.ModelRoute.Create().
 		SetName(input.Name).
 		SetModelAlias(input.Name).
-		SetNillableGatewayConnectionID(gwID).
+		SetGatewayConnectionID(gwID).
 		SetGatewayName(derefString(input.GatewayName)).
 		SetUpstreams(orEmptyStrings(input.SupportedModels))
+	if input.Strategy != nil {
+		c.SetStrategy(modelroute.Strategy(string(*input.Strategy)))
+	}
 	if input.UIStrategy != nil {
 		c.SetUIStrategy(modelroute.UIStrategy(*input.UIStrategy))
 	}
 	if input.Enabled != nil {
 		c.SetEnabled(*input.Enabled)
 	}
+	if input.Fallbacks != nil {
+		c.SetFallbacks(input.Fallbacks)
+	}
+	if input.ContextWindowFallbacks != nil {
+		c.SetContextWindowFallbacks(input.ContextWindowFallbacks)
+	}
+	if input.ContentPolicyFallbacks != nil {
+		c.SetContentPolicyFallbacks(input.ContentPolicyFallbacks)
+	}
 	mr, err := c.Save(ctx)
 	if err != nil {
 		return nil, err
 	}
 	r.audit(ctx, "model_route.create", "model_route", mr.ID.String(), true, actorID(auth.FromContext(ctx)))
+	r.AggregateAndPushRouterSettingsFireAndForget(mr.GatewayConnectionID)
 	return toModelModelRoute(mr), nil
 }
 
 // UpdateModelRoute edits an existing model route by id (console 模型路由 edit form).
 // Only provided fields change; supportedModels (when given) replace the upstream
-// group. backendGatewayId is intentionally not cleared here — the form always
-// resends a gateway.
+// group. backendGatewayId, when present, must point at a live gateway.
 func (r *mutationResolver) UpdateModelRoute(ctx context.Context, id string, input model.UpdateModelRouteInput) (*model.ModelRoute, error) {
 	rid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid id")
 	}
+	existing, err := r.Ent.ModelRoute.Get(ctx, rid)
+	if err != nil {
+		return nil, err
+	}
 	u := r.Ent.ModelRoute.UpdateOneID(rid)
 	if input.Name != nil {
 		u.SetName(*input.Name)
 	}
-	if gwID, perr := parseOptionalUUID(input.BackendGatewayID, "backendGatewayId"); perr != nil {
-		return nil, perr
-	} else if gwID != nil {
-		u.SetGatewayConnectionID(*gwID)
+	var pushTarget = existing.GatewayConnectionID
+	if input.BackendGatewayID != nil {
+		gwID, err := parseRequiredUUID(*input.BackendGatewayID, "backendGatewayId")
+		if err != nil {
+			return nil, err
+		}
+		if _, err := resolveLiveGateway(ctx, r.Ent, gwID); err != nil {
+			return nil, err
+		}
+		u.SetGatewayConnectionID(gwID)
+		pushTarget = gwID
 	}
 	if input.GatewayName != nil {
 		u.SetGatewayName(*input.GatewayName)
@@ -332,6 +118,7 @@ func (r *mutationResolver) UpdateModelRoute(ctx context.Context, id string, inpu
 		return nil, err
 	}
 	r.audit(ctx, "model_route.update", "model_route", id, true, actorID(auth.FromContext(ctx)))
+	r.AggregateAndPushRouterSettingsFireAndForget(pushTarget)
 	return toModelModelRoute(mr), nil
 }
 
@@ -346,77 +133,71 @@ func (r *mutationResolver) SetModelRouteEnabled(ctx context.Context, id string, 
 		return nil, err
 	}
 	r.audit(ctx, "model_route.set_enabled", "model_route", id, true, actorID(auth.FromContext(ctx)))
+	r.AggregateAndPushRouterSettingsFireAndForget(mr.GatewayConnectionID)
 	return toModelModelRoute(mr), nil
 }
 
-// DeleteModelRoute removes a model route. Mirrors DeleteUpstream: parse + delete
+// DeleteModelRoute removes a model route. Mirrors DeleteProviderModel: parse + delete
 // + audit. The litellm-side model is managed via upstream sync, so deleting the
-// route record only drops the backend mapping.
+// route record only drops the backend mapping. The push is scoped to the route's
+// old gateway (captured before the row is dropped) so other gateways are not
+// re-pushed gratuitously.
 func (r *mutationResolver) DeleteModelRoute(ctx context.Context, id string) (bool, error) {
 	rid, err := uuid.Parse(id)
 	if err != nil {
 		return false, gqlerror.Errorf("invalid id")
 	}
+	existing, err := r.Ent.ModelRoute.Get(ctx, rid)
+	if err != nil {
+		return false, err
+	}
 	if err := r.Ent.ModelRoute.DeleteOneID(rid).Exec(ctx); err != nil {
 		return false, err
 	}
 	r.audit(ctx, "model_route.delete", "model_route", id, true, actorID(auth.FromContext(ctx)))
+	r.AggregateAndPushRouterSettingsFireAndForget(existing.GatewayConnectionID)
 	return true, nil
 }
 
-// SetRouterTier maps a difficulty tier to a model alias and re-syncs the litellm
-// Complexity Router: simple questions → cheap model, hard → strong model.
-func (r *mutationResolver) SetRouterTier(ctx context.Context, tier model.RouterTierLevel, modelAlias string) (*model.RouterTier, error) {
-	existing, err := r.Ent.RouterTier.Query().Where(routertier.TierEQ(routertier.Tier(tier))).Only(ctx)
-	var rt *ent.RouterTier
-	switch {
-	case ent.IsNotFound(err):
-		rt, err = r.Ent.RouterTier.Create().SetTier(routertier.Tier(tier)).SetModelAlias(modelAlias).Save(ctx)
-	case err != nil:
-		return nil, err
-	default:
-		rt, err = r.Ent.RouterTier.UpdateOne(existing).SetModelAlias(modelAlias).Save(ctx)
-	}
+// SyncRouterSettings is the resolver for the syncRouterSettings field.
+// On-demand version of the periodic router sync: re-aggregates every active
+// ModelRoute, partitions the routes by backendGatewayId, and POSTs the
+// per-gateway router_settings payload to /config/update. Each gateway
+// receives only the routes bound to it. Returns true only when every
+// gateway accepted the push; partial failures surface as GraphQL errors.
+func (r *mutationResolver) SyncRouterSettings(ctx context.Context) (bool, error) {
+	routes, err := r.Ent.ModelRoute.Query().Where(modelroute.Enabled(true)).All(ctx)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
+	settings := gateway.AggregateRouterSettings(routes, nil)
 
-	// Re-sync the whole tier map to the gateway's Complexity Router.
-	all, err := r.Ent.RouterTier.Query().All(ctx)
-	if err != nil {
-		return nil, err
+	buckets := bucketRoutesByGateway(routes)
+	if len(buckets) == 0 {
+		// No active routes — nothing to push. Return true so the console's
+		// "sync now" button doesn't surface an error on an empty fleet.
+		r.audit(ctx, "router.sync", "router_settings", "", true, actorID(auth.FromContext(ctx)))
+		return true, nil
 	}
-	tiers := make(map[string]string, len(all))
-	for _, t := range all {
-		tiers[string(t.Tier)] = t.ModelAlias
-	}
-	if mm := r.gatewayModels(ctx); mm != nil {
-		if err := mm.UpsertComplexityRouter(ctx, gateway.RouterSpec{
-			ModelName: gateway.DefaultRouterModel, Tiers: tiers, DefaultModel: tiers["MEDIUM"],
-		}); err != nil {
-			return nil, fmt.Errorf("sync complexity router: %w", err)
+	for gwID := range buckets {
+		g, err := r.Ent.GatewayConnection.Get(ctx, gwID)
+		if err != nil {
+			return false, err
+		}
+		mk := r.gatewayMasterKey(ctx, g)
+		if mk == "" {
+			return false, gqlerror.Errorf("gateway %s has no resolvable master key", g.Name)
+		}
+		http, err := gateway.NewHTTPClient(g.Endpoint, mk)
+		if err != nil {
+			return false, err
+		}
+		if err := gateway.NewAdminClient(http).PushRouterSettings(ctx, settings); err != nil {
+			return false, err
 		}
 	}
-	r.audit(ctx, "router.set_tier", "router_tier", rt.ID.String(), true, actorID(auth.FromContext(ctx)))
-	return toModelRouterTier(rt), nil
-}
-
-// GatewayConnections is the resolver for the gatewayConnections field.
-func (r *queryResolver) GatewayConnections(ctx context.Context) ([]model.GatewayConnection, error) {
-	gs, err := r.Ent.GatewayConnection.Query().Order(orderNewest).All(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return mapSlice(gs, toModelGatewayConnection), nil
-}
-
-// Upstreams is the resolver for the upstreams field.
-func (r *queryResolver) Upstreams(ctx context.Context) ([]model.Upstream, error) {
-	us, err := r.Ent.Upstream.Query().Order(orderNewest).All(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return mapSlice(us, toModelUpstream), nil
+	r.audit(ctx, "router.sync", "router_settings", "", true, actorID(auth.FromContext(ctx)))
+	return true, nil
 }
 
 // ModelRoutes is the resolver for the modelRoutes field.
@@ -426,13 +207,4 @@ func (r *queryResolver) ModelRoutes(ctx context.Context) ([]model.ModelRoute, er
 		return nil, err
 	}
 	return mapSlice(rs, toModelModelRoute), nil
-}
-
-// RouterTiers is the resolver for the routerTiers field.
-func (r *queryResolver) RouterTiers(ctx context.Context) ([]model.RouterTier, error) {
-	ts, err := r.Ent.RouterTier.Query().Order(orderNewest).All(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return mapSlice(ts, toModelRouterTier), nil
 }

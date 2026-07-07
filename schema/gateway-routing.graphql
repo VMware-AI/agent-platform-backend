@@ -1,24 +1,10 @@
-# Compute gateway routing (算力网关): connections, upstreams, model routes,
-# and the difficulty router. See LLD-07. The development focus.
-
-enum GatewayStatus {
-  connected
-  disconnected
-  error
-}
-enum UpstreamProvider {
-  vllm
-  openai
-  anthropic
-  minimax
-  codex
-}
-enum RouterTierLevel {
-  SIMPLE
-  MEDIUM
-  COMPLEX
-  REASONING
-}
+# Compute gateway routing (算力网关): model routes.
+# See LLD-07. The development focus.
+#
+# Each ModelRoute is bound to exactly one GatewayConnection via
+# backendGatewayId, which is also the router-settings push target (no platform
+# default). ProviderModel CRUD + the GatewayConnection surface live in their
+# own modules; this file only contains routing topology.
 
 # Console-facing load-balancing strategy for a model route (模型路由 page). Distinct
 # from the litellm LoadBalanceStrategy: a friendly, gateway-agnostic choice the
@@ -29,34 +15,13 @@ enum ModelRouteStrategy {
   RANDOM
 }
 
-type GatewayConnection {
-  id: ID!
-  name: String!
-  endpoint: String!
-  # The URL provisioned VMs/agents call (LLD-13 §3.3). Falls back to endpoint when unset.
-  publicUrl: String
-  # The platform default gateway — used for ops with no department context. At most one.
-  isDefault: Boolean!
-  status: GatewayStatus!
-  loadBalanceStrategy: LoadBalancingStrategy!
-  createdAt: Time!
-}
-
-type Upstream {
-  id: ID!
-  name: String!
-  provider: UpstreamProvider!
-  apiBase: String
-  model: String!
-  enabled: Boolean!
-  createdAt: Time!
-}
-
 type ModelRoute {
   id: ID!
   name: String!
   modelAlias: String!
-  backendGatewayId: ID
+  # Required: the litellm gateway this route is hosted on. The router-settings
+  # push targets this gateway (no platform default fallback).
+  backendGatewayId: ID!
   # Display name of the serving gateway (console 模型路由 list).
   gatewayName: String!
   upstreams: [String!]!
@@ -68,59 +33,34 @@ type ModelRoute {
   enabled: Boolean!
   createdAt: Time!
   updatedAt: Time!
+  # Fallback chains (LiteLLM design doc §3.2)
+  fallbacks: [String!]!
+  contextWindowFallbacks: [String!]!
+  contentPolicyFallbacks: [String!]!
 }
 
-type RouterTier {
-  id: ID!
-  tier: RouterTierLevel!
-  modelAlias: String!
-}
-
-input RegisterGatewayConnectionInput {
-  name: String!
-  endpoint: String!
-  # litellm master key(接入表单填写)→ 后端写 secret store,只存引用,明文不落库;
-  # 优先于 masterKeyRef。
-  masterKey: String
-  masterKeyRef: String
-  loadBalanceStrategy: LoadBalancingStrategy
-  # The URL provisioned VMs call (LLD-13 §3.3); omitted → falls back to endpoint.
-  publicUrl: String
-  # Mark this the platform default gateway; setting true clears the flag on any other.
-  isDefault: Boolean
-}
-input UpsertUpstreamInput {
-  name: String!
-  provider: UpstreamProvider!
-  apiBase: String
-  # 上游 API key(上游表单填写)→ 后端写 secret store,只存引用,明文不落库;
-  # 优先于 apiKeyRef。
-  apiKey: String
-  apiKeyRef: String
-  model: String!
-  enabled: Boolean
-}
-input UpsertModelRouteInput {
-  name: String!
-  modelAlias: String!
-  backendGatewayId: ID
-  upstreams: [String!]
-  strategy: LoadBalancingStrategy
-  enabled: Boolean
-}
-
-# Console 模型路由 create form (创建路由). modelAlias defaults to name when omitted;
-# supportedModels are stored as the route's upstream group.
+# Console 模型路由 create form (创建路由). modelAlias is set to name;
+# supportedModels are stored as the route's model group. backendGatewayId is
+# REQUIRED — a route without a gateway has no router-settings push target.
+# strategy is the litellm LoadBalanceStrategy to set on this route; default
+# (omitted) leaves the ent column default in place (SIMPLE_SHUFFLE).
+# A duplicate name surfaces as a GraphQL error — re-saving the same name goes
+# through updateModelRoute.
 input CreateModelRouteInput {
   name: String!
-  backendGatewayId: ID
+  backendGatewayId: ID!
   gatewayName: String
   supportedModels: [String!]
+  strategy: LoadBalancingStrategy
   uiStrategy: ModelRouteStrategy
   enabled: Boolean
+  fallbacks: [String!]
+  contextWindowFallbacks: [String!]
+  contentPolicyFallbacks: [String!]
 }
 
-# Console 模型路由 edit form (编辑路由). All fields optional — only set ones change.
+# Console 模型路由 edit form (编辑路由). All fields optional — only set ones
+# change. backendGatewayId, when present, must point at a live gateway.
 input UpdateModelRouteInput {
   name: String
   backendGatewayId: ID
@@ -128,35 +68,27 @@ input UpdateModelRouteInput {
   supportedModels: [String!]
   uiStrategy: ModelRouteStrategy
   enabled: Boolean
+  fallbacks: [String!]
+  contextWindowFallbacks: [String!]
+  contentPolicyFallbacks: [String!]
 }
 
 extend type Query {
-  gatewayConnections: [GatewayConnection!]! @hasRole(any: [admin])
-  upstreams: [Upstream!]! @hasRole(any: [admin])
   # Model routes are platform-global gateway config (no tenant_id), so admin-only —
   # tenant-admin must not read/write another tenant's routes (no scoping exists).
   modelRoutes: [ModelRoute!]! @hasRole(any: [admin])
-  routerTiers: [RouterTier!]! @hasRole(any: [admin])
 }
 
 extend type Mutation {
-  registerGatewayConnection(input: RegisterGatewayConnectionInput!): GatewayConnection! @hasRole(any: [admin])
-  testGatewayConnection(id: ID!): GatewayStatus! @hasRole(any: [admin])
-  deleteGatewayConnection(id: ID!): Boolean! @hasRole(any: [admin])
-
-  upsertUpstream(input: UpsertUpstreamInput!): Upstream! @hasRole(any: [admin])
-  deleteUpstream(id: ID!): Boolean! @hasRole(any: [admin])
-  # Model routes are platform-global gateway config (no tenant_id) → admin-only,
-  # mirroring modelGateways. tenant-admin holds "route:manage" but has no tenant
-  # scoping here, so a permission gate would leak cross-tenant read/write.
-  upsertModelRoute(input: UpsertModelRouteInput!): ModelRoute! @hasRole(any: [admin])
-  # Console 模型路由 page CRUD (创建/编辑路由). create mints a new route by id;
-  # update edits an existing one by id (distinct from the name-keyed upsert above).
+  # Model routes CRUD — design doc §3.2
   createModelRoute(input: CreateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
   updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
   setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute! @hasRole(any: [admin])
   deleteModelRoute(id: ID!): Boolean! @hasRole(any: [admin])
-
-  # The difficulty router: map a tier to a model alias → syncs litellm Complexity Router.
-  setRouterTier(tier: RouterTierLevel!, modelAlias: String!): RouterTier! @hasRole(any: [admin])
+  # Atomic 全量聚合覆盖刷新 — re-aggregates every active ModelRoute and
+  # POSTs the full router_settings payload to /config/update, grouped by
+  # backendGatewayId. Triggered automatically after a route save; exposed
+  # as a mutation so the console can call it explicitly. Each gateway
+  # receives only the routes bound to it.
+  syncRouterSettings: Boolean! @hasRole(any: [admin])
 }

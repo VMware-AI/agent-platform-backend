@@ -28,10 +28,6 @@ type GatewayConnection struct {
 	Endpoint string `json:"endpoint,omitempty"`
 	// MasterKeyRef holds the value of the "master_key_ref" field.
 	MasterKeyRef string `json:"master_key_ref,omitempty"`
-	// PublicURL holds the value of the "public_url" field.
-	PublicURL string `json:"public_url,omitempty"`
-	// IsDefault holds the value of the "is_default" field.
-	IsDefault bool `json:"is_default,omitempty"`
 	// LastSyncedAt holds the value of the "last_synced_at" field.
 	LastSyncedAt *time.Time `json:"last_synced_at,omitempty"`
 	// BackendModelCount holds the value of the "backend_model_count" field.
@@ -48,11 +44,9 @@ func (*GatewayConnection) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case gatewayconnection.FieldIsDefault:
-			values[i] = new(sql.NullBool)
 		case gatewayconnection.FieldBackendModelCount:
 			values[i] = new(sql.NullInt64)
-		case gatewayconnection.FieldName, gatewayconnection.FieldEndpoint, gatewayconnection.FieldMasterKeyRef, gatewayconnection.FieldPublicURL, gatewayconnection.FieldStatus, gatewayconnection.FieldLoadBalanceStrategy:
+		case gatewayconnection.FieldName, gatewayconnection.FieldEndpoint, gatewayconnection.FieldMasterKeyRef, gatewayconnection.FieldStatus, gatewayconnection.FieldLoadBalanceStrategy:
 			values[i] = new(sql.NullString)
 		case gatewayconnection.FieldCreatedAt, gatewayconnection.FieldUpdatedAt, gatewayconnection.FieldLastSyncedAt:
 			values[i] = new(sql.NullTime)
@@ -108,18 +102,6 @@ func (_m *GatewayConnection) assignValues(columns []string, values []any) error 
 				return fmt.Errorf("unexpected type %T for field master_key_ref", values[i])
 			} else if value.Valid {
 				_m.MasterKeyRef = value.String
-			}
-		case gatewayconnection.FieldPublicURL:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field public_url", values[i])
-			} else if value.Valid {
-				_m.PublicURL = value.String
-			}
-		case gatewayconnection.FieldIsDefault:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field is_default", values[i])
-			} else if value.Valid {
-				_m.IsDefault = value.Bool
 			}
 		case gatewayconnection.FieldLastSyncedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -197,12 +179,6 @@ func (_m *GatewayConnection) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("master_key_ref=")
 	builder.WriteString(_m.MasterKeyRef)
-	builder.WriteString(", ")
-	builder.WriteString("public_url=")
-	builder.WriteString(_m.PublicURL)
-	builder.WriteString(", ")
-	builder.WriteString("is_default=")
-	builder.WriteString(fmt.Sprintf("%v", _m.IsDefault))
 	builder.WriteString(", ")
 	if v := _m.LastSyncedAt; v != nil {
 		builder.WriteString("last_synced_at=")

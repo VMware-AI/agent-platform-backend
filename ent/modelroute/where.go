@@ -340,16 +340,6 @@ func GatewayConnectionIDLTE(v uuid.UUID) predicate.ModelRoute {
 	return predicate.ModelRoute(sql.FieldLTE(FieldGatewayConnectionID, v))
 }
 
-// GatewayConnectionIDIsNil applies the IsNil predicate on the "gateway_connection_id" field.
-func GatewayConnectionIDIsNil() predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldIsNull(FieldGatewayConnectionID))
-}
-
-// GatewayConnectionIDNotNil applies the NotNil predicate on the "gateway_connection_id" field.
-func GatewayConnectionIDNotNil() predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldNotNull(FieldGatewayConnectionID))
-}
-
 // GatewayNameEQ applies the EQ predicate on the "gateway_name" field.
 func GatewayNameEQ(v string) predicate.ModelRoute {
 	return predicate.ModelRoute(sql.FieldEQ(FieldGatewayName, v))
@@ -483,6 +473,36 @@ func EnabledEQ(v bool) predicate.ModelRoute {
 // EnabledNEQ applies the NEQ predicate on the "enabled" field.
 func EnabledNEQ(v bool) predicate.ModelRoute {
 	return predicate.ModelRoute(sql.FieldNEQ(FieldEnabled, v))
+}
+
+// FallbacksIsNil applies the IsNil predicate on the "fallbacks" field.
+func FallbacksIsNil() predicate.ModelRoute {
+	return predicate.ModelRoute(sql.FieldIsNull(FieldFallbacks))
+}
+
+// FallbacksNotNil applies the NotNil predicate on the "fallbacks" field.
+func FallbacksNotNil() predicate.ModelRoute {
+	return predicate.ModelRoute(sql.FieldNotNull(FieldFallbacks))
+}
+
+// ContextWindowFallbacksIsNil applies the IsNil predicate on the "context_window_fallbacks" field.
+func ContextWindowFallbacksIsNil() predicate.ModelRoute {
+	return predicate.ModelRoute(sql.FieldIsNull(FieldContextWindowFallbacks))
+}
+
+// ContextWindowFallbacksNotNil applies the NotNil predicate on the "context_window_fallbacks" field.
+func ContextWindowFallbacksNotNil() predicate.ModelRoute {
+	return predicate.ModelRoute(sql.FieldNotNull(FieldContextWindowFallbacks))
+}
+
+// ContentPolicyFallbacksIsNil applies the IsNil predicate on the "content_policy_fallbacks" field.
+func ContentPolicyFallbacksIsNil() predicate.ModelRoute {
+	return predicate.ModelRoute(sql.FieldIsNull(FieldContentPolicyFallbacks))
+}
+
+// ContentPolicyFallbacksNotNil applies the NotNil predicate on the "content_policy_fallbacks" field.
+func ContentPolicyFallbacksNotNil() predicate.ModelRoute {
+	return predicate.ModelRoute(sql.FieldNotNull(FieldContentPolicyFallbacks))
 }
 
 // And groups predicates with the AND operator between them.

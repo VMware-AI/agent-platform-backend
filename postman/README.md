@@ -4,7 +4,7 @@ Postman v2.1 collection for the GraphQL API at `agent-platform-backend`.
 
 ## Files
 
-- `agent-platform-backend.postman_collection.json` — 17 grouped folders, 114 requests covering every GraphQL query/mutation in the schema.
+- `agent-platform-backend.postman_collection.json` — 14 grouped folders, 111 requests covering every GraphQL query/mutation in the schema.
 
 ## Quick start
 
@@ -43,13 +43,11 @@ Either one works; the collection uses the Bearer path.
 | Users & Roles | 11 | Users list, CreateUser (AUTO/CUSTOM), ResetPassword, Toggle, … |
 | RBAC | 9 | Custom roles, permission catalog, role-permission matrix |
 | Departments & Memberships | 6 | Add/RemoveMembership delegated to dept-admins |
-| Platform Settings | 2 | `agentUser` (LLD-13) |
 | Resource Pools | 8 | vCenter pools, sync, pre-save probe, vsphere placement |
 | Model Gateways (LITELLM) | 7 | Page + sync summary + test connection (id-based + dry-run pre-create) |
-| Gateway Connections (raw) | 4 | Lower-level connection ops |
-| Model Routes | 6 | Create/Update/Delete + legacy upsertModelRoute |
-| Upstreams & Router Tiers | 5 | Provider/model routing + difficulty router |
-| Virtual Keys | 5 | Issue/Revoke/Regenerate/SetEnabled — `secret` returned ONCE |
+| Provider Models | 10 | providerModelInfo (paged/filter/sort) + create/update/delete + per-spec CRUD (add/update/delete/block) + on-demand probe/refresh (status = full_healthy/partial_outage/full_outage/unknown) |
+| Model Routes | 6 | Create / Update / Delete / SetEnabled / SyncRouterSettings (gatewayConnections + upsertModelRoute + RouterTier surface retired) |
+| Virtual Keys | 7 | Issue/Revoke/Regenerate/SetEnabled/AssociateAgent — `secret` returned ONCE; `GatewayAvailableModels` for issue-form cross-check |
 | Rate Limit Policies | 4 | rpm/tpm, enabled, delete (refused while keys reference it) |
 | Agents (Deployed) | 17 | List, lifecycle, snapshots, agent configs, rotation, enrollment revoke |
 | Deploy (Marketplace OVA) | 6 | OVA families + versions + DeployAgent + vmTemplates |

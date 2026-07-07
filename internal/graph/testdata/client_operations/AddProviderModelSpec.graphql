@@ -1,0 +1,5 @@
+mutation AddProviderModelSpec($input: AddProviderModelSpecInput!) {
+  addProviderModelSpec(input: $input) {
+    ...ProviderModelFields
+  }
+}

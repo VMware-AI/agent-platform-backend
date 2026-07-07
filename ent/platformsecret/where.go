@@ -84,6 +84,11 @@ func APIKey(v string) predicate.PlatformSecret {
 	return predicate.PlatformSecret(sql.FieldEQ(FieldAPIKey, v))
 }
 
+// KeyID applies equality check predicate on the "key_id" field. It's identical to KeyIDEQ.
+func KeyID(v string) predicate.PlatformSecret {
+	return predicate.PlatformSecret(sql.FieldEQ(FieldKeyID, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.PlatformSecret {
 	return predicate.PlatformSecret(sql.FieldEQ(FieldCreatedAt, v))
@@ -452,6 +457,81 @@ func APIKeyEqualFold(v string) predicate.PlatformSecret {
 // APIKeyContainsFold applies the ContainsFold predicate on the "api_key" field.
 func APIKeyContainsFold(v string) predicate.PlatformSecret {
 	return predicate.PlatformSecret(sql.FieldContainsFold(FieldAPIKey, v))
+}
+
+// KeyIDEQ applies the EQ predicate on the "key_id" field.
+func KeyIDEQ(v string) predicate.PlatformSecret {
+	return predicate.PlatformSecret(sql.FieldEQ(FieldKeyID, v))
+}
+
+// KeyIDNEQ applies the NEQ predicate on the "key_id" field.
+func KeyIDNEQ(v string) predicate.PlatformSecret {
+	return predicate.PlatformSecret(sql.FieldNEQ(FieldKeyID, v))
+}
+
+// KeyIDIn applies the In predicate on the "key_id" field.
+func KeyIDIn(vs ...string) predicate.PlatformSecret {
+	return predicate.PlatformSecret(sql.FieldIn(FieldKeyID, vs...))
+}
+
+// KeyIDNotIn applies the NotIn predicate on the "key_id" field.
+func KeyIDNotIn(vs ...string) predicate.PlatformSecret {
+	return predicate.PlatformSecret(sql.FieldNotIn(FieldKeyID, vs...))
+}
+
+// KeyIDGT applies the GT predicate on the "key_id" field.
+func KeyIDGT(v string) predicate.PlatformSecret {
+	return predicate.PlatformSecret(sql.FieldGT(FieldKeyID, v))
+}
+
+// KeyIDGTE applies the GTE predicate on the "key_id" field.
+func KeyIDGTE(v string) predicate.PlatformSecret {
+	return predicate.PlatformSecret(sql.FieldGTE(FieldKeyID, v))
+}
+
+// KeyIDLT applies the LT predicate on the "key_id" field.
+func KeyIDLT(v string) predicate.PlatformSecret {
+	return predicate.PlatformSecret(sql.FieldLT(FieldKeyID, v))
+}
+
+// KeyIDLTE applies the LTE predicate on the "key_id" field.
+func KeyIDLTE(v string) predicate.PlatformSecret {
+	return predicate.PlatformSecret(sql.FieldLTE(FieldKeyID, v))
+}
+
+// KeyIDContains applies the Contains predicate on the "key_id" field.
+func KeyIDContains(v string) predicate.PlatformSecret {
+	return predicate.PlatformSecret(sql.FieldContains(FieldKeyID, v))
+}
+
+// KeyIDHasPrefix applies the HasPrefix predicate on the "key_id" field.
+func KeyIDHasPrefix(v string) predicate.PlatformSecret {
+	return predicate.PlatformSecret(sql.FieldHasPrefix(FieldKeyID, v))
+}
+
+// KeyIDHasSuffix applies the HasSuffix predicate on the "key_id" field.
+func KeyIDHasSuffix(v string) predicate.PlatformSecret {
+	return predicate.PlatformSecret(sql.FieldHasSuffix(FieldKeyID, v))
+}
+
+// KeyIDIsNil applies the IsNil predicate on the "key_id" field.
+func KeyIDIsNil() predicate.PlatformSecret {
+	return predicate.PlatformSecret(sql.FieldIsNull(FieldKeyID))
+}
+
+// KeyIDNotNil applies the NotNil predicate on the "key_id" field.
+func KeyIDNotNil() predicate.PlatformSecret {
+	return predicate.PlatformSecret(sql.FieldNotNull(FieldKeyID))
+}
+
+// KeyIDEqualFold applies the EqualFold predicate on the "key_id" field.
+func KeyIDEqualFold(v string) predicate.PlatformSecret {
+	return predicate.PlatformSecret(sql.FieldEqualFold(FieldKeyID, v))
+}
+
+// KeyIDContainsFold applies the ContainsFold predicate on the "key_id" field.
+func KeyIDContainsFold(v string) predicate.PlatformSecret {
+	return predicate.PlatformSecret(sql.FieldContainsFold(FieldKeyID, v))
 }
 
 // And groups predicates with the AND operator between them.

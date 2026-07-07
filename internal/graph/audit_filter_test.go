@@ -18,10 +18,6 @@ func TestAuditLogFilters(t *testing.T) {
 	if _, err := mr.CreateUser(ctx, model.CreateUserInput{Username: "audita", DisplayName: "audita", Email: "a@x.io", RoleID: builtinRoleUUID(string(model.RoleNameUser)), PasswordMode: model.PasswordModeCustom, CustomPassword: ptr("AuditPass1234")}); err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
-	rpm := 60
-	if _, err := mr.UpsertRateLimitPolicy(ctx, model.UpsertRateLimitPolicyInput{Name: "p", Rpm: &rpm}); err != nil {
-		t.Fatalf("UpsertRateLimitPolicy: %v", err)
-	}
 
 	// filter by action category prefix
 	prefix := "user."
@@ -36,16 +32,6 @@ func TestAuditLogFilters(t *testing.T) {
 		if !strings.HasPrefix(it.Action, "user.") {
 			t.Fatalf("actionPrefix filter leaked: %s", it.Action)
 		}
-	}
-
-	// substring search
-	search := "rate_limit"
-	conn2, err := qr.AuditLogs(ctx, &model.AuditFilter{Search: &search}, nil)
-	if err != nil {
-		t.Fatalf("AuditLogs search: %v", err)
-	}
-	if conn2.Total == 0 {
-		t.Fatal("expected a rate_limit audit entry via search")
 	}
 
 	// filter by actor (adminCtx fixed id)

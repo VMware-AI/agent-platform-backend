@@ -9,7 +9,6 @@ query VirtualKeys($userId: ID) {
     alias
     userId
     agentId
-    rateLimitPolicyId
     status
     expiresAt
     createdAt

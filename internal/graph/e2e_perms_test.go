@@ -21,7 +21,6 @@ func TestE2E_PermissionDirectives(t *testing.T) {
 
 	userCookie := e.seedUser(t, "plain", user.RoleUser)
 	readOnlyCookie := e.seedUser(t, "ro", user.RoleReadOnly)
-	adminCookie := e.seedUser(t, "boss", user.RoleAdmin)
 
 	// --- @hasPermission-gated reads (audit:view) ---
 	// read_only is the observability seat (LLD-15 T7): it HOLDS audit:view, so
@@ -39,24 +38,6 @@ func TestE2E_PermissionDirectives(t *testing.T) {
 	// unauthenticated denied
 	if err := e.gql.Post(auditQ, &aResp); err == nil {
 		t.Fatal("unauthenticated must be denied audit:view")
-	}
-
-	// --- @hasPermission-gated writes (route:manage) — admin only ---
-	const routeM = `mutation { upsertRateLimitPolicy(input:{name:"p"}){ id name } }`
-	var rResp struct {
-		UpsertRateLimitPolicy struct {
-			ID   string
-			Name string
-		}
-	}
-	if err := e.gql.Post(routeM, &rResp, client.AddCookie(readOnlyCookie)); err == nil {
-		t.Fatal("read_only must be denied route:manage")
-	}
-	if err := e.gql.Post(routeM, &rResp, client.AddCookie(adminCookie)); err != nil {
-		t.Fatalf("admin should pass route:manage: %v", err)
-	}
-	if rResp.UpsertRateLimitPolicy.Name != "p" {
-		t.Fatalf("unexpected result: %+v", rResp.UpsertRateLimitPolicy)
 	}
 }
 

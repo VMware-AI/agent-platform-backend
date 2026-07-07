@@ -217,7 +217,7 @@ changePassword(oldPassword: String!, newPassword: String!): Boolean!
 | Field | Type | Description |
 |-------|------|-------------|
 | `actorUserId` | `ID` | — |
-| `actionPrefix` | `String` | action category prefix, e.g. "user." / "router." / "key." / "rate_limit." |
+| `actionPrefix` | `String` | action category prefix, e.g. "user." / "router." / "key." |
 | `search` | `String` | substring match across action + resourceId |
 | `from` | `Time` | createdAt window (inclusive); either bound may be omitted. |
 | `to` | `Time` | — |

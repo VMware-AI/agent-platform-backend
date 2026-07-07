@@ -35,6 +35,12 @@ const (
 	FieldUIStrategy = "ui_strategy"
 	// FieldEnabled holds the string denoting the enabled field in the database.
 	FieldEnabled = "enabled"
+	// FieldFallbacks holds the string denoting the fallbacks field in the database.
+	FieldFallbacks = "fallbacks"
+	// FieldContextWindowFallbacks holds the string denoting the context_window_fallbacks field in the database.
+	FieldContextWindowFallbacks = "context_window_fallbacks"
+	// FieldContentPolicyFallbacks holds the string denoting the content_policy_fallbacks field in the database.
+	FieldContentPolicyFallbacks = "content_policy_fallbacks"
 	// Table holds the table name of the modelroute in the database.
 	Table = "model_routes"
 )
@@ -52,6 +58,9 @@ var Columns = []string{
 	FieldStrategy,
 	FieldUIStrategy,
 	FieldEnabled,
+	FieldFallbacks,
+	FieldContextWindowFallbacks,
+	FieldContentPolicyFallbacks,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

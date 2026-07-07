@@ -1,0 +1,35 @@
+mutation CreateProviderModel($input: CreateProviderModelInput!) {
+  createProviderModel(input: $input) {
+    ...ProviderModelFields
+  }
+}
+
+fragment ProviderModelFields on ProviderModel {
+  id
+  name
+  status
+  createdAt
+  updatedAt
+  lastCheckedAt
+  modelGateway {
+    id
+    name
+    endpoint
+  }
+  modelSpecs {
+    litellmParams {
+      model
+      apiBase
+      apiKeyRef
+      customLlmProvider
+    }
+    modelInfo {
+      id
+      blocked
+      additionalProp1 {
+        status
+        message
+      }
+    }
+  }
+}

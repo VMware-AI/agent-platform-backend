@@ -48,15 +48,11 @@ type GatewayTarget struct {
 
 // Reconciler compares gateway keys/teams against governance rows.
 type Reconciler struct {
-	Ent     *ent.Client
-	Gateway Gateway
-	// GatewaysFunc, when set, resolves EVERY gateway to reconcile this cycle, each
-	// paired with the rows it owns (LLD-14 §3.4 / OQ-5). It replaces the old
-	// single-gateway resolver: instead of scanning one default gateway against all
-	// rows, the reconciler scans each gateway against only its own keys/teams. A
-	// nil/empty result skips the cycle. When set, it takes precedence over the
-	// legacy r.Gateway path (which remains for the single-gateway / injected-fake
-	// case).
+	Ent *ent.Client
+	// GatewaysFunc resolves EVERY gateway to reconcile this cycle, each
+	// paired with the rows it owns (LLD-14 §3.4 / OQ-5). The reconciler
+	// scans each gateway against only its own keys/teams. A nil/empty
+	// result skips the cycle.
 	GatewaysFunc func(context.Context) ([]GatewayTarget, error)
 	// Prune enables healing: delete gateway orphans + revoke stale DB rows. When
 	// false (default) the reconciler only reports.
@@ -80,17 +76,16 @@ type Report struct {
 	Revoked        int      // stale rows marked revoked (Prune only)
 }
 
-// ReconcileKeys runs one pass over ALL governance rows against r.Gateway. It is
-// the single-gateway/legacy entry point (also used by tests); the multi-gateway
-// path (runCycle + GatewaysFunc) calls reconcileKeysFor per gateway with a
-// pre-scoped row subset instead. Returns an error only when it cannot read both
-// sides; per-item heal failures are logged and counted, not fatal.
-func (r *Reconciler) ReconcileKeys(ctx context.Context) (*Report, error) {
+// ReconcileKeys runs one pass over ALL governance rows against the given
+// gateway. Used by the per-gateway path (runCycle) for a pre-scoped row
+// subset. Returns an error only when it cannot read both sides; per-item
+// heal failures are logged and counted, not fatal.
+func (r *Reconciler) ReconcileKeys(ctx context.Context, gw Gateway) (*Report, error) {
 	rows, err := r.Ent.VirtualKey.Query().All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list governance rows: %w", err)
 	}
-	return r.reconcileKeysFor(ctx, r.Gateway, rows)
+	return r.reconcileKeysFor(ctx, gw, rows)
 }
 
 // reconcileKeysFor diffs ONE gateway's listed keys against the GIVEN governance
@@ -155,29 +150,16 @@ type TeamReport struct {
 	TeamOrphans   []string // team ids at gateway with no department (prune candidates)
 	DanglingDepts []string // department ids whose litellm_team_id is absent at gateway
 	Pruned        int      // orphan teams deleted at the gateway (Prune only)
-	// ProtectedOrphans are orphan team ids that were NOT pruned because they still
-	// own active (non-revoked) virtual keys — deleting the team would cascade-delete
-	// those keys at litellm and strand live agents (#81). Reported so an operator can
-	// heal the underlying key/team bucketing asymmetry instead of the reconciler
-	// silently leaking the gateway team.
-	ProtectedOrphans []string
 }
 
-// ReconcileTeams compares r.Gateway's teams against ALL department rows. Mirrors
-// ReconcileKeys: the single-gateway/legacy entry point; the multi-gateway path
-// calls reconcileTeamsFor per gateway with a pre-scoped department subset. The
-// prune-guard set (team ids that still own active keys) is derived from ALL
-// virtual keys here, matching the all-rows department scope.
-func (r *Reconciler) ReconcileTeams(ctx context.Context) (*TeamReport, error) {
+// ReconcileTeams compares the given gateway's teams against ALL department
+// rows. Mirrors ReconcileKeys' per-item count/log behavior.
+func (r *Reconciler) ReconcileTeams(ctx context.Context, gw Gateway) (*TeamReport, error) {
 	depts, err := r.Ent.Department.Query().All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list departments: %w", err)
 	}
-	keys, err := r.Ent.VirtualKey.Query().All(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list governance rows: %w", err)
-	}
-	return r.reconcileTeamsFor(ctx, r.Gateway, depts, activeKeyTeamIDs(keys))
+	return r.reconcileTeamsFor(ctx, gw, depts)
 }
 
 // reconcileTeamsFor diffs ONE gateway's teams against the GIVEN department subset
@@ -185,16 +167,7 @@ func (r *Reconciler) ReconcileTeams(ctx context.Context) (*TeamReport, error) {
 // (no backing department) are pruned under Prune; dangling department references
 // are only reported — re-creating vs clearing the link is an operator policy
 // decision. Returns an error only when it cannot read the gateway side.
-//
-// activeKeyTeams is the set of team ids that still own at least one active
-// (non-revoked) virtual key on THIS gateway. An orphan team in that set is never
-// pruned regardless of Prune: because virtual keys are bucketed by their issuing
-// gateway while departments are bucketed by their current binding, a default-
-// gateway switch can leave a team on its old gateway looking orphaned (no backing
-// department in this bucket) even though its keys still live and bill here.
-// Pruning it would cascade-delete those keys and strand live agents (#81), so it
-// is surfaced as a ProtectedOrphan instead.
-func (r *Reconciler) reconcileTeamsFor(ctx context.Context, gw Gateway, depts []*ent.Department, activeKeyTeams map[string]struct{}) (*TeamReport, error) {
+func (r *Reconciler) reconcileTeamsFor(ctx context.Context, gw Gateway, depts []*ent.Department) (*TeamReport, error) {
 	gwTeams, err := gw.ListTeams(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list gateway teams: %w", err)
@@ -236,17 +209,6 @@ func (r *Reconciler) reconcileTeamsFor(ctx context.Context, gw Gateway, depts []
 				rep.GatewayTeams, rep.DBDepartments)
 		} else {
 			for _, teamID := range rep.TeamOrphans {
-				// Safety net (#81): never prune a team that still owns active keys on
-				// this gateway. DeleteTeam cascades at litellm and would revoke those
-				// still-billing keys, cutting off live agents. This can happen when a
-				// department re-binds to another gateway (or the default switches) but
-				// its keys — bucketed by issuing gateway — remain here; the team then
-				// looks orphaned in this bucket while its keys are very much alive.
-				if _, hasActive := activeKeyTeams[teamID]; hasActive {
-					rep.ProtectedOrphans = append(rep.ProtectedOrphans, teamID)
-					log.Printf("reconcile: SKIP pruning gateway team orphan — it still owns active virtual keys on this gateway (key/team bucketing asymmetry, #81); heal the binding instead")
-					continue
-				}
 				if err := gw.DeleteTeam(ctx, teamID); err != nil {
 					log.Printf("reconcile: prune gateway team orphan failed: %v", err)
 					continue
@@ -256,29 +218,10 @@ func (r *Reconciler) reconcileTeamsFor(ctx context.Context, gw Gateway, depts []
 		}
 	}
 
-	log.Printf("reconcile teams: gateway=%d db=%d orphans=%d dangling=%d pruned=%d protected=%d prune=%v",
+	log.Printf("reconcile teams: gateway=%d db=%d orphans=%d dangling=%d pruned=%d prune=%v",
 		rep.GatewayTeams, rep.DBDepartments, len(rep.TeamOrphans), len(rep.DanglingDepts),
-		rep.Pruned, len(rep.ProtectedOrphans), r.Prune)
+		rep.Pruned, r.Prune)
 	return rep, nil
-}
-
-// activeKeyTeamIDs collects the team ids (VirtualKey.team_id == department id ==
-// litellm team id, per LLD-13 §3.3) that still own at least one active
-// (non-revoked) key. reconcileTeamsFor uses it as a prune-guard so a team with
-// live keys is never cascade-deleted (#81). A key with an empty team id (a
-// user-level key on the default gateway with no team) contributes nothing.
-func activeKeyTeamIDs(keys []*ent.VirtualKey) map[string]struct{} {
-	teams := make(map[string]struct{})
-	for _, vk := range keys {
-		if vk.Status == virtualkey.StatusRevoked {
-			continue // terminal — its key is expected to be gone, protects nothing
-		}
-		if vk.TeamID == "" {
-			continue
-		}
-		teams[vk.TeamID] = struct{}{}
-	}
-	return teams
 }
 
 // allUnmatched reports the catastrophic signature where EVERY gateway item is
@@ -369,19 +312,6 @@ func (r *Reconciler) runCycle(ctx context.Context) {
 			log.Printf("reconcile: resolve gateway targets failed, skipping cycle: %v", err)
 			return
 		}
-		// Prune-guard is a SUPERSET across ALL gateways: a team that owns an active
-		// (non-revoked) key on ANY gateway is never pruned. Keys with a recorded
-		// gateway_connection_id bucket by their issuing gateway, but legacy NULL-
-		// gateway keys bucket by the department's CURRENT binding — so after a
-		// default-gateway switch a team's keys can sit in a different gateway's
-		// bucket than the gateway the team physically lives on. A per-gateway guard
-		// would miss that and prune a team with live keys (#81). A superset only ever
-		// errs toward NOT deleting — the safe default for a destructive prune.
-		var allKeys []*ent.VirtualKey
-		for _, t := range targets {
-			allKeys = append(allKeys, t.Keys...)
-		}
-		allActiveKeyTeams := activeKeyTeamIDs(allKeys)
 		for _, t := range targets {
 			if t.Gateway == nil {
 				continue
@@ -389,21 +319,9 @@ func (r *Reconciler) runCycle(ctx context.Context) {
 			if _, err := r.reconcileKeysFor(ctx, t.Gateway, t.Keys); err != nil {
 				log.Printf("reconcile keys cycle error: %v", err)
 			}
-			if _, err := r.reconcileTeamsFor(ctx, t.Gateway, t.Depts, allActiveKeyTeams); err != nil {
+			if _, err := r.reconcileTeamsFor(ctx, t.Gateway, t.Depts); err != nil {
 				log.Printf("reconcile teams cycle error: %v", err)
 			}
 		}
-		return
-	}
-	// Legacy single-gateway path: an injected r.Gateway reconciled against all rows
-	// (tests / a not-yet-migrated install with no GatewayConnection rows).
-	if r.Gateway == nil {
-		return
-	}
-	if _, err := r.ReconcileKeys(ctx); err != nil {
-		log.Printf("reconcile keys cycle error: %v", err)
-	}
-	if _, err := r.ReconcileTeams(ctx); err != nil {
-		log.Printf("reconcile teams cycle error: %v", err)
 	}
 }
