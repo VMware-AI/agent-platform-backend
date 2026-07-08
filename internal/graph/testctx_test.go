@@ -32,3 +32,5 @@ func readOnlyCtx() context.Context {
 	return auth.WithCurrentUser(context.Background(),
 		&auth.CurrentUser{ID: "00000000-0000-0000-0000-000000000002", Role: auth.RoleReadOnly})
 }
+
+func ptr[T any](v T) *T { return &v }
