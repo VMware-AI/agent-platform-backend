@@ -142,5 +142,3 @@ func findNode(nodes []model.Agent, name string) *model.Agent {
 	}
 	return nil
 }
-
-func ptr[T any](v T) *T { return &v }
