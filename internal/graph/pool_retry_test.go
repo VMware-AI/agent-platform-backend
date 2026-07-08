@@ -3,10 +3,9 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
-
-	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 )
 
 // TestRetrySync_ExhaustsRetriesOnRetryable: a function that always returns
@@ -16,7 +15,7 @@ func TestRetrySync_ExhaustsRetriesOnRetryable(t *testing.T) {
 	calls := 0
 	err := retrySync(context.Background(), 2, func(ctx context.Context) error {
 		calls++
-		return &vcenter.RetryableError{Err: errors.New("connection refused")}
+		return errors.New("connection refused")
 	})
 	if err == nil {
 		t.Fatal("expected non-nil after exhausting retries")
@@ -26,19 +25,24 @@ func TestRetrySync_ExhaustsRetriesOnRetryable(t *testing.T) {
 	}
 }
 
-// TestRetrySync_ImmediateReturnOnBusinessError: a non-retryable error
-// short-circuits the retry loop.
-func TestRetrySync_ImmediateReturnOnBusinessError(t *testing.T) {
+// TestRetrySync_ImmediateReturnOnContextError: with the vcenter-side error
+// classifier gone, the ONLY non-retryable class left is a context error
+// (isRetryable: errors.Is Canceled/DeadlineExceeded) — a wrapped one must
+// short-circuit the loop without burning backoff sleeps. (The old
+// "business errors return immediately" contract no longer exists in source;
+// whether permission-denied/not-found should regain a fast path is an open
+// question for the retry author.)
+func TestRetrySync_ImmediateReturnOnContextError(t *testing.T) {
 	calls := 0
 	err := retrySync(context.Background(), 5, func(ctx context.Context) error {
 		calls++
-		return errors.New("Permission denied: user cannot login")
+		return fmt.Errorf("sync aborted: %w", context.DeadlineExceeded)
 	})
 	if err == nil {
-		t.Fatal("expected non-nil business error")
+		t.Fatal("expected non-nil error")
 	}
 	if calls != 1 {
-		t.Fatalf("business error should be returned after 1 call, got %d", calls)
+		t.Fatalf("context error should be returned after 1 call, got %d", calls)
 	}
 }
 
@@ -53,7 +57,7 @@ func TestRetrySync_StopsOnContextCancel(t *testing.T) {
 	calls := 0
 	err := retrySync(ctx, 5, func(ctx context.Context) error {
 		calls++
-		return &vcenter.RetryableError{Err: errors.New("transient")}
+		return errors.New("transient")
 	})
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("expected context.Canceled, got %v", err)
@@ -72,7 +76,7 @@ func TestRetrySync_SuccessAfterRetries(t *testing.T) {
 	err := retrySync(context.Background(), 3, func(ctx context.Context) error {
 		calls++
 		if calls < 2 {
-			return &vcenter.RetryableError{Err: errors.New("transient")}
+			return errors.New("transient")
 		}
 		return nil
 	})

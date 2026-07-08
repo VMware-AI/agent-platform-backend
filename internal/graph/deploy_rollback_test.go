@@ -103,24 +103,4 @@ func (f *fakeVCenter) GetVMInfo(_ context.Context, _ string) (*vcenter.VMInfo, e
 
 func (f *fakeVCenter) CheckInstantCloneCompatible(_ context.Context, _ string) error { return nil }
 func (f *fakeVCenter) RemoveSerialPorts(_ context.Context, _ string) error           { return nil }
-func (f *fakeVCenter) DeployOVF(_ context.Context, _ vcenter.OVFDeploySpec) (*vcenter.VMInfo, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-func (f *fakeVCenter) ReconfigVM(_ context.Context, _ string, _ vcenter.ReconfigSpec) error {
-	return nil
-}
-func (f *fakeVCenter) GetVMHardware(_ context.Context, _ string) (*vcenter.VMHardware, error) {
-	return &vcenter.VMHardware{CPU: 2, MemoryMB: 4096, DiskKB: 20971520}, nil
-}
-func (f *fakeVCenter) GetVAppProperties(_ context.Context, _ string) ([]vcenter.OVFProperty, error) {
-	return nil, nil
-}
-func (f *fakeVCenter) InstantClone(_ context.Context, spec vcenter.InstantCloneSpec) (*vcenter.VMInfo, error) {
-	return &vcenter.VMInfo{Name: spec.Name, PowerState: "poweredOn"}, nil
-}
-func (f *fakeVCenter) ListRunningVMs(context.Context) ([]vcenter.VMInfo, error) {
-	return []vcenter.VMInfo{{Name: "parent-vm", PowerState: "poweredOn", UUID: "fake-uuid"}}, nil
-}
-func (f *fakeVCenter) CheckInstantCloneCompatible(_ context.Context, _ string) error { return nil }
-func (f *fakeVCenter) RemoveSerialPorts(_ context.Context, _ string) error           { return nil }
 func (f *fakeVCenter) PowerOff(_ context.Context, _ string) error                    { return nil }

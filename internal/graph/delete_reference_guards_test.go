@@ -8,7 +8,6 @@ import (
 
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/membership"
-	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 )
 
@@ -64,45 +63,5 @@ func TestDeleteDepartment_RefusedWhenHasMembers(t *testing.T) {
 	}
 	if n, _ := r.Ent.Department.Query().Count(ctx); n != 1 {
 		t.Fatalf("department must NOT be deleted while it has members, count=%d", n)
-	}
-}
-
-// #64-5: deleting a department whose litellm team still has live keys would orphan
-// those keys on its (possibly non-default) gateway — revoke routing falls back to
-// the default gateway once the department row is gone, so the real key is never
-// revoked. DeleteDepartment must refuse while a non-revoked key references the team.
-func TestDeleteDepartment_RefusedWhenHasActiveKeys(t *testing.T) {
-	r, cleanup := newTestResolver(t)
-	defer cleanup()
-	ctx := adminCtx()
-	mr := &mutationResolver{r}
-
-	dept, err := mr.CreateDepartment(ctx, model.CreateDepartmentInput{Name: "research"})
-	if err != nil {
-		t.Fatalf("CreateDepartment: %v", err)
-	}
-	did := uuid.MustParse(dept.ID)
-	// A live key minted under this department's litellm team (team_id = dept id).
-	vk, err := r.Ent.VirtualKey.Create().
-		SetLitellmKey("sk-live").SetUserID(uuid.New()).
-		SetTeamID(did.String()).SetStatus(virtualkey.StatusActive).Save(ctx)
-	if err != nil {
-		t.Fatalf("seed virtual key: %v", err)
-	}
-
-	if _, err := mr.DeleteDepartment(ctx, dept.ID); err == nil {
-		t.Fatal("must refuse to delete a department with active virtual keys")
-	}
-	if n, _ := r.Ent.Department.Query().Count(ctx); n != 1 {
-		t.Fatalf("department must NOT be deleted while keys reference it, count=%d", n)
-	}
-
-	// Once the key is revoked (e.g. the agent was recycled, revoking on the correct
-	// gateway while the department still resolved), deletion is allowed.
-	if _, err := r.Ent.VirtualKey.UpdateOne(vk).SetStatus(virtualkey.StatusRevoked).Save(ctx); err != nil {
-		t.Fatalf("revoke key: %v", err)
-	}
-	if ok, err := mr.DeleteDepartment(ctx, dept.ID); err != nil || !ok {
-		t.Fatalf("DeleteDepartment after revoke: ok=%v err=%v", ok, err)
 	}
 }

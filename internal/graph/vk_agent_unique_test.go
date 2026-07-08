@@ -19,25 +19,28 @@ func TestVirtualKey_AgentUniqueIndex(t *testing.T) {
 	r, cleanup := newTestResolver(t)
 	defer cleanup()
 	ctx := context.Background()
-	aid, uid := uuid.New(), uuid.New()
+	aid := uuid.New()
+	// Seed helper covering the model-routing schema's required fields; ownership
+	// columns (user/team) are gone, so uniqueness is exercised purely via agent_id.
+	mk := func(key string) *ent.VirtualKeyCreate { return seedVirtualKey(r.Ent, key) }
 
-	r.Ent.VirtualKey.Create().SetLitellmKey("k1").SetUserID(uid).SetAgentID(aid).SaveX(ctx)
+	mk("k1").SetAgentID(aid).SaveX(ctx)
 
 	// a second ACTIVE key for the same agent must violate the partial unique index.
-	if _, err := r.Ent.VirtualKey.Create().SetLitellmKey("k2").SetUserID(uid).SetAgentID(aid).Save(ctx); err == nil || !ent.IsConstraintError(err) {
+	if _, err := mk("k2").SetAgentID(aid).Save(ctx); err == nil || !ent.IsConstraintError(err) {
 		t.Fatalf("second active key for the same agent must hit the unique index, got %v", err)
 	}
 
 	// revoking the first frees the agent — re-issuing is allowed (partial WHERE).
 	first := r.Ent.VirtualKey.Query().Where(virtualkey.AgentID(aid)).FirstX(ctx)
 	r.Ent.VirtualKey.UpdateOne(first).SetStatus(virtualkey.StatusRevoked).SaveX(ctx)
-	if _, err := r.Ent.VirtualKey.Create().SetLitellmKey("k3").SetUserID(uid).SetAgentID(aid).Save(ctx); err != nil {
+	if _, err := mk("k3").SetAgentID(aid).Save(ctx); err != nil {
 		t.Fatalf("after revoke, a new key for the agent must be allowed: %v", err)
 	}
 
 	// NULL agent_id (user-level keys) is unconstrained: many are allowed.
-	r.Ent.VirtualKey.Create().SetLitellmKey("u1").SetUserID(uid).SaveX(ctx)
-	if _, err := r.Ent.VirtualKey.Create().SetLitellmKey("u2").SetUserID(uid).Save(ctx); err != nil {
+	mk("u1").SaveX(ctx)
+	if _, err := mk("u2").Save(ctx); err != nil {
 		t.Fatalf("user-level keys (NULL agent_id) must not be constrained: %v", err)
 	}
 }
