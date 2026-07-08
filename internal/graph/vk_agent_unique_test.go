@@ -22,10 +22,7 @@ func TestVirtualKey_AgentUniqueIndex(t *testing.T) {
 	aid := uuid.New()
 	// Seed helper covering the model-routing schema's required fields; ownership
 	// columns (user/team) are gone, so uniqueness is exercised purely via agent_id.
-	mk := func(key string) *ent.VirtualKeyCreate {
-		return r.Ent.VirtualKey.Create().SetLitellmKey(key).SetMaskedKey("sk-***").
-			SetName(key).SetOrganizationID("org-uniq").SetModelGatewayID(uuid.New())
-	}
+	mk := func(key string) *ent.VirtualKeyCreate { return seedVirtualKey(r.Ent, key) }
 
 	mk("k1").SetAgentID(aid).SaveX(ctx)
 

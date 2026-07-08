@@ -165,8 +165,7 @@ func TestAgentsEdge_KeywordFiltersFailClosed(t *testing.T) {
 
 	owner := r.Ent.User.Create().SetUsername("realuser").SetEmail("real@x.io").
 		SetPasswordHash("x").SetRole("user").SaveX(bg)
-	vk := r.Ent.VirtualKey.Create().SetLitellmKey("sk-real").
-		SetMaskedKey("sk-***").SetOrganizationID("org-edge").SetModelGatewayID(uuid.New()).
+	vk := seedVirtualKey(r.Ent, "sk-real").
 		SetModels([]string{"smart"}).SetName("real-key").SaveX(bg)
 	seedAgentEdge(t, r, "agentA", "goose", agent.StatusRunning, owner.ID, &vk.ID, nil)
 	seedAgentEdge(t, r, "agentB", "goose", agent.StatusRunning, owner.ID, nil, nil)

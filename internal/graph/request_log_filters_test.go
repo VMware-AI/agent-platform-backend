@@ -16,7 +16,7 @@ func TestRequestLogs_StatusClassAndTotal(t *testing.T) {
 	uid := uuid.New()
 	mk := func(status int, user uuid.UUID) {
 		if _, err := r.Ent.RequestLog.Create().
-			SetRequestID(uuid.NewString()).SetStatusCode(status).SetLatencyMs(10).
+			SetRequestID(uuid.NewString()).SetUserID(user).SetStatusCode(status).SetLatencyMs(10).
 			SetInputTokens(1).SetOutputTokens(1).Save(ctx); err != nil {
 			t.Fatal(err)
 		}
