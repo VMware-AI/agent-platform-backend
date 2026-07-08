@@ -32,7 +32,8 @@ func (f *fakeGateway) DeleteKey(_ context.Context, key string) error {
 func (f *fakeGateway) CreateTeam(context.Context, gateway.TeamRequest) (*gateway.TeamResponse, error) {
 	return &gateway.TeamResponse{}, nil
 }
-func (f *fakeGateway) DeleteTeam(context.Context, string) error { return nil }
+func (f *fakeGateway) DeleteTeam(context.Context, string) error              { return nil }
+func (f *fakeGateway) ListAvailableModels(context.Context) ([]string, error) { return nil, nil }
 func (f *fakeGateway) ListKeys(context.Context) ([]gateway.KeyInfo, error) {
 	return nil, nil
 }

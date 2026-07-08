@@ -55,6 +55,13 @@ func (d *countingDriver) reset() {
 }
 
 // n1Env is a full HTTP GraphQL stack whose ent driver counts queries.
+// seedVK mirrors package graph's seedVirtualKey (invisible from this external
+// test package): a VirtualKey builder pre-filled with the schema's required set.
+func seedVK(ec *ent.Client, key string) *ent.VirtualKeyCreate {
+	return ec.VirtualKey.Create().SetLitellmKey(key).SetMaskedKey("sk-***").
+		SetName(key).SetOrganizationID("org-test").SetModelGatewayID(uuid.New())
+}
+
 type n1Env struct {
 	gql     *client.Client
 	ent     *ent.Client
@@ -166,11 +173,8 @@ func TestAgents_NoN1_OwnerAndKeyBatched(t *testing.T) {
 	}
 	keys := make([]uuid.UUID, 3)
 	for i := range keys {
-		vk := e.ent.VirtualKey.Create().
-			SetLitellmKey("sk-" + string(rune('a'+i))).
-			SetUserID(owners[0]).
-			SetModels([]string{"smart"}).
-			SetAlias("key-" + string(rune('a'+i))).SaveX(bg)
+		vk := seedVK(e.ent, "sk-"+string(rune('a'+i))).
+			SetModels([]string{"smart"}).SaveX(bg)
 		keys[i] = vk.ID
 	}
 	for i := 0; i < n; i++ {
@@ -234,8 +238,8 @@ func TestAgents_NilSafety_DeletedOwnerAndKey(t *testing.T) {
 
 	owner := e.ent.User.Create().SetUsername("ghost").SetEmail("ghost@x.io").
 		SetPasswordHash("x").SetRole("user").SaveX(bg)
-	vk := e.ent.VirtualKey.Create().SetLitellmKey("sk-ghost").SetUserID(owner.ID).
-		SetModels([]string{"smart"}).SetAlias("ghost-key").SaveX(bg)
+	vk := seedVK(e.ent, "sk-ghost").
+		SetModels([]string{"smart"}).SetName("ghost-key").SaveX(bg)
 
 	// Agent points at an owner id and a key id that we then delete: the FK ids
 	// stay on the agent row, but the related rows vanish.

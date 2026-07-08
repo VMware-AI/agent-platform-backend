@@ -9,7 +9,9 @@ package graph
 import (
 	"context"
 
+	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
+	"github.com/google/uuid"
 )
 
 func userCtx(id, role string) context.Context {
@@ -31,4 +33,16 @@ func tenantAdminCtx(id, tenantID string) context.Context {
 func readOnlyCtx() context.Context {
 	return auth.WithCurrentUser(context.Background(),
 		&auth.CurrentUser{ID: "00000000-0000-0000-0000-000000000002", Role: auth.RoleReadOnly})
+}
+
+func ptr[T any](v T) *T { return &v }
+
+// seedVirtualKey returns a VirtualKey builder pre-filled with every field the
+// model-routing schema REQUIRES (masked_key / name / organization_id /
+// model_gateway_id) so seed sites only chain what the test is about
+// (SetAgentID, SetStatus, SetModels, …). One home for the required set: the
+// next required column is added here once, not hunted across N test files.
+func seedVirtualKey(ec *ent.Client, key string) *ent.VirtualKeyCreate {
+	return ec.VirtualKey.Create().SetLitellmKey(key).SetMaskedKey("sk-***").
+		SetName(key).SetOrganizationID("org-test").SetModelGatewayID(uuid.New())
 }
