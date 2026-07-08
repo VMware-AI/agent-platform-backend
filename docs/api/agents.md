@@ -369,6 +369,38 @@ requestRotation(agentId: ID!, kind: RotationKind!): Boolean!
 | `agentId` | `ID!` | yes | — |
 | `kind` | `RotationKind!` | yes | — |
 
+### `requestAgentUpgrade`
+
+Owner or admin. Enqueue an agent upgrade to targetVersion (LLD-16 §4, platform pull upgrade); the daemon pulls + installs it on its next heartbeat. No-op (true) if an upgrade is already in flight. The command carries only the version — the package source stays the daemon's fixed trusted mirror.
+
+```graphql
+requestAgentUpgrade(agentId: ID!, targetVersion: String!): Boolean!
+```
+
+- **Returns:** `Boolean!`
+- **Auth:** authenticated (no directive)
+
+| Argument | Type | Required | Default |
+|----------|------|----------|---------|
+| `agentId` | `ID!` | yes | — |
+| `targetVersion` | `String!` | yes | — |
+
+### `upgradeAgents`
+
+Admin fleet op: enqueue the same upgrade across many agents. Returns the number of upgrade commands actually enqueued (skips agents that already have one).
+
+```graphql
+upgradeAgents(agentIds: [ID!]!, targetVersion: String!): Int!
+```
+
+- **Returns:** `Int!`
+- **Auth:** authenticated (no directive)
+
+| Argument | Type | Required | Default |
+|----------|------|----------|---------|
+| `agentIds` | `[ID!]!` | yes | — |
+| `targetVersion` | `String!` | yes | — |
+
 ### `revokeAgentEnrollment`
 
 Owner or admin. Revoke the agent VM's bearer credential — its next heartbeat is rejected (LLD-08 §4.4). Idempotent.

@@ -69,6 +69,9 @@ type Request struct {
 	// daemon resolves {pkg_base_url}/{name}-{version}.tar.gz). NOT the display
 	// name in AgentName above.
 	AgentPkgName string
+	// AgentVersion is the first-boot install target (guestinfo agent_version,
+	// LLD-16 §3). Empty → the daemon skips auto-install (assumes pre-installed).
+	AgentVersion string
 	// AgentService is the systemd unit the daemon restarts on upgrade (daemon
 	// default agent.service).
 	AgentService string
@@ -236,6 +239,9 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 	// (guestinfo is a VM-readable, low-trust channel).
 	if req.AgentPkgName != "" {
 		gi["agentmgr.agent_name"] = req.AgentPkgName
+	}
+	if req.AgentVersion != "" {
+		gi["agentmgr.agent_version"] = req.AgentVersion
 	}
 	if req.AgentService != "" {
 		gi["agentmgr.agent_service"] = req.AgentService

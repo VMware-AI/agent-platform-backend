@@ -132,7 +132,7 @@ func (s *Service) dispatchAndAssemble(ctx context.Context, enr *ent.AgentEnrollm
 			CommandID: cmd.CommandID,
 			Kind:      string(cmd.Kind),
 			Reason:    cmd.Reason,
-			Params:    map[string]any{"min_length": uiPasswordMinLength},
+			Params:    commandParams(cmd),
 		})
 	}
 
@@ -141,6 +141,21 @@ func (s *Service) dispatchAndAssemble(ctx context.Context, enr *ent.AgentEnrollm
 		resp.VMToken = tok
 	}
 	return resp, nil
+}
+
+// commandParams builds the per-kind params carried to the daemon. upgrade carries
+// target_version (LLD-16 §4.3: the command carries the version, NEVER a URL — the
+// package source is the daemon's fixed trusted mirror); rotate_ui_password carries
+// the min length; other kinds carry nothing.
+func commandParams(cmd *ent.RotationCommand) map[string]any {
+	switch cmd.Kind {
+	case rotationcommand.KindUpgrade:
+		return map[string]any{"target_version": cmd.TargetVersion}
+	case rotationcommand.KindRotateUIPassword:
+		return map[string]any{"min_length": uiPasswordMinLength}
+	default:
+		return nil
+	}
 }
 
 // applyAck advances one command's state machine. Single-direction; terminal

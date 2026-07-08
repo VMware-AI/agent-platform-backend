@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"regexp"
 	"time"
 
 	"github.com/google/uuid"
@@ -229,5 +230,43 @@ func (s *Service) RequestRotation(ctx context.Context, agentID uuid.UUID, kind r
 		return nil, nil // raced an in-flight rotation (caught by the unique index) — no-op
 	}
 	s.audit(ctx, "rotation.request", "rotation_command", cmd.ID.String(), true, actorID)
+	return cmd, nil
+}
+
+// versionRe validates an agent version before it becomes a pull-upgrade command's
+// target — same shape the daemon enforces. Safe as a package_url path segment: no
+// '/', no '..', no shell metacharacters.
+var versionRe = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$`)
+
+// RequestUpgrade enqueues a manual agent-upgrade command (admin-triggered, LLD-16
+// §4, platform pull upgrade). Carries a validated target_version and NO URL — the
+// daemon fetches from its fixed trusted mirror. Skips if an upgrade is already in
+// flight for the agent (partial unique index closes the TOCTOU).
+//
+// Version whitelist (LLD-16 §4.3): M1 enforces format only (this defends the
+// package_url path segment). A strict "catalog-approved versions" whitelist needs
+// the catalog to carry a version LIST (today it pins a single version) — deferred.
+func (s *Service) RequestUpgrade(ctx context.Context, agentID uuid.UUID, targetVersion, actorID string) (*ent.RotationCommand, error) {
+	if !versionRe.MatchString(targetVersion) {
+		return nil, fmt.Errorf("agentmgr: invalid target_version %q", targetVersion)
+	}
+	if has, err := s.hasInFlight(ctx, agentID, rotationcommand.KindUpgrade); err != nil || has {
+		return nil, err
+	}
+	cmd, err := s.Ent.RotationCommand.Create().
+		SetCommandID(uuid.New().String()).
+		SetAgentID(agentID).
+		SetKind(rotationcommand.KindUpgrade).
+		SetReason("manual").
+		SetTargetVersion(targetVersion).
+		SetStatus(rotationcommand.StatusPending).
+		Save(ctx)
+	if err != nil {
+		if ent.IsConstraintError(err) {
+			return nil, nil // raced an in-flight upgrade (unique index) — no-op
+		}
+		return nil, err
+	}
+	s.audit(ctx, "upgrade.request", "rotation_command", cmd.ID.String(), true, actorID)
 	return cmd, nil
 }

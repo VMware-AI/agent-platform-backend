@@ -112,6 +112,26 @@ func (_u *RotationCommandUpdate) ClearReason() *RotationCommandUpdate {
 	return _u
 }
 
+// SetTargetVersion sets the "target_version" field.
+func (_u *RotationCommandUpdate) SetTargetVersion(v string) *RotationCommandUpdate {
+	_u.mutation.SetTargetVersion(v)
+	return _u
+}
+
+// SetNillableTargetVersion sets the "target_version" field if the given value is not nil.
+func (_u *RotationCommandUpdate) SetNillableTargetVersion(v *string) *RotationCommandUpdate {
+	if v != nil {
+		_u.SetTargetVersion(*v)
+	}
+	return _u
+}
+
+// ClearTargetVersion clears the value of the "target_version" field.
+func (_u *RotationCommandUpdate) ClearTargetVersion() *RotationCommandUpdate {
+	_u.mutation.ClearTargetVersion()
+	return _u
+}
+
 // SetDispatchedAt sets the "dispatched_at" field.
 func (_u *RotationCommandUpdate) SetDispatchedAt(v time.Time) *RotationCommandUpdate {
 	_u.mutation.SetDispatchedAt(v)
@@ -352,6 +372,12 @@ func (_u *RotationCommandUpdate) sqlSave(ctx context.Context) (_node int, err er
 	if _u.mutation.ReasonCleared() {
 		_spec.ClearField(rotationcommand.FieldReason, field.TypeString)
 	}
+	if value, ok := _u.mutation.TargetVersion(); ok {
+		_spec.SetField(rotationcommand.FieldTargetVersion, field.TypeString, value)
+	}
+	if _u.mutation.TargetVersionCleared() {
+		_spec.ClearField(rotationcommand.FieldTargetVersion, field.TypeString)
+	}
 	if value, ok := _u.mutation.DispatchedAt(); ok {
 		_spec.SetField(rotationcommand.FieldDispatchedAt, field.TypeTime, value)
 	}
@@ -495,6 +521,26 @@ func (_u *RotationCommandUpdateOne) SetNillableReason(v *string) *RotationComman
 // ClearReason clears the value of the "reason" field.
 func (_u *RotationCommandUpdateOne) ClearReason() *RotationCommandUpdateOne {
 	_u.mutation.ClearReason()
+	return _u
+}
+
+// SetTargetVersion sets the "target_version" field.
+func (_u *RotationCommandUpdateOne) SetTargetVersion(v string) *RotationCommandUpdateOne {
+	_u.mutation.SetTargetVersion(v)
+	return _u
+}
+
+// SetNillableTargetVersion sets the "target_version" field if the given value is not nil.
+func (_u *RotationCommandUpdateOne) SetNillableTargetVersion(v *string) *RotationCommandUpdateOne {
+	if v != nil {
+		_u.SetTargetVersion(*v)
+	}
+	return _u
+}
+
+// ClearTargetVersion clears the value of the "target_version" field.
+func (_u *RotationCommandUpdateOne) ClearTargetVersion() *RotationCommandUpdateOne {
+	_u.mutation.ClearTargetVersion()
 	return _u
 }
 
@@ -767,6 +813,12 @@ func (_u *RotationCommandUpdateOne) sqlSave(ctx context.Context) (_node *Rotatio
 	}
 	if _u.mutation.ReasonCleared() {
 		_spec.ClearField(rotationcommand.FieldReason, field.TypeString)
+	}
+	if value, ok := _u.mutation.TargetVersion(); ok {
+		_spec.SetField(rotationcommand.FieldTargetVersion, field.TypeString, value)
+	}
+	if _u.mutation.TargetVersionCleared() {
+		_spec.ClearField(rotationcommand.FieldTargetVersion, field.TypeString)
 	}
 	if value, ok := _u.mutation.DispatchedAt(); ok {
 		_spec.SetField(rotationcommand.FieldDispatchedAt, field.TypeTime, value)

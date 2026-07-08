@@ -560,9 +560,10 @@ var (
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "command_id", Type: field.TypeString, Unique: true},
 		{Name: "agent_id", Type: field.TypeUUID},
-		{Name: "kind", Type: field.TypeEnum, Enums: []string{"rotate_ui_password", "rotate_os_password"}},
+		{Name: "kind", Type: field.TypeEnum, Enums: []string{"rotate_ui_password", "rotate_os_password", "upgrade"}},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "dispatched", "acked", "completed", "failed"}, Default: "pending"},
 		{Name: "reason", Type: field.TypeString, Nullable: true},
+		{Name: "target_version", Type: field.TypeString, Nullable: true},
 		{Name: "dispatched_at", Type: field.TypeTime, Nullable: true},
 		{Name: "acked_at", Type: field.TypeTime, Nullable: true},
 		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
@@ -601,6 +602,20 @@ var (
 				},
 			},
 		},
+	}
+	// SettingsColumns holds the columns for the "settings" table.
+	SettingsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "key", Type: field.TypeString, Unique: true},
+		{Name: "value", Type: field.TypeString, Nullable: true},
+	}
+	// SettingsTable holds the schema information for the "settings" table.
+	SettingsTable = &schema.Table{
+		Name:       "settings",
+		Columns:    SettingsColumns,
+		PrimaryKey: []*schema.Column{SettingsColumns[0]},
 	}
 	// SkillsColumns holds the columns for the "skills" table.
 	SkillsColumns = []*schema.Column{
@@ -857,6 +872,7 @@ var (
 		ResourcePoolsTable,
 		RolesTable,
 		RotationCommandsTable,
+		SettingsTable,
 		SkillsTable,
 		TenantsTable,
 		TokenUsagesTable,

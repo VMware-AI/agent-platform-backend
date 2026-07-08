@@ -34,7 +34,7 @@ DOMAINS = [
     ("observability", "Observability (Request Logs, Audit Logs, Metrics)", ["observability"]),
     ("metering", "Metering", ["metering", "observability-spend"]),
     ("platform", "Platform (Users, Roles, Permissions, Departments)",
-     ["account", "rbac", "department"]),
+     ["account", "rbac", "department", "settings"]),
     ("resource-pools", "Resource Pools & vSphere", ["resourcepool"]),
     ("ova-marketplace", "OVA Marketplace", ["ova"]),
     ("dashboard", "Dashboard", ["dashboard"]),

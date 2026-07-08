@@ -29,6 +29,8 @@ const (
 	FieldStatus = "status"
 	// FieldReason holds the string denoting the reason field in the database.
 	FieldReason = "reason"
+	// FieldTargetVersion holds the string denoting the target_version field in the database.
+	FieldTargetVersion = "target_version"
 	// FieldDispatchedAt holds the string denoting the dispatched_at field in the database.
 	FieldDispatchedAt = "dispatched_at"
 	// FieldAckedAt holds the string denoting the acked_at field in the database.
@@ -57,6 +59,7 @@ var Columns = []string{
 	FieldKind,
 	FieldStatus,
 	FieldReason,
+	FieldTargetVersion,
 	FieldDispatchedAt,
 	FieldAckedAt,
 	FieldCompletedAt,
@@ -96,6 +99,7 @@ type Kind string
 const (
 	KindRotateUIPassword Kind = "rotate_ui_password"
 	KindRotateOsPassword Kind = "rotate_os_password"
+	KindUpgrade          Kind = "upgrade"
 )
 
 func (k Kind) String() string {
@@ -105,7 +109,7 @@ func (k Kind) String() string {
 // KindValidator is a validator for the "kind" field enum values. It is called by the builders before save.
 func KindValidator(k Kind) error {
 	switch k {
-	case KindRotateUIPassword, KindRotateOsPassword:
+	case KindRotateUIPassword, KindRotateOsPassword, KindUpgrade:
 		return nil
 	default:
 		return fmt.Errorf("rotationcommand: invalid enum value for kind field: %q", k)
@@ -182,6 +186,11 @@ func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 // ByReason orders the results by the reason field.
 func ByReason(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldReason, opts...).ToFunc()
+}
+
+// ByTargetVersion orders the results by the target_version field.
+func ByTargetVersion(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTargetVersion, opts...).ToFunc()
 }
 
 // ByDispatchedAt orders the results by the dispatched_at field.

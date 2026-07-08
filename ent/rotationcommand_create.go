@@ -95,6 +95,20 @@ func (_c *RotationCommandCreate) SetNillableReason(v *string) *RotationCommandCr
 	return _c
 }
 
+// SetTargetVersion sets the "target_version" field.
+func (_c *RotationCommandCreate) SetTargetVersion(v string) *RotationCommandCreate {
+	_c.mutation.SetTargetVersion(v)
+	return _c
+}
+
+// SetNillableTargetVersion sets the "target_version" field if the given value is not nil.
+func (_c *RotationCommandCreate) SetNillableTargetVersion(v *string) *RotationCommandCreate {
+	if v != nil {
+		_c.SetTargetVersion(*v)
+	}
+	return _c
+}
+
 // SetDispatchedAt sets the "dispatched_at" field.
 func (_c *RotationCommandCreate) SetDispatchedAt(v time.Time) *RotationCommandCreate {
 	_c.mutation.SetDispatchedAt(v)
@@ -357,6 +371,10 @@ func (_c *RotationCommandCreate) createSpec() (*RotationCommand, *sqlgraph.Creat
 	if value, ok := _c.mutation.Reason(); ok {
 		_spec.SetField(rotationcommand.FieldReason, field.TypeString, value)
 		_node.Reason = value
+	}
+	if value, ok := _c.mutation.TargetVersion(); ok {
+		_spec.SetField(rotationcommand.FieldTargetVersion, field.TypeString, value)
+		_node.TargetVersion = value
 	}
 	if value, ok := _c.mutation.DispatchedAt(); ok {
 		_spec.SetField(rotationcommand.FieldDispatchedAt, field.TypeTime, value)

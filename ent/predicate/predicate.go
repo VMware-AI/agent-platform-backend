@@ -72,6 +72,9 @@ type Role func(*sql.Selector)
 // RotationCommand is the predicate function for rotationcommand builders.
 type RotationCommand func(*sql.Selector)
 
+// Setting is the predicate function for setting builders.
+type Setting func(*sql.Selector)
+
 // Skill is the predicate function for skill builders.
 type Skill func(*sql.Selector)
 

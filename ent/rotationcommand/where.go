@@ -80,6 +80,11 @@ func Reason(v string) predicate.RotationCommand {
 	return predicate.RotationCommand(sql.FieldEQ(FieldReason, v))
 }
 
+// TargetVersion applies equality check predicate on the "target_version" field. It's identical to TargetVersionEQ.
+func TargetVersion(v string) predicate.RotationCommand {
+	return predicate.RotationCommand(sql.FieldEQ(FieldTargetVersion, v))
+}
+
 // DispatchedAt applies equality check predicate on the "dispatched_at" field. It's identical to DispatchedAtEQ.
 func DispatchedAt(v time.Time) predicate.RotationCommand {
 	return predicate.RotationCommand(sql.FieldEQ(FieldDispatchedAt, v))
@@ -413,6 +418,81 @@ func ReasonEqualFold(v string) predicate.RotationCommand {
 // ReasonContainsFold applies the ContainsFold predicate on the "reason" field.
 func ReasonContainsFold(v string) predicate.RotationCommand {
 	return predicate.RotationCommand(sql.FieldContainsFold(FieldReason, v))
+}
+
+// TargetVersionEQ applies the EQ predicate on the "target_version" field.
+func TargetVersionEQ(v string) predicate.RotationCommand {
+	return predicate.RotationCommand(sql.FieldEQ(FieldTargetVersion, v))
+}
+
+// TargetVersionNEQ applies the NEQ predicate on the "target_version" field.
+func TargetVersionNEQ(v string) predicate.RotationCommand {
+	return predicate.RotationCommand(sql.FieldNEQ(FieldTargetVersion, v))
+}
+
+// TargetVersionIn applies the In predicate on the "target_version" field.
+func TargetVersionIn(vs ...string) predicate.RotationCommand {
+	return predicate.RotationCommand(sql.FieldIn(FieldTargetVersion, vs...))
+}
+
+// TargetVersionNotIn applies the NotIn predicate on the "target_version" field.
+func TargetVersionNotIn(vs ...string) predicate.RotationCommand {
+	return predicate.RotationCommand(sql.FieldNotIn(FieldTargetVersion, vs...))
+}
+
+// TargetVersionGT applies the GT predicate on the "target_version" field.
+func TargetVersionGT(v string) predicate.RotationCommand {
+	return predicate.RotationCommand(sql.FieldGT(FieldTargetVersion, v))
+}
+
+// TargetVersionGTE applies the GTE predicate on the "target_version" field.
+func TargetVersionGTE(v string) predicate.RotationCommand {
+	return predicate.RotationCommand(sql.FieldGTE(FieldTargetVersion, v))
+}
+
+// TargetVersionLT applies the LT predicate on the "target_version" field.
+func TargetVersionLT(v string) predicate.RotationCommand {
+	return predicate.RotationCommand(sql.FieldLT(FieldTargetVersion, v))
+}
+
+// TargetVersionLTE applies the LTE predicate on the "target_version" field.
+func TargetVersionLTE(v string) predicate.RotationCommand {
+	return predicate.RotationCommand(sql.FieldLTE(FieldTargetVersion, v))
+}
+
+// TargetVersionContains applies the Contains predicate on the "target_version" field.
+func TargetVersionContains(v string) predicate.RotationCommand {
+	return predicate.RotationCommand(sql.FieldContains(FieldTargetVersion, v))
+}
+
+// TargetVersionHasPrefix applies the HasPrefix predicate on the "target_version" field.
+func TargetVersionHasPrefix(v string) predicate.RotationCommand {
+	return predicate.RotationCommand(sql.FieldHasPrefix(FieldTargetVersion, v))
+}
+
+// TargetVersionHasSuffix applies the HasSuffix predicate on the "target_version" field.
+func TargetVersionHasSuffix(v string) predicate.RotationCommand {
+	return predicate.RotationCommand(sql.FieldHasSuffix(FieldTargetVersion, v))
+}
+
+// TargetVersionIsNil applies the IsNil predicate on the "target_version" field.
+func TargetVersionIsNil() predicate.RotationCommand {
+	return predicate.RotationCommand(sql.FieldIsNull(FieldTargetVersion))
+}
+
+// TargetVersionNotNil applies the NotNil predicate on the "target_version" field.
+func TargetVersionNotNil() predicate.RotationCommand {
+	return predicate.RotationCommand(sql.FieldNotNull(FieldTargetVersion))
+}
+
+// TargetVersionEqualFold applies the EqualFold predicate on the "target_version" field.
+func TargetVersionEqualFold(v string) predicate.RotationCommand {
+	return predicate.RotationCommand(sql.FieldEqualFold(FieldTargetVersion, v))
+}
+
+// TargetVersionContainsFold applies the ContainsFold predicate on the "target_version" field.
+func TargetVersionContainsFold(v string) predicate.RotationCommand {
+	return predicate.RotationCommand(sql.FieldContainsFold(FieldTargetVersion, v))
 }
 
 // DispatchedAtEQ applies the EQ predicate on the "dispatched_at" field.
