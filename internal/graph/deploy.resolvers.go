@@ -10,15 +10,18 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
-	"github.com/VMware-AI/agent-platform-backend/ent/agenttemplate"
 	"github.com/VMware-AI/agent-platform-backend/ent/rotationcommand"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/deploy"
+	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
+	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
@@ -110,17 +113,6 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	// within our tracking, and rollback can clean up on a real error.
 	provCtx, cancelProv := context.WithTimeout(context.WithoutCancel(ctx), deployProvisionTimeout)
 	defer cancelProv()
-	// First-boot install target from the catalog (LLD-16 §3; OQ-3: catalog version is
-	// the default). "" when no catalog entry / no pinned version → the daemon skips
-	// first-boot auto-install (assumes the OVA/operator pre-installed the agent).
-	// A real DB error also degrades to "" (deploy still proceeds) but is logged —
-	// silently treating it as "not pinned" would make the missing agent untraceable.
-	agentVersion := ""
-	if tpl, terr := r.Ent.AgentTemplate.Query().Where(agenttemplate.Kind(ag.AgentType)).Only(ctx); terr == nil {
-		agentVersion = tpl.Version
-	} else if !ent.IsNotFound(terr) {
-		log.Printf("deploy: catalog version lookup for kind %q failed (deploying without agent_version): %v", ag.AgentType, terr)
-	}
 	res, err := svc.Provision(provCtx, deploy.Request{
 		AgentName: ag.Name,
 		UserID:    ag.OwnerUserID.String(),
@@ -143,15 +135,6 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		KnowledgePackIDs: r.resolveAgentKnowledge(ctx, ag), // LLD-11 K2: 下发知识包引用
 		KnowledgeRoot:    r.resolveKnowledgeRoot(ctx, ag),  // LLD-11 K4
 		OVFProperties:    mapOVFProperties(input.OvfProperties),
-		// webadmin deploy-time contract (LLD-16/17): first-boot install + upgrade
-		// wiring. agent_name is the package base name == the catalog kind (the daemon
-		// resolves {pkg_base_url}/{name}-{version}.tar.gz). The login credential is NOT
-		// a dedicated field anymore — it travels as a template-defined OVF property
-		// (see mapOVFProperties; LLD-17 D6).
-		AgentPkgName:      ag.AgentType,
-		AgentVersion:      agentVersion,
-		AgentPkgBaseURL:   r.resolveAgentPkgBaseURL(ctx), // DB pkg-source (OQ-2) → env fallback
-		AgentKeepVersions: r.AgentKeepVersions,
 	})
 	if err != nil {
 		// Provision rolls back its own partial work (VM+key); the agent row is ours.
@@ -166,6 +149,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	// drop the agent row), else we leak an orphan VM and an ungoverned key.
 	vkCreate := r.Ent.VirtualKey.Create().
 		SetLitellmKey(res.VirtualKey).
+		SetMaskedKey(maskKey(res.VirtualKey)).
 		SetModelGatewayID(t.gwConn.ID).
 		SetModels(nil).
 		SetName(ag.Name).
@@ -370,63 +354,6 @@ func (r *mutationResolver) RequestRotation(ctx context.Context, agentID string, 
 	return true, nil
 }
 
-// RequestAgentUpgrade enqueues an agent upgrade to targetVersion (LLD-16 §4, platform
-// pull upgrade). Owner/admin; no-op (true) if an upgrade is already in flight. The
-// command carries only the version — the daemon fetches from its fixed trusted mirror.
-func (r *mutationResolver) RequestAgentUpgrade(ctx context.Context, agentID string, targetVersion string) (bool, error) {
-	cu := auth.FromContext(ctx)
-	if cu == nil {
-		return false, gqlerror.Errorf("unauthenticated")
-	}
-	if r.AgentMgr == nil {
-		return false, gqlerror.Errorf("agent-manager is not configured")
-	}
-	aid, err := uuid.Parse(agentID)
-	if err != nil {
-		return false, gqlerror.Errorf("invalid agentId")
-	}
-	if _, err := r.getOwnedAgent(ctx, aid, cu); err != nil {
-		return false, err
-	}
-	if _, err := r.AgentMgr.RequestUpgrade(ctx, aid, targetVersion, cu.ID); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-// UpgradeAgents enqueues the same upgrade across many agents (admin fleet op,
-// LLD-16 §4). Per-agent owner/admin check; returns the number of upgrade commands
-// actually enqueued (an agent that already has one in flight is a silent skip).
-// Stops and surfaces the first hard error (bad id / unauthorized / invalid version),
-// returning the count enqueued so far.
-func (r *mutationResolver) UpgradeAgents(ctx context.Context, agentIds []string, targetVersion string) (int, error) {
-	cu := auth.FromContext(ctx)
-	if cu == nil {
-		return 0, gqlerror.Errorf("unauthenticated")
-	}
-	if r.AgentMgr == nil {
-		return 0, gqlerror.Errorf("agent-manager is not configured")
-	}
-	enqueued := 0
-	for _, idStr := range agentIds {
-		aid, err := uuid.Parse(idStr)
-		if err != nil {
-			return enqueued, gqlerror.Errorf("invalid agentId %q", idStr)
-		}
-		if _, err := r.getOwnedAgent(ctx, aid, cu); err != nil {
-			return enqueued, err
-		}
-		cmd, err := r.AgentMgr.RequestUpgrade(ctx, aid, targetVersion, cu.ID)
-		if err != nil {
-			return enqueued, err
-		}
-		if cmd != nil { // nil = raced an in-flight upgrade (skip, not an error)
-			enqueued++
-		}
-	}
-	return enqueued, nil
-}
-
 // RevokeAgentEnrollment revokes the agent VM's bearer credential (LLD-08 §4.4).
 // Owner/admin; idempotent.
 func (r *mutationResolver) RevokeAgentEnrollment(ctx context.Context, agentID string) (bool, error) {
@@ -448,6 +375,30 @@ func (r *mutationResolver) RevokeAgentEnrollment(ctx context.Context, agentID st
 		return false, err
 	}
 	return true, nil
+}
+
+// mapOVFProperties converts deploy-input OVF property pairs to a map for
+// the deploy service (guestinfo.* keys become VM ExtraConfig). Only keys
+// starting with "guestinfo." are forwarded; anything else is logged and
+// dropped to prevent arbitrary ExtraConfig injection. This is a defense-
+// in-depth check: the deploy mutation is already admin-gated, but a
+// misconfigured client should not be able to inject arbitrary VM config.
+func mapOVFProperties(props []model.OVFPropertyInput) map[string]string {
+	if len(props) == 0 {
+		return nil
+	}
+	m := make(map[string]string, len(props))
+	for _, p := range props {
+		if !strings.HasPrefix(p.Key, "guestinfo.") {
+			log.Printf("deploy: ignoring ovf property %q — key must start with guestinfo.", p.Key)
+			continue
+		}
+		m[p.Key] = p.Value
+	}
+	if len(m) == 0 {
+		return nil
+	}
+	return m
 }
 
 // VMTemplates lists the OVA templates available in a resource pool's vCenter,
@@ -636,3 +587,137 @@ func (r *queryResolver) InstantCloneParents(ctx context.Context, resourcePoolID 
 	}
 	return out, nil
 }
+
+// deployAgentInstant runs the Instant Clone path: it power-off → remove
+// serial ports → power-on → InstantClone a parent VM, then injects guestinfo
+// into the already-running child. Brought over from the deploy API branch;
+// the VCenterClient interface methods it relies on (PowerOff/On,
+// RemoveSerialPorts, InstantClone, SetGuestinfo) are all already part of the
+// shared graph.Resolver interface. VirtualKey persistence uses the model-
+// routing schema (organization + model_gateway, not user/team).
+func (r *mutationResolver) deployAgentInstant(
+	ctx context.Context,
+	ag *ent.Agent,
+	t *deployTargets,
+	conn VCenterClient,
+	input model.DeployAgentInput,
+	vmName string,
+	enrollToken string,
+	defaultConfig string,
+	configPath string,
+) (*model.DeployedAgent, error) {
+	parentVM := derefString(input.InstantCloneParent)
+	if parentVM == "" {
+		return nil, fmt.Errorf("instantCloneParent required")
+	}
+
+	// 1. Issue gateway key.
+	key, err := t.gw.GenerateKey(ctx, gateway.GenerateKeyRequest{
+		UserID:         ag.OwnerUserID.String(),
+		TeamID:         t.deployTeamID,
+		Models:         nil,
+		MaxBudget:      input.MaxBudget,
+		OrganizationID: ag.TenantID.String(),
+		Metadata:       map[string]string{"agent": ag.Name},
+	})
+	if err != nil {
+		r.deleteAgentRow(ctx, ag)
+		return nil, fmt.Errorf("generate key: %w", err)
+	}
+
+	// 2. Power off the parent so RemoveSerialPorts is safe; tolerate failures
+	// (vcsim/standalone may not implement power transitions).
+	if err := conn.PowerOff(ctx, parentVM); err != nil {
+		log.Printf("[instant-clone] power off non-fatal: %v", err)
+	}
+	time.Sleep(3 * time.Second)
+	if err := conn.RemoveSerialPorts(ctx, parentVM); err != nil {
+		_ = t.gw.DeleteKey(ctx, key.Key)
+		r.deleteAgentRow(ctx, ag)
+		return nil, fmt.Errorf("remove serial ports from %q: %w", parentVM, err)
+	}
+	if err := conn.PowerOn(ctx, parentVM); err != nil {
+		_ = t.gw.DeleteKey(ctx, key.Key)
+		r.deleteAgentRow(ctx, ag)
+		return nil, fmt.Errorf("power on parent %q: %w", parentVM, err)
+	}
+	time.Sleep(5 * time.Second)
+
+	// 3. Instant Clone the parent.
+	icSpec := vcenter.InstantCloneSpec{
+		ParentVM:     parentVM,
+		Name:         vmName,
+		ResourcePool: derefString(input.TargetResourcePool),
+		Network:      derefString(input.TargetNetwork),
+	}
+	if len(input.OvfProperties) > 0 {
+		icSpec.ExtraConfig = make(map[string]string, len(input.OvfProperties))
+		for _, p := range input.OvfProperties {
+			icSpec.ExtraConfig[p.Key] = p.Value
+		}
+	}
+	if _, err := conn.InstantClone(ctx, icSpec); err != nil {
+		_ = t.gw.DeleteKey(ctx, key.Key)
+		r.deleteAgentRow(ctx, ag)
+		return nil, fmt.Errorf("instant clone: %w", err)
+	}
+
+	// 4. Inject guestinfo (the clone is already running).
+	gi := map[string]string{}
+	if enrollToken != "" {
+		gi["agentmgr.enroll_token"] = enrollToken
+		gi["agentmgr.vm_id"] = vmName
+		gi["agentmgr.control_plane_url"] = r.ControlPlaneURL
+	}
+	if defaultConfig != "" {
+		gi["agent.default_config"] = defaultConfig
+	}
+	if len(gi) > 0 {
+		_ = conn.SetGuestinfo(ctx, vmName, gi)
+	}
+
+	// 5. Persist virtual key (model-routing schema: org + gateway, not user/team).
+	vkCreate := r.Ent.VirtualKey.Create().
+		SetLitellmKey(key.Key).
+		SetMaskedKey(maskKey(key.Key)).
+		SetModelGatewayID(t.gwConn.ID).
+		SetModels(nil).
+		SetName(ag.Name).
+		SetOrganizationID(ag.TenantID.String())
+	if key.Token != "" {
+		vkCreate.SetLitellmToken(key.Token)
+	}
+	vk, err := vkCreate.Save(ctx)
+	if err != nil {
+		r.rollbackDeployCreate(ctx, conn, t.gw, ag, vmName, key.Key)
+		return nil, fmt.Errorf("save vk: %w", err)
+	}
+
+	// 6. Mark the agent row running and point at the new VM.
+	updated, err := r.Ent.Agent.UpdateOne(ag).
+		SetStatus(agent.StatusRunning).
+		SetVMRef(vmName).
+		SetVirtualKeyID(vk.ID).
+		Save(ctx)
+	if err != nil {
+		r.rollbackDeployCreate(ctx, conn, t.gw, ag, vmName, key.Key)
+		return nil, fmt.Errorf("update agent: %w", err)
+	}
+
+	return &model.DeployedAgent{
+		Agent:            toModelAgent(updated),
+		VirtualKeySecret: key.Key,
+		TemplateVersion:  toModelOvaVersion(t.version, t.familyID.String()),
+		ResourcePool:     toModelResourcePool(t.pool),
+	}, nil
+}
+
+// maskKey returns a masked version of a key for display/storage.
+// e.g. "sk-abc123..." → "sk-a*****23"
+func maskKey(key string) string {
+	if len(key) <= 8 {
+		return key
+	}
+	return key[:4] + "****" + key[len(key)-4:]
+}
+

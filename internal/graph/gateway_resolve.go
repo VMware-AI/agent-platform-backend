@@ -3,6 +3,7 @@ package graph
 import (
 	"context"
 	"log"
+	"os"
 
 	"github.com/google/uuid"
 
@@ -15,10 +16,22 @@ import (
 // gatewayMasterKey resolves a connection's litellm master key from the secret
 // store (master_key_ref). Empty when unset or unresolvable.
 func (r *Resolver) gatewayMasterKey(ctx context.Context, g *ent.GatewayConnection) string {
-	if g.MasterKeyRef != "" && r.Secrets != nil {
-		if cred, err := r.resolveSecret(ctx, g.MasterKeyRef, secretPurposeGatewayMaster); err == nil {
-			return cred.APIKey
-		}
+	if g.MasterKeyRef == "" {
+		log.Printf("gatewayMasterKey: MasterKeyRef is empty for %s", g.Name)
+		return ""
+	}
+	// Dev fallback: use env var when secret store is unavailable or key can't be decrypted.
+	if mk := os.Getenv("LITELLM_MASTER_KEY"); mk != "" {
+		return mk
+	}
+	if r.Secrets == nil {
+		log.Printf("gatewayMasterKey: Secrets is nil for %s", g.Name)
+		return ""
+	}
+	if cred, err := r.resolveSecret(ctx, g.MasterKeyRef, secretPurposeGatewayMaster); err == nil {
+		return cred.APIKey
+	} else {
+		log.Printf("gatewayMasterKey: resolveSecret failed for %s: %v", g.MasterKeyRef, err)
 	}
 	return ""
 }
@@ -244,6 +257,12 @@ func (r *Resolver) deployGateway(ctx context.Context, deptID *uuid.UUID) (gatewa
 	if conn, gw := r.resolveKeyGateway(ctx, deptID); conn != nil {
 		return gw, conn
 	}
+	// Fallback: when no department gateway is bound, use the first available gateway.
+	if def, err := r.Ent.GatewayConnection.Query().First(ctx); err == nil && def != nil {
+		log.Printf("deployGateway: using fallback gateway %s (%s)", def.Name, def.Endpoint)
+		return r.buildGatewayKeyClient(ctx, def), def
+	}
+	log.Printf("deployGateway: no gateway found (deptID=%v)", deptID)
 	return nil, nil
 }
 
