@@ -77,17 +77,29 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 	t := time.Now().Add(d)
 	expiresAt := &t
 
-	// 3) Cross-check: every model in input.Models must be in the live
-	//    model list of the gateway (gatewayAvailableModels, real-time, no
-	//    cache). Backend-call 400s when the operator passed stale names.
+	// 3) Cross-check: every model in input.Models must exist on this
+	//    modelGateway AND have a healthy status (full_healthy or
+	//    partial_outage). We source the catalog from `provider_models`
+	//    — the same table GatewayAvailableModels reads from — rather
+	//    than calling the gateway, whose /model/list endpoint returns
+	//    404 on the current LiteLLM (correct path is /models). Reading
+	//    the local table also closes the TOCTOU window between
+	//    validation and mint. The health-check worker keeps `status`
+	//    current, so this is the operator-visible truth.
 	if len(input.Models) > 0 {
-		available, lerr := gw.ListAvailableModels(ctx)
-		if lerr != nil {
-			return nil, fmt.Errorf("list available models from gateway: %w", lerr)
+		rows, err := r.Ent.ProviderModel.Query().
+			Where(
+				providermodel.ModelGatewayIDEQ(mgID),
+				providermodel.NameIn(input.Models...),
+				providermodel.StatusIn(providermodel.StatusFullHealthy, providermodel.StatusPartialOutage),
+			).
+			All(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("query available models: %w", err)
 		}
-		known := make(map[string]struct{}, len(available))
-		for _, m := range available {
-			known[m] = struct{}{}
+		known := make(map[string]struct{}, len(rows))
+		for _, row := range rows {
+			known[row.Name] = struct{}{}
 		}
 		var stale []string
 		for _, m := range input.Models {

@@ -136,10 +136,6 @@ type Client interface {
 	// RegenerateKey rotates a key's secret, returning the new one (POST
 	// /key/{key}/regenerate). The governance row/binding is unchanged. LLD-04 §3.
 	RegenerateKey(ctx context.Context, key string) (*KeyResponse, error)
-	// ListAvailableModels enumerates the models the gateway currently
-	// advertises (GET /model/list). Used by gatewayAvailableModels query
-	// and by IssueVirtualKey's pre-mint cross-check. Real-time; no cache.
-	ListAvailableModels(ctx context.Context) ([]string, error)
 	CreateTeam(ctx context.Context, req TeamRequest) (*TeamResponse, error)
 	DeleteTeam(ctx context.Context, teamID string) error
 	// ListKeys enumerates the keys the gateway currently holds, for
@@ -325,26 +321,6 @@ func (c *HTTPClient) ListTeams(ctx context.Context) ([]TeamInfo, error) {
 		teams = append(teams, TeamInfo{TeamID: t.TeamID, Alias: t.TeamAlias})
 	}
 	return teams, nil
-}
-
-// ListAvailableModels enumerates the gateway's model catalog via
-// GET /model/list. LiteLLM returns a top-level array of objects whose
-// `id` field is the model name used by /key/generate's `models` param.
-func (c *HTTPClient) ListAvailableModels(ctx context.Context) ([]string, error) {
-	var raw []struct {
-		ID string `json:"id"`
-	}
-	if err := c.get(ctx, "/model/list", &raw); err != nil {
-		return nil, err
-	}
-	models := make([]string, 0, len(raw))
-	for _, m := range raw {
-		if m.ID == "" {
-			continue // unidentifiable entry
-		}
-		models = append(models, m.ID)
-	}
-	return models, nil
 }
 
 // --- Low-level HTTP ---
