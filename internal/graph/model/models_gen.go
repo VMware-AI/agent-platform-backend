@@ -505,7 +505,6 @@ type IssueVirtualKeyInput struct {
 	TpmLimitType        *string  `json:"tpmLimitType,omitempty"`
 	AllowedRoutes       []string `json:"allowedRoutes,omitempty"`
 	Tags                []string `json:"tags,omitempty"`
-	Blocked             *bool    `json:"blocked,omitempty"`
 	KeyType             *string  `json:"keyType,omitempty"`
 	AutoRotate          *bool    `json:"autoRotate,omitempty"`
 	RotationInterval    *string  `json:"rotationInterval,omitempty"`

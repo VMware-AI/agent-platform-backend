@@ -488,7 +488,6 @@ input IssueVirtualKeyInput {
 	tpmLimitType: String
 	allowedRoutes: [String!]
 	tags: [String!]
-	blocked: Boolean
 	keyType: String
 	autoRotate: Boolean
 	rotationInterval: String

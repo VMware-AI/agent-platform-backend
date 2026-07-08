@@ -8054,7 +8054,6 @@ input IssueVirtualKeyInput {
   # frontend OMITS this field. When OFF, it sends the explicit list.
   allowedRoutes: [String!]
   tags: [String!]
-  blocked: Boolean
   # Operational / catalog metadata (LiteLLM design doc §4.2).
   keyType: String
   autoRotate: Boolean
@@ -33878,7 +33877,7 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"organizationId", "name", "modelGateway", "duration", "models", "maxBudget", "budgetDuration", "maxParallelRequests", "rpmLimit", "tpmLimit", "rpmLimitType", "tpmLimitType", "allowedRoutes", "tags", "blocked", "keyType", "autoRotate", "rotationInterval"}
+	fieldsInOrder := [...]string{"organizationId", "name", "modelGateway", "duration", "models", "maxBudget", "budgetDuration", "maxParallelRequests", "rpmLimit", "tpmLimit", "rpmLimitType", "tpmLimitType", "allowedRoutes", "tags", "keyType", "autoRotate", "rotationInterval"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -33983,13 +33982,6 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 				return it, err
 			}
 			it.Tags = data
-		case "blocked":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("blocked"))
-			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Blocked = data
 		case "keyType":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyType"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)

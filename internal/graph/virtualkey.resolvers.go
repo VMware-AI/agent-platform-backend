@@ -114,7 +114,6 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		TPMLimitType:        vkDerefStr(input.TpmLimitType, ""),
 		AllowedRoutes:       input.AllowedRoutes,
 		Tags:                input.Tags,
-		Blocked:             input.Blocked,
 		KeyType:             vkDerefStr(input.KeyType, ""),
 		AutoRotate:          input.AutoRotate,
 		RotationInterval:    vkDerefStr(input.RotationInterval, ""),
@@ -148,7 +147,6 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		SetBudgetDuration(vkDerefStr(input.BudgetDuration, "")).
 		SetTags(input.Tags).
 		SetAllowedRoutes(input.AllowedRoutes).
-		SetBlocked(vkDerefBool(input.Blocked, false)).
 		SetKeyType(vkDerefStr(input.KeyType, "default")).
 		SetAutoRotate(vkDerefBool(input.AutoRotate, false)).
 		SetRotationInterval(vkDerefStr(input.RotationInterval, ""))

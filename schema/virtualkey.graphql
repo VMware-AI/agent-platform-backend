@@ -115,7 +115,6 @@ input IssueVirtualKeyInput {
   # frontend OMITS this field. When OFF, it sends the explicit list.
   allowedRoutes: [String!]
   tags: [String!]
-  blocked: Boolean
   # Operational / catalog metadata (LiteLLM design doc §4.2).
   keyType: String
   autoRotate: Boolean

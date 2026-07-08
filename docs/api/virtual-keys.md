@@ -180,7 +180,6 @@ Returned only at issue / regenerate time — carries the secret, which is never 
 | `tpmLimitType` | `String` | — |
 | `allowedRoutes` | `[String!]` | allowedRoutes — when the form's "Allow All Routes" switch is ON, the frontend OMITS this field. When OFF, it sends the explicit list. |
 | `tags` | `[String!]` | — |
-| `blocked` | `Boolean` | — |
 | `keyType` | `String` | Operational / catalog metadata (LiteLLM design doc §4.2). |
 | `autoRotate` | `Boolean` | — |
 | `rotationInterval` | `String` | — |
