@@ -65,7 +65,7 @@ type AuditLog {
 
 input AuditFilter {
   actorUserId: ID
-  # action category prefix, e.g. "user." / "router." / "key." / "rate_limit."
+  # action category prefix, e.g. "user." / "router." / "key."
   actionPrefix: String
   # substring match across action + resourceId
   search: String

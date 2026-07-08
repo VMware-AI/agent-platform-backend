@@ -1,4 +1,4 @@
-# Platform (Users, Roles, Permissions, Departments, Settings)
+# Platform (Users, Roles, Permissions, Departments)
 
 [← API Reference index](./README.md)
 

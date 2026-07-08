@@ -1,0 +1,3 @@
+mutation DeleteProviderModel($id: ID!) {
+  deleteProviderModel(id: $id)
+}

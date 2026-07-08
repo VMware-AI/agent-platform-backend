@@ -18,9 +18,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/deploy"
-	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
-	_ "github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
@@ -99,6 +97,11 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		enrollToken = tok
 	}
 
+	// Instant Clone path — fork from running parent VM (seconds).
+	if input.CloneMode == model.CloneModeInstant {
+		return r.deployAgentInstant(ctx, ag, t, conn, input, vmName, enrollToken, defaultConfig, configPath)
+	}
+
 	svc := &deploy.Service{Gateway: t.gw, VCenter: conn, GatewayURL: t.gwURL}
 	// Decouple provisioning from the HTTP write deadline (server WriteTimeout=60s):
 	// a clone + power-on can run minutes, and if the request ctx is canceled
@@ -138,13 +141,13 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		EnrollToken:      enrollToken,
 		ControlPlaneURL:  r.ControlPlaneURL,
 		KnowledgePackIDs: r.resolveAgentKnowledge(ctx, ag), // LLD-11 K2: 下发知识包引用
-		KnowledgeRoot:    r.resolveKnowledgeRoot(ctx, ag),  // LLD-11 K4: 按 kind 的解包根
-		// webadmin deploy-time contract: one-time credential seed + upgrade wiring.
-		// agent_name is the package base name == the catalog kind (the daemon
-		// resolves {pkg_base_url}/{name}-{version}.tar.gz). agent_service /
-		// agent_install_root are not sent — the OVA follows the daemon defaults
-		// (agent.service, /opt/agent) until the catalog grows a per-kind source.
-		InitialPassword:   derefString(input.InitialPassword),
+		KnowledgeRoot:    r.resolveKnowledgeRoot(ctx, ag),  // LLD-11 K4
+		OVFProperties:    mapOVFProperties(input.OvfProperties),
+		// webadmin deploy-time contract (LLD-16/17): first-boot install + upgrade
+		// wiring. agent_name is the package base name == the catalog kind (the daemon
+		// resolves {pkg_base_url}/{name}-{version}.tar.gz). The login credential is NOT
+		// a dedicated field anymore — it travels as a template-defined OVF property
+		// (see mapOVFProperties; LLD-17 D6).
 		AgentPkgName:      ag.AgentType,
 		AgentVersion:      agentVersion,
 		AgentPkgBaseURL:   r.resolveAgentPkgBaseURL(ctx), // DB pkg-source (OQ-2) → env fallback
@@ -163,16 +166,14 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	// drop the agent row), else we leak an orphan VM and an ungoverned key.
 	vkCreate := r.Ent.VirtualKey.Create().
 		SetLitellmKey(res.VirtualKey).
-		SetUserID(ag.OwnerUserID).
-		SetModels([]string{gateway.DefaultRouterModel}).
-		SetAlias(ag.Name)
-	if t.gwConn != nil {
-		vkCreate.SetGatewayConnectionID(t.gwConn.ID) // LLD-14: pin lifecycle to the issuing gateway
-	}
+		SetModelGatewayID(t.gwConn.ID).
+		SetModels(nil).
+		SetName(ag.Name).
+		SetOrganizationID(ag.TenantID.String())
 	if t.deployTeamID != "" {
-		// Bind the key to its department/team so RecycleAgent revokes on the
-		// department's gateway (deptIDFromTeam(vk.TeamID)), not the default.
-		vkCreate.SetTeamID(t.deployTeamID)
+		// No-op after per-agent-per-org refactor: organizationId is required,
+		// but the legacy teamID context is not needed in the deploy path.
+		_ = t.deployTeamID
 	}
 	if res.VirtualKeyToken != "" {
 		vkCreate.SetLitellmToken(res.VirtualKeyToken) // gateway reconciliation id
@@ -256,7 +257,7 @@ func (r *mutationResolver) RecycleAgent(ctx context.Context, input model.Recycle
 		cctx := context.WithoutCancel(ctx)
 		if vk, err := r.Ent.VirtualKey.Get(cctx, *ag.VirtualKeyID); err == nil {
 			// Route the revoke to the gateway that issued the key (LLD-14).
-			if gw := r.gatewayKeyClientForVK(cctx, vk); gw == nil {
+			if gw := r.modelGatewayClientForVK(cctx, vk); gw == nil {
 				log.Printf("recycle agent %s: no gateway to revoke key %s", ag.ID, vk.ID)
 			} else if delErr := gw.DeleteKey(cctx, vk.LitellmKey); delErr != nil {
 				log.Printf("recycle agent %s: orphan gateway key %s, revoke failed: %v", ag.ID, vk.ID, delErr)
@@ -582,6 +583,56 @@ func (r *queryResolver) AgentSnapshots(ctx context.Context, agentID string) ([]m
 	out := make([]model.AgentSnapshot, 0, len(snaps))
 	for _, s := range snaps {
 		out = append(out, *toModelAgentSnapshot(s))
+	}
+	return out, nil
+}
+
+// UnboundKeys is the resolver for the unboundKeys field.
+func (r *queryResolver) UnboundKeys(ctx context.Context) ([]model.VirtualKey, error) {
+	// UnboundKeys lists virtual keys not yet assigned to any agent.
+	cu := auth.FromContext(ctx)
+	if cu == nil || cu.Role != auth.RoleAdmin {
+		return nil, gqlerror.Errorf("forbidden: admin only")
+	}
+	keys, err := r.Ent.VirtualKey.Query().
+		Where(virtualkey.AgentIDIsNil()).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list unbound keys: %w", err)
+	}
+	out := make([]model.VirtualKey, len(keys))
+	for i, k := range keys {
+		mk, err := toModelVirtualKey(ctx, r.Resolver, k)
+		if err != nil {
+			return nil, err
+		}
+		out[i] = *mk
+	}
+	return out, nil
+}
+
+// InstantCloneParents returns running VMs eligible as instant-clone parents.
+func (r *queryResolver) InstantCloneParents(ctx context.Context, resourcePoolID string) ([]model.VMTemplate, error) {
+	rid, err := uuid.Parse(resourcePoolID)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid resource pool id")
+	}
+	pool, err := r.Ent.ResourcePool.Get(ctx, rid)
+	if err != nil {
+		return nil, fmt.Errorf("resource pool: %w", err)
+	}
+	conn, err := r.connectPool(ctx, pool)
+	if err != nil {
+		return nil, fmt.Errorf("connect vcenter: %w", err)
+	}
+	defer func() { _ = conn.Logout(ctx) }()
+	vms, err := conn.ListRunningVMs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list running vms: %w", err)
+	}
+	out := make([]model.VMTemplate, 0, len(vms))
+	for _, vm := range vms {
+		out = append(out, model.VMTemplate{Name: vm.Name, UUID: vm.UUID})
 	}
 	return out, nil
 }

@@ -262,8 +262,6 @@ var (
 		{Name: "name", Type: field.TypeString, Unique: true},
 		{Name: "endpoint", Type: field.TypeString},
 		{Name: "master_key_ref", Type: field.TypeString, Nullable: true},
-		{Name: "public_url", Type: field.TypeString, Nullable: true},
-		{Name: "is_default", Type: field.TypeBool, Default: false},
 		{Name: "last_synced_at", Type: field.TypeTime, Nullable: true},
 		{Name: "backend_model_count", Type: field.TypeInt, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"connected", "disconnected", "error"}, Default: "disconnected"},
@@ -274,16 +272,6 @@ var (
 		Name:       "gateway_connections",
 		Columns:    GatewayConnectionsColumns,
 		PrimaryKey: []*schema.Column{GatewayConnectionsColumns[0]},
-		Indexes: []*schema.Index{
-			{
-				Name:    "gatewayconnection_is_default",
-				Unique:  true,
-				Columns: []*schema.Column{GatewayConnectionsColumns[7]},
-				Annotation: &entsql.IndexAnnotation{
-					Where: "is_default",
-				},
-			},
-		},
 	}
 	// ImagesColumns holds the columns for the "images" table.
 	ImagesColumns = []*schema.Column{
@@ -335,12 +323,15 @@ var (
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "name", Type: field.TypeString, Unique: true},
 		{Name: "model_alias", Type: field.TypeString},
-		{Name: "gateway_connection_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "gateway_connection_id", Type: field.TypeUUID},
 		{Name: "gateway_name", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "upstreams", Type: field.TypeJSON, Nullable: true},
 		{Name: "strategy", Type: field.TypeEnum, Enums: []string{"SIMPLE_SHUFFLE", "LEAST_BUSY", "LATENCY_BASED_ROUTING", "USAGE_BASED_ROUTING_V2", "COST_BASED_ROUTING"}, Default: "SIMPLE_SHUFFLE"},
 		{Name: "ui_strategy", Type: field.TypeEnum, Enums: []string{"ROUND_ROBIN", "WEIGHTED_ROUND_ROBIN", "RANDOM"}, Default: "ROUND_ROBIN"},
 		{Name: "enabled", Type: field.TypeBool, Default: true},
+		{Name: "fallbacks", Type: field.TypeJSON, Nullable: true},
+		{Name: "context_window_fallbacks", Type: field.TypeJSON, Nullable: true},
+		{Name: "content_policy_fallbacks", Type: field.TypeJSON, Nullable: true},
 	}
 	// ModelRoutesTable holds the schema information for the "model_routes" table.
 	ModelRoutesTable = &schema.Table{
@@ -420,6 +411,7 @@ var (
 		{Name: "username", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "password", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "api_key", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "key_id", Type: field.TypeString, Nullable: true, Default: "default"},
 	}
 	// PlatformSecretsTable holds the schema information for the "platform_secrets" table.
 	PlatformSecretsTable = &schema.Table{
@@ -434,39 +426,27 @@ var (
 			},
 		},
 	}
-	// RateLimitPoliciesColumns holds the columns for the "rate_limit_policies" table.
-	RateLimitPoliciesColumns = []*schema.Column{
+	// ProviderModelsColumns holds the columns for the "provider_models" table.
+	ProviderModelsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "name", Type: field.TypeString},
-		{Name: "rpm", Type: field.TypeInt, Nullable: true},
-		{Name: "tpm", Type: field.TypeInt, Nullable: true},
-		{Name: "enabled", Type: field.TypeBool, Default: false},
-		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "environment_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "name", Type: field.TypeString, Unique: true},
+		{Name: "model_gateway_id", Type: field.TypeUUID},
+		{Name: "model_specs", Type: field.TypeJSON, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"full_healthy", "partial_outage", "full_outage", "unknown"}, Default: "unknown"},
+		{Name: "last_checked_at", Type: field.TypeTime, Nullable: true},
 	}
-	// RateLimitPoliciesTable holds the schema information for the "rate_limit_policies" table.
-	RateLimitPoliciesTable = &schema.Table{
-		Name:       "rate_limit_policies",
-		Columns:    RateLimitPoliciesColumns,
-		PrimaryKey: []*schema.Column{RateLimitPoliciesColumns[0]},
+	// ProviderModelsTable holds the schema information for the "provider_models" table.
+	ProviderModelsTable = &schema.Table{
+		Name:       "provider_models",
+		Columns:    ProviderModelsColumns,
+		PrimaryKey: []*schema.Column{ProviderModelsColumns[0]},
 		Indexes: []*schema.Index{
 			{
-				Name:    "ratelimitpolicy_tenant_id_name",
-				Unique:  true,
-				Columns: []*schema.Column{RateLimitPoliciesColumns[7], RateLimitPoliciesColumns[3]},
-				Annotation: &entsql.IndexAnnotation{
-					Where: "tenant_id IS NOT NULL",
-				},
-			},
-			{
-				Name:    "ratelimitpolicy_name",
-				Unique:  true,
-				Columns: []*schema.Column{RateLimitPoliciesColumns[3]},
-				Annotation: &entsql.IndexAnnotation{
-					Where: "tenant_id IS NULL",
-				},
+				Name:    "providermodel_model_gateway_id",
+				Unique:  false,
+				Columns: []*schema.Column{ProviderModelsColumns[4]},
 			},
 		},
 	}
@@ -623,27 +603,6 @@ var (
 			},
 		},
 	}
-	// RouterTiersColumns holds the columns for the "router_tiers" table.
-	RouterTiersColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "tier", Type: field.TypeEnum, Enums: []string{"SIMPLE", "MEDIUM", "COMPLEX", "REASONING"}},
-		{Name: "model_alias", Type: field.TypeString},
-	}
-	// RouterTiersTable holds the schema information for the "router_tiers" table.
-	RouterTiersTable = &schema.Table{
-		Name:       "router_tiers",
-		Columns:    RouterTiersColumns,
-		PrimaryKey: []*schema.Column{RouterTiersColumns[0]},
-		Indexes: []*schema.Index{
-			{
-				Name:    "routertier_tier",
-				Unique:  true,
-				Columns: []*schema.Column{RouterTiersColumns[3]},
-			},
-		},
-	}
 	// SettingsColumns holds the columns for the "settings" table.
 	SettingsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -740,24 +699,6 @@ var (
 			},
 		},
 	}
-	// UpstreamsColumns holds the columns for the "upstreams" table.
-	UpstreamsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "name", Type: field.TypeString, Unique: true},
-		{Name: "provider", Type: field.TypeEnum, Enums: []string{"vllm", "openai", "anthropic", "minimax", "codex"}},
-		{Name: "api_base", Type: field.TypeString, Nullable: true},
-		{Name: "api_key_ref", Type: field.TypeString, Nullable: true},
-		{Name: "model", Type: field.TypeString},
-		{Name: "enabled", Type: field.TypeBool, Default: true},
-	}
-	// UpstreamsTable holds the schema information for the "upstreams" table.
-	UpstreamsTable = &schema.Table{
-		Name:       "upstreams",
-		Columns:    UpstreamsColumns,
-		PrimaryKey: []*schema.Column{UpstreamsColumns[0]},
-	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -792,16 +733,29 @@ var (
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "litellm_key", Type: field.TypeString},
 		{Name: "litellm_token", Type: field.TypeString, Nullable: true},
-		{Name: "alias", Type: field.TypeString, Nullable: true},
-		{Name: "user_id", Type: field.TypeUUID},
+		{Name: "masked_key", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString},
+		{Name: "organization_id", Type: field.TypeString},
 		{Name: "agent_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "rate_limit_policy_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "team_id", Type: field.TypeString, Nullable: true},
-		{Name: "gateway_connection_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "model_gateway_id", Type: field.TypeUUID},
 		{Name: "models", Type: field.TypeJSON, Nullable: true},
 		{Name: "max_budget", Type: field.TypeFloat64, Nullable: true},
+		{Name: "max_parallel_requests", Type: field.TypeInt, Nullable: true},
+		{Name: "tpm_limit", Type: field.TypeInt, Nullable: true},
+		{Name: "rpm_limit", Type: field.TypeInt, Nullable: true},
+		{Name: "tpm_limit_type", Type: field.TypeString, Nullable: true},
+		{Name: "rpm_limit_type", Type: field.TypeString, Nullable: true},
+		{Name: "budget_duration", Type: field.TypeString, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "disabled", "revoked"}, Default: "active"},
 		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
+		{Name: "allowed_routes", Type: field.TypeJSON, Nullable: true},
+		{Name: "tags", Type: field.TypeJSON, Nullable: true},
+		{Name: "blocked", Type: field.TypeBool, Default: false},
+		{Name: "key_type", Type: field.TypeString, Default: "default"},
+		{Name: "auto_rotate", Type: field.TypeBool, Default: false},
+		{Name: "rotation_interval", Type: field.TypeString, Nullable: true},
+		{Name: "last_active_at", Type: field.TypeTime, Nullable: true},
+		{Name: "spend", Type: field.TypeInt, Nullable: true, Default: 0},
 	}
 	// VirtualKeysTable holds the schema information for the "virtual_keys" table.
 	VirtualKeysTable = &schema.Table{
@@ -810,14 +764,9 @@ var (
 		PrimaryKey: []*schema.Column{VirtualKeysColumns[0]},
 		Indexes: []*schema.Index{
 			{
-				Name:    "virtualkey_user_id",
-				Unique:  false,
-				Columns: []*schema.Column{VirtualKeysColumns[6]},
-			},
-			{
 				Name:    "virtualkey_agent_id",
 				Unique:  true,
-				Columns: []*schema.Column{VirtualKeysColumns[7]},
+				Columns: []*schema.Column{VirtualKeysColumns[8]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "status <> 'revoked'",
 				},
@@ -918,17 +867,15 @@ var (
 		OvaTemplateVersionsTable,
 		PermissionsTable,
 		PlatformSecretsTable,
-		RateLimitPoliciesTable,
+		ProviderModelsTable,
 		RequestLogsTable,
 		ResourcePoolsTable,
 		RolesTable,
 		RotationCommandsTable,
-		RouterTiersTable,
 		SettingsTable,
 		SkillsTable,
 		TenantsTable,
 		TokenUsagesTable,
-		UpstreamsTable,
 		UsersTable,
 		VirtualKeysTable,
 		AgentConfigKnowledgeTable,

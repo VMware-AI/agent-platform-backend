@@ -8,9 +8,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
-	"unicode"
-	"unicode/utf8"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
@@ -56,9 +53,6 @@ func (r *mutationResolver) resolveDeployTargets(ctx context.Context, input model
 	if input.Name == "" {
 		return nil, gqlerror.Errorf("name is required")
 	}
-	if err := validateInitialPassword(input.InitialPassword); err != nil {
-		return nil, err
-	}
 	// Resolve the gateway that issues this agent's key + whose public URL the VM
 	// will call (LLD-13 §3.3): the chosen department's gateway, or the default.
 	var deptID *uuid.UUID
@@ -79,9 +73,13 @@ func (r *mutationResolver) resolveDeployTargets(ctx context.Context, input model
 	if deptID != nil {
 		deployTeamID = deptID.String()
 	}
-	gw, gwURL, gwConn := r.deployGateway(ctx, deptID)
+	gw, gwConn := r.deployGateway(ctx, deptID)
 	if gw == nil {
 		return nil, gqlerror.Errorf("deploy is not configured (gateway required)")
+	}
+	gwURL := ""
+	if gwConn != nil {
+		gwURL = gwConn.Endpoint
 	}
 	cu := auth.FromContext(ctx)
 	ownerID, err := uuid.Parse(cu.ID)
@@ -134,7 +132,7 @@ func (r *mutationResolver) resolveDeployTargets(ctx context.Context, input model
 	if pool.SecretRef == "" {
 		return nil, gqlerror.Errorf("resource pool has no secret_ref")
 	}
-	cred, err := r.Secrets.Resolve(ctx, pool.SecretRef)
+	cred, err := r.resolveSecret(ctx, pool.SecretRef, secretPurposeVCenterConnect)
 	if err != nil {
 		return nil, fmt.Errorf("resolve pool credentials: %w", err)
 	}
@@ -164,56 +162,6 @@ func (r *mutationResolver) resolveDeployTargets(ctx context.Context, input model
 	}, nil
 }
 
-// Initial-password seed policy, mirroring the VM webadmin's PasswordPolicy +
-// validate_new_password (agent-manager-daemon webadmin/config.py +
-// webadmin/passwords.py): bcrypt silently truncates past 72 bytes, the webadmin
-// rejects seeds shorter than 12 characters, and ':' / control characters break
-// the htpasswd/chpasswd line format. Enforced here at the API boundary because
-// the VM's SEED path applies the value without re-validating: a policy
-// violation either strands the user without a first login or — worse — an
-// interior newline would smuggle a second "user:password" line into chpasswd
-// stdin (root credential injection).
-const (
-	initialPasswordMinChars = 12
-	initialPasswordMaxBytes = 72
-)
-
-// validateInitialPassword checks an optional DeployAgentInput.initialPassword
-// against the VM webadmin's seed policy. The value itself must never appear in
-// the returned error (it has to stay out of logs, audit entries and GraphQL
-// responses).
-func validateInitialPassword(p *string) error {
-	if p == nil || *p == "" {
-		return nil // optional: no seed — the VM boots without an initial credential
-	}
-	pw := *p
-	if strings.TrimSpace(pw) != pw {
-		// The VM-side seeder strips surrounding whitespace before applying, so a
-		// padded value would silently seed a DIFFERENT credential than typed.
-		return gqlerror.Errorf("initialPassword must not start or end with whitespace")
-	}
-	if utf8.RuneCountInString(pw) < initialPasswordMinChars {
-		return gqlerror.Errorf("initialPassword must be at least %d characters", initialPasswordMinChars)
-	}
-	if len(pw) > initialPasswordMaxBytes {
-		return gqlerror.Errorf("initialPassword must be at most %d bytes", initialPasswordMaxBytes)
-	}
-	if strings.ContainsRune(pw, ':') {
-		// ':' is the htpasswd/chpasswd field delimiter on the VM.
-		return gqlerror.Errorf("initialPassword must not contain ':'")
-	}
-	for _, r := range pw {
-		if unicode.IsControl(r) {
-			// The VM seed feeds "user:password\n" to chpasswd stdin; an interior
-			// newline would set a second, attacker-chosen account's password (root).
-			// unicode.IsControl is a superset of the daemon's ASCII check — stricter
-			// here only rejects earlier, never strands a seeded VM.
-			return gqlerror.Errorf("initialPassword must not contain control characters")
-		}
-	}
-	return nil
-}
-
 // devDeployAgent handles deployAgent in DEV_NO_VCENTER mode.
 // It issues a gateway key, persists the VirtualKey, marks the agent RUNNING,
 // and returns the frontend payload — all without touching vCenter.
@@ -222,7 +170,7 @@ func (r *mutationResolver) devDeployAgent(ctx context.Context, ag *ent.Agent, t 
 	key, err := t.gw.GenerateKey(ctx, gateway.GenerateKeyRequest{
 		UserID:   ag.OwnerUserID.String(),
 		TeamID:   t.deployTeamID,
-		Models:   []string{gateway.DefaultRouterModel},
+		Models:   nil,
 		Metadata: map[string]string{"agent": ag.Name},
 	})
 	if err != nil {
@@ -232,11 +180,14 @@ func (r *mutationResolver) devDeployAgent(ctx context.Context, ag *ent.Agent, t 
 
 	vkCreate := r.Ent.VirtualKey.Create().
 		SetLitellmKey(key.Key).
-		SetUserID(ag.OwnerUserID).
-		SetModels([]string{gateway.DefaultRouterModel}).
-		SetAlias(ag.Name)
+		SetModelGatewayID(t.gwConn.ID).
+		SetModels(nil).
+		SetName(ag.Name).
+		SetOrganizationID(ag.TenantID.String())
 	if t.deployTeamID != "" {
-		vkCreate.SetTeamID(t.deployTeamID)
+		// No-op after per-agent-per-org refactor: organizationId is required,
+		// but the legacy teamID context is not needed in the deploy path.
+		_ = t.deployTeamID
 	}
 	if key.Token != "" {
 		vkCreate.SetLitellmToken(key.Token)

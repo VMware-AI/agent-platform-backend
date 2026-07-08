@@ -1,0 +1,19 @@
+query ModelGatewayById($id: ID!) {
+  modelGatewayById(id: $id) {
+    ...ModelGatewayFields
+  }
+}
+
+fragment ModelGatewayFields on ModelGateway {
+  id
+  name
+  endpoint
+  backendModelCount
+  loadBalancingStrategy
+  lastSyncAt
+  lastSyncStatus
+  lastSyncMessage
+  createdAt
+  updatedAt
+  # NOTE: masterKey / masterKeyRef NOT selected — wire-level guard.
+}

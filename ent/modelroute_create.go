@@ -67,14 +67,6 @@ func (_c *ModelRouteCreate) SetGatewayConnectionID(v uuid.UUID) *ModelRouteCreat
 	return _c
 }
 
-// SetNillableGatewayConnectionID sets the "gateway_connection_id" field if the given value is not nil.
-func (_c *ModelRouteCreate) SetNillableGatewayConnectionID(v *uuid.UUID) *ModelRouteCreate {
-	if v != nil {
-		_c.SetGatewayConnectionID(*v)
-	}
-	return _c
-}
-
 // SetGatewayName sets the "gateway_name" field.
 func (_c *ModelRouteCreate) SetGatewayName(v string) *ModelRouteCreate {
 	_c.mutation.SetGatewayName(v)
@@ -134,6 +126,24 @@ func (_c *ModelRouteCreate) SetNillableEnabled(v *bool) *ModelRouteCreate {
 	if v != nil {
 		_c.SetEnabled(*v)
 	}
+	return _c
+}
+
+// SetFallbacks sets the "fallbacks" field.
+func (_c *ModelRouteCreate) SetFallbacks(v []string) *ModelRouteCreate {
+	_c.mutation.SetFallbacks(v)
+	return _c
+}
+
+// SetContextWindowFallbacks sets the "context_window_fallbacks" field.
+func (_c *ModelRouteCreate) SetContextWindowFallbacks(v []string) *ModelRouteCreate {
+	_c.mutation.SetContextWindowFallbacks(v)
+	return _c
+}
+
+// SetContentPolicyFallbacks sets the "content_policy_fallbacks" field.
+func (_c *ModelRouteCreate) SetContentPolicyFallbacks(v []string) *ModelRouteCreate {
+	_c.mutation.SetContentPolicyFallbacks(v)
 	return _c
 }
 
@@ -240,6 +250,9 @@ func (_c *ModelRouteCreate) check() error {
 			return &ValidationError{Name: "model_alias", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.model_alias": %w`, err)}
 		}
 	}
+	if _, ok := _c.mutation.GatewayConnectionID(); !ok {
+		return &ValidationError{Name: "gateway_connection_id", err: errors.New(`ent: missing required field "ModelRoute.gateway_connection_id"`)}
+	}
 	if _, ok := _c.mutation.Strategy(); !ok {
 		return &ValidationError{Name: "strategy", err: errors.New(`ent: missing required field "ModelRoute.strategy"`)}
 	}
@@ -312,7 +325,7 @@ func (_c *ModelRouteCreate) createSpec() (*ModelRoute, *sqlgraph.CreateSpec) {
 	}
 	if value, ok := _c.mutation.GatewayConnectionID(); ok {
 		_spec.SetField(modelroute.FieldGatewayConnectionID, field.TypeUUID, value)
-		_node.GatewayConnectionID = &value
+		_node.GatewayConnectionID = value
 	}
 	if value, ok := _c.mutation.GatewayName(); ok {
 		_spec.SetField(modelroute.FieldGatewayName, field.TypeString, value)
@@ -333,6 +346,18 @@ func (_c *ModelRouteCreate) createSpec() (*ModelRoute, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Enabled(); ok {
 		_spec.SetField(modelroute.FieldEnabled, field.TypeBool, value)
 		_node.Enabled = value
+	}
+	if value, ok := _c.mutation.Fallbacks(); ok {
+		_spec.SetField(modelroute.FieldFallbacks, field.TypeJSON, value)
+		_node.Fallbacks = value
+	}
+	if value, ok := _c.mutation.ContextWindowFallbacks(); ok {
+		_spec.SetField(modelroute.FieldContextWindowFallbacks, field.TypeJSON, value)
+		_node.ContextWindowFallbacks = value
+	}
+	if value, ok := _c.mutation.ContentPolicyFallbacks(); ok {
+		_spec.SetField(modelroute.FieldContentPolicyFallbacks, field.TypeJSON, value)
+		_node.ContentPolicyFallbacks = value
 	}
 	return _node, _spec
 }

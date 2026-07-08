@@ -3,6 +3,7 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -161,4 +162,8 @@ func TestDeployAgent_FailureCleansEnrollment(t *testing.T) {
 	if n := r.Ent.AgentEnrollment.Query().CountX(ctx); n != 0 {
 		t.Fatalf("expected 0 orphan enrollment rows after failed deploy, got %d", n)
 	}
+}
+
+func (c *cloneFailVCenter) DeployOVF(_ context.Context, _ vcenter.OVFDeploySpec) (*vcenter.VMInfo, error) {
+	return nil, fmt.Errorf("not implemented")
 }

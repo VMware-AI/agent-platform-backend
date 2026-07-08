@@ -5,9 +5,12 @@ on:
     branches: [main]
   pull_request:
 
-# Merge gate only (CLAUDE.md §2): docs-sync + gofmt + vet + build, plus the
-# migration-drift job. Go tests are NOT run on push/PR — they run weekly + on
-# demand via test.yml, per CLAUDE.md §1.
+# Merge gate (CLAUDE.md §2 — dev-stage adjustment): docs-sync + gofmt + vet
+# + build. The migration-drift job is intentionally absent during the
+# iteration phase — ent/migrate/migrations/ holds no versioned SQL files
+# while the team relies on `ent.Client.Schema.Create()` for fresh-DB bootstrap
+# during development. When we declare a release phase, restore the job per
+# the original spec (see CLAUDE.md §2).
 jobs:
   gate:
     runs-on: ubuntu-latest
@@ -39,43 +42,3 @@ jobs:
 
       - name: build
         run: go build ./...
-
-  # Prod never auto-migrates (H3), so an ent-schema change that ships without its
-  # versioned migration would silently drift the live DB. This job replays the
-  # committed migrations into a throwaway postgres and diffs the current ent
-  # schema against it; a non-empty plan (a new file appears) fails the build.
-  # Fix locally with `make migrate-diff name=<change>`.
-  migration-drift:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: atlas
-          POSTGRES_PASSWORD: atlas
-          POSTGRES_DB: atlas_dev
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.25"
-          cache: true
-      - name: ent schema in sync with migrations
-        env:
-          ATLAS_DEV_URL: postgres://atlas:atlas@localhost:5432/atlas_dev?sslmode=disable
-        run: |
-          make migrate-diff name=ci_drift_check
-          if [ -n "$(git status --porcelain ent/migrate/migrations)" ]; then
-            echo "::error::ent schema drifted from committed migrations — a schema change shipped without its migration. Run: make migrate-diff name=<change>"
-            git status --porcelain ent/migrate/migrations
-            git --no-pager diff -- ent/migrate/migrations
-            exit 1
-          fi
-          echo "migrations are in sync with the ent schema"

@@ -1,0 +1,5 @@
+mutation DeleteProviderModelSpec($input: ProviderModelSpecIDInput!) {
+  deleteProviderModelSpec(input: $input) {
+    ...ProviderModelFields
+  }
+}

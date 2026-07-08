@@ -28,7 +28,9 @@ type PlatformSecret struct {
 	// Password holds the value of the "password" field.
 	Password string `json:"-"`
 	// APIKey holds the value of the "api_key" field.
-	APIKey       string `json:"-"`
+	APIKey string `json:"-"`
+	// KeyID holds the value of the "key_id" field.
+	KeyID        string `json:"key_id,omitempty"`
 	selectValues sql.SelectValues
 }
 
@@ -39,7 +41,7 @@ func (*PlatformSecret) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case platformsecret.FieldID:
 			values[i] = new(sql.NullInt64)
-		case platformsecret.FieldRef, platformsecret.FieldUsername, platformsecret.FieldPassword, platformsecret.FieldAPIKey:
+		case platformsecret.FieldRef, platformsecret.FieldUsername, platformsecret.FieldPassword, platformsecret.FieldAPIKey, platformsecret.FieldKeyID:
 			values[i] = new(sql.NullString)
 		case platformsecret.FieldCreatedAt, platformsecret.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -100,6 +102,12 @@ func (_m *PlatformSecret) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.APIKey = value.String
 			}
+		case platformsecret.FieldKeyID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field key_id", values[i])
+			} else if value.Valid {
+				_m.KeyID = value.String
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -151,6 +159,9 @@ func (_m *PlatformSecret) String() string {
 	builder.WriteString("password=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("api_key=<sensitive>")
+	builder.WriteString(", ")
+	builder.WriteString("key_id=")
+	builder.WriteString(_m.KeyID)
 	builder.WriteByte(')')
 	return builder.String()
 }

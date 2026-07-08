@@ -12,18 +12,17 @@ import (
 // red, forcing the author to wire its tenant scoping (and register its
 // cross-tenant test) rather than silently shipping an unisolated entity.
 var tenantedTables = map[string]bool{
-	"users":               true,
-	"agents":              true,
-	"agent_configs":       true,
-	"artifacts":           true,
-	"resource_pools":      true, // platform-shared per LLD-10, but still carries tenant_id
-	"rate_limit_policies": true,
-	"roles":               true,
-	"departments":         true,
-	"token_usages":        true,
-	"agent_enrollments":   true, // LLD-08
-	"rotation_commands":   true, // LLD-08
-	"environments":        true, // LLD-10 B4 (tenant_id required; env is tenant-owned)
+	"users":             true,
+	"agents":            true,
+	"agent_configs":     true,
+	"artifacts":         true,
+	"resource_pools":    true, // platform-shared per LLD-10, but still carries tenant_id
+	"roles":             true,
+	"departments":       true,
+	"token_usages":      true,
+	"agent_enrollments": true, // LLD-08
+	"rotation_commands": true, // LLD-08
+	"environments":      true, // LLD-10 B4 (tenant_id required; env is tenant-owned)
 }
 
 // TestTenantedEntityInventory reflects over ent's compiled schema and asserts the

@@ -21,10 +21,12 @@ import (
 // full provisioning lifecycle.
 type VCenterClient interface {
 	CloneFromTemplate(ctx context.Context, spec vcenter.CloneSpec) (*vcenter.VMInfo, error)
+	DeployOVF(ctx context.Context, spec vcenter.OVFDeploySpec) (*vcenter.VMInfo, error)
 	ListTemplates(ctx context.Context) ([]vcenter.VMInfo, error)
 	ListResourcePools(ctx context.Context) ([]vcenter.ResourcePoolInfo, error)
 	SetGuestinfo(ctx context.Context, vmName string, kv map[string]string) error
 	PowerOn(ctx context.Context, vmName string) error
+	PowerOff(ctx context.Context, vmName string) error
 	Destroy(ctx context.Context, vmName string) error
 	Inventory(ctx context.Context) (vcenter.Inventory, error)
 	// FullInventory walks the vCenter inventory tree (per-DC errgroup +
@@ -44,6 +46,18 @@ type VCenterClient interface {
 	// ListNetworks returns all standard portgroups and dvPortgroups in the vCenter
 	// (deploy form NIC/portgroup picker).
 	ListNetworks(ctx context.Context) ([]vcenter.NetworkInfo, error)
+	// GetTemplateVAppProperties reads the vAppConfig from a deployed VM template
+	// and returns its user-configurable OVF properties for the deploy form.
+	GetTemplateVAppProperties(ctx context.Context, templateName string) ([]vcenter.OVFProperty, error)
+	ListVMs(ctx context.Context) ([]vcenter.VMInfo, error)
+	ReconfigVM(ctx context.Context, vmName string, spec vcenter.ReconfigSpec) error
+	GetVMHardware(ctx context.Context, vmName string) (*vcenter.VMHardware, error)
+	GetVAppProperties(ctx context.Context, vmName string) ([]vcenter.OVFProperty, error)
+	InstantClone(ctx context.Context, spec vcenter.InstantCloneSpec) (*vcenter.VMInfo, error)
+	ListRunningVMs(ctx context.Context) ([]vcenter.VMInfo, error)
+	RemoveSerialPorts(ctx context.Context, vmName string) error
+	CheckInstantCloneCompatible(ctx context.Context, vmName string) error
+	GetVMInfo(ctx context.Context, vmName string) (*vcenter.VMInfo, error)
 	// About returns the vCenter version/build identity (test-connection detail).
 	About() vcenter.AboutInfo
 	Logout(ctx context.Context) error
@@ -59,14 +73,6 @@ type Resolver struct {
 	SessionTTL time.Duration
 	// SecureCookies sets the Secure flag on the session cookie (true behind TLS).
 	SecureCookies bool
-	// Gateway governs LiteLLM virtual keys; nil if no gateway is configured.
-	Gateway gateway.Client
-	// GatewayModels manages the model pool + difficulty router (nil disables sync).
-	GatewayModels gateway.ModelManager
-	// GatewayClientFor builds a litellm model-manager bound to a specific gateway
-	// row (its own endpoint + master key) for model/connection-test ops. Injectable
-	// for tests; nil → a real HTTP client (see Resolver.buildGatewayModels).
-	GatewayClientFor func(ctx context.Context, endpoint, masterKey string) gateway.ModelManager
 	// GatewayKeyClientFor builds a litellm key/team client bound to a specific
 	// gateway row, for per-department routing (LLD-13 §3.3). Injectable for tests;
 	// nil → a real HTTP client (see Resolver.buildGatewayKeyClient).
@@ -81,13 +87,19 @@ type Resolver struct {
 	spendCache *spendReportCache
 	// Secrets resolves resource-pool credentials (encrypted DBStore); nil disables deploy.
 	Secrets secrets.Resolver
-	// GatewayURL is the LLM gateway base URL injected into provisioned VMs.
-	GatewayURL string
+	// SecretsAuditEnabled, when true, causes every successful Secrets.Resolve to
+	// write an audit_log row (action="secret.read"). Default false — opt-in via
+	// the SECRETS_AUDIT_ENABLED env. The flag lives on Resolver so callers can
+	// enable it without importing the secrets package.
+	SecretsAuditEnabled bool
 	// InstallVars holds the STATIC env-derived {{PLACEHOLDER}} tokens for
-	// AgentTemplate.install_command (currently just AGENT_PKG_BASE_URL). AGENT_USER
-	// is NOT here — it is a DB platform setting merged in per-request by
-	// renderInstallVars (LLD-13).
+	// AgentTemplate.install_command (currently just AGENT_PKG_BASE_URL).
+	// AGENT_USER is set on the resolver at startup (see AgentUser below).
 	InstallVars map[string]string
+	// AgentUser is the OS account installed agents run as, substituted into
+	// {{AGENT_USER}} in catalog install commands. Set once at startup from
+	// the AGENT_USER env (cmd/server); empty means "use defaultAgentUser".
+	AgentUser string
 	// VCenterConnect dials vCenter; nil disables deploy. TLS-skip is per-pool
 	// (ResourcePool.insecure, LLD-13), passed into each connect call.
 	VCenterConnect VCenterConnector

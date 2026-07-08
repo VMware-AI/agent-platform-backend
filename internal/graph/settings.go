@@ -71,16 +71,28 @@ func (r *Resolver) setSetting(ctx context.Context, key, value string) error {
 	return nil
 }
 
+// agentUserDefault is the fallback when no agent_user platform setting is stored:
+// the AGENT_USER startup env (Resolver.AgentUser, set in cmd/server), then the
+// historical "agent". Precedence: DB setting > env > default — the DB row is the
+// operator-editable source of truth (LLD-13); env survives for pre-console deploys.
+func (r *Resolver) agentUserDefault() string {
+	if r.AgentUser != "" {
+		return r.AgentUser
+	}
+	return defaultAgentUser
+}
+
 // renderInstallVars builds the {{PLACEHOLDER}} substitutions for catalog install
 // commands: the static env-derived vars (AGENT_PKG_BASE_URL) PLUS AGENT_USER read
-// from the DB platform setting (LLD-13), so AGENT_USER is operator-editable, not a
-// startup env. Called once per template-returning resolver (lists fetch once).
+// from the DB platform setting (LLD-13), falling back to the AGENT_USER env, so the
+// account is operator-editable in the console. Called once per template-returning
+// resolver (lists fetch once).
 func (r *Resolver) renderInstallVars(ctx context.Context) map[string]string {
 	vars := make(map[string]string, len(r.InstallVars)+1)
 	for k, v := range r.InstallVars {
 		vars[k] = v
 	}
-	vars["AGENT_USER"] = r.getSetting(ctx, settingKeyAgentUser, defaultAgentUser)
+	vars["AGENT_USER"] = r.getSetting(ctx, settingKeyAgentUser, r.agentUserDefault())
 	// Package mirror: DB platform settings (console-configurable, OQ-2) take
 	// precedence over the startup env; resolveAgentPkgBaseURL falls back to env.
 	if base := r.resolveAgentPkgBaseURL(ctx); base != "" {

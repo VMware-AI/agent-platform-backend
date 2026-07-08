@@ -65,13 +65,11 @@ func TestDenyPath_AdminOps_RoleGated(t *testing.T) {
 			allowed: []model.RoleName{model.RoleNameAdmin, model.RoleNameReadOnly},
 		},
 		{
-			// @hasRole(any: [admin]) — platform-only catalog + gateway + permission registry.
+			// @hasRole(any: [admin]) — platform-only catalog + permission registry.
 			//   content.graphql:80,82          deleteSkill / deleteImage
-			//   gateway-routing.graphql:142-144 registerGatewayConnection / testGatewayConnection / deleteGatewayConnection
 			//   rbac.graphql:32                upsertPermission
 			ops: []string{
 				"deleteSkill", "deleteImage",
-				"registerGatewayConnection", "testGatewayConnection", "deleteGatewayConnection",
 				"upsertPermission",
 			},
 			allowed: []model.RoleName{model.RoleNameAdmin},

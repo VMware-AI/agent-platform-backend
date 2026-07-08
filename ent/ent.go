@@ -29,17 +29,15 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/ovatemplateversion"
 	"github.com/VMware-AI/agent-platform-backend/ent/permission"
 	"github.com/VMware-AI/agent-platform-backend/ent/platformsecret"
-	"github.com/VMware-AI/agent-platform-backend/ent/ratelimitpolicy"
+	"github.com/VMware-AI/agent-platform-backend/ent/providermodel"
 	"github.com/VMware-AI/agent-platform-backend/ent/requestlog"
 	"github.com/VMware-AI/agent-platform-backend/ent/resourcepool"
 	"github.com/VMware-AI/agent-platform-backend/ent/role"
 	"github.com/VMware-AI/agent-platform-backend/ent/rotationcommand"
-	"github.com/VMware-AI/agent-platform-backend/ent/routertier"
 	"github.com/VMware-AI/agent-platform-backend/ent/setting"
 	"github.com/VMware-AI/agent-platform-backend/ent/skill"
 	"github.com/VMware-AI/agent-platform-backend/ent/tenant"
 	"github.com/VMware-AI/agent-platform-backend/ent/tokenusage"
-	"github.com/VMware-AI/agent-platform-backend/ent/upstream"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 )
@@ -119,17 +117,15 @@ func checkColumn(t, c string) error {
 			ovatemplateversion.Table: ovatemplateversion.ValidColumn,
 			permission.Table:         permission.ValidColumn,
 			platformsecret.Table:     platformsecret.ValidColumn,
-			ratelimitpolicy.Table:    ratelimitpolicy.ValidColumn,
+			providermodel.Table:      providermodel.ValidColumn,
 			requestlog.Table:         requestlog.ValidColumn,
 			resourcepool.Table:       resourcepool.ValidColumn,
 			role.Table:               role.ValidColumn,
 			rotationcommand.Table:    rotationcommand.ValidColumn,
-			routertier.Table:         routertier.ValidColumn,
 			setting.Table:            setting.ValidColumn,
 			skill.Table:              skill.ValidColumn,
 			tenant.Table:             tenant.ValidColumn,
 			tokenusage.Table:         tokenusage.ValidColumn,
-			upstream.Table:           upstream.ValidColumn,
 			user.Table:               user.ValidColumn,
 			virtualkey.Table:         virtualkey.ValidColumn,
 		})

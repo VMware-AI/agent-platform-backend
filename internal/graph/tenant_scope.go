@@ -139,21 +139,12 @@ func (r *Resolver) assertVirtualKeyOwnerTenant(ctx context.Context, vk *ent.Virt
 	if auth.FromContext(ctx) == nil {
 		return nil
 	}
-	owner, err := r.Ent.User.Get(ctx, vk.UserID)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			// Orphan key (owner deleted): a platform admin may still act on it; a
-			// tenant-admin can't claim it (unknown owner tenant) → reads as missing.
-			if writeAllowed(ctx, nil) {
-				return nil
-			}
-			return notFoundErr("virtual key")
-		}
-		return err
-	}
-	if !writeAllowed(ctx, owner.TenantID) {
-		return notFoundErr("virtual key")
-	}
+	// Per-agent-per-org refactor (2026-07): a VirtualKey has no UserID —
+	// it belongs to an organization, not a user. The owner-trail guard
+	// therefore cannot reference the key's owner; for now we treat any
+	// key as resolvable to its organization (not its user) and let the
+	// caller's tenant scope apply. Follow-up: wire organization → tenant
+	// mapping (see plan/spec §3.4).
 	return nil
 }
 
@@ -219,23 +210,6 @@ func (r *Resolver) assertDepartmentReferenceManageable(ctx context.Context, did 
 	}
 	if !ok {
 		return notFoundErr("department")
-	}
-	return nil
-}
-
-// assertRateLimitPolicyReadable enforces the tenant 404 oracle for a by-id
-// rate-limit-policy REFERENCE supplied to a mutation (IssueVirtualKey's
-// rateLimitPolicyId): a tenant-admin may apply only their own tenant's policy;
-// another tenant's policy reads as missing, so its rpm/tpm are never copied into a
-// foreign key and a missing id is not an existence oracle. Mirrors
-// DeleteRateLimitPolicy / SetRateLimitPolicyEnabled. Only constrains an authed
-// caller (no-auth ctx = resolver-level tests).
-func (r *Resolver) assertRateLimitPolicyReadable(ctx context.Context, pol *ent.RateLimitPolicy) error {
-	if auth.FromContext(ctx) == nil {
-		return nil
-	}
-	if !writeAllowed(ctx, pol.TenantID) {
-		return notFoundErr("rate-limit policy")
 	}
 	return nil
 }

@@ -5,17 +5,53 @@ general_settings:
   # Required so the control plane can add models at runtime via /model/new
   # (persisted to the DB) instead of only via config.yaml.
   store_model_in_db: true
+  background_health_checks: true
+  health_check_details: true
+  health_check_interval: 300
+  enable_health_check_routing: true
+  allowed_fails_policy:
+    default: 2
 
 router_settings:
-  routing_strategy: simple-shuffle
+  routing_strategy: latency-based-routing
+  routing_strategy_args:
+    ttl: 3600
   redis_host: "redis" # 对应 docker-compose 中的服务名
   redis_port: 6379
+  allowed_fails: 2
+  cooldown_time: 60
+  num_retries: 2
+  retry_policy: {                          # Dict[str, int]: retry policy for different types of exceptions
+    "AuthenticationErrorRetries": 3,
+    "TimeoutErrorRetries": 3,
+    "RateLimitErrorRetries": 3,
+    "ContentPolicyViolationErrorRetries": 4,
+    "InternalServerErrorRetries": 4
+  }
+  allowed_fails_policy: {
+    "BadRequestErrorAllowedFails": 1000, # Allow 1000 BadRequestErrors before cooling down a deployment
+    "AuthenticationErrorAllowedFails": 10, # int 
+    "TimeoutErrorAllowedFails": 12, # int 
+    "RateLimitErrorAllowedFails": 10000, # int 
+    "ContentPolicyViolationErrorAllowedFails": 15, # int 
+    "InternalServerErrorAllowedFails": 20, # int 
+  }
 
 litellm_settings:
   drop_params: true # tolerate provider param differences
   # 开启 Prometheus 监控指标回调
   success_callbacks: ["prometheus"]
   failure_callbacks: ["prometheus"]
+  json_logs: true
+  request_timeout: 20
+  cache: true
+  cache_params: # set cache params for redis
+    type: redis # type of cache to initialize (options: "local", "redis", "s3", "gcs")
+    # Optional - Redis Settings
+    host: "redis" # The host address for the Redis cache. Required if type is "redis".
+    port: 6379 # The port number for the Redis cache. Required if type is "redis".
+    namespace: "litellm.caching.caching" # namespace for redis cache
+    max_connections: 100
 
 # Optional: pre-seed minimax instead of pushing via the backend's 上游 form.
 # minimax exposes an OpenAI-compatible API, so use the `openai/` prefix with its

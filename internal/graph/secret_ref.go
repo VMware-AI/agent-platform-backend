@@ -44,7 +44,7 @@ func (r *Resolver) resolvePoolSecretRef(ctx context.Context, label string, usern
 // one-field key: the form sends a raw key, the backend writes it to the secret
 // store and persists ONLY the ref — plaintext never lands in the DB. An explicit
 // existing ref is the alternative; set=false when neither is given. label = the
-// secret-store item name (caller-qualified, e.g. "upstream/<name>").
+// secret-store item name (caller-qualified, e.g. "provider_model/<name>").
 //
 // minted is true ONLY when this call freshly Put a new secret (raw-key path) — NOT
 // for a caller-supplied existing ref. See resolvePoolSecretRef and
@@ -70,7 +70,7 @@ func (r *Resolver) resolveKeySecretRef(ctx context.Context, label string, rawKey
 // cleanupMintedSecretOnErr retires a freshly-minted secret ref when the DB Save
 // that was supposed to reference it failed, so a failed create/rotate doesn't
 // orphan plaintext in the store (no row points at it, and the reconciler never
-// GCs orphaned secrets). It is the create/update counterpart of the DELETE-side
+// GCs secret-store items). It is the create/update counterpart of the DELETE-side
 // deleteSecretRef calls.
 //
 // No-op unless a NEW secret was minted by this request (minted, i.e. the raw-key

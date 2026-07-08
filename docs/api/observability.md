@@ -4,8 +4,6 @@
 
 > Source: `schema/observability.graphql`
 
-> Rate-limit policies are co-located here (same source file) but are conceptually paired with [virtual keys](./virtual-keys.md), which bind to them via `rateLimitPolicyId`.
-
 ## Queries
 
 ### `requestLogs`
@@ -21,15 +19,6 @@ requestLogs(filter: RequestLogFilter, page: PageInput): RequestLogConnection!
 |----------|------|----------|---------|
 | `filter` | `RequestLogFilter` | no | — |
 | `page` | `PageInput` | no | — |
-
-### `rateLimitPolicies`
-
-```graphql
-rateLimitPolicies: [RateLimitPolicy!]!
-```
-
-- **Returns:** `[RateLimitPolicy!]!`
-- **Auth:** `@hasRole(any: [admin])`
 
 ### `requestMetrics`
 
@@ -49,7 +38,7 @@ requestMetrics(from: Time!, to: Time!, granularity: RequestMetricsBucketGranular
 
 ### `gatewayHealth`
 
-Upstream health across every configured gateway (fan-out to litellm /health).
+Provider-model health across every configured gateway (fan-out to litellm /health).
 
 ```graphql
 gatewayHealth: [GatewayHealth!]!
@@ -72,48 +61,6 @@ recordRequestLog(input: RecordRequestLogInput!): RequestLog!
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
 | `input` | `RecordRequestLogInput!` | yes | — |
-
-### `upsertRateLimitPolicy`
-
-```graphql
-upsertRateLimitPolicy(input: UpsertRateLimitPolicyInput!): RateLimitPolicy!
-```
-
-- **Returns:** `RateLimitPolicy!`
-- **Auth:** `@hasPermission(perm: "route:manage")`
-
-| Argument | Type | Required | Default |
-|----------|------|----------|---------|
-| `input` | `UpsertRateLimitPolicyInput!` | yes | — |
-
-### `setRateLimitPolicyEnabled`
-
-```graphql
-setRateLimitPolicyEnabled(id: ID!, enabled: Boolean!): RateLimitPolicy!
-```
-
-- **Returns:** `RateLimitPolicy!`
-- **Auth:** `@hasPermission(perm: "route:manage")`
-
-| Argument | Type | Required | Default |
-|----------|------|----------|---------|
-| `id` | `ID!` | yes | — |
-| `enabled` | `Boolean!` | yes | — |
-
-### `deleteRateLimitPolicy`
-
-Delete a policy. Refused while any non-revoked virtual key still references it (reassign/revoke those keys first) so bound keys never silently lose their limits.
-
-```graphql
-deleteRateLimitPolicy(id: ID!): Boolean!
-```
-
-- **Returns:** `Boolean!`
-- **Auth:** `@hasPermission(perm: "route:manage")`
-
-| Argument | Type | Required | Default |
-|----------|------|----------|---------|
-| `id` | `ID!` | yes | — |
 
 ## Types
 
@@ -144,19 +91,6 @@ A gateway's health, aggregated by the backend fanning out to litellm's /health (
 | `healthy` | `[EndpointHealth!]!` | — |
 | `unhealthy` | `[EndpointHealth!]!` | — |
 | `error` | `String` | — |
-
-### RateLimitPolicy
-
-*Object*
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `ID!` | — |
-| `name` | `String!` | — |
-| `rpm` | `Int` | — |
-| `tpm` | `Int` | — |
-| `enabled` | `Boolean!` | — |
-| `createdAt` | `Time!` | — |
 
 ### RequestLog
 
@@ -269,17 +203,6 @@ Paged request logs with a real total for offset/limit pagination.
 | `statusCode` | `Int` | — |
 | `agentId` | `ID` | — |
 | `model` | `String` | — |
-
-### UpsertRateLimitPolicyInput
-
-*Input*
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | `String!` | — |
-| `rpm` | `Int` | — |
-| `tpm` | `Int` | — |
-| `enabled` | `Boolean` | — |
 
 ### RequestMetricsBucketGranularity
 

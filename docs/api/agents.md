@@ -32,7 +32,7 @@ agentConfigs(agentType: String): [AgentConfig!]!
 
 ### `agents`
 
-Admin + read_only see all agents; a regular user only their own (owner scope). Paged/filtered/sorted connection (前后端整合契约).
+Admin sees all agents; tenant-admin their tenant; a regular user only their own (owner scope). Paged/filtered/sorted connection (前后端整合契约).
 
 ```graphql
 agents(filter: AgentFilter, pagination: Pagination, sort: AgentSort): AgentConnection!
@@ -49,7 +49,7 @@ agents(filter: AgentFilter, pagination: Pagination, sort: AgentSort): AgentConne
 
 ### `agent`
 
-Single-agent detail. Follows the same three-track visibility as the agents list (admin/read_only→all, user→own agents only).
+Single-agent detail. Owner or admin; follows the same three-track visibility as the agents list (admin→all, tenant-admin→their tenant, user→own agents only).
 
 ```graphql
 agent(id: ID!): Agent!
@@ -57,6 +57,19 @@ agent(id: ID!): Agent!
 
 - **Returns:** `Agent!`
 - **Auth:** authenticated (no directive)
+
+| Argument | Type | Required | Default |
+|----------|------|----------|---------|
+| `id` | `ID!` | yes | — |
+
+### `agentVmResources`
+
+```graphql
+agentVmResources(id: ID!): AgentVmResources!
+```
+
+- **Returns:** `AgentVmResources!`
+- **Auth:** `@hasRole(any: [admin, user])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -122,6 +135,32 @@ agentSnapshots(agentId: ID!): [AgentSnapshot!]!
 |----------|------|----------|---------|
 | `agentId` | `ID!` | yes | — |
 
+### `unboundKeys`
+
+List virtual keys not yet bound to any agent, for the deploy form's "use existing key" flow. Admin-only.
+
+```graphql
+unboundKeys: [VirtualKey!]!
+```
+
+- **Returns:** `[VirtualKey!]!`
+- **Auth:** `@hasRole(any: [admin])`
+
+### `instantCloneParents`
+
+Running VMs eligible as instant-clone parents (powered on, not templates).
+
+```graphql
+instantCloneParents(resourcePoolId: ID!): [VMTemplate!]!
+```
+
+- **Returns:** `[VMTemplate!]!`
+- **Auth:** `@hasRole(any: [admin])`
+
+| Argument | Type | Required | Default |
+|----------|------|----------|---------|
+| `resourcePoolId` | `ID!` | yes | — |
+
 ## Mutations
 
 ### `upsertAgentTemplate`
@@ -177,7 +216,7 @@ createAgentConfig(input: CreateAgentConfigInput!): AgentConfig!
 ```
 
 - **Returns:** `AgentConfig!`
-- **Auth:** `@hasRole(any: [admin])`
+- **Auth:** `@hasRole(any: [admin, tenant_admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -190,7 +229,7 @@ updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig!
 ```
 
 - **Returns:** `AgentConfig!`
-- **Auth:** `@hasRole(any: [admin])`
+- **Auth:** `@hasRole(any: [admin, tenant_admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -204,7 +243,7 @@ deleteAgentConfig(id: ID!): Boolean!
 ```
 
 - **Returns:** `Boolean!`
-- **Auth:** `@hasRole(any: [admin])`
+- **Auth:** `@hasRole(any: [admin, tenant_admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -219,7 +258,7 @@ setDefaultAgentConfig(id: ID!): AgentConfig!
 ```
 
 - **Returns:** `AgentConfig!`
-- **Auth:** `@hasRole(any: [admin])`
+- **Auth:** `@hasRole(any: [admin, tenant_admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
@@ -234,12 +273,25 @@ setAgentConfigKnowledge(configId: ID!, knowledgeArtifactIds: [ID!]!): AgentConfi
 ```
 
 - **Returns:** `AgentConfig!`
-- **Auth:** `@hasRole(any: [admin])`
+- **Auth:** `@hasRole(any: [admin, tenant_admin])`
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
 | `configId` | `ID!` | yes | — |
 | `knowledgeArtifactIds` | `[ID!]!` | yes | — |
+
+### `reconfigAgentVM`
+
+```graphql
+reconfigAgentVM(agentId: ID! resource: AgentResourceInput network: AgentNetworkInput vAppProperties: [VAppPropertyInput!]): Agent!
+```
+
+- **Returns:** `Agent!`
+- **Auth:** `@hasRole(any: [admin, user])`
+
+| Argument | Type | Required | Default |
+|----------|------|----------|---------|
+| `agentId` | `ID! resource: AgentResourceInput network: AgentNetworkInput vAppProperties: [VAppPropertyInput!]` | no | — |
 
 ### `deployAgent`
 
@@ -384,6 +436,7 @@ revokeAgentEnrollment(agentId: ID!): Boolean!
 | `templateVersionId` | `ID` | — |
 | `resourcePoolId` | `ID` | The vCenter resource pool the agent's VM lives in (set at deploy). Null until deployed. |
 | `credentials` | `AgentCredentials` | Run-as credentials for the agent's VM. Currently sources `username` from the owning user (the agent has no separate OS account today); resolver-computed. |
+| `vmResources` | `AgentVmResources` | Live VM hardware snapshot from vCenter (null if not deployed). |
 | `createdAt` | `Time!` | — |
 | `updatedAt` | `Time!` | — |
 
@@ -428,11 +481,14 @@ Connection wrapper for the paged/filtered/sorted agent list (前后端整合契�
 
 *Object*
 
-Run-as credentials surfaced for a deployed agent. Only `username` is exposed; the password is never returned by the API (it is a Sensitive VM secret).
+VM access credentials for a deployed agent.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `username` | `String!` | — |
+| `ip` | `String!` | VM IP from vCenter guest info. Empty if not deployed. |
+| `sshCommand` | `String!` | SSH connection string (e.g. "ssh user@ip"). |
+| `passwordHint` | `String!` | Password hint — never returns the actual password. |
 
 ### AgentSnapshot
 
@@ -465,6 +521,20 @@ A vCenter snapshot of an agent's VM (LLD-03 §4 生命周期/快照).
 | `knowledgePrompt` | `String` | — |
 | `createdAt` | `Time!` | — |
 
+### AgentVmResources
+
+*Object*
+
+VM hardware resources returned by live vCenter query.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `cpu` | `Int!` | — |
+| `memory` | `Int!` | — |
+| `disk` | `Int!` | — |
+| `networkLabel` | `String!` | — |
+| `vAppProperties` | `[VAppProperty!]!` | — |
+
 ### DeployedAgent
 
 *Object*
@@ -485,6 +555,15 @@ A vCenter snapshot of an agent's VM (LLD-03 §4 生命周期/快照).
 | `page` | `Int!` | — |
 | `pageSize` | `Int!` | — |
 | `totalPages` | `Int!` | — |
+
+### VAppProperty
+
+*Object*
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `key` | `String!` | — |
+| `value` | `String!` | — |
 
 ### VMTemplate
 
@@ -533,6 +612,24 @@ A vCenter resource pool offered as a placement target for the cloned VM. A true 
 | `keyKeyword` | `String` | substring match on apiKey.name (virtual_key alias) |
 | `ownerKeyword` | `String` | substring match on owner.username / owner.email |
 
+### AgentNetworkInput
+
+*Input*
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `portGroup` | `String` | — |
+
+### AgentResourceInput
+
+*Input*
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `cpu` | `Int` | — |
+| `memory` | `Int` | — |
+| `disk` | `Int` | — |
+
 ### AgentSort
 
 *Input*
@@ -568,18 +665,34 @@ A vCenter resource pool offered as a placement target for the cloned VM. A true 
 
 *Input*
 
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `name` | `String!` | — | Display name for the new agent (and its cloned VM). |
+| `templateFamilyId` | `ID!` | — | The OVA template family (its `type` becomes the agent's kind) and the specific version to clone from (its `ovaIdentifier` is the source template). |
+| `templateVersionId` | `ID!` | — | — |
+| `resourcePoolId` | `ID!` | — | Target vCenter resource pool to place the clone in. |
+| `departmentId` | `ID` | — | Department whose gateway issues the agent's virtual key + whose gateway public_url is baked into cloud-init (LLD-13 §3.3). Omitted → platform default gateway. |
+| `targetResourcePool` | `String` | — | Optional vSphere resource-pool name to place the VM clone in. A true OVA template has NO source resource pool, so vCenter's CloneFromTemplate requires an explicit placement pool for real deploys ("source has no resource pool; specify resourcePool"). Empty = inherit the source template's pool (only works when the source is a regular VM, e.g. vcsim). Optional to keep the contract backward-compatible. |
+| `hostname` | `String` | — | Optional cloud-init hostname for the VM (defaults to none). |
+| `maxBudget` | `Float` | — | Optional per-key spend cap handed to the gateway when issuing the agent's key. |
+| `targetNetwork` | `String` | — | Optional target network/portgroup path for the agent VM's NIC. Matches VsphereNetwork.path. "" = keep the source template's NIC mapping. |
+| `ovfProperties` | `[OVFPropertyInput!]` | — | OVF/vApp properties from the template, keyed by property id. |
+| `keySource` | `KeySource!` | `new` | Key source: "new" issues a fresh gateway key; "existing" binds an unbound key. |
+| `existingKeyId` | `ID` | — | Required when keySource=existing — the id of an unbound virtual key to reuse. |
+| `notes` | `String` | — | Optional free-text deploy notes. |
+| `cloneMode` | `CloneMode!` | `full` | — |
+| `instantCloneParent` | `String` | — | — |
+
+### OVFPropertyInput
+
+*Input*
+
+A single OVF property value for the deploy mutation.
+
 | Field | Type | Description |
 |-------|------|-------------|
-| `name` | `String!` | Display name for the new agent (and its cloned VM). |
-| `templateFamilyId` | `ID!` | The OVA template family (its `type` becomes the agent's kind) and the specific version to clone from (its `ovaIdentifier` is the source template). |
-| `templateVersionId` | `ID!` | — |
-| `resourcePoolId` | `ID!` | Target vCenter resource pool to place the clone in. |
-| `departmentId` | `ID` | Department whose gateway issues the agent's virtual key + whose gateway public_url is baked into cloud-init (LLD-13 §3.3). Omitted → platform default gateway. |
-| `targetResourcePool` | `String` | Optional vSphere resource-pool name to place the VM clone in. A true OVA template has NO source resource pool, so vCenter's CloneFromTemplate requires an explicit placement pool for real deploys ("source has no resource pool; specify resourcePool"). Empty = inherit the source template's pool (only works when the source is a regular VM, e.g. vcsim). Optional to keep the contract backward-compatible. |
-| `hostname` | `String` | Optional cloud-init hostname for the VM (defaults to none). |
-| `maxBudget` | `Float` | Optional per-key spend cap handed to the gateway when issuing the agent's key. |
-| `targetNetwork` | `String` | Optional target network/portgroup path for the agent VM's NIC. Matches VsphereNetwork.path. "" = keep the source template's NIC mapping. |
-| `initialPassword` | `String` | One-time initial credential for the agent VM's UI + OS accounts. deployAgent stamps it into guestinfo.agentmgr.initial_password; the VM's webadmin seeds it into the nginx htpasswd + the OS user at first boot, and the user should change it right after first login (via /manage/). Policy mirrors the VM webadmin's: at least 12 characters, at most 72 bytes (bcrypt cap), no leading/trailing whitespace, no control characters, no ':'. SENSITIVE: never logged, audited or persisted by the platform. Optional for contract backward-compatibility — omitted = no credential is seeded. |
+| `key` | `String!` | — |
+| `value` | `String!` | — |
 
 ### Pagination
 
@@ -644,6 +757,15 @@ A vCenter resource pool offered as a placement target for the cloned VM. A true 
 | `knowledgeRoot` | `String` | OKF grounding convention (LLD-11 K4); operators may override the seeded defaults. |
 | `knowledgePrompt` | `String` | — |
 
+### VAppPropertyInput
+
+*Input*
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `key` | `String!` | — |
+| `value` | `String!` | — |
+
 ### AgentSortField
 
 *Enum*
@@ -678,6 +800,15 @@ A vCenter resource pool offered as a placement target for the cloned VM. A true 
 | `active` | — |
 | `deferred` | — |
 
+### CloneMode
+
+*Enum*
+
+| Value | Description |
+|-------|-------------|
+| `full` | — |
+| `instant` | — |
+
 ### InstallMethod
 
 *Enum*
@@ -687,6 +818,17 @@ A vCenter resource pool offered as a placement target for the cloned VM. A true 
 | `offline_tar` | — |
 | `curl` | — |
 | `unset` | — |
+
+### KeySource
+
+*Enum*
+
+Whether to issue a new key or use an existing unbound one.
+
+| Value | Description |
+|-------|-------------|
+| `new` | — |
+| `existing` | — |
 
 ### RotationKind
 

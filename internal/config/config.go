@@ -99,12 +99,59 @@ type Config struct {
 	// syncModelGatewayConnection mutation, and a sync is also fired-and-
 	// forgotten at create time.
 	ModelGatewaySyncIntervalSeconds int
+	// ProviderProbeIntervalSeconds is how often (seconds) the background
+	// goroutine probes each enabled ProviderModel against its upstream API
+	// and writes the resulting Active/Degraded/Melted/Unknown status back to
+	// the row. Default 60 (1m); 0 disables the periodic probe. Upserts
+	// also kick off a one-shot probe so the operator sees the real status
+	// within seconds rather than waiting for the next tick.
+	// Driven by the LiteLLM design doc §2.2 "状态异步探测解耦机制" — the
+	// frontend only reads the cached status, never blocks on a live probe.
+	ProviderProbeIntervalSeconds int
+	// RouterSyncIntervalSeconds is how often (seconds) the background goroutine
+	// re-aggregates all enabled ModelRoute rows and POSTs the full
+	// router_settings payload to /config/update, grouped by backendGatewayId.
+	// Default 300 (5m); 0 disables the periodic safety-net sync (per-route
+	// save already pushes immediately, so disabling this only loses the
+	// safety net).
+	RouterSyncIntervalSeconds int
+	// VirtualKeySpendRefreshIntervalSeconds is how often (seconds) the
+	// background goroutine reads litellm /key/info for every active
+	// VirtualKey and writes the resulting spend + last_active_at back to the
+	// platform row. Drives the 消费进度 column on the 令牌管理 page (design
+	// doc §4.1). Default 300 (5m); 0 disables the periodic refresh (the
+	// values will then freeze at whatever the worker last observed).
+	VirtualKeySpendRefreshIntervalSeconds int
 	// SecretsEncryptionKey is the single symmetric key (any high-entropy string;
 	// SHA-256-derived to 32 bytes) used to encrypt credential fields at rest in the
 	// platform_secrets table. The same key is used in every environment — there is
 	// no dev/prod secrets split. Required: the server refuses to start without it
-	// (an empty key would mean credentials cannot be sealed/opened).
+	// (an empty key would mean credentials cannot be sealed/opened). For rotation,
+	// prefer SecretsEncryptionKeys below — SecretsEncryptionKey still works and is
+	// equivalent to a single-key map tagged with key id "default".
 	SecretsEncryptionKey string
+	// SecretsEncryptionKeys (optional) is the rotation-friendly form of
+	// SecretsEncryptionKey: "id1:passphrase1,id2:passphrase2". The first id
+	// is the active key (new Put writes go under it); every listed key is
+	// available for Resolve so a row sealed under an older key keeps
+	// decrypting until the rotation worker migrates it. When this is set it
+	// takes precedence over SecretsEncryptionKey. Empty values in the list
+	// are skipped; ids must be unique and non-empty.
+	SecretsEncryptionKeys string
+	// SecretsRotationIntervalSeconds is how often (seconds) the background
+	// goroutine scans platform_secrets for rows still encrypted under a
+	// retired key and re-encrypts them under the active key. Default 0
+	// (disabled) — the worker is opt-in (rotation in production is a
+	// deliberate operator action; we don't surprise them by migrating
+	// existing ciphertexts under their nose). Set to N > 0 to enable.
+	SecretsRotationIntervalSeconds int
+	// SecretsAuditEnabled controls whether every successful Secrets.Resolve
+	// call is recorded as an audit-log row (action="secret.read"). Default
+	// false — the worker is opt-in because a busy deploy (5-min router sync
+	// + 60s probes × N upstreams + pool sync) easily writes hundreds of
+	// audit rows per hour. Operators investigating an incident enable it
+	// for the duration of the investigation.
+	SecretsAuditEnabled bool
 }
 
 // Load reads config from the environment and validates it. Fails fast on a
@@ -186,10 +233,27 @@ func Load() (*Config, error) {
 	if c.PoolSyncBreakerOpenSeconds, err = getenvInt("POOL_SYNC_BREAKER_OPEN_SECONDS", 60); err != nil {
 		return nil, err
 	}
-	if c.ModelGatewaySyncIntervalSeconds, err = getenvInt("MODEL_GATEWAY_SYNC_INTERVAL_SECONDS", 1800); err != nil {
+	if c.ModelGatewaySyncIntervalSeconds, err = getenvInt("MODEL_GATEWAY_SYNC_INTERVAL_SECONDS", 0); err != nil {
+		return nil, err
+	}
+	if c.ProviderProbeIntervalSeconds, err = getenvInt("PROVIDER_PROBE_INTERVAL_SECONDS", 600); err != nil {
+		return nil, err
+	}
+	if c.RouterSyncIntervalSeconds, err = getenvInt("ROUTER_SYNC_INTERVAL_SECONDS", 300); err != nil {
+		return nil, err
+	}
+	if c.VirtualKeySpendRefreshIntervalSeconds, err = getenvInt("VK_SPEND_REFRESH_INTERVAL_SECONDS", 300); err != nil {
 		return nil, err
 	}
 	c.SecretsEncryptionKey = os.Getenv("SECRETS_ENCRYPTION_KEY")
+	c.SecretsEncryptionKeys = os.Getenv("SECRETS_ENCRYPTION_KEYS")
+	c.SecretsAuditEnabled = getenv("SECRETS_AUDIT_ENABLED", "false") == "true"
+	if c.SecretsRotationIntervalSeconds, err = getenvInt("SECRETS_ROTATION_INTERVAL_SECONDS", 0); err != nil {
+		return nil, err
+	}
+	if c.SecretsRotationIntervalSeconds < 0 {
+		return nil, fmt.Errorf("SECRETS_ROTATION_INTERVAL_SECONDS must be >= 0, got %d", c.SecretsRotationIntervalSeconds)
+	}
 	return c, nil
 }
 

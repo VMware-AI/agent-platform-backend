@@ -75,7 +75,7 @@ func (r *Resolver) connectPool(ctx context.Context, pool *ent.ResourcePool) (VCe
 	if pool.SecretRef == "" {
 		return nil, fmt.Errorf("resource pool has no secret_ref")
 	}
-	cred, err := r.Secrets.Resolve(ctx, pool.SecretRef)
+	cred, err := r.resolveSecret(ctx, pool.SecretRef, secretPurposeVCenterConnect)
 	if err != nil {
 		return nil, fmt.Errorf("resolve credentials: %w", err)
 	}

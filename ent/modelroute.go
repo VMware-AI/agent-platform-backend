@@ -28,7 +28,7 @@ type ModelRoute struct {
 	// ModelAlias holds the value of the "model_alias" field.
 	ModelAlias string `json:"model_alias,omitempty"`
 	// GatewayConnectionID holds the value of the "gateway_connection_id" field.
-	GatewayConnectionID *uuid.UUID `json:"gateway_connection_id,omitempty"`
+	GatewayConnectionID uuid.UUID `json:"gateway_connection_id,omitempty"`
 	// GatewayName holds the value of the "gateway_name" field.
 	GatewayName string `json:"gateway_name,omitempty"`
 	// Upstreams holds the value of the "upstreams" field.
@@ -38,8 +38,14 @@ type ModelRoute struct {
 	// UIStrategy holds the value of the "ui_strategy" field.
 	UIStrategy modelroute.UIStrategy `json:"ui_strategy,omitempty"`
 	// Enabled holds the value of the "enabled" field.
-	Enabled      bool `json:"enabled,omitempty"`
-	selectValues sql.SelectValues
+	Enabled bool `json:"enabled,omitempty"`
+	// Fallbacks holds the value of the "fallbacks" field.
+	Fallbacks []string `json:"fallbacks,omitempty"`
+	// ContextWindowFallbacks holds the value of the "context_window_fallbacks" field.
+	ContextWindowFallbacks []string `json:"context_window_fallbacks,omitempty"`
+	// ContentPolicyFallbacks holds the value of the "content_policy_fallbacks" field.
+	ContentPolicyFallbacks []string `json:"content_policy_fallbacks,omitempty"`
+	selectValues           sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -47,9 +53,7 @@ func (*ModelRoute) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case modelroute.FieldGatewayConnectionID:
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case modelroute.FieldUpstreams:
+		case modelroute.FieldUpstreams, modelroute.FieldFallbacks, modelroute.FieldContextWindowFallbacks, modelroute.FieldContentPolicyFallbacks:
 			values[i] = new([]byte)
 		case modelroute.FieldEnabled:
 			values[i] = new(sql.NullBool)
@@ -57,7 +61,7 @@ func (*ModelRoute) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case modelroute.FieldCreatedAt, modelroute.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case modelroute.FieldID:
+		case modelroute.FieldID, modelroute.FieldGatewayConnectionID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -105,11 +109,10 @@ func (_m *ModelRoute) assignValues(columns []string, values []any) error {
 				_m.ModelAlias = value.String
 			}
 		case modelroute.FieldGatewayConnectionID:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
+			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field gateway_connection_id", values[i])
-			} else if value.Valid {
-				_m.GatewayConnectionID = new(uuid.UUID)
-				*_m.GatewayConnectionID = *value.S.(*uuid.UUID)
+			} else if value != nil {
+				_m.GatewayConnectionID = *value
 			}
 		case modelroute.FieldGatewayName:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -142,6 +145,30 @@ func (_m *ModelRoute) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field enabled", values[i])
 			} else if value.Valid {
 				_m.Enabled = value.Bool
+			}
+		case modelroute.FieldFallbacks:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field fallbacks", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Fallbacks); err != nil {
+					return fmt.Errorf("unmarshal field fallbacks: %w", err)
+				}
+			}
+		case modelroute.FieldContextWindowFallbacks:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field context_window_fallbacks", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.ContextWindowFallbacks); err != nil {
+					return fmt.Errorf("unmarshal field context_window_fallbacks: %w", err)
+				}
+			}
+		case modelroute.FieldContentPolicyFallbacks:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field content_policy_fallbacks", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.ContentPolicyFallbacks); err != nil {
+					return fmt.Errorf("unmarshal field content_policy_fallbacks: %w", err)
+				}
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -191,10 +218,8 @@ func (_m *ModelRoute) String() string {
 	builder.WriteString("model_alias=")
 	builder.WriteString(_m.ModelAlias)
 	builder.WriteString(", ")
-	if v := _m.GatewayConnectionID; v != nil {
-		builder.WriteString("gateway_connection_id=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
+	builder.WriteString("gateway_connection_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.GatewayConnectionID))
 	builder.WriteString(", ")
 	builder.WriteString("gateway_name=")
 	builder.WriteString(_m.GatewayName)
@@ -210,6 +235,15 @@ func (_m *ModelRoute) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("enabled=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Enabled))
+	builder.WriteString(", ")
+	builder.WriteString("fallbacks=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Fallbacks))
+	builder.WriteString(", ")
+	builder.WriteString("context_window_fallbacks=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ContextWindowFallbacks))
+	builder.WriteString(", ")
+	builder.WriteString("content_policy_fallbacks=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ContentPolicyFallbacks))
 	builder.WriteByte(')')
 	return builder.String()
 }

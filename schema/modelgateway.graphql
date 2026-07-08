@@ -108,6 +108,8 @@ extend type Query {
   # page is the shared PageInput (limit/offset) defined alongside audit/read_only.
   modelGateways(filter: ModelGatewayFilterInput, page: PageInput!, sort: ModelGatewaySort): ModelGatewayConnection! @hasRole(any: [admin])
   modelGatewaySyncSummary: ModelGatewaySyncSummary! @hasRole(any: [admin])
+  # 0.1.x: 单条 lookup,用于 ProviderModel 表单 dropdown / 详情展示;masterKey 不暴露。
+  modelGatewayById(id: ID!): ModelGateway! @hasRole(any: [admin])
 }
 
 extend type Mutation {

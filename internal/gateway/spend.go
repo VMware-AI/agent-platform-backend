@@ -119,6 +119,11 @@ type BudgetInfo struct {
 	Spend         float64
 	MaxBudget     *float64
 	BudgetResetAt *string // litellm returns an ISO timestamp; kept as-is, parsed at the edge
+	// LastActiveAt is set by /key/info responses only; nil for team/user
+	// scopes. The virtualkey-spend worker reads this to populate
+	// VirtualKey.last_active_at. Stored as a pointer so the absence case
+	// (older litellm versions that don't emit the field) is unambiguous.
+	LastActiveAt *string
 }
 
 // --- litellm wire DTOs (best-effort mapping; see LLD-15 §3.2 on version drift) ---
@@ -155,6 +160,10 @@ type llmBudgetInfo struct {
 	Spend         float64  `json:"spend"`
 	MaxBudget     *float64 `json:"max_budget"`
 	BudgetResetAt *string  `json:"budget_reset_at"`
+	// Last-active timestamp — only /key/info populates this. We carry it
+	// through here (omitempty so the team/user scopes don't see a noise
+	// field in their JSON) and read it in the spend worker below.
+	LastActiveAt *string `json:"last_active_at,omitempty"`
 }
 
 func (c *HTTPClient) GlobalSpendReport(ctx context.Context, start, end, litellmGroupBy string) ([]SpendReportDay, error) {
@@ -211,13 +220,20 @@ func (c *HTTPClient) BudgetInfo(ctx context.Context, scope BudgetInfoScope, id s
 		return nil, err
 	}
 	label := firstNonEmpty(raw.TeamAlias, raw.KeyAlias, raw.KeyName, raw.TeamID, raw.UserID, id)
-	return &BudgetInfo{
+	out := &BudgetInfo{
 		ID:            id,
 		Label:         label,
 		Spend:         raw.Spend,
 		MaxBudget:     raw.MaxBudget,
 		BudgetResetAt: raw.BudgetResetAt,
-	}, nil
+	}
+	// Only /key/info populates last_active_at; carry it through only when
+	// the field was actually present in the response. The pointer indirection
+	// keeps "absent" distinct from "set but empty".
+	if raw.LastActiveAt != nil {
+		out.LastActiveAt = raw.LastActiveAt
+	}
+	return out, nil
 }
 
 func firstNonEmpty(vals ...string) string {

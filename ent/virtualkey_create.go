@@ -69,23 +69,21 @@ func (_c *VirtualKeyCreate) SetNillableLitellmToken(v *string) *VirtualKeyCreate
 	return _c
 }
 
-// SetAlias sets the "alias" field.
-func (_c *VirtualKeyCreate) SetAlias(v string) *VirtualKeyCreate {
-	_c.mutation.SetAlias(v)
+// SetMaskedKey sets the "masked_key" field.
+func (_c *VirtualKeyCreate) SetMaskedKey(v string) *VirtualKeyCreate {
+	_c.mutation.SetMaskedKey(v)
 	return _c
 }
 
-// SetNillableAlias sets the "alias" field if the given value is not nil.
-func (_c *VirtualKeyCreate) SetNillableAlias(v *string) *VirtualKeyCreate {
-	if v != nil {
-		_c.SetAlias(*v)
-	}
+// SetName sets the "name" field.
+func (_c *VirtualKeyCreate) SetName(v string) *VirtualKeyCreate {
+	_c.mutation.SetName(v)
 	return _c
 }
 
-// SetUserID sets the "user_id" field.
-func (_c *VirtualKeyCreate) SetUserID(v uuid.UUID) *VirtualKeyCreate {
-	_c.mutation.SetUserID(v)
+// SetOrganizationID sets the "organization_id" field.
+func (_c *VirtualKeyCreate) SetOrganizationID(v string) *VirtualKeyCreate {
+	_c.mutation.SetOrganizationID(v)
 	return _c
 }
 
@@ -103,45 +101,9 @@ func (_c *VirtualKeyCreate) SetNillableAgentID(v *uuid.UUID) *VirtualKeyCreate {
 	return _c
 }
 
-// SetRateLimitPolicyID sets the "rate_limit_policy_id" field.
-func (_c *VirtualKeyCreate) SetRateLimitPolicyID(v uuid.UUID) *VirtualKeyCreate {
-	_c.mutation.SetRateLimitPolicyID(v)
-	return _c
-}
-
-// SetNillableRateLimitPolicyID sets the "rate_limit_policy_id" field if the given value is not nil.
-func (_c *VirtualKeyCreate) SetNillableRateLimitPolicyID(v *uuid.UUID) *VirtualKeyCreate {
-	if v != nil {
-		_c.SetRateLimitPolicyID(*v)
-	}
-	return _c
-}
-
-// SetTeamID sets the "team_id" field.
-func (_c *VirtualKeyCreate) SetTeamID(v string) *VirtualKeyCreate {
-	_c.mutation.SetTeamID(v)
-	return _c
-}
-
-// SetNillableTeamID sets the "team_id" field if the given value is not nil.
-func (_c *VirtualKeyCreate) SetNillableTeamID(v *string) *VirtualKeyCreate {
-	if v != nil {
-		_c.SetTeamID(*v)
-	}
-	return _c
-}
-
-// SetGatewayConnectionID sets the "gateway_connection_id" field.
-func (_c *VirtualKeyCreate) SetGatewayConnectionID(v uuid.UUID) *VirtualKeyCreate {
-	_c.mutation.SetGatewayConnectionID(v)
-	return _c
-}
-
-// SetNillableGatewayConnectionID sets the "gateway_connection_id" field if the given value is not nil.
-func (_c *VirtualKeyCreate) SetNillableGatewayConnectionID(v *uuid.UUID) *VirtualKeyCreate {
-	if v != nil {
-		_c.SetGatewayConnectionID(*v)
-	}
+// SetModelGatewayID sets the "model_gateway_id" field.
+func (_c *VirtualKeyCreate) SetModelGatewayID(v uuid.UUID) *VirtualKeyCreate {
+	_c.mutation.SetModelGatewayID(v)
 	return _c
 }
 
@@ -161,6 +123,90 @@ func (_c *VirtualKeyCreate) SetMaxBudget(v float64) *VirtualKeyCreate {
 func (_c *VirtualKeyCreate) SetNillableMaxBudget(v *float64) *VirtualKeyCreate {
 	if v != nil {
 		_c.SetMaxBudget(*v)
+	}
+	return _c
+}
+
+// SetMaxParallelRequests sets the "max_parallel_requests" field.
+func (_c *VirtualKeyCreate) SetMaxParallelRequests(v int) *VirtualKeyCreate {
+	_c.mutation.SetMaxParallelRequests(v)
+	return _c
+}
+
+// SetNillableMaxParallelRequests sets the "max_parallel_requests" field if the given value is not nil.
+func (_c *VirtualKeyCreate) SetNillableMaxParallelRequests(v *int) *VirtualKeyCreate {
+	if v != nil {
+		_c.SetMaxParallelRequests(*v)
+	}
+	return _c
+}
+
+// SetTpmLimit sets the "tpm_limit" field.
+func (_c *VirtualKeyCreate) SetTpmLimit(v int) *VirtualKeyCreate {
+	_c.mutation.SetTpmLimit(v)
+	return _c
+}
+
+// SetNillableTpmLimit sets the "tpm_limit" field if the given value is not nil.
+func (_c *VirtualKeyCreate) SetNillableTpmLimit(v *int) *VirtualKeyCreate {
+	if v != nil {
+		_c.SetTpmLimit(*v)
+	}
+	return _c
+}
+
+// SetRpmLimit sets the "rpm_limit" field.
+func (_c *VirtualKeyCreate) SetRpmLimit(v int) *VirtualKeyCreate {
+	_c.mutation.SetRpmLimit(v)
+	return _c
+}
+
+// SetNillableRpmLimit sets the "rpm_limit" field if the given value is not nil.
+func (_c *VirtualKeyCreate) SetNillableRpmLimit(v *int) *VirtualKeyCreate {
+	if v != nil {
+		_c.SetRpmLimit(*v)
+	}
+	return _c
+}
+
+// SetTpmLimitType sets the "tpm_limit_type" field.
+func (_c *VirtualKeyCreate) SetTpmLimitType(v string) *VirtualKeyCreate {
+	_c.mutation.SetTpmLimitType(v)
+	return _c
+}
+
+// SetNillableTpmLimitType sets the "tpm_limit_type" field if the given value is not nil.
+func (_c *VirtualKeyCreate) SetNillableTpmLimitType(v *string) *VirtualKeyCreate {
+	if v != nil {
+		_c.SetTpmLimitType(*v)
+	}
+	return _c
+}
+
+// SetRpmLimitType sets the "rpm_limit_type" field.
+func (_c *VirtualKeyCreate) SetRpmLimitType(v string) *VirtualKeyCreate {
+	_c.mutation.SetRpmLimitType(v)
+	return _c
+}
+
+// SetNillableRpmLimitType sets the "rpm_limit_type" field if the given value is not nil.
+func (_c *VirtualKeyCreate) SetNillableRpmLimitType(v *string) *VirtualKeyCreate {
+	if v != nil {
+		_c.SetRpmLimitType(*v)
+	}
+	return _c
+}
+
+// SetBudgetDuration sets the "budget_duration" field.
+func (_c *VirtualKeyCreate) SetBudgetDuration(v string) *VirtualKeyCreate {
+	_c.mutation.SetBudgetDuration(v)
+	return _c
+}
+
+// SetNillableBudgetDuration sets the "budget_duration" field if the given value is not nil.
+func (_c *VirtualKeyCreate) SetNillableBudgetDuration(v *string) *VirtualKeyCreate {
+	if v != nil {
+		_c.SetBudgetDuration(*v)
 	}
 	return _c
 }
@@ -189,6 +235,102 @@ func (_c *VirtualKeyCreate) SetExpiresAt(v time.Time) *VirtualKeyCreate {
 func (_c *VirtualKeyCreate) SetNillableExpiresAt(v *time.Time) *VirtualKeyCreate {
 	if v != nil {
 		_c.SetExpiresAt(*v)
+	}
+	return _c
+}
+
+// SetAllowedRoutes sets the "allowed_routes" field.
+func (_c *VirtualKeyCreate) SetAllowedRoutes(v []string) *VirtualKeyCreate {
+	_c.mutation.SetAllowedRoutes(v)
+	return _c
+}
+
+// SetTags sets the "tags" field.
+func (_c *VirtualKeyCreate) SetTags(v []string) *VirtualKeyCreate {
+	_c.mutation.SetTags(v)
+	return _c
+}
+
+// SetBlocked sets the "blocked" field.
+func (_c *VirtualKeyCreate) SetBlocked(v bool) *VirtualKeyCreate {
+	_c.mutation.SetBlocked(v)
+	return _c
+}
+
+// SetNillableBlocked sets the "blocked" field if the given value is not nil.
+func (_c *VirtualKeyCreate) SetNillableBlocked(v *bool) *VirtualKeyCreate {
+	if v != nil {
+		_c.SetBlocked(*v)
+	}
+	return _c
+}
+
+// SetKeyType sets the "key_type" field.
+func (_c *VirtualKeyCreate) SetKeyType(v string) *VirtualKeyCreate {
+	_c.mutation.SetKeyType(v)
+	return _c
+}
+
+// SetNillableKeyType sets the "key_type" field if the given value is not nil.
+func (_c *VirtualKeyCreate) SetNillableKeyType(v *string) *VirtualKeyCreate {
+	if v != nil {
+		_c.SetKeyType(*v)
+	}
+	return _c
+}
+
+// SetAutoRotate sets the "auto_rotate" field.
+func (_c *VirtualKeyCreate) SetAutoRotate(v bool) *VirtualKeyCreate {
+	_c.mutation.SetAutoRotate(v)
+	return _c
+}
+
+// SetNillableAutoRotate sets the "auto_rotate" field if the given value is not nil.
+func (_c *VirtualKeyCreate) SetNillableAutoRotate(v *bool) *VirtualKeyCreate {
+	if v != nil {
+		_c.SetAutoRotate(*v)
+	}
+	return _c
+}
+
+// SetRotationInterval sets the "rotation_interval" field.
+func (_c *VirtualKeyCreate) SetRotationInterval(v string) *VirtualKeyCreate {
+	_c.mutation.SetRotationInterval(v)
+	return _c
+}
+
+// SetNillableRotationInterval sets the "rotation_interval" field if the given value is not nil.
+func (_c *VirtualKeyCreate) SetNillableRotationInterval(v *string) *VirtualKeyCreate {
+	if v != nil {
+		_c.SetRotationInterval(*v)
+	}
+	return _c
+}
+
+// SetLastActiveAt sets the "last_active_at" field.
+func (_c *VirtualKeyCreate) SetLastActiveAt(v time.Time) *VirtualKeyCreate {
+	_c.mutation.SetLastActiveAt(v)
+	return _c
+}
+
+// SetNillableLastActiveAt sets the "last_active_at" field if the given value is not nil.
+func (_c *VirtualKeyCreate) SetNillableLastActiveAt(v *time.Time) *VirtualKeyCreate {
+	if v != nil {
+		_c.SetLastActiveAt(*v)
+	}
+	return _c
+}
+
+// SetSpend sets the "spend" field.
+func (_c *VirtualKeyCreate) SetSpend(v int) *VirtualKeyCreate {
+	_c.mutation.SetSpend(v)
+	return _c
+}
+
+// SetNillableSpend sets the "spend" field if the given value is not nil.
+func (_c *VirtualKeyCreate) SetNillableSpend(v *int) *VirtualKeyCreate {
+	if v != nil {
+		_c.SetSpend(*v)
 	}
 	return _c
 }
@@ -254,6 +396,22 @@ func (_c *VirtualKeyCreate) defaults() {
 		v := virtualkey.DefaultStatus
 		_c.mutation.SetStatus(v)
 	}
+	if _, ok := _c.mutation.Blocked(); !ok {
+		v := virtualkey.DefaultBlocked
+		_c.mutation.SetBlocked(v)
+	}
+	if _, ok := _c.mutation.KeyType(); !ok {
+		v := virtualkey.DefaultKeyType
+		_c.mutation.SetKeyType(v)
+	}
+	if _, ok := _c.mutation.AutoRotate(); !ok {
+		v := virtualkey.DefaultAutoRotate
+		_c.mutation.SetAutoRotate(v)
+	}
+	if _, ok := _c.mutation.Spend(); !ok {
+		v := virtualkey.DefaultSpend
+		_c.mutation.SetSpend(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := virtualkey.DefaultID()
 		_c.mutation.SetID(v)
@@ -276,8 +434,32 @@ func (_c *VirtualKeyCreate) check() error {
 			return &ValidationError{Name: "litellm_key", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.litellm_key": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.UserID(); !ok {
-		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "VirtualKey.user_id"`)}
+	if _, ok := _c.mutation.MaskedKey(); !ok {
+		return &ValidationError{Name: "masked_key", err: errors.New(`ent: missing required field "VirtualKey.masked_key"`)}
+	}
+	if v, ok := _c.mutation.MaskedKey(); ok {
+		if err := virtualkey.MaskedKeyValidator(v); err != nil {
+			return &ValidationError{Name: "masked_key", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.masked_key": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.Name(); !ok {
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "VirtualKey.name"`)}
+	}
+	if v, ok := _c.mutation.Name(); ok {
+		if err := virtualkey.NameValidator(v); err != nil {
+			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.name": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.OrganizationID(); !ok {
+		return &ValidationError{Name: "organization_id", err: errors.New(`ent: missing required field "VirtualKey.organization_id"`)}
+	}
+	if v, ok := _c.mutation.OrganizationID(); ok {
+		if err := virtualkey.OrganizationIDValidator(v); err != nil {
+			return &ValidationError{Name: "organization_id", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.organization_id": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.ModelGatewayID(); !ok {
+		return &ValidationError{Name: "model_gateway_id", err: errors.New(`ent: missing required field "VirtualKey.model_gateway_id"`)}
 	}
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "VirtualKey.status"`)}
@@ -286,6 +468,15 @@ func (_c *VirtualKeyCreate) check() error {
 		if err := virtualkey.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.status": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.Blocked(); !ok {
+		return &ValidationError{Name: "blocked", err: errors.New(`ent: missing required field "VirtualKey.blocked"`)}
+	}
+	if _, ok := _c.mutation.KeyType(); !ok {
+		return &ValidationError{Name: "key_type", err: errors.New(`ent: missing required field "VirtualKey.key_type"`)}
+	}
+	if _, ok := _c.mutation.AutoRotate(); !ok {
+		return &ValidationError{Name: "auto_rotate", err: errors.New(`ent: missing required field "VirtualKey.auto_rotate"`)}
 	}
 	return nil
 }
@@ -338,29 +529,25 @@ func (_c *VirtualKeyCreate) createSpec() (*VirtualKey, *sqlgraph.CreateSpec) {
 		_spec.SetField(virtualkey.FieldLitellmToken, field.TypeString, value)
 		_node.LitellmToken = value
 	}
-	if value, ok := _c.mutation.Alias(); ok {
-		_spec.SetField(virtualkey.FieldAlias, field.TypeString, value)
-		_node.Alias = value
+	if value, ok := _c.mutation.MaskedKey(); ok {
+		_spec.SetField(virtualkey.FieldMaskedKey, field.TypeString, value)
+		_node.MaskedKey = value
 	}
-	if value, ok := _c.mutation.UserID(); ok {
-		_spec.SetField(virtualkey.FieldUserID, field.TypeUUID, value)
-		_node.UserID = value
+	if value, ok := _c.mutation.Name(); ok {
+		_spec.SetField(virtualkey.FieldName, field.TypeString, value)
+		_node.Name = value
+	}
+	if value, ok := _c.mutation.OrganizationID(); ok {
+		_spec.SetField(virtualkey.FieldOrganizationID, field.TypeString, value)
+		_node.OrganizationID = value
 	}
 	if value, ok := _c.mutation.AgentID(); ok {
 		_spec.SetField(virtualkey.FieldAgentID, field.TypeUUID, value)
 		_node.AgentID = &value
 	}
-	if value, ok := _c.mutation.RateLimitPolicyID(); ok {
-		_spec.SetField(virtualkey.FieldRateLimitPolicyID, field.TypeUUID, value)
-		_node.RateLimitPolicyID = &value
-	}
-	if value, ok := _c.mutation.TeamID(); ok {
-		_spec.SetField(virtualkey.FieldTeamID, field.TypeString, value)
-		_node.TeamID = value
-	}
-	if value, ok := _c.mutation.GatewayConnectionID(); ok {
-		_spec.SetField(virtualkey.FieldGatewayConnectionID, field.TypeUUID, value)
-		_node.GatewayConnectionID = &value
+	if value, ok := _c.mutation.ModelGatewayID(); ok {
+		_spec.SetField(virtualkey.FieldModelGatewayID, field.TypeUUID, value)
+		_node.ModelGatewayID = value
 	}
 	if value, ok := _c.mutation.Models(); ok {
 		_spec.SetField(virtualkey.FieldModels, field.TypeJSON, value)
@@ -370,6 +557,30 @@ func (_c *VirtualKeyCreate) createSpec() (*VirtualKey, *sqlgraph.CreateSpec) {
 		_spec.SetField(virtualkey.FieldMaxBudget, field.TypeFloat64, value)
 		_node.MaxBudget = value
 	}
+	if value, ok := _c.mutation.MaxParallelRequests(); ok {
+		_spec.SetField(virtualkey.FieldMaxParallelRequests, field.TypeInt, value)
+		_node.MaxParallelRequests = value
+	}
+	if value, ok := _c.mutation.TpmLimit(); ok {
+		_spec.SetField(virtualkey.FieldTpmLimit, field.TypeInt, value)
+		_node.TpmLimit = value
+	}
+	if value, ok := _c.mutation.RpmLimit(); ok {
+		_spec.SetField(virtualkey.FieldRpmLimit, field.TypeInt, value)
+		_node.RpmLimit = value
+	}
+	if value, ok := _c.mutation.TpmLimitType(); ok {
+		_spec.SetField(virtualkey.FieldTpmLimitType, field.TypeString, value)
+		_node.TpmLimitType = value
+	}
+	if value, ok := _c.mutation.RpmLimitType(); ok {
+		_spec.SetField(virtualkey.FieldRpmLimitType, field.TypeString, value)
+		_node.RpmLimitType = value
+	}
+	if value, ok := _c.mutation.BudgetDuration(); ok {
+		_spec.SetField(virtualkey.FieldBudgetDuration, field.TypeString, value)
+		_node.BudgetDuration = value
+	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(virtualkey.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
@@ -377,6 +588,38 @@ func (_c *VirtualKeyCreate) createSpec() (*VirtualKey, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ExpiresAt(); ok {
 		_spec.SetField(virtualkey.FieldExpiresAt, field.TypeTime, value)
 		_node.ExpiresAt = &value
+	}
+	if value, ok := _c.mutation.AllowedRoutes(); ok {
+		_spec.SetField(virtualkey.FieldAllowedRoutes, field.TypeJSON, value)
+		_node.AllowedRoutes = value
+	}
+	if value, ok := _c.mutation.Tags(); ok {
+		_spec.SetField(virtualkey.FieldTags, field.TypeJSON, value)
+		_node.Tags = value
+	}
+	if value, ok := _c.mutation.Blocked(); ok {
+		_spec.SetField(virtualkey.FieldBlocked, field.TypeBool, value)
+		_node.Blocked = value
+	}
+	if value, ok := _c.mutation.KeyType(); ok {
+		_spec.SetField(virtualkey.FieldKeyType, field.TypeString, value)
+		_node.KeyType = value
+	}
+	if value, ok := _c.mutation.AutoRotate(); ok {
+		_spec.SetField(virtualkey.FieldAutoRotate, field.TypeBool, value)
+		_node.AutoRotate = value
+	}
+	if value, ok := _c.mutation.RotationInterval(); ok {
+		_spec.SetField(virtualkey.FieldRotationInterval, field.TypeString, value)
+		_node.RotationInterval = value
+	}
+	if value, ok := _c.mutation.LastActiveAt(); ok {
+		_spec.SetField(virtualkey.FieldLastActiveAt, field.TypeTime, value)
+		_node.LastActiveAt = &value
+	}
+	if value, ok := _c.mutation.Spend(); ok {
+		_spec.SetField(virtualkey.FieldSpend, field.TypeInt, value)
+		_node.Spend = value
 	}
 	return _node, _spec
 }

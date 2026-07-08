@@ -37,7 +37,7 @@ func (RotationCommand) Fields() []ent.Field {
 		field.Time("completed_at").Optional().Nillable(),
 		// Daemon-reported fingerprint of the new credential (not plaintext).
 		field.String("result_fingerprint").Optional(),
-		// Pointer to the new secret in the secret store (never plaintext in DB).
+		// Pointer to the new secret in the encrypted secret store (never plaintext in DB).
 		field.String("secret_ref").Optional(),
 		field.String("error").Optional(),
 		field.UUID("tenant_id", uuid.UUID{}).Optional().Nillable(),

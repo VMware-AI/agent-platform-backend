@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "agent-platform-backend-v1",
     "name": "Agent Platform Backend API",
-    "description": "GraphQL API collection for the VMware AI Agent Platform backend.\n\n**Endpoint:** `POST http://localhost:8080/query`\n\n**Auth options:**\n1. Bearer token in `Authorization: Bearer <token>` header (returned from the `login` mutation — simplest in Postman).\n2. Session cookie `ap_session` (set automatically by browser when posting from same origin).\n\n**Required headers (every POST to /query):**\n- `Content-Type: application/json`\n- `Origin: http://localhost:8080` — required by the CSRF middleware (Origin or Referer must be present, and must be same-origin or allowlisted).\n\n**CORS allowlist headers (also valid):**\n- `Authorization` (Bearer)\n- `X-Environment`\n\n**Source of truth:** GraphQL schema at `/schema/*.graphql`. Generated from `internal/graph/testdata/client_operations/*.graphql` (these are the operations the front-end actually runs).\n\n**Authorization model (3 roles, post #56 refactor):**\n- `admin` — full access to every operation (only role that can write)\n- `read_only` — read-only access to most business objects (agents list, virtual keys list, dashboard, audit, metering); cannot mutate anything\n- `user` — owner-scoped access to their own agents/keys; unchanged\n\n**Default admin (dev):** username `admin@platform.local`, password `ChangeMe123!` (forces password change on first login unless `ADMIN_BOOTSTRAP_PASSWORD` env var is set).",
+    "description": "GraphQL API collection for the VMware AI Agent Platform backend.\n\nEndpoint: `POST {{baseUrl}}` (defaults to `http://localhost:8080/query`).\n\nAuth: bearer via `Authorization: Bearer {{session_token}}`. Run **Auth \u2192 Login** first; its post-response script captures `login.token` into the `session_token` collection variable.\n\nEvery POST also sends `Origin: {{origin}}` \u2014 the CSRF middleware rejects requests without an Origin/Referer header that matches an allowlisted origin.\n\nSource of truth: `schema/*.graphql` (operations in `internal/graph/testdata/client_operations/*.graphql`).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -10,26 +10,26 @@
     "bearer": [
       {
         "key": "token",
-        "value": "{{session_token}}",
-        "type": "string"
+        "type": "string",
+        "value": "{{session_token}}"
       }
     ]
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8080/query",
-      "type": "string"
+      "type": "string",
+      "value": "http://localhost:8080/query"
     },
     {
       "key": "session_token",
-      "value": "",
-      "type": "string"
+      "type": "string",
+      "value": ""
     },
     {
       "key": "origin",
-      "value": "http://localhost:8080",
-      "type": "string"
+      "type": "string",
+      "value": "http://localhost:8080"
     }
   ],
   "item": [
@@ -38,6 +38,32 @@
       "item": [
         {
           "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation Login($input: LoginInput!) {\\n    login(input: $input) {\\n      token\\n      mustChangePassword\\n      user {\\n        id\\n        username\\n        displayName\\n        email\\n        role\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"input\": {\n      \"email\": \"admin@platform.local\",\n      \"password\": \"ChangeMe123!\",\n      \"remember\": true\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": []
+            },
+            "description": "Mutation Login \u2014 generated from internal/graph/testdata/client_operations/Login.graphql. Replace the variable stubs with real IDs before sending."
+          },
+          "response": [],
           "event": [
             {
               "listen": "test",
@@ -56,36 +82,7 @@
           ],
           "auth": {
             "type": "noauth"
-          },
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation Login($input: LoginInput!) {\\n  login(input: $input) {\\n    token\\n    mustChangePassword\\n    user {\\n      id\\n      username\\n      displayName\\n      email\\n      role\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"email\": \"admin@platform.local\",\n      \"password\": \"ChangeMe123!\",\n      \"remember\": true\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Authenticate with email (or username) + password. Returns a bearer token; **store it in `session_token` collection variable for subsequent requests**. If `mustChangePassword=true`, the user must call `changePassword` before any other mutation succeeds (queries still work)."
-          },
-          "response": []
+          }
         },
         {
           "name": "Me",
@@ -98,24 +95,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query Me {\\n  me {\\n    id\\n    username\\n    displayName\\n    email\\n    role\\n    mustChangePassword\\n  }\\n}\"\n}"
+              "raw": "{\n  \"query\": \"query Me {\\n    me {\\n      id\\n      username\\n      displayName\\n      email\\n      role\\n      mustChangePassword\\n      lastLoginAt\\n      connectionStatus\\n      createdAt\\n      enabled\\n    }\\n  }\",\n  \"variables\": {}\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Current authenticated user. Useful to verify the bearer token is still valid (e.g. after a page refresh) and to re-check `mustChangePassword`."
+            "description": "Query Me \u2014 generated from internal/graph/testdata/client_operations/Me.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -130,24 +124,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation ChangePassword($oldPassword: String!, $newPassword: String!) {\\n  changePassword(oldPassword: $oldPassword, newPassword: $newPassword)\\n}\",\n  \"variables\": {\n    \"oldPassword\": \"ChangeMe123!\",\n    \"newPassword\": \"NewSecurePass456!\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation ChangePassword($oldPassword: String!, $newPassword: String!) {\\n    changePassword(oldPassword: $oldPassword, newPassword: $newPassword)\\n  }\",\n  \"variables\": {\n    \"$oldPassword\": \"\",\n    \"$newPassword\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Change own password. Returns `Boolean!`. Clears `mustChangePassword`, revokes all other sessions, and re-issues a fresh session cookie. The bearer token continues to work for this session. Whitelisted from the `mustChangePassword` middleware (always allowed)."
+            "description": "Mutation ChangePassword \u2014 generated from internal/graph/testdata/client_operations/ChangePassword.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -162,24 +153,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation Logout {\\n  logout\\n}\"\n}"
+              "raw": "{\n  \"query\": \"mutation Logout {\\n    logout\\n  }\",\n  \"variables\": {}\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Invalidate the current session. Returns `Boolean!`. Whitelisted from the `mustChangePassword` middleware (always allowed)."
+            "description": "Mutation Logout \u2014 generated from internal/graph/testdata/client_operations/Logout.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         }
@@ -199,24 +187,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query DashboardOverview($recentLimit: Int, $noticeLimit: Int) {\\n  dashboardOverview(recentLimit: $recentLimit, noticeLimit: $noticeLimit) {\\n    stats {\\n      totalAgents\\n      runningAgents\\n      stoppedAgents\\n      exceptionAgents\\n      totalVirtualKeys\\n      totalGateways\\n      totalResourcePools\\n      totalUsers\\n      monthlyCalls\\n      monthlyTokens\\n      monthlyCost\\n    }\\n    recentAgents {\\n      id\\n      name\\n      agentName\\n      status\\n      createdAt\\n    }\\n    notices {\\n      id\\n      text\\n      status\\n      occurredAt\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"recentLimit\": 5,\n    \"noticeLimit\": 5\n  }\n}"
+              "raw": "{\n  \"query\": \"query DashboardOverview($recentLimit: Int, $noticeLimit: Int) {\\n    dashboardOverview(recentLimit: $recentLimit, noticeLimit: $noticeLimit) {\\n      stats {\\n        totalAgents\\n        runningAgents\\n        stoppedAgents\\n        exceptionAgents\\n        totalVirtualKeys\\n        totalGateways\\n        totalResourcePools\\n        totalUsers\\n        monthlyCalls\\n        monthlyTokens\\n        monthlyCost\\n      }\\n      recentAgents {\\n        id\\n        name\\n        agentName\\n        status\\n        createdAt\\n      }\\n      notices {\\n        id\\n        text\\n        status\\n        occurredAt\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$recentLimit\": 0,\n    \"$noticeLimit\": 0\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Console overview page — stat cards, recent agents, system notices. Restricted to `admin` / `read_only`."
+            "description": "Query DashboardOverview \u2014 generated from internal/graph/testdata/client_operations/DashboardOverview.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         }
@@ -226,7 +211,7 @@
       "name": "Users & Roles",
       "item": [
         {
-          "name": "Users (list)",
+          "name": "Users",
           "request": {
             "method": "POST",
             "header": [
@@ -236,24 +221,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query Users($filter: UserFilter, $pagination: Pagination, $sort: UserSort) {\\n  users(filter: $filter, pagination: $pagination, sort: $sort) {\\n    nodes {\\n      id\\n      username\\n      displayName\\n      email\\n      role { id roleKey name }\\n      connectionStatus\\n      lastLoginAt\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n    totalCount\\n    pageInfo { page pageSize totalPages }\\n  }\\n}\",\n  \"variables\": {\n    \"pagination\": {\n      \"page\": 1,\n      \"pageSize\": 20\n    },\n    \"sort\": {\n      \"field\": \"CREATED_AT\",\n      \"direction\": \"DESC\"\n    },\n    \"filter\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"fragment AccountUserFields on AccountUser {\\n    id\\n    username\\n    displayName\\n    email\\n    role {\\n      id\\n      name\\n    }\\n    connectionStatus\\n    lastLoginAt\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\\n\\n  query Users($filter: UserFilter, $pagination: Pagination, $sort: UserSort) {\\n    users(filter: $filter, pagination: $pagination, sort: $sort) {\\n      nodes {\\n        ...AccountUserFields\\n      }\\n      totalCount\\n      pageInfo {\\n        page\\n        pageSize\\n        totalPages\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$filter\": null,\n    \"$pagination\": null,\n    \"$sort\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Paginated/filtered/sorted user list. Restricted to `admin` only."
+            "description": "Query Users \u2014 generated from internal/graph/testdata/client_operations/Users.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -268,24 +250,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query UserExists($username: String, $email: String) {\\n  userExists(username: $username, email: $email)\\n}\",\n  \"variables\": {\n    \"username\": \"alice\",\n    \"email\": \"alice@example.com\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query UserExists($username: String, $email: String) {\\n    userExists(username: $username, email: $email)\\n  }\",\n  \"variables\": {\n    \"$username\": \"\",\n    \"$email\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Debounced dedupe check for the create-user form. Returns `Boolean!`. Restricted to `admin` only."
+            "description": "Query UserExists \u2014 generated from internal/graph/testdata/client_operations/UserExists.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -300,24 +279,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query UsersByRole($roleId: ID!) {\\n  users(filter: { roleId: $roleId }) {\\n    nodes { id username displayName email role { id roleKey name } connectionStatus lastLoginAt enabled createdAt updatedAt }\\n    totalCount\\n  }\\n}\",\n  \"variables\": {\n    \"roleId\": \"REPLACE_WITH_ROLE_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"fragment AccountUserFields on AccountUser {\\n    id\\n    username\\n    displayName\\n    email\\n    role {\\n      id\\n      name\\n    }\\n    connectionStatus\\n    lastLoginAt\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\\n\\n  query UsersByRole($roleId: ID!) {\\n    users(filter: { roleId: $roleId }) {\\n      nodes {\\n        ...AccountUserFields\\n      }\\n      totalCount\\n    }\\n  }\",\n  \"variables\": {\n    \"$roleId\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "List all users assigned to a given role id. Restricted to `admin` only."
+            "description": "Query UsersByRole \u2014 generated from internal/graph/testdata/client_operations/UsersByRole.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -332,24 +308,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateUser($input: CreateUserInput!) {\\n  createUser(input: $input) {\\n    user {\\n      id\\n      username\\n      displayName\\n      email\\n      role { id roleKey name }\\n      connectionStatus\\n      lastLoginAt\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n    generatedPassword\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"username\": \"alice\",\n      \"displayName\": \"Alice Example\",\n      \"email\": \"alice@example.com\",\n      \"roleId\": \"REPLACE_WITH_ROLE_ID\",\n      \"passwordMode\": \"CUSTOM\",\n      \"customPassword\": \"TempPass123!\",\n      \"enabled\": true\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"fragment AccountUserFields on AccountUser {\\n    id\\n    username\\n    displayName\\n    email\\n    role {\\n      id\\n      name\\n    }\\n    connectionStatus\\n    lastLoginAt\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\\n\\n  mutation CreateUser($input: CreateUserInput!) {\\n    createUser(input: $input) {\\n      user {\\n        ...AccountUserFields\\n      }\\n      generatedPassword\\n    }\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Create a user. `passwordMode = AUTO` generates a temp password returned once in `generatedPassword` and forces `mustChangePassword=true`. `CUSTOM` uses `customPassword` and does not force a password change."
+            "description": "Mutation CreateUser \u2014 generated from internal/graph/testdata/client_operations/CreateUser.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -364,24 +337,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {\\n  updateUser(id: $id, input: $input) {\\n    id\\n    username\\n    displayName\\n    email\\n    role { id roleKey name }\\n    connectionStatus\\n    lastLoginAt\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_USER_ID\",\n    \"input\": {\n      \"displayName\": \"Alice New Name\",\n      \"email\": \"alice.new@example.com\",\n      \"roleId\": \"REPLACE_WITH_ROLE_ID\",\n      \"enabled\": true\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"fragment AccountUserFields on AccountUser {\\n    id\\n    username\\n    displayName\\n    email\\n    role {\\n      id\\n      name\\n    }\\n    connectionStatus\\n    lastLoginAt\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\\n\\n  mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {\\n    updateUser(id: $id, input: $input) {\\n      ...AccountUserFields\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\",\n    \"$input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Update a user. All fields optional. Note: `displayName` is accepted but currently has no backing column (ignored by backend)."
+            "description": "Mutation UpdateUser \u2014 generated from internal/graph/testdata/client_operations/UpdateUser.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -396,24 +366,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeleteUser($id: ID!) {\\n  deleteUser(id: $id) { id }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_USER_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation DeleteUser($id: ID!) {\\n    deleteUser(id: $id) {\\n      id\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Delete a user. Returns `DeleteUserPayload { id }`."
+            "description": "Mutation DeleteUser \u2014 generated from internal/graph/testdata/client_operations/DeleteUser.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -428,24 +395,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation ResetUserPassword($id: ID!) {\\n  resetUserPassword(id: $id) {\\n    user { id username displayName email role { id roleKey name } connectionStatus lastLoginAt enabled createdAt updatedAt }\\n    generatedPassword\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_USER_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"fragment AccountUserFields on AccountUser {\\n    id\\n    username\\n    displayName\\n    email\\n    role {\\n      id\\n      name\\n    }\\n    connectionStatus\\n    lastLoginAt\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\\n\\n  mutation ResetUserPassword($id: ID!) {\\n    resetUserPassword(id: $id) {\\n      user {\\n        ...AccountUserFields\\n      }\\n      generatedPassword\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Reset a user's password \u2014 backend generates a new 16-char temp password, sets `mustChangePassword=true`, revokes all sessions. The new password is returned **once** in `generatedPassword`."
+            "description": "Mutation ResetUserPassword \u2014 generated from internal/graph/testdata/client_operations/ResetUserPassword.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -460,29 +424,26 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation ToggleUserEnabled($id: ID!) {\\n  toggleUserEnabled(id: $id) {\\n    user { id username displayName email role { id roleKey name } connectionStatus lastLoginAt enabled createdAt updatedAt }\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_USER_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"fragment AccountUserFields on AccountUser {\\n    id\\n    username\\n    displayName\\n    email\\n    role {\\n      id\\n      name\\n    }\\n    connectionStatus\\n    lastLoginAt\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\\n\\n  mutation ToggleUserEnabled($id: ID!) {\\n    toggleUserEnabled(id: $id) {\\n      user {\\n        ...AccountUserFields\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Toggle `enabled` on a user."
+            "description": "Mutation ToggleUserEnabled \u2014 generated from internal/graph/testdata/client_operations/ToggleUserEnabled.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
         {
-          "name": "AssignUsersToRole",
+          "name": "Roles",
           "request": {
             "method": "POST",
             "header": [
@@ -492,29 +453,26 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation AssignUsersToRole($input: AssignUsersToRoleInput!) {\\n  assignUsersToRole(input: $input) {\\n    role { id roleKey name description userCount builtIn }\\n    assignedCount\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"roleId\": \"REPLACE_WITH_ROLE_ID\",\n      \"userIds\": [\n        \"REPLACE_WITH_USER_ID_1\",\n        \"REPLACE_WITH_USER_ID_2\"\n      ]\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"fragment RoleFields on Role {\\n    id\\n    name\\n    description\\n    userCount\\n    builtIn\\n  }\\n\\n  query Roles {\\n    roles {\\n      nodes {\\n        ...RoleFields\\n      }\\n      totalCount\\n      pageInfo {\\n        page\\n        pageSize\\n        totalPages\\n      }\\n    }\\n  }\",\n  \"variables\": {}\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Replace the user set on a custom role. Returns the role and the number of users assigned."
+            "description": "Query Roles \u2014 generated from internal/graph/testdata/client_operations/Roles.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
         {
-          "name": "Roles (list)",
+          "name": "Role",
           "request": {
             "method": "POST",
             "header": [
@@ -524,29 +482,26 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query Roles {\\n  roles {\\n    nodes { id name description userCount builtIn }\\n    totalCount\\n    pageInfo { page pageSize totalPages }\\n  }\\n}\"\n}"
+              "raw": "{\n  \"query\": \"fragment RoleFields on Role {\\n    id\\n    name\\n    description\\n    userCount\\n    builtIn\\n  }\\n\\n  query Role($id: ID!) {\\n    role(id: $id) {\\n      ...RoleFields\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "List built-in and custom roles. Restricted to `admin` only."
+            "description": "Query Role \u2014 generated from internal/graph/testdata/client_operations/Role.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
         {
-          "name": "Role (by id)",
+          "name": "RoleUsersMin",
           "request": {
             "method": "POST",
             "header": [
@@ -556,583 +511,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query Role($id: ID!) {\\n  role(id: $id) { id roleKey name description userCount builtIn }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_ROLE_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query RoleUsersMin($roleId: ID!) {\\n    users(filter: { roleId: $roleId }) {\\n      nodes {\\n        id\\n        username\\n        email\\n        enabled\\n      }\\n      totalCount\\n    }\\n  }\",\n  \"variables\": {\n    \"$roleId\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Fetch a single role by id. Null if not found."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "RBAC (Custom Roles & Permissions)",
-      "item": [
-        {
-          "name": "CustomRolesList",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"query CustomRolesList {\\n  customRoles { id name isSystem permissions createdAt }\\n}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "List custom (non-built-in) roles. Restricted to `admin` only."
-          },
-          "response": []
-        },
-        {
-          "name": "PermissionCatalog",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"query PermissionCatalog {\\n  permissions { id key description }\\n}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "List all permission keys (drives the role-permission matrix UI). Admin-only."
-          },
-          "response": []
-        },
-        {
-          "name": "CreateCustomRoleEntry",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateCustomRoleEntry($input: CreateCustomRoleInput!) {\\n  createCustomRole(input: $input) { id name isSystem permissions createdAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"Auditor\"\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Create a custom role (initially with no permissions). Restricted to `admin` only."
-          },
-          "response": []
-        },
-        {
-          "name": "DeleteCustomRoleEntry",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeleteCustomRoleEntry($id: ID!) {\\n  deleteCustomRole(id: $id)\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_CUSTOM_ROLE_ID\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Delete a custom role."
-          },
-          "response": []
-        },
-        {
-          "name": "SetCustomRolePermissions",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SetCustomRolePermissions($roleId: ID!, $permissionKeys: [String!]!) {\\n  setRolePermissions(roleId: $roleId, permissionKeys: $permissionKeys) { id name isSystem permissions createdAt }\\n}\",\n  \"variables\": {\n    \"roleId\": \"REPLACE_WITH_CUSTOM_ROLE_ID\",\n    \"permissionKeys\": [\n      \"audit:view\",\n      \"metering:view\"\n    ]\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Replace the role's permission set wholesale (matrix row)."
-          },
-          "response": []
-        },
-        {
-          "name": "UpsertPermissionEntry",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpsertPermissionEntry($key: String!, $description: String) {\\n  upsertPermission(key: $key, description: $description) { id key description }\\n}\",\n  \"variables\": {\n    \"key\": \"audit:view\",\n    \"description\": \"View audit logs\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Upsert a permission key. Admin-only."
-          },
-          "response": []
-        },
-        {
-          "name": "UserRoles",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"query UserRoles($userId: ID!) {\\n  userRoles(userId: $userId) { id name isSystem permissions createdAt }\\n}\",\n  \"variables\": {\n    \"userId\": \"REPLACE_WITH_USER_ID\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "List custom roles assigned to a user. Admin-only."
-          },
-          "response": []
-        },
-        {
-          "name": "AssignUserRole",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation AssignUserRole($userId: ID!, $roleId: ID!) {\\n  assignUserRole(userId: $userId, roleId: $roleId)\\n}\",\n  \"variables\": {\n    \"userId\": \"REPLACE_WITH_USER_ID\",\n    \"roleId\": \"REPLACE_WITH_ROLE_ID\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Assign a single custom role to a user. Restricted to `admin` only."
-          },
-          "response": []
-        },
-        {
-          "name": "RemoveUserRole",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation RemoveUserRole($userId: ID!, $roleId: ID!) {\\n  removeUserRole(userId: $userId, roleId: $roleId)\\n}\",\n  \"variables\": {\n    \"userId\": \"REPLACE_WITH_USER_ID\",\n    \"roleId\": \"REPLACE_WITH_ROLE_ID\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Remove a single custom role from a user."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Departments & Memberships",
-      "item": [
-        {
-          "name": "Departments (list)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"query Departments {\\n  departments { id tenantId name litellmTeamId createdAt }\\n}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "List departments. Restricted to `admin` only."
-          },
-          "response": []
-        },
-        {
-          "name": "CreateDepartment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateDepartment($input: CreateDepartmentInput!) {\\n  createDepartment(input: $input) { id tenantId name litellmTeamId createdAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"Engineering\",\n      \"maxBudget\": 100,\n      \"gatewayConnectionId\": null\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Create a department + its litellm team. Rolls back on sync failure (no orphan team)."
-          },
-          "response": []
-        },
-        {
-          "name": "DeleteDepartment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeleteDepartment($id: ID!) {\\n  deleteDepartment(id: $id)\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_DEPARTMENT_ID\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Delete a department."
-          },
-          "response": []
-        },
-        {
-          "name": "DepartmentMembers",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"query DepartmentMembers($departmentId: ID!) {\\n  departmentMembers(departmentId: $departmentId) { id userId departmentId role }\\n}\",\n  \"variables\": {\n    \"departmentId\": \"REPLACE_WITH_DEPARTMENT_ID\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "List memberships for a department. In-resolver delegation allows platform/tenant admins or the department's own dept-admin."
-          },
-          "response": []
-        },
-        {
-          "name": "AddMembership",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation AddMembership($userId: ID!, $departmentId: ID!, $role: MembershipRole) {\\n  addMembership(userId: $userId, departmentId: $departmentId, role: $role) { id userId departmentId role }\\n}\",\n  \"variables\": {\n    \"userId\": \"REPLACE_WITH_USER_ID\",\n    \"departmentId\": \"REPLACE_WITH_DEPARTMENT_ID\",\n    \"role\": \"user\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Add a user to a department with a membership role (`user` or `dept_admin`). Delegated to platform/tenant admins or dept-admins."
-          },
-          "response": []
-        },
-        {
-          "name": "RemoveMembership",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation RemoveMembership($userId: ID!, $departmentId: ID!) {\\n  removeMembership(userId: $userId, departmentId: $departmentId)\\n}\",\n  \"variables\": {\n    \"userId\": \"REPLACE_WITH_USER_ID\",\n    \"departmentId\": \"REPLACE_WITH_DEPARTMENT_ID\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Remove a user from a department."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Platform Settings",
-      "item": [
-        {
-          "name": "PlatformSettings",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"query PlatformSettings {\\n  platformSettings { agentUser }\\n}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Get platform-wide settings (currently just `agentUser` \u2014 the OS account installed agents run as). Admin-only."
-          },
-          "response": []
-        },
-        {
-          "name": "UpdatePlatformSettings",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpdatePlatformSettings($input: UpdatePlatformSettingsInput!) {\\n  updatePlatformSettings(input: $input) { agentUser }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"agentUser\": \"agent\"\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Update platform settings. `agentUser` must be non-empty. Admin-only."
+            "description": "Query RoleUsersMin \u2014 generated from internal/graph/testdata/client_operations/RoleUsersMin.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         }
@@ -1142,7 +535,7 @@
       "name": "Resource Pools",
       "item": [
         {
-          "name": "ResourcePools (list)",
+          "name": "ResourcePools",
           "request": {
             "method": "POST",
             "header": [
@@ -1152,29 +545,26 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query ResourcePools($filter: ResourcePoolFilter, $pagination: Pagination, $sort: ResourcePoolSort) {\\n  resourcePools(filter: $filter, pagination: $pagination, sort: $sort) {\\n    nodes { id name endpoint contentLibraryName insecure syncStatus lastSyncedAt datacenters { name path clusters { name path esxiHosts { name path } resourcePools { name path } } datastores { name path } networks { name path } folders { name path } } createdAt updatedAt }\\n    totalCount\\n    pageInfo { page pageSize totalPages }\\n  }\\n}\",\n  \"variables\": {\n    \"pagination\": {\n      \"page\": 1,\n      \"pageSize\": 20\n    },\n    \"sort\": {\n      \"field\": \"CREATED_AT\",\n      \"direction\": \"DESC\"\n    },\n    \"filter\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"fragment ResourcePoolFields on ResourcePool {\\n    id\\n    name\\n    endpoint\\n    contentLibraryName\\n    insecure\\n    syncStatus\\n    lastSyncedAt\\n    createdAt\\n    updatedAt\\n  }\\n\\n  query ResourcePools(\\n    $filter: ResourcePoolFilter\\n    $pagination: Pagination\\n    $sort: ResourcePoolSort\\n  ) {\\n    resourcePools(filter: $filter, pagination: $pagination, sort: $sort) {\\n      nodes {\\n        ...ResourcePoolFields\\n      }\\n      totalCount\\n      pageInfo {\\n        page\\n        pageSize\\n        totalPages\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$filter\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Paginated/filtered/sorted list of vCenter resource pools. Admin-only."
+            "description": "Query ResourcePools \u2014 generated from internal/graph/testdata/client_operations/ResourcePools.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
         {
-          "name": "ResourcePool (by id)",
+          "name": "ResourcePool",
           "request": {
             "method": "POST",
             "header": [
@@ -1184,24 +574,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query ResourcePool($id: ID!) {\\n  resourcePool(id: $id) { id name endpoint contentLibraryName insecure syncStatus lastSyncedAt datacenters { name path clusters { name path esxiHosts { name path } resourcePools { name path } } datastores { name path } networks { name path } folders { name path } } createdAt updatedAt }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_POOL_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"fragment ResourcePoolInventoryFields on ResourcePool {\\n    datacenters {\\n      name\\n      path\\n      clusters {\\n        name\\n        path\\n        esxiHosts {\\n          name\\n          path\\n        }\\n        resourcePools {\\n          name\\n          path\\n        }\\n      }\\n      datastores {\\n        name\\n        path\\n      }\\n      networks {\\n        name\\n        path\\n      }\\n      folders {\\n        name\\n        path\\n      }\\n      storagePolicies {\\n        name\\n        path\\n      }\\n    }\\n  }\\n\\n  query ResourcePool($id: ID!) {\\n    resourcePool(id: $id) {\\n      ...ResourcePoolInventoryFields\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Fetch a single resource pool. Null if not found. Admin-only."
+            "description": "Query ResourcePool \u2014 generated from internal/graph/testdata/client_operations/ResourcePool.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -1216,24 +603,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateResourcePool($input: CreateResourcePoolInput!) {\\n  createResourcePool(input: $input) {\\n    pool { id name endpoint contentLibraryName insecure syncStatus lastSyncedAt createdAt updatedAt }\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"dc01-pool\",\n      \"endpoint\": \"https://vcenter.example.com/sdk\",\n      \"contentLibraryName\": \"agent-ovas\",\n      \"username\": \"admin@example.com\",\n      \"password\": \"secret\"\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"fragment ResourcePoolFields on ResourcePool {\\n    id\\n    name\\n    endpoint\\n    contentLibraryName\\n    insecure\\n    syncStatus\\n    lastSyncedAt\\n    createdAt\\n    updatedAt\\n  }\\n\\n  mutation CreateResourcePool($input: CreateResourcePoolInput!) {\\n    createResourcePool(input: $input) {\\n      pool {\\n        ...ResourcePoolFields\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Create a resource pool. Credentials are written to secret store \u2014 only the ref is persisted; the plaintext never reaches the DB. Set `insecure: true` to skip vCenter TLS verification (self-signed/internal CA)."
+            "description": "Mutation CreateResourcePool \u2014 generated from internal/graph/testdata/client_operations/CreateResourcePool.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -1248,24 +632,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpdateResourcePool($id: ID!, $input: UpdateResourcePoolInput!) {\\n  updateResourcePool(id: $id, input: $input) {\\n    pool { id name endpoint contentLibraryName insecure syncStatus lastSyncedAt createdAt updatedAt }\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_POOL_ID\",\n    \"input\": {\n      \"name\": \"dc01-pool-renamed\",\n      \"insecure\": true,\n      \"username\": \"admin@example.com\",\n      \"password\": \"newsecret\"\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"fragment ResourcePoolFields on ResourcePool {\\n    id\\n    name\\n    endpoint\\n    contentLibraryName\\n    insecure\\n    syncStatus\\n    lastSyncedAt\\n    createdAt\\n    updatedAt\\n  }\\n\\n  mutation UpdateResourcePool($id: ID!, $input: UpdateResourcePoolInput!) {\\n    updateResourcePool(id: $id, input: $input) {\\n      pool {\\n        ...ResourcePoolFields\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\",\n    \"$input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Update a resource pool. All fields optional. Use to rotate credentials."
+            "description": "Mutation UpdateResourcePool \u2014 generated from internal/graph/testdata/client_operations/UpdateResourcePool.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -1280,24 +661,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeleteResourcePool($id: ID!) {\\n  deleteResourcePool(id: $id) { id deletedName }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_POOL_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation DeleteResourcePool($id: ID!) {\\n    deleteResourcePool(id: $id) {\\n      id\\n      deletedName\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Delete a resource pool. Returns `DeleteResourcePoolPayload { id, deletedName }`."
+            "description": "Mutation DeleteResourcePool \u2014 generated from internal/graph/testdata/client_operations/DeleteResourcePool.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -1312,24 +690,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SyncResourcePool($id: ID!) {\\n  syncResourcePool(id: $id) {\\n    pool { id name endpoint contentLibraryName insecure syncStatus lastSyncedAt datacenters { name path clusters { name esxiHosts { name } } } createdAt updatedAt }\\n    syncedAt\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_POOL_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"fragment ResourcePoolFields on ResourcePool {\\n    id\\n    name\\n    endpoint\\n    contentLibraryName\\n    insecure\\n    syncStatus\\n    lastSyncedAt\\n    createdAt\\n    updatedAt\\n  }\\n\\n  mutation SyncResourcePool($id: ID!) {\\n    syncResourcePool(id: $id) {\\n      pool {\\n        ...ResourcePoolFields\\n      }\\n      syncedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Connect \u2192 fetch inventory tree (per-DC clusters/hosts/RPs + datastores/networks/vm folders/storage policies) \u2192 persist. Long-running \u2014 may take seconds."
+            "description": "Mutation SyncResourcePool \u2014 generated from internal/graph/testdata/client_operations/SyncResourcePool.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -1344,24 +719,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation TestResourcePoolConnection($input: TestResourcePoolConnectionInput!) {\\n  testResourcePoolConnection(input: $input) {\\n    ok\\n    message\\n    detail { vSphereVersion itemCount }\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"probe\",\n      \"endpoint\": \"https://vcenter.example.com/sdk\",\n      \"contentLibraryName\": \"agent-ovas\"\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation TestResourcePoolConnection($input: TestResourcePoolConnectionInput!) {\\n    testResourcePoolConnection(input: $input) {\\n      ok\\n      message\\n      detail {\\n        vSphereVersion\\n        contentLibraries\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Pre-save reachability probe (no credentials) \u2014 used by the \u63a5\u5165\u8868\u5355 to validate the endpoint before committing."
+            "description": "Mutation TestResourcePoolConnection \u2014 generated from internal/graph/testdata/client_operations/TestResourcePoolConnection.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -1376,24 +748,50 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query VsphereResourcePools($resourcePoolId: ID!) {\\n  vsphereResourcePools(resourcePoolId: $resourcePoolId) { name path }\\n}\",\n  \"variables\": {\n    \"resourcePoolId\": \"REPLACE_WITH_POOL_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query VsphereResourcePools($resourcePoolId: ID!) {\\n    vsphereResourcePools(resourcePoolId: $resourcePoolId) {\\n      name\\n      path\\n    }\\n  }\",\n  \"variables\": {\n    \"$resourcePoolId\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "List vCenter placement resource pools for a platform pool. Powers the deploy form's placement picker (`targetResourcePool`). Admin-only."
+            "description": "Query VsphereResourcePools \u2014 generated from internal/graph/testdata/client_operations/VsphereResourcePools.graphql. Replace the variable stubs with real IDs before sending."
+          },
+          "response": []
+        },
+        {
+          "name": "VsphereNetworks",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query VsphereNetworks($resourcePoolId: ID!) {\\n    vsphereNetworks(resourcePoolId: $resourcePoolId) {\\n      name\\n      path\\n      type\\n      dvsName\\n    }\\n  }\",\n  \"variables\": {\n    \"$resourcePoolId\": \"\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": []
+            },
+            "description": "Query VsphereNetworks \u2014 generated from internal/graph/testdata/client_operations/VsphereNetworks.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         }
@@ -1403,7 +801,7 @@
       "name": "Model Gateways (LITELLM)",
       "item": [
         {
-          "name": "ModelGateways (list)",
+          "name": "ModelGateways",
           "request": {
             "method": "POST",
             "header": [
@@ -1413,29 +811,26 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query ModelGateways($filter: ModelGatewayFilterInput, $page: PageInput!, $sort: ModelGatewaySort) {\\n  modelGateways(filter: $filter, page: $page, sort: $sort) {\\n    nodes { id name provider endpoint backendModelCount loadBalancingStrategy lastSyncAt lastSyncStatus lastSyncMessage createdAt updatedAt }\\n    totalCount\\n  }\\n  modelGatewaySyncSummary { state lastSyncedAt successCount failedCount message }\\n}\",\n  \"variables\": {\n    \"page\": {\n      \"limit\": 50,\n      \"offset\": 0\n    },\n    \"sort\": {\n      \"field\": \"CREATED_AT\",\n      \"direction\": \"DESC\"\n    },\n    \"filter\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"query ModelGateways($filter: ModelGatewayFilterInput, $page: PageInput!, $sort: ModelGatewaySort) {\\n    modelGateways(filter: $filter, page: $page, sort: $sort) {\\n      nodes {\\n        ...ModelGatewayFields\\n      }\\n      totalCount\\n    }\\n    modelGatewaySyncSummary {\\n      state\\n      lastSyncedAt\\n      successCount\\n      failedCount\\n      message\\n    }\\n  }\\n  \\n  fragment ModelGatewayFields on ModelGateway {\\n    id\\n    name\\n    provider\\n    endpoint\\n    backendModelCount\\n    loadBalancingStrategy\\n    lastSyncAt\\n    lastSyncStatus\\n    lastSyncMessage\\n    createdAt\\n    updatedAt\\n  }\",\n  \"variables\": {\n    \"$filter\": {},\n    \"$page\": {},\n    \"$sort\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Paginated model gateways + sync summary. Admin-only."
+            "description": "Query ModelGateways \u2014 generated from internal/graph/testdata/client_operations/ModelGateways.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
         {
-          "name": "GatewayConnectionsSyncSummary",
+          "name": "ModelGatewayById",
           "request": {
             "method": "POST",
             "header": [
@@ -1445,24 +840,50 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query GatewayConnectionsSyncSummary {\\n  modelGatewaySyncSummary { state lastSyncedAt successCount failedCount message }\\n}\"\n}"
+              "raw": "{\n  \"query\": \"query ModelGatewayById($id: ID!) {\\n  modelGatewayById(id: $id) {\\n    ...ModelGatewayFields\\n  }\\n}\\n\\nfragment ModelGatewayFields on ModelGateway {\\n  id\\n  name\\n  endpoint\\n  backendModelCount\\n  loadBalancingStrategy\\n  lastSyncAt\\n  lastSyncStatus\\n  lastSyncMessage\\n  createdAt\\n  updatedAt\\n  # NOTE: masterKey / masterKeyRef NOT selected \\u2014 wire-level guard.\\n}\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Get only the gateway-sync summary."
+            "description": "Query ModelGatewayById \u2014 generated from internal/graph/testdata/client_operations/ModelGatewayById.graphql. Replace the variable stubs with real IDs before sending."
+          },
+          "response": []
+        },
+        {
+          "name": "GatewayHealth",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query GatewayHealth {\\n    gatewayHealth {\\n      gatewayId\\n      gatewayName\\n      healthyCount\\n      unhealthyCount\\n      healthy {\\n        model\\n        apiBase\\n      }\\n      unhealthy {\\n        model\\n        apiBase\\n      }\\n      error\\n    }\\n  }\",\n  \"variables\": {}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": []
+            },
+            "description": "Query GatewayHealth \u2014 generated from internal/graph/testdata/client_operations/GatewayHealth.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -1477,56 +898,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateModelGateway($input: ModelGatewayInput!) {\\n  createModelGateway(input: $input) {\\n    id name provider endpoint backendModelCount loadBalancingStrategy lastSyncAt lastSyncStatus lastSyncMessage createdAt updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"primary-litellm\",\n      \"provider\": \"LITELLM\",\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"masterKey\": \"sk-litellm-XXXXXX\"\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation CreateModelGateway($input: ModelGatewayInput!) {\\n    createModelGateway(input: $input) {\\n      ...ModelGatewayFields\\n    }\\n  }\\n  \\n  fragment ModelGatewayFields on ModelGateway {\\n    id\\n    name\\n    provider\\n    endpoint\\n    backendModelCount\\n    loadBalancingStrategy\\n    lastSyncAt\\n    lastSyncStatus\\n    lastSyncMessage\\n    createdAt\\n    updatedAt\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Create a model gateway. The litellm master key is written to secret store \u2014 only the ref is stored. loadBalancingStrategy, backendModelCount, and lastSyncStatus are read-only, populated by the post-create background sync (and subsequent periodic sync). A row in just-created state will show lastSyncStatus=SYNCED within a few seconds."
-          },
-          "response": []
-        },
-        {
-          "name": "UpdateModelGateway",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpdateModelGateway($id: ID!, $input: ModelGatewayInput!) {\\n  updateModelGateway(id: $id, input: $input) {\\n    id name provider endpoint backendModelCount loadBalancingStrategy lastSyncAt lastSyncStatus lastSyncMessage createdAt updatedAt\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_GATEWAY_ID\",\n    \"input\": {\n      \"name\": \"primary-litellm\",\n      \"provider\": \"LITELLM\",\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"masterKey\": \"sk-litellm-NEWSECRET\"\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Update a model's name/endpoint and (on re-submit) rotate the master key. backendModelCount and loadBalancingStrategy are NOT inputs \u2014 they're read-only, populated by sync."
+            "description": "Mutation CreateModelGateway \u2014 generated from internal/graph/testdata/client_operations/CreateModelGateway.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -1541,24 +927,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeleteModelGateway($id: ID!) {\\n  deleteModelGateway(id: $id) { deletedID }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_GATEWAY_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation DeleteModelGateway($id: ID!) {\\n    deleteModelGateway(id: $id) {\\n      deletedID\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Delete a model gateway. Returns `DeleteModelGatewayPayload { deletedID }`."
+            "description": "Mutation DeleteModelGateway \u2014 generated from internal/graph/testdata/client_operations/DeleteModelGateway.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -1573,29 +956,26 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SyncModelGatewayConnection($id: ID!) {\\n  syncModelGatewayConnection(id: $id) { success message gateway { id name provider endpoint backendModelCount loadBalancingStrategy lastSyncAt lastSyncStatus lastSyncMessage } }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_GATEWAY_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation SyncModelGatewayConnection($id: ID!) {\\n    syncModelGatewayConnection(id: $id) {\\n      success\\n      message\\n      gateway {\\n        ...ModelGatewayFields\\n      }\\n    }\\n  }\\n  \\n  fragment ModelGatewayFields on ModelGateway {\\n    id\\n    name\\n    provider\\n    endpoint\\n    backendModelCount\\n    loadBalancingStrategy\\n    lastSyncAt\\n    lastSyncStatus\\n    lastSyncMessage\\n    createdAt\\n    updatedAt\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Sync the live litellm gateway now: pings /models for connectivity, fetches the global routing strategy from /config/router, and counts the gateway's deployed models from /models. On success, gateway.loadBalancingStrategy and gateway.backendModelCount are persisted; on failure the stored values are preserved (transient outage \u2260 reset)."
+            "description": "Mutation SyncModelGatewayConnection \u2014 generated from internal/graph/testdata/client_operations/SyncModelGatewayConnection.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
         {
-          "name": "TestNewModelGatewayConnection (dry-run, pre-create)",
+          "name": "TestNewModelGatewayConnection",
           "request": {
             "method": "POST",
             "header": [
@@ -1605,34 +985,31 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation TestNewModelGatewayConnection($input: TestModelGatewayConnectionInput!) {\\n  testNewModelGatewayConnection(input: $input) {\\n    success message testedAt\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"masterKey\": \"sk-litellm-XXXXXX\"\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation TestNewModelGatewayConnection($input: TestModelGatewayConnectionInput!) {\\n    testNewModelGatewayConnection(input: $input) {\\n      success\\n      message\\n      testedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Pre-create dry-run probe. The form-level Test Connection button on the create form uses this \u2014 pings a not-yet-saved config. No row is created; the result's `gateway` field is null. Only the connectivity probe runs (no routing-strategy probe)."
+            "description": "Mutation TestNewModelGatewayConnection \u2014 generated from internal/graph/testdata/client_operations/TestNewModelGatewayConnection.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         }
       ]
     },
     {
-      "name": "Gateway Connections (raw)",
+      "name": "Provider Models",
       "item": [
         {
-          "name": "GatewayConnectionsList",
+          "name": "ProviderModelInfo",
           "request": {
             "method": "POST",
             "header": [
@@ -1642,29 +1019,26 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query GatewayConnectionsList {\\n  gatewayConnections { id name endpoint status loadBalanceStrategy createdAt }\\n}\"\n}"
+              "raw": "{\n  \"query\": \"query ProviderModelInfo($filter: ProviderModelInfoFilterInput, $page: PageInput!, $sort: ProviderModelInfoSort) {\\n  providerModelInfo(filter: $filter, page: $page, sort: $sort) {\\n    data {\\n      ...ProviderModelFields\\n    }\\n    total_count\\n    current_page\\n    total_pages\\n    size\\n  }\\n}\",\n  \"variables\": {\n    \"$filter\": {},\n    \"$page\": {},\n    \"$sort\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Raw gateway connections (admin-only). For console UI prefer `modelGateways`."
+            "description": "Query ProviderModelInfo \u2014 generated from internal/graph/testdata/client_operations/ProviderModelInfo.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
         {
-          "name": "RegisterGatewayConnectionEntry",
+          "name": "CreateProviderModel",
           "request": {
             "method": "POST",
             "header": [
@@ -1674,29 +1048,26 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation RegisterGatewayConnectionEntry($input: RegisterGatewayConnectionInput!) {\\n  registerGatewayConnection(input: $input) { id name endpoint status loadBalanceStrategy createdAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"primary\",\n      \"endpoint\": \"http://litellm.local:4000\",\n      \"masterKey\": \"sk-litellm-XXXXXX\",\n      \"loadBalanceStrategy\": \"SIMPLE_SHUFFLE\",\n      \"publicUrl\": \"https://gw.example.com\",\n      \"isDefault\": true\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation CreateProviderModel($input: CreateProviderModelInput!) {\\n  createProviderModel(input: $input) {\\n    ...ProviderModelFields\\n  }\\n}\\n\\nfragment ProviderModelFields on ProviderModel {\\n  id\\n  name\\n  status\\n  createdAt\\n  updatedAt\\n  lastCheckedAt\\n  modelGateway {\\n    id\\n    name\\n    endpoint\\n  }\\n  modelSpecs {\\n    litellmParams {\\n      model\\n      apiBase\\n      apiKeyRef\\n      customLlmProvider\\n    }\\n    modelInfo {\\n      id\\n      blocked\\n      additionalProp1 {\\n        status\\n        message\\n      }\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Register a raw gateway connection. `masterKey` is written to secret store \u2014 only the ref is persisted. Setting `isDefault=true` clears the flag on any other."
+            "description": "Mutation CreateProviderModel \u2014 generated from internal/graph/testdata/client_operations/CreateProviderModel.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
         {
-          "name": "TestGatewayConnectionStatus",
+          "name": "UpdateProviderModel",
           "request": {
             "method": "POST",
             "header": [
@@ -1706,29 +1077,26 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation TestGatewayConnectionStatus($id: ID!) {\\n  testGatewayConnection(id: $id)\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_CONNECTION_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation UpdateProviderModel($input: UpdateProviderModelInput!) {\\n  updateProviderModel(input: $input) {\\n    ...ProviderModelFields\\n  }\\n}\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Ping a gateway connection. Returns `GatewayStatus` (connected / disconnected / error)."
+            "description": "Mutation UpdateProviderModel \u2014 generated from internal/graph/testdata/client_operations/UpdateProviderModel.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
         {
-          "name": "DeleteGatewayConnectionEntry",
+          "name": "DeleteProviderModel",
           "request": {
             "method": "POST",
             "header": [
@@ -1738,24 +1106,195 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeleteGatewayConnectionEntry($id: ID!) {\\n  deleteGatewayConnection(id: $id)\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_CONNECTION_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation DeleteProviderModel($id: ID!) {\\n  deleteProviderModel(id: $id)\\n}\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Delete a gateway connection."
+            "description": "Mutation DeleteProviderModel \u2014 generated from internal/graph/testdata/client_operations/DeleteProviderModel.graphql. Replace the variable stubs with real IDs before sending."
+          },
+          "response": []
+        },
+        {
+          "name": "AddProviderModelSpec",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation AddProviderModelSpec($input: AddProviderModelSpecInput!) {\\n  addProviderModelSpec(input: $input) {\\n    ...ProviderModelFields\\n  }\\n}\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": []
+            },
+            "description": "Mutation AddProviderModelSpec \u2014 generated from internal/graph/testdata/client_operations/AddProviderModelSpec.graphql. Replace the variable stubs with real IDs before sending."
+          },
+          "response": []
+        },
+        {
+          "name": "UpdateProviderModelSpec",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation UpdateProviderModelSpec($input: UpdateProviderModelSpecInput!) {\\n  updateProviderModelSpec(input: $input) {\\n    ...ProviderModelFields\\n  }\\n}\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": []
+            },
+            "description": "Mutation UpdateProviderModelSpec \u2014 generated from internal/graph/testdata/client_operations/UpdateProviderModelSpec.graphql. Replace the variable stubs with real IDs before sending."
+          },
+          "response": []
+        },
+        {
+          "name": "DeleteProviderModelSpec",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation DeleteProviderModelSpec($input: ProviderModelSpecIDInput!) {\\n  deleteProviderModelSpec(input: $input) {\\n    ...ProviderModelFields\\n  }\\n}\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": []
+            },
+            "description": "Mutation DeleteProviderModelSpec \u2014 generated from internal/graph/testdata/client_operations/DeleteProviderModelSpec.graphql. Replace the variable stubs with real IDs before sending."
+          },
+          "response": []
+        },
+        {
+          "name": "BlockProviderModelSpec",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation BlockProviderModelSpec($input: ProviderModelSpecBlockInput!) {\\n  blockProviderModelSpec(input: $input) {\\n    ...ProviderModelFields\\n  }\\n}\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": []
+            },
+            "description": "Mutation BlockProviderModelSpec \u2014 generated from internal/graph/testdata/client_operations/BlockProviderModelSpec.graphql. Replace the variable stubs with real IDs before sending."
+          },
+          "response": []
+        },
+        {
+          "name": "TestProviderConnection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation TestProviderConnection($name: String!) {\\n  testProviderConnection(name: $name)\\n}\",\n  \"variables\": {\n    \"$name\": \"\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": []
+            },
+            "description": "Mutation TestProviderConnection \u2014 generated from internal/graph/testdata/client_operations/TestProviderConnection.graphql. Replace the variable stubs with real IDs before sending."
+          },
+          "response": []
+        },
+        {
+          "name": "RefreshProviderModelStatus",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation RefreshProviderModelStatus($id: ID!) {\\n  refreshProviderModelStatus(id: $id) {\\n    ...ProviderModelFields\\n  }\\n}\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": []
+            },
+            "description": "Mutation RefreshProviderModelStatus \u2014 generated from internal/graph/testdata/client_operations/RefreshProviderModelStatus.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         }
@@ -1765,7 +1304,7 @@
       "name": "Model Routes",
       "item": [
         {
-          "name": "ModelRoutes (list)",
+          "name": "ModelRoutes",
           "request": {
             "method": "POST",
             "header": [
@@ -1775,24 +1314,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query ModelRoutes {\\n  modelRoutes { id name backendGatewayId gatewayName supportedModels uiStrategy enabled createdAt updatedAt }\\n}\"\n}"
+              "raw": "{\n  \"query\": \"query ModelRoutes {\\n    modelRoutes {\\n      ...ModelRouteFields\\n    }\\n  }\\n  \\n  fragment ModelRouteFields on ModelRoute {\\n    id\\n    name\\n    backendGatewayId\\n    gatewayName\\n    supportedModels\\n    uiStrategy\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\",\n  \"variables\": {}\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "List model routes. Admin-only."
+            "description": "Query ModelRoutes \u2014 generated from internal/graph/testdata/client_operations/ModelRoutes.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -1807,24 +1343,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateModelRoute($input: CreateModelRouteInput!) {\\n  createModelRoute(input: $input) { id name backendGatewayId gatewayName supportedModels uiStrategy enabled createdAt updatedAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"chat-default\",\n      \"backendGatewayId\": \"REPLACE_WITH_GATEWAY_ID\",\n      \"gatewayName\": \"primary-litellm\",\n      \"supportedModels\": [\n        \"gpt-4o-mini\",\n        \"claude-3-5-sonnet\"\n      ],\n      \"uiStrategy\": \"ROUND_ROBIN\",\n      \"enabled\": true\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation CreateModelRoute($input: CreateModelRouteInput!) {\\n    createModelRoute(input: $input) {\\n      ...ModelRouteFields\\n    }\\n  }\\n  \\n  fragment ModelRouteFields on ModelRoute {\\n    id\\n    name\\n    backendGatewayId\\n    gatewayName\\n    supportedModels\\n    uiStrategy\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Create a model route (console \u521b\u5efa\u8def\u7531 page). `modelAlias` defaults to `name` when omitted."
+            "description": "Mutation CreateModelRoute \u2014 generated from internal/graph/testdata/client_operations/CreateModelRoute.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -1839,24 +1372,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpdateModelRoute($id: ID!, $input: UpdateModelRouteInput!) {\\n  updateModelRoute(id: $id, input: $input) { id name backendGatewayId gatewayName supportedModels uiStrategy enabled createdAt updatedAt }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_ROUTE_ID\",\n    \"input\": {\n      \"enabled\": false,\n      \"supportedModels\": [\n        \"gpt-4o-mini\"\n      ]\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation UpdateModelRoute($id: ID!, $input: UpdateModelRouteInput!) {\\n    updateModelRoute(id: $id, input: $input) {\\n      ...ModelRouteFields\\n    }\\n  }\\n  \\n  fragment ModelRouteFields on ModelRoute {\\n    id\\n    name\\n    backendGatewayId\\n    gatewayName\\n    supportedModels\\n    uiStrategy\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\",\n  \"variables\": {\n    \"$id\": \"\",\n    \"$input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Edit a model route (console \u7f16\u8f91\u8def\u7531 page). All fields optional."
+            "description": "Mutation UpdateModelRoute \u2014 generated from internal/graph/testdata/client_operations/UpdateModelRoute.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -1871,24 +1401,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SetModelRouteEnabled($id: ID!, $enabled: Boolean!) {\\n  setModelRouteEnabled(id: $id, enabled: $enabled) { id name enabled }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_ROUTE_ID\",\n    \"enabled\": true\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation SetModelRouteEnabled($id: ID!, $enabled: Boolean!) {\\n    setModelRouteEnabled(id: $id, enabled: $enabled) {\\n      ...ModelRouteFields\\n    }\\n  }\\n  \\n  fragment ModelRouteFields on ModelRoute {\\n    id\\n    name\\n    backendGatewayId\\n    gatewayName\\n    supportedModels\\n    uiStrategy\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\",\n  \"variables\": {\n    \"$id\": \"\",\n    \"$enabled\": false\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Toggle a model route's enabled flag."
+            "description": "Mutation SetModelRouteEnabled \u2014 generated from internal/graph/testdata/client_operations/SetModelRouteEnabled.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -1903,221 +1430,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeleteModelRoute($id: ID!) {\\n  deleteModelRoute(id: $id)\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_ROUTE_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation DeleteModelRoute($id: ID!) {\\n    deleteModelRoute(id: $id)\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Delete a model route."
-          },
-          "response": []
-        },
-        {
-          "name": "UpsertModelRoute",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpsertModelRoute($input: UpsertModelRouteInput!) {\\n  upsertModelRoute(input: $input) { id name backendGatewayId upstreams strategy enabled createdAt updatedAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"chat-default\",\n      \"modelAlias\": \"chat-default\",\n      \"backendGatewayId\": \"REPLACE_WITH_GATEWAY_ID\",\n      \"upstreams\": [\n        \"gpt-4o-mini\"\n      ],\n      \"strategy\": \"SIMPLE_SHUFFLE\",\n      \"enabled\": true\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Legacy name-keyed upsert of a model route (the console \u521b\u5efa\u8def\u7531 page uses `createModelRoute` instead). Admin-only."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Upstreams & Router Tiers",
-      "item": [
-        {
-          "name": "UpstreamsRouting (list)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"query UpstreamsRouting {\\n  upstreams { id name provider apiBase model enabled createdAt }\\n}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "List upstreams. Requires `route:manage` permission."
-          },
-          "response": []
-        },
-        {
-          "name": "UpsertUpstreamRouting",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpsertUpstreamRouting($input: UpsertUpstreamInput!) {\\n  upsertUpstream(input: $input) { id name provider apiBase model enabled createdAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"openai-primary\",\n      \"provider\": \"openai\",\n      \"apiBase\": \"https://api.openai.com/v1\",\n      \"apiKey\": \"sk-XXXXXX\",\n      \"model\": \"gpt-4o-mini\",\n      \"enabled\": true\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Upsert an upstream (provider / model / API key). `apiKey` is written to secret store \u2014 only the ref is persisted. Requires `route:manage` permission."
-          },
-          "response": []
-        },
-        {
-          "name": "DeleteUpstreamRouting",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeleteUpstreamRouting($id: ID!) {\\n  deleteUpstream(id: $id)\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_UPSTREAM_ID\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Delete an upstream. Requires `route:manage` permission."
-          },
-          "response": []
-        },
-        {
-          "name": "RouterTiersRouting (list)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"query RouterTiersRouting {\\n  routerTiers { id tier modelAlias }\\n}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "List the difficulty-router tiers (SIMPLE/MEDIUM/COMPLEX/REASONING \u2192 modelAlias). Requires `route:manage` permission."
-          },
-          "response": []
-        },
-        {
-          "name": "SetRouterTierRouting",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SetRouterTierRouting($tier: RouterTierLevel!, $modelAlias: String!) {\\n  setRouterTier(tier: $tier, modelAlias: $modelAlias) { id tier modelAlias }\\n}\",\n  \"variables\": {\n    \"tier\": \"SIMPLE\",\n    \"modelAlias\": \"gpt-4o-mini\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Map a router tier to a model alias \u2192 syncs litellm Complexity Router. Requires `route:manage` permission."
+            "description": "Mutation DeleteModelRoute \u2014 generated from internal/graph/testdata/client_operations/DeleteModelRoute.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         }
@@ -2127,7 +1454,7 @@
       "name": "Virtual Keys",
       "item": [
         {
-          "name": "VirtualKeys (list)",
+          "name": "VirtualKeys",
           "request": {
             "method": "POST",
             "header": [
@@ -2137,24 +1464,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query VirtualKeys($userId: ID) {\\n  virtualKeys(userId: $userId) { id alias userId agentId rateLimitPolicyId status expiresAt createdAt }\\n}\",\n  \"variables\": {\n    \"userId\": null\n  }\n}"
+              "raw": "{\n  \"query\": \"query VirtualKeys($userId: ID) {\\n    virtualKeys(userId: $userId) {\\n      ...VirtualKeyFields\\n    }\\n  }\\n  \\n  fragment VirtualKeyFields on VirtualKey {\\n    id\\n    alias\\n    userId\\n    agentId\\n    status\\n    expiresAt\\n    createdAt\\n  }\",\n  \"variables\": {\n    \"$userId\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "List virtual keys, optionally filtered by `userId`. Admin-only."
+            "description": "Query VirtualKeys \u2014 generated from internal/graph/testdata/client_operations/VirtualKeys.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -2169,24 +1493,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation IssueVirtualKey($input: IssueVirtualKeyInput!) {\\n  issueVirtualKey(input: $input) {\\n    secret\\n    virtualKey { id alias userId agentId rateLimitPolicyId status expiresAt createdAt }\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"userId\": \"REPLACE_WITH_USER_ID\",\n      \"agentId\": null,\n      \"rateLimitPolicyId\": null,\n      \"teamId\": null,\n      \"models\": [\n        \"gpt-4o-mini\"\n      ],\n      \"maxBudget\": 50,\n      \"alias\": \"alice-key\"\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation IssueVirtualKey($input: IssueVirtualKeyInput!) {\\n    issueVirtualKey(input: $input) {\\n      secret\\n      virtualKey {\\n        ...VirtualKeyFields\\n      }\\n    }\\n  }\\n  \\n  fragment VirtualKeyFields on VirtualKey {\\n    id\\n    alias\\n    userId\\n    agentId\\n    status\\n    expiresAt\\n    createdAt\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Issue a new litellm virtual key. The `secret` is returned **once** \u2014 never queryable again. Requires `key:manage` permission."
+            "description": "Mutation IssueVirtualKey \u2014 generated from internal/graph/testdata/client_operations/IssueVirtualKey.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -2201,24 +1522,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation RevokeVirtualKey($id: ID!) {\\n  revokeVirtualKey(id: $id)\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_KEY_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation RevokeVirtualKey($id: ID!) {\\n    revokeVirtualKey(id: $id)\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Revoke (terminal) a virtual key. Requires `key:manage` permission."
+            "description": "Mutation RevokeVirtualKey \u2014 generated from internal/graph/testdata/client_operations/RevokeVirtualKey.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -2233,24 +1551,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation RegenerateVirtualKey($id: ID!) {\\n  regenerateVirtualKey(id: $id) {\\n    secret\\n    virtualKey { id alias userId agentId rateLimitPolicyId status expiresAt createdAt }\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_KEY_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation RegenerateVirtualKey($id: ID!) {\\n    regenerateVirtualKey(id: $id) {\\n      secret\\n      virtualKey {\\n        ...VirtualKeyFields\\n      }\\n    }\\n  }\\n  \\n  fragment VirtualKeyFields on VirtualKey {\\n    id\\n    alias\\n    userId\\n    agentId\\n    status\\n    expiresAt\\n    createdAt\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Rotate the key's secret at the gateway, keeping its governance row/binding. New secret returned ONCE."
+            "description": "Mutation RegenerateVirtualKey \u2014 generated from internal/graph/testdata/client_operations/RegenerateVirtualKey.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -2265,157 +1580,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SetVirtualKeyEnabled($id: ID!, $enabled: Boolean!) {\\n  setVirtualKeyEnabled(id: $id, enabled: $enabled) { id alias userId agentId rateLimitPolicyId status expiresAt createdAt }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_KEY_ID\",\n    \"enabled\": false\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation SetVirtualKeyEnabled($id: ID!, $enabled: Boolean!) {\\n    setVirtualKeyEnabled(id: $id, enabled: $enabled) {\\n      ...VirtualKeyFields\\n    }\\n  }\\n  \\n  fragment VirtualKeyFields on VirtualKey {\\n    id\\n    alias\\n    userId\\n    agentId\\n    status\\n    expiresAt\\n    createdAt\\n  }\",\n  \"variables\": {\n    \"$id\": \"\",\n    \"$enabled\": false\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Toggle enabled/disabled on a virtual key (distinct from revoke, which is terminal)."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Rate Limit Policies",
-      "item": [
-        {
-          "name": "RateLimitPolicies (list)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"query RateLimitPolicies {\\n  rateLimitPolicies { id name rpm tpm enabled createdAt }\\n}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "List rate-limit policies. Restricted to `admin` only."
-          },
-          "response": []
-        },
-        {
-          "name": "UpsertRateLimitPolicy",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpsertRateLimitPolicy($input: UpsertRateLimitPolicyInput!) {\\n  upsertRateLimitPolicy(input: $input) { id name rpm tpm enabled createdAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"free-tier\",\n      \"rpm\": 60,\n      \"tpm\": 100000,\n      \"enabled\": true\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Create or update a rate-limit policy. Requires `route:manage` permission."
-          },
-          "response": []
-        },
-        {
-          "name": "SetRateLimitPolicyEnabled",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SetRateLimitPolicyEnabled($id: ID!, $enabled: Boolean!) {\\n  setRateLimitPolicyEnabled(id: $id, enabled: $enabled) { id name rpm tpm enabled createdAt }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_POLICY_ID\",\n    \"enabled\": false\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Toggle a policy's enabled flag."
-          },
-          "response": []
-        },
-        {
-          "name": "DeleteRateLimitPolicy",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeleteRateLimitPolicy($id: ID!) {\\n  deleteRateLimitPolicy(id: $id)\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_POLICY_ID\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Delete a policy. Refused while any non-revoked virtual key still references it."
+            "description": "Mutation SetVirtualKeyEnabled \u2014 generated from internal/graph/testdata/client_operations/SetVirtualKeyEnabled.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         }
@@ -2425,7 +1604,7 @@
       "name": "Agents (Deployed)",
       "item": [
         {
-          "name": "Agents (list)",
+          "name": "Agents",
           "request": {
             "method": "POST",
             "header": [
@@ -2435,29 +1614,26 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query Agents($filter: AgentFilter, $pagination: Pagination, $sort: AgentSort) {\\n  agents(filter: $filter, pagination: $pagination, sort: $sort) {\\n    nodes {\\n      id name type status\\n      apiKey { id name }\\n      owner { id displayName email }\\n      createdAt updatedAt endpoint\\n    }\\n    totalCount\\n    pageInfo { page pageSize totalPages }\\n  }\\n}\",\n  \"variables\": {\n    \"pagination\": {\n      \"page\": 1,\n      \"pageSize\": 20\n    },\n    \"sort\": {\n      \"field\": \"CREATED_AT\",\n      \"direction\": \"DESC\"\n    },\n    \"filter\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"query Agents($filter: AgentFilter, $pagination: Pagination, $sort: AgentSort) {\\n    agents(filter: $filter, pagination: $pagination, sort: $sort) {\\n      nodes {\\n        id\\n        name\\n        type\\n        status\\n        apiKey {\\n          id\\n          name\\n        }\\n        owner {\\n          id\\n          displayName\\n          email\\n        }\\n        createdAt\\n        updatedAt\\n        endpoint\\n      }\\n      totalCount\\n      pageInfo {\\n        page\\n        pageSize\\n        totalPages\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$filter\": null,\n    \"$pagination\": null,\n    \"$sort\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Paginated agent list. Admin and read_only see all; user sees only their own (owner scope). Gated `@hasRole(any: [admin, read_only, user])` so all 3 roles can read."
+            "description": "Query Agents \u2014 generated from internal/graph/testdata/client_operations/Agents.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
         {
-          "name": "SetAgentLifecycleStatus",
+          "name": "Agent",
           "request": {
             "method": "POST",
             "header": [
@@ -2467,29 +1643,26 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SetAgentLifecycleStatus($id: ID!, $status: AgentStatus!) {\\n  setAgentStatus(id: $id, status: $status) { id name status }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_AGENT_ID\",\n    \"status\": \"stopped\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query Agent($id: ID!) {\\n    agent(id: $id) {\\n      id\\n      name\\n      type\\n      status\\n      apiKey {\\n        id\\n        name\\n      }\\n      owner {\\n        id\\n        displayName\\n        email\\n      }\\n      credentials {\\n        username\\n      }\\n      endpoint\\n      templateFamilyId\\n      templateVersionId\\n      resourcePoolId\\n      typeLabel\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Set agent lifecycle status (`provisioning` / `running` / `stopped` / `exception`)."
+            "description": "Query Agent \u2014 generated from internal/graph/testdata/client_operations/Agent.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
         {
-          "name": "RecycleAgentLifecycle",
+          "name": "SetAgentStatus",
           "request": {
             "method": "POST",
             "header": [
@@ -2499,29 +1672,26 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation RecycleAgentLifecycle($input: RecycleAgentInput!) {\\n  recycleAgent(input: $input) { id name status }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"agentId\": \"REPLACE_WITH_AGENT_ID\",\n      \"confirm\": true\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation SetAgentStatus($id: ID!, $status: AgentStatus!) {\\n    setAgentStatus(id: $id, status: $status) {\\n      id\\n      status\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\",\n    \"$status\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "DESTRUCTIVE: destroys the agent VM, revokes its key, marks it stopped. `confirm` must be true. Owner or admin."
+            "description": "Mutation SetAgentStatus \u2014 generated from internal/graph/testdata/client_operations/SetAgentStatus.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
         {
-          "name": "CreateAgentSnapshot",
+          "name": "RecycleAgent",
           "request": {
             "method": "POST",
             "header": [
@@ -2531,29 +1701,26 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateAgentSnapshot($input: SnapshotAgentInput!) {\\n  snapshotAgent(input: $input) { name description state createdAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"agentId\": \"REPLACE_WITH_AGENT_ID\",\n      \"name\": \"pre-upgrade\",\n      \"description\": \"before upgrade\"\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation RecycleAgent($input: RecycleAgentInput!) {\\n    recycleAgent(input: $input) {\\n      id\\n      status\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Snapshot the agent's VM (LLD-03 \u00a74). Owner or admin."
+            "description": "Mutation RecycleAgent \u2014 generated from internal/graph/testdata/client_operations/RecycleAgent.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
         {
-          "name": "AgentSnapshotsForLifecycle",
+          "name": "AgentConfigs",
           "request": {
             "method": "POST",
             "header": [
@@ -2563,88 +1730,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query AgentSnapshotsForLifecycle($agentId: ID!) {\\n  agentSnapshots(agentId: $agentId) { name description state createdAt }\\n}\",\n  \"variables\": {\n    \"agentId\": \"REPLACE_WITH_AGENT_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query AgentConfigs($agentType: String) {\\n    agentConfigs(agentType: $agentType) {\\n      ...AgentConfigFields\\n    }\\n  }\\n  \\n  fragment AgentConfigFields on AgentConfig {\\n    id\\n    name\\n    agentType\\n    isDefault\\n    artifactId\\n    knowledge {\\n      ...KnowledgeArtifactFields\\n    }\\n    createdAt\\n  }\\n  \\n  fragment KnowledgeArtifactFields on Artifact {\\n    id\\n    name\\n    kind\\n    version\\n    uri\\n    sha256\\n    createdAt\\n  }\",\n  \"variables\": {\n    \"$agentType\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "List the agent VM's snapshots."
-          },
-          "response": []
-        },
-        {
-          "name": "RevertAgentSnapshotState",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation RevertAgentSnapshotState($input: RevertAgentSnapshotInput!) {\\n  revertAgentSnapshot(input: $input)\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"agentId\": \"REPLACE_WITH_AGENT_ID\",\n      \"snapshotName\": \"pre-upgrade\",\n      \"confirm\": true\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "DESTRUCTIVE: revert the agent VM to a snapshot (discards all state since). `confirm` must be true."
-          },
-          "response": []
-        },
-        {
-          "name": "AgentConfigs (list)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"query AgentConfigs($agentType: String) {\\n  agentConfigs(agentType: $agentType) {\\n    id name agentType isDefault artifactId\\n    knowledge { id name kind version uri sha256 createdAt }\\n    createdAt\\n  }\\n}\",\n  \"variables\": {\n    \"agentType\": null\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "List agent configs (\u667a\u80fd\u4f53\u914d\u7f6e page), optionally filtered by `agentType`."
+            "description": "Query AgentConfigs \u2014 generated from internal/graph/testdata/client_operations/AgentConfigs.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -2659,312 +1759,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SetAgentConfigKnowledge($configId: ID!, $knowledgeArtifactIds: [ID!]!) {\\n  setAgentConfigKnowledge(configId: $configId, knowledgeArtifactIds: $knowledgeArtifactIds) {\\n    id name agentType isDefault artifactId\\n    knowledge { id name kind version uri sha256 createdAt }\\n    createdAt\\n  }\\n}\",\n  \"variables\": {\n    \"configId\": \"REPLACE_WITH_CONFIG_ID\",\n    \"knowledgeArtifactIds\": [\n      \"REPLACE_WITH_ARTIFACT_ID\"\n    ]\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation SetAgentConfigKnowledge($configId: ID!, $knowledgeArtifactIds: [ID!]!) {\\n    setAgentConfigKnowledge(configId: $configId, knowledgeArtifactIds: $knowledgeArtifactIds) {\\n      ...AgentConfigFields\\n    }\\n  }\\n  \\n  fragment AgentConfigFields on AgentConfig {\\n    id\\n    name\\n    agentType\\n    isDefault\\n    artifactId\\n    knowledge {\\n      ...KnowledgeArtifactFields\\n    }\\n    createdAt\\n  }\\n  \\n  fragment KnowledgeArtifactFields on Artifact {\\n    id\\n    name\\n    kind\\n    version\\n    uri\\n    sha256\\n    createdAt\\n  }\",\n  \"variables\": {\n    \"$configId\": \"\",\n    \"$knowledgeArtifactIds\": []\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Replace the config's mounted OKF knowledge packs (LLD-11 K2). Set replaced wholesale. Restricted to `admin` only."
-          },
-          "response": []
-        },
-        {
-          "name": "AgentTemplatesList",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"query AgentTemplatesList {\\n  agentTemplates { id kind display description installMethod installCommand status version knowledgeRoot knowledgePrompt createdAt }\\n}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Browse the agent template catalog (\u667a\u80fd\u4f53\u4e2d\u5fc3). Any authenticated user can read."
-          },
-          "response": []
-        },
-        {
-          "name": "UpsertAgentTemplateEntry",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpsertAgentTemplateEntry($input: UpsertAgentTemplateInput!) {\\n  upsertAgentTemplate(input: $input) { id kind display description installMethod installCommand status version knowledgeRoot knowledgePrompt createdAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"kind\": \"goose\",\n      \"display\": \"Goose\",\n      \"description\": \"Local-coding agent\",\n      \"installMethod\": \"curl\",\n      \"installCommand\": \"curl -fsSL https://example/install.sh | bash\",\n      \"status\": \"active\",\n      \"version\": \"1.2.0\"\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Upsert an agent template (catalog management). Admin-only."
-          },
-          "response": []
-        },
-        {
-          "name": "CreateAgent",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateAgent($input: CreateAgentInput!) {\\n  createAgent(input: $input) {\\n    id name type status apiKey { id name } owner { id displayName email } createdAt updatedAt endpoint\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"alice-goose\",\n      \"agentType\": \"goose\",\n      \"configId\": null,\n      \"resourcePoolId\": null\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Self-service: any authenticated user creates their own agent (owner = caller). Distinct from `deployAgent` (which provisions a VM from a marketplace OVA)."
-          },
-          "response": []
-        },
-        {
-          "name": "CreateAgentConfig",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateAgentConfig($input: CreateAgentConfigInput!) {\\n  createAgentConfig(input: $input) { id name agentType isDefault artifactId createdAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"goose-default\",\n      \"agentType\": \"goose\",\n      \"isDefault\": true,\n      \"artifactId\": null\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Create an agent config (智能体配置). Restricted to `admin` only."
-          },
-          "response": []
-        },
-        {
-          "name": "UpdateAgentConfig",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpdateAgentConfig($id: ID!, $input: UpdateAgentConfigInput!) {\\n  updateAgentConfig(id: $id, input: $input) { id name agentType isDefault artifactId createdAt }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_CONFIG_ID\",\n    \"input\": {\n      \"name\": \"goose-default-renamed\",\n      \"artifactId\": \"REPLACE_WITH_ARTIFACT_ID\"\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Update an agent config. All fields optional."
-          },
-          "response": []
-        },
-        {
-          "name": "DeleteAgentConfig",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeleteAgentConfig($id: ID!) {\\n  deleteAgentConfig(id: $id)\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_CONFIG_ID\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Delete an agent config."
-          },
-          "response": []
-        },
-        {
-          "name": "SetDefaultAgentConfig",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SetDefaultAgentConfig($id: ID!) {\\n  setDefaultAgentConfig(id: $id) { id name agentType isDefault }\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_CONFIG_ID\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Mark this config the default for its agent type (unsets others of that type)."
-          },
-          "response": []
-        },
-        {
-          "name": "RequestRotation",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation RequestRotation($agentId: ID!, $kind: RotationKind!) {\\n  requestRotation(agentId: $agentId, kind: $kind)\\n}\",\n  \"variables\": {\n    \"agentId\": \"REPLACE_WITH_AGENT_ID\",\n    \"kind\": \"rotate_ui_password\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Enqueue a credential rotation for the agent's VM (LLD-08); the agent-manager daemon executes it on its next heartbeat. No-op if already in flight. Owner or admin."
-          },
-          "response": []
-        },
-        {
-          "name": "RevokeAgentEnrollment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation RevokeAgentEnrollment($agentId: ID!) {\\n  revokeAgentEnrollment(agentId: $agentId)\\n}\",\n  \"variables\": {\n    \"agentId\": \"REPLACE_WITH_AGENT_ID\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Revoke the agent VM's bearer credential \u2014 its next heartbeat is rejected (LLD-08 \u00a74.4). Idempotent."
+            "description": "Mutation SetAgentConfigKnowledge \u2014 generated from internal/graph/testdata/client_operations/SetAgentConfigKnowledge.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         }
@@ -2974,7 +1783,7 @@
       "name": "Deploy (Marketplace OVA)",
       "item": [
         {
-          "name": "OvaTemplateFamilies (list)",
+          "name": "OvaTemplateFamilies",
           "request": {
             "method": "POST",
             "header": [
@@ -2984,29 +1793,26 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query OvaTemplateFamilies($filter: OvaTemplateFamilyFilter, $pagination: Pagination, $sort: OvaTemplateFamilySort) {\\n  ovaTemplateFamilies(filter: $filter, pagination: $pagination, sort: $sort) {\\n    nodes {\\n      id name type description tools skills scenarios iconShape iconColor latestVersion createdAt updatedAt\\n      versions { id familyId version ovaIdentifier notes createdAt }\\n    }\\n    totalCount\\n    pageInfo { page pageSize totalPages }\\n  }\\n}\",\n  \"variables\": {\n    \"pagination\": {\n      \"page\": 1,\n      \"pageSize\": 20\n    },\n    \"sort\": {\n      \"field\": \"CREATED_AT\",\n      \"direction\": \"DESC\"\n    },\n    \"filter\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"fragment OvaTemplateFamilyFields on OvaTemplateFamily {\\n    id\\n    name\\n    type\\n    description\\n    tools\\n    skills\\n    scenarios\\n    iconShape\\n    iconColor\\n    latestVersion\\n    createdAt\\n    updatedAt\\n    versions {\\n      id\\n      familyId\\n      version\\n      ovaIdentifier\\n      notes\\n      createdAt\\n    }\\n  }\\n\\n  query OvaTemplateFamilies(\\n    $filter: OvaTemplateFamilyFilter\\n    $pagination: Pagination\\n    $sort: OvaTemplateFamilySort\\n  ) {\\n    ovaTemplateFamilies(filter: $filter, pagination: $pagination, sort: $sort) {\\n      nodes {\\n        ...OvaTemplateFamilyFields\\n      }\\n      totalCount\\n      pageInfo {\\n        page\\n        pageSize\\n        totalPages\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$filter\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Marketplace OVA template families (\u667a\u80fd\u4f53\u5e02\u573a). Admin-only."
+            "description": "Query OvaTemplateFamilies \u2014 generated from internal/graph/testdata/client_operations/OvaTemplateFamilies.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
         {
-          "name": "OvaTemplateVersions (list)",
+          "name": "OvaTemplateVersions",
           "request": {
             "method": "POST",
             "header": [
@@ -3016,24 +1822,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query OvaTemplateVersions($familyId: ID, $pagination: Pagination) {\\n  ovaTemplateVersions(familyId: $familyId, pagination: $pagination) {\\n    nodes { id familyId version ovaIdentifier notes createdAt }\\n    totalCount\\n    pageInfo { page pageSize totalPages }\\n  }\\n}\",\n  \"variables\": {\n    \"familyId\": null,\n    \"pagination\": {\n      \"page\": 1,\n      \"pageSize\": 20\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"fragment OvaTemplateVersionFields on OvaTemplateVersion {\\n    id\\n    familyId\\n    version\\n    ovaIdentifier\\n    notes\\n    createdAt\\n  }\\n\\n  query OvaTemplateVersions($familyId: ID, $pagination: Pagination) {\\n    ovaTemplateVersions(familyId: $familyId, pagination: $pagination) {\\n      nodes {\\n        ...OvaTemplateVersionFields\\n      }\\n      totalCount\\n      pageInfo {\\n        page\\n        pageSize\\n        totalPages\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$familyId\": \"\",\n    \"$pagination\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "List OVA versions (optionally filtered by family)."
+            "description": "Query OvaTemplateVersions \u2014 generated from internal/graph/testdata/client_operations/OvaTemplateVersions.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -3048,24 +1851,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateOvaTemplateFamily($input: CreateOvaTemplateFamilyInput!) {\\n  createOvaTemplateFamily(input: $input) {\\n    family {\\n      id name type description tools skills scenarios iconShape iconColor latestVersion createdAt updatedAt\\n      versions { id familyId version ovaIdentifier notes createdAt }\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"Coding Goose\",\n      \"type\": \"goose\",\n      \"description\": \"Local-coding agent\",\n      \"tools\": [\n        \"bash\",\n        \"editor\"\n      ],\n      \"scenarios\": [\n        \"code-review\"\n      ],\n      \"skills\": [\n        \"refactor\"\n      ],\n      \"iconShape\": \"bird\",\n      \"iconColor\": \"BLUE\",\n      \"initialVersion\": {\n        \"version\": \"1.0.0\",\n        \"ovaIdentifier\": \"goose-1.0.0.ova\",\n        \"notes\": \"initial\"\n      }\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"fragment OvaTemplateFamilyFields on OvaTemplateFamily {\\n    id\\n    name\\n    type\\n    description\\n    tools\\n    skills\\n    scenarios\\n    iconShape\\n    iconColor\\n    latestVersion\\n    createdAt\\n    updatedAt\\n    versions {\\n      id\\n      familyId\\n      version\\n      ovaIdentifier\\n      notes\\n      createdAt\\n    }\\n  }\\n\\n  mutation CreateOvaTemplateFamily($input: CreateOvaTemplateFamilyInput!) {\\n    createOvaTemplateFamily(input: $input) {\\n      family {\\n        ...OvaTemplateFamilyFields\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Create a family + its initial OVA version in one transaction."
+            "description": "Mutation CreateOvaTemplateFamily \u2014 generated from internal/graph/testdata/client_operations/CreateOvaTemplateFamily.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -3080,24 +1880,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation AddOvaTemplateVersion($input: AddOvaTemplateVersionInput!) {\\n  addOvaTemplateVersion(input: $input) {\\n    version { id familyId version ovaIdentifier notes createdAt }\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"familyId\": \"REPLACE_WITH_FAMILY_ID\",\n      \"version\": \"1.1.0\",\n      \"ovaIdentifier\": \"goose-1.1.0.ova\",\n      \"notes\": \"patch\"\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"fragment OvaTemplateVersionFields on OvaTemplateVersion {\\n    id\\n    familyId\\n    version\\n    ovaIdentifier\\n    notes\\n    createdAt\\n  }\\n\\n  mutation AddOvaTemplateVersion($input: AddOvaTemplateVersionInput!) {\\n    addOvaTemplateVersion(input: $input) {\\n      version {\\n        ...OvaTemplateVersionFields\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Append a version to an existing family."
+            "description": "Mutation AddOvaTemplateVersion \u2014 generated from internal/graph/testdata/client_operations/AddOvaTemplateVersion.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -3112,56 +1909,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeployAgent($input: DeployAgentInput!) {\\n  deployAgent(input: $input) {\\n    agent {\\n      id name type status endpoint createdAt updatedAt\\n      apiKey { id name }\\n      credentials { username }\\n      templateFamilyId templateVersionId resourcePoolId\\n    }\\n    virtualKeySecret\\n    templateVersion { id familyId version ovaIdentifier notes createdAt }\\n    resourcePool { id name endpoint syncStatus lastSyncedAt datacenters { name } }\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"alice-coding-goose\",\n      \"templateFamilyId\": \"REPLACE_WITH_FAMILY_ID\",\n      \"templateVersionId\": \"REPLACE_WITH_VERSION_ID\",\n      \"resourcePoolId\": \"REPLACE_WITH_POOL_ID\",\n      \"departmentId\": null,\n      \"targetResourcePool\": \"/DC0/host/DC0_C0/Resources\",\n      \"hostname\": \"alice-goose\",\n      \"maxBudget\": 50\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"fragment OvaTemplateVersionFields on OvaTemplateVersion {\\n    id\\n    familyId\\n    version\\n    ovaIdentifier\\n    notes\\n    createdAt\\n  }\\n\\n  mutation DeployAgent($input: DeployAgentInput!) {\\n    deployAgent(input: $input) {\\n      agent {\\n        id\\n        name\\n        type\\n        status\\n        endpoint\\n        createdAt\\n        updatedAt\\n        apiKey {\\n          id\\n          name\\n        }\\n        credentials {\\n          username\\n        }\\n        templateFamilyId\\n        templateVersionId\\n        resourcePoolId\\n      }\\n      virtualKeySecret\\n      templateVersion {\\n        ...OvaTemplateVersionFields\\n      }\\n      resourcePool {\\n        id\\n        name\\n        endpoint\\n        syncStatus\\n        lastSyncedAt\\n        datacenters {\\n          name\\n        }\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Create a NEW agent from a catalog OVA version and provision its VM. Issues the gateway key (returned ONCE in `virtualKeySecret`). Admin-only. Long-running."
-          },
-          "response": []
-        },
-        {
-          "name": "VmTemplates",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"query VmTemplates($resourcePoolId: ID!) {\\n  vmTemplates(resourcePoolId: $resourcePoolId) { name uuid }\\n}\",\n  \"variables\": {\n    \"resourcePoolId\": \"REPLACE_WITH_POOL_ID\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "List OVA templates in a resource pool's vCenter (powers the deploy form's source picker)."
+            "description": "Mutation DeployAgent \u2014 generated from internal/graph/testdata/client_operations/DeployAgent.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         }
@@ -3170,38 +1932,6 @@
     {
       "name": "Content (Artifacts / Skills / Harbor)",
       "item": [
-        {
-          "name": "PlatformArtifacts (list)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"query PlatformArtifacts($kind: ArtifactKind) {\\n  artifacts(kind: $kind) { id name kind version uri content sha256 metadata createdAt }\\n}\",\n  \"variables\": {\n    \"kind\": null\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "List artifacts (script/config/package/knowledge). Optionally filter by `kind`."
-          },
-          "response": []
-        },
         {
           "name": "KnowledgeArtifacts",
           "request": {
@@ -3213,29 +1943,26 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query KnowledgeArtifacts {\\n  artifacts(kind: knowledge) { id name kind version uri sha256 createdAt }\\n}\"\n}"
+              "raw": "{\n  \"query\": \"query KnowledgeArtifacts {\\n    artifacts(kind: knowledge) {\\n      ...KnowledgeArtifactFields\\n    }\\n  }\\n  \\n  fragment KnowledgeArtifactFields on Artifact {\\n    id\\n    name\\n    kind\\n    version\\n    uri\\n    sha256\\n    createdAt\\n  }\",\n  \"variables\": {}\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "List OKF knowledge packs (LLD-11 K2). Drives the agent-config knowledge picker."
+            "description": "Query KnowledgeArtifacts \u2014 generated from internal/graph/testdata/client_operations/KnowledgeArtifacts.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
         {
-          "name": "PlatformArtifactVersions",
+          "name": "ContentLibraries",
           "request": {
             "method": "POST",
             "header": [
@@ -3245,29 +1972,26 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query PlatformArtifactVersions($name: String!) {\\n  artifactVersions(name: $name) { id name kind version uri content sha256 metadata createdAt }\\n}\",\n  \"variables\": {\n    \"name\": \"coding-defaults\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query ContentLibraries($resourcePoolId: ID!) {\\n    contentLibraries(resourcePoolId: $resourcePoolId)\\n  }\",\n  \"variables\": {\n    \"$resourcePoolId\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "All versions of a named artifact (newest-first)."
+            "description": "Query ContentLibraries \u2014 generated from internal/graph/testdata/client_operations/ContentLibraries.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
         {
-          "name": "UpsertPlatformArtifact",
+          "name": "ContentLibraryItems",
           "request": {
             "method": "POST",
             "header": [
@@ -3277,29 +2001,31 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpsertPlatformArtifact($input: UpsertArtifactInput!) {\\n  upsertArtifact(input: $input) { id name kind version uri content sha256 metadata createdAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"coding-defaults\",\n      \"kind\": \"config\",\n      \"version\": \"1.0.0\",\n      \"uri\": \"inline://coding-defaults\",\n      \"content\": \"# inline config content\",\n      \"metadata\": {}\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"query ContentLibraryItems($resourcePoolId: ID!, $libraryName: String!) {\\n    contentLibraryItems(resourcePoolId: $resourcePoolId, libraryName: $libraryName) {\\n      name\\n      type\\n    }\\n  }\",\n  \"variables\": {\n    \"$resourcePoolId\": \"\",\n    \"$libraryName\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Upsert an artifact. `content` (\u226464K) is embedded for config/script/knowledge kinds; rejected for `kind=package`. sha256 is recomputed from content."
+            "description": "Query ContentLibraryItems \u2014 generated from internal/graph/testdata/client_operations/ContentLibraryItems.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
-        },
+        }
+      ]
+    },
+    {
+      "name": "Budgets & Spend",
+      "item": [
         {
-          "name": "DeletePlatformArtifact",
+          "name": "Budgets",
           "request": {
             "method": "POST",
             "header": [
@@ -3309,29 +2035,26 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeletePlatformArtifact($id: ID!) {\\n  deleteArtifact(id: $id)\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_ARTIFACT_ID\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query Budgets($scope: BudgetScope!) {\\n    budgets(scope: $scope) {\\n      scope\\n      label\\n      spend\\n      maxBudget\\n      remaining\\n      budgetResetAt\\n      utilizationPct\\n    }\\n  }\",\n  \"variables\": {\n    \"$scope\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Delete an artifact."
+            "description": "Query Budgets \u2014 generated from internal/graph/testdata/client_operations/Budgets.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
         {
-          "name": "ConsoleSkills (list)",
+          "name": "SpendReport",
           "request": {
             "method": "POST",
             "header": [
@@ -3341,184 +2064,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query ConsoleSkills {\\n  skills { id name version description uri createdAt }\\n}\"\n}"
+              "raw": "{\n  \"query\": \"query SpendReport($input: SpendReportInput!) {\\n    spendReport(input: $input) {\\n      from\\n      to\\n      groupBy\\n      rows {\\n        key\\n        label\\n        spend\\n        promptTokens\\n        completionTokens\\n        totalTokens\\n        requests\\n      }\\n      totals {\\n        spend\\n        promptTokens\\n        completionTokens\\n        totalTokens\\n        requests\\n      }\\n      byDay {\\n        date\\n        spend\\n        totalTokens\\n      }\\n      gateways {\\n        gatewayId\\n        gatewayName\\n        ok\\n        error\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "List skills (Skill hub)."
-          },
-          "response": []
-        },
-        {
-          "name": "ConsoleUpsertSkill",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation ConsoleUpsertSkill($input: UpsertSkillInput!) {\\n  upsertSkill(input: $input) { id name version description uri createdAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"refactor\",\n      \"version\": \"1.0.0\",\n      \"description\": \"Refactor code\",\n      \"uri\": \"https://example/skills/refactor-1.0.0.tar\"\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Upsert a skill. Admin-only."
-          },
-          "response": []
-        },
-        {
-          "name": "ConsoleDeleteSkill",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation ConsoleDeleteSkill($id: ID!) {\\n  deleteSkill(id: $id)\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_SKILL_ID\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Delete a skill. Admin-only."
-          },
-          "response": []
-        },
-        {
-          "name": "HarborImages (list)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"query HarborImages {\\n  images { id repository tag digest signed createdAt }\\n}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "List Harbor container images."
-          },
-          "response": []
-        },
-        {
-          "name": "UpsertHarborImage",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpsertHarborImage($input: UpsertImageInput!) {\\n  upsertImage(input: $input) { id repository tag digest signed createdAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"repository\": \"agent-platform/coding-goose\",\n      \"tag\": \"1.0.0\",\n      \"digest\": \"sha256:XXXXXX\",\n      \"signed\": true\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Upsert a Harbor image. Admin-only."
-          },
-          "response": []
-        },
-        {
-          "name": "DeleteHarborImage",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeleteHarborImage($id: ID!) {\\n  deleteImage(id: $id)\\n}\",\n  \"variables\": {\n    \"id\": \"REPLACE_WITH_IMAGE_ID\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Delete a Harbor image. Admin-only."
+            "description": "Query SpendReport \u2014 generated from internal/graph/testdata/client_operations/SpendReport.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         }
@@ -3538,24 +2098,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query RequestLogs($filter: RequestLogFilter, $page: PageInput) {\\n  requestLogs(filter: $filter, page: $page) {\\n    id requestId userId agentId model inputTokens outputTokens latencyMs statusCode detail createdAt\\n  }\\n}\",\n  \"variables\": {\n    \"filter\": {},\n    \"page\": {\n      \"limit\": 50,\n      \"offset\": 0\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"query RequestLogs($filter: RequestLogFilter, $page: PageInput) {\\n    requestLogs(filter: $filter, page: $page) {\\n      items {\\n        ...RequestLogFields\\n      }\\n      total\\n    }\\n  }\\n  \\n  fragment RequestLogFields on RequestLog {\\n    id\\n    requestId\\n    userId\\n    agentId\\n    model\\n    inputTokens\\n    outputTokens\\n    latencyMs\\n    statusCode\\n    detail\\n    createdAt\\n  }\",\n  \"variables\": {\n    \"$filter\": null,\n    \"$page\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Recent request logs. Requires `audit:view` permission."
+            "description": "Query RequestLogs \u2014 generated from internal/graph/testdata/client_operations/RequestLogs.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -3570,24 +2127,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query RequestMetrics($from: Time!, $to: Time!, $granularity: RequestMetricsBucketGranularity!, $filter: RequestMetricsFilter) {\\n  requestMetrics(from: $from, to: $to, granularity: $granularity, filter: $filter) {\\n    rangeStart rangeEnd granularity\\n    summary { totalRequests totalErrors errorRate avgLatencyMs p95LatencyMs totalInputTokens totalOutputTokens }\\n    buckets { timestamp requestCount errorCount avgLatencyMs p95LatencyMs inputTokensTotal outputTokensTotal }\\n  }\\n}\",\n  \"variables\": {\n    \"from\": \"2026-06-01T00:00:00Z\",\n    \"to\": \"2026-06-28T23:59:59Z\",\n    \"granularity\": \"DAY\",\n    \"filter\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"query RequestMetrics(\\n    $from: Time!\\n    $to: Time!\\n    $granularity: RequestMetricsBucketGranularity!\\n    $filter: RequestMetricsFilter\\n  ) {\\n    requestMetrics(from: $from, to: $to, granularity: $granularity, filter: $filter) {\\n      rangeStart\\n      rangeEnd\\n      granularity\\n      summary {\\n        totalRequests\\n        totalErrors\\n        errorRate\\n        avgLatencyMs\\n        p50LatencyMs\\n        p95LatencyMs\\n        p99LatencyMs\\n        totalInputTokens\\n        totalOutputTokens\\n      }\\n      buckets {\\n        timestamp\\n        requestCount\\n        errorCount\\n        avgLatencyMs\\n        p95LatencyMs\\n        inputTokensTotal\\n        outputTokensTotal\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$from\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Time-bucketed request metrics (summary + buckets). Requires `audit:view`."
+            "description": "Query RequestMetrics \u2014 generated from internal/graph/testdata/client_operations/RequestMetrics.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -3602,24 +2156,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query AuditLogs($filter: AuditFilter, $page: PageInput) {\\n  auditLogs(filter: $filter, page: $page) {\\n    items { id actorUserId action resourceType resourceId ip result detail createdAt }\\n    total\\n  }\\n}\",\n  \"variables\": {\n    \"filter\": {},\n    \"page\": {\n      \"limit\": 50,\n      \"offset\": 0\n    }\n  }\n}"
+              "raw": "{\n  \"query\": \"query AuditLogs($filter: AuditFilter, $page: PageInput) {\\n    auditLogs(filter: $filter, page: $page) {\\n      items {\\n        id\\n        actorUserId\\n        actorName\\n        action\\n        resourceType\\n        resourceId\\n        ip\\n        result\\n        detail\\n        createdAt\\n      }\\n      total\\n    }\\n  }\",\n  \"variables\": {\n    \"$filter\": null,\n    \"$page\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Audit log feed. Requires `audit:view`. Filter by `actorUserId`, `actionPrefix` (e.g. `\"user.\"` / `\"router.\"`), or `search` substring."
+            "description": "Query AuditLogs \u2014 generated from internal/graph/testdata/client_operations/AuditLogs.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },
@@ -3634,152 +2185,21 @@
               },
               {
                 "key": "Origin",
-                "value": "http://localhost:8080"
+                "value": "{{origin}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query MeteringOverview($range: MeteringTimeRange, $userId: ID) {\\n  meteringOverview(range: $range, userId: $userId) {\\n    range totalInputTokens totalOutputTokens totalTokens totalRequests\\n    byAgent { agentId agentName inputTokens outputTokens totalTokens requests cost }\\n    byModel { model inputTokens outputTokens totalTokens requests cost }\\n    byDay { date inputTokens outputTokens totalTokens requests cost }\\n    cost { totalCost monthlyCost }\\n  }\\n}\",\n  \"variables\": {\n    \"range\": \"LAST_7_DAYS\",\n    \"userId\": null\n  }\n}"
+              "raw": "{\n  \"query\": \"query MeteringOverview($range: MeteringTimeRange, $userId: ID) {\\n    meteringOverview(range: $range, userId: $userId) {\\n      range\\n      totalInputTokens\\n      totalOutputTokens\\n      totalTokens\\n      totalRequests\\n      byAgent {\\n        agentId\\n        agentName\\n        inputTokens\\n        outputTokens\\n        totalTokens\\n        requests\\n        cost\\n      }\\n      byModel {\\n        model\\n        inputTokens\\n        outputTokens\\n        totalTokens\\n        requests\\n        cost\\n      }\\n      byDay {\\n        date\\n        inputTokens\\n        outputTokens\\n        totalTokens\\n        requests\\n        cost\\n      }\\n      cost {\\n        totalCost\\n        monthlyCost\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$range\": null,\n    \"$userId\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
+              "path": []
             },
-            "description": "Aggregated metering for the \u8ba1\u91cf\u4e2d\u5fc3 over a time range. Requires `metering:view`."
-          },
-          "response": []
-        },
-        {
-          "name": "MeteringSummary",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"query MeteringSummary($userId: ID) {\\n  meteringSummary(userId: $userId) {\\n    totalInputTokens totalOutputTokens totalCost\\n    byModel { model inputTokens outputTokens cost }\\n    byAgent { agentId inputTokens outputTokens cost }\\n    byDate { date inputTokens outputTokens cost }\\n  }\\n}\",\n  \"variables\": {\n    \"userId\": null\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Token usage aggregation grouped by model/agent/date (older \u8ba1\u91cf summary shape; for the console \u8ba1\u91cf\u4e2d\u5fc3 prefer `MeteringOverview`). Requires `metering:view`."
-          },
-          "response": []
-        },
-        {
-          "name": "TokenUsage",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"query TokenUsage($userId: ID, $page: PageInput) {\\n  tokenUsage(userId: $userId, page: $page) { id userId agentId model inputTokens outputTokens cost createdAt }\\n}\",\n  \"variables\": {\n    \"userId\": null,\n    \"page\": {\n      \"limit\": 50,\n      \"offset\": 0\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Raw per-request token usage events (paged). Requires `metering:view`."
-          },
-          "response": []
-        },
-        {
-          "name": "RecordTokenUsage",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation RecordTokenUsage($input: RecordTokenUsageInput!) {\\n  recordTokenUsage(input: $input) { id userId agentId model inputTokens outputTokens cost createdAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"userId\": \"REPLACE_WITH_USER_ID\",\n      \"agentId\": null,\n      \"model\": \"gpt-4o-mini\",\n      \"inputTokens\": 120,\n      \"outputTokens\": 80,\n      \"cost\": 0.0001\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Ingest path (gateway usage callback / telemetry). Admin-only (TODO: dedicated service token)."
-          },
-          "response": []
-        },
-        {
-          "name": "RecordRequestLog",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "http://localhost:8080"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation RecordRequestLog($input: RecordRequestLogInput!) {\\n  recordRequestLog(input: $input) { id requestId userId agentId model inputTokens outputTokens latencyMs statusCode detail createdAt }\\n}\",\n  \"variables\": {\n    \"input\": {\n      \"requestId\": \"req-XXXXXX\",\n      \"userId\": null,\n      \"agentId\": null,\n      \"model\": \"gpt-4o-mini\",\n      \"inputTokens\": 120,\n      \"outputTokens\": 80,\n      \"latencyMs\": 250,\n      \"statusCode\": 200,\n      \"detail\": null\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "query"
-              ]
-            },
-            "description": "Ingest a single request log row. Admin-only."
+            "description": "Query MeteringOverview \u2014 generated from internal/graph/testdata/client_operations/MeteringOverview.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         }
