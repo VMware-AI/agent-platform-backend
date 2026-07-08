@@ -8034,15 +8034,11 @@ input IssueVirtualKeyInput {
   # ` + "`" + `models` + "`" + ` against the gateway's live model list (gatewayAvailableModels)
   # before mint.
   modelGateway: ID!
-  # Optional. Can be left unbound at issue and later set via
-  # associateVirtualKeyAgent(virtualKeyId, agentId).
-  agentId: ID
   # Friendly duration input. Accepts "<n>d" / "<n>h" / "<n>w" / "<n>m".
-  # When set, server computes expiresAt = now + duration. If both duration
-  # and expiresAt are provided, duration takes precedence (expiresAt is
-  # silently overridden; logged once at server side).
+  # The server computes expiresAt = now + duration and persists it on the
+  # returned VirtualKey. This is the ONLY way to set an expiry at issue
+  # time; callers cannot pass an absolute timestamp.
   duration: String
-  expiresAt: Time
   # Optional. Models named MUST be a subset of ` + "`" + `modelGateway` + "`" + `'s live model
   # list (verified server-side via gatewayAvailableModels). Resolver 400s
   # on stale names. Empty = omit (litellm default = no restriction).
@@ -8066,8 +8062,12 @@ input IssueVirtualKeyInput {
 }
 
 extend type Query {
-  # Real-time model list for a modelGateway (calls LiteLLM /model/list on
-  # demand — no cache). Frontend uses this to populate the issue form's
+  # Distinct model names that are bound to the given modelGateway AND
+  # have at least one backend physical model in a healthy state
+  # (status ∈ {full_healthy, partial_outage}). Sourced from the
+  # ` + "`" + `provider_models` + "`" + ` table — the periodic health-check worker keeps
+  # ` + "`" + `status` + "`" + ` up to date, so this list reflects the operator-console's
+  # "what's currently usable" view. Used to populate the issue form's
   # "Models" multi-select after the operator picks a modelGateway.
   # @hasRole: read_only or admin (matches virtualKeys permissioning).
   gatewayAvailableModels(gatewayConnectionId: ID!): [String!]!
@@ -33878,7 +33878,7 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"organizationId", "name", "modelGateway", "agentId", "duration", "expiresAt", "models", "maxBudget", "budgetDuration", "maxParallelRequests", "rpmLimit", "tpmLimit", "rpmLimitType", "tpmLimitType", "allowedRoutes", "tags", "blocked", "keyType", "autoRotate", "rotationInterval"}
+	fieldsInOrder := [...]string{"organizationId", "name", "modelGateway", "duration", "models", "maxBudget", "budgetDuration", "maxParallelRequests", "rpmLimit", "tpmLimit", "rpmLimitType", "tpmLimitType", "allowedRoutes", "tags", "blocked", "keyType", "autoRotate", "rotationInterval"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -33906,13 +33906,6 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 				return it, err
 			}
 			it.ModelGateway = data
-		case "agentId":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("agentId"))
-			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.AgentID = data
 		case "duration":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("duration"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -33920,13 +33913,6 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 				return it, err
 			}
 			it.Duration = data
-		case "expiresAt":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("expiresAt"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ExpiresAt = data
 		case "models":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("models"))
 			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)

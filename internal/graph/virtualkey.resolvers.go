@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
+	"github.com/VMware-AI/agent-platform-backend/ent/providermodel"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
@@ -59,40 +60,24 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		return nil, gqlerror.Errorf("model gateway client unavailable for gateway %q", input.ModelGateway)
 	}
 
-	// 2) Optional agent pre-bind (1:1 invariant checked here; DB partial
-	//    unique index is the authoritative race gate).
-	var agentID *uuid.UUID
-	if input.AgentID != nil {
-		aID, err := uuid.Parse(*input.AgentID)
-		if err != nil {
-			return nil, gqlerror.Errorf("invalid agentId")
-		}
-		existing, qerr := r.Ent.VirtualKey.Query().
-			Where(virtualkey.AgentIDEQ(aID), virtualkey.StatusNEQ(virtualkey.StatusRevoked)).
-			First(ctx)
-		if qerr == nil && existing != nil {
-			return nil, gqlerror.Errorf("agent %s already has active key %s", aID, existing.ID)
-		}
-		if qerr != nil && !ent.IsNotFound(qerr) {
-			return nil, qerr
-		}
-		agentID = &aID
-	}
+	// Agent binding is intentionally NOT accepted here. Agents are assigned
+	// to a key later via associateVirtualKeyAgent(virtualKeyId, agentId);
+	// that mutation is the single place where the 1:1 active-key-per-agent
+	// invariant is enforced (DB partial unique index is the race gate).
 
-	// 3) Resolve expiry: duration > expiresAt (logged once).
-	var expiresAt *time.Time
-	if input.Duration != nil && *input.Duration != "" {
-		d, ok := parseDuration(*input.Duration)
-		if !ok {
-			return nil, gqlerror.Errorf("invalid duration format %q (expected <n>d|h|w|m)", *input.Duration)
-		}
-		t := time.Now().Add(d)
-		expiresAt = &t
-	} else if input.ExpiresAt != nil {
-		expiresAt = input.ExpiresAt
+	// 2) Resolve expiry: duration is required (callers cannot pass an
+	// absolute timestamp); server computes expiresAt = now + duration.
+	if input.Duration == nil || *input.Duration == "" {
+		return nil, gqlerror.Errorf("duration is required (expected <n>d|h|w|m)")
 	}
+	d, ok := parseDuration(*input.Duration)
+	if !ok {
+		return nil, gqlerror.Errorf("invalid duration format %q (expected <n>d|h|w|m)", *input.Duration)
+	}
+	t := time.Now().Add(d)
+	expiresAt := &t
 
-	// 4) Cross-check: every model in input.Models must be in the live
+	// 3) Cross-check: every model in input.Models must be in the live
 	//    model list of the gateway (gatewayAvailableModels, real-time, no
 	//    cache). Backend-call 400s when the operator passed stale names.
 	if len(input.Models) > 0 {
@@ -115,7 +100,7 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		}
 	}
 
-	// 5) Build gateway request. Field names match the regenerated
+	// 4) Build gateway request. Field names match the regenerated
 	// gateway.GenerateKeyRequest (see internal/gateway/client.go).
 	gReq := gateway.GenerateKeyRequest{
 		OrganizationID:      input.OrganizationID,
@@ -134,13 +119,10 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		AutoRotate:          input.AutoRotate,
 		RotationInterval:    vkDerefStr(input.RotationInterval, ""),
 	}
-	// AgentID and ExpiresAt are not in the current gateway.GenerateKeyRequest
-	// struct (in-flight gateway/client.go rewrite). The platform persists them
-	// to its own row regardless, so this is wire-side inert. Follow-up:
-	// extend GenerateKeyRequest and re-enable these passes once the gateway
-	// client settles.
-	_ = agentID
-	_ = expiresAt
+	// Agent binding is platform-side only (lives on the ent.VirtualKey row
+	// via agent_id); the gateway doesn't know about agents, so no field on
+	// gateway.GenerateKeyRequest to set. Binding happens later via
+	// associateVirtualKeyAgent.
 
 	resp, err := gw.GenerateKey(ctx, gReq)
 	if err != nil {
@@ -148,7 +130,7 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		return nil, fmt.Errorf("gateway mint: %w", err)
 	}
 
-	// 6) Persist governance row.
+	// 5) Persist governance row.
 	create := r.Ent.VirtualKey.Create().
 		SetLitellmKey(resp.Key).
 		SetLitellmToken(resp.Token).
@@ -173,9 +155,8 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 	if expiresAt != nil {
 		create = create.SetExpiresAt(*expiresAt)
 	}
-	if agentID != nil {
-		create = create.SetAgentID(*agentID)
-	}
+	// agent_id is intentionally NOT set here — bound later via
+	// associateVirtualKeyAgent.
 
 	vk, err := create.Save(ctx)
 	if err != nil {
@@ -337,27 +318,39 @@ func (r *mutationResolver) AssociateVirtualKeyAgent(ctx context.Context, virtual
 	return toModelVirtualKey(ctx, r.Resolver, updated)
 }
 
-// GatewayAvailableModels returns the live model list advertised by the
-// given modelGateway. Real-time: every call hits LiteLLM /model/list on
-// demand (no cache). Used by the operator-console issue form to populate
-// the "Models" multi-select after the operator picks a modelGateway.
+// GatewayAvailableModels returns the distinct model names whose backed
+// physical model rows exist under the given modelGateway AND whose
+// health status is "at least one backend up" — i.e. status ∈
+// {full_healthy, partial_outage}. Sourced from the `provider_models`
+// table (the periodic health-check worker keeps `status` current), so
+// the list reflects what the operator can actually use right now rather
+// than whatever /model/list happens to return from the gateway. Used to
+// populate the issue form's "Models" multi-select after the operator
+// picks a modelGateway.
 func (r *queryResolver) GatewayAvailableModels(ctx context.Context, gatewayConnectionID string) ([]string, error) {
 	mgID, err := uuid.Parse(gatewayConnectionID)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid gatewayConnectionId")
 	}
-	conn, err := r.Ent.GatewayConnection.Get(ctx, mgID)
+	rows, err := r.Ent.ProviderModel.Query().
+		Where(
+			providermodel.ModelGatewayIDEQ(mgID),
+			providermodel.StatusIn(providermodel.StatusFullHealthy, providermodel.StatusPartialOutage),
+		).
+		All(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, gqlerror.Errorf("model gateway not found")
-		}
 		return nil, err
 	}
-	gw := r.buildGatewayKeyClient(ctx, conn)
-	if gw == nil {
-		return nil, gqlerror.Errorf("model gateway client unavailable")
+	seen := make(map[string]struct{}, len(rows))
+	out := make([]string, 0, len(rows))
+	for _, row := range rows {
+		if _, ok := seen[row.Name]; ok {
+			continue
+		}
+		seen[row.Name] = struct{}{}
+		out = append(out, row.Name)
 	}
-	return gw.ListAvailableModels(ctx)
+	return out, nil
 }
 
 // VirtualKeys lists keys with three optional filters: organizationId,

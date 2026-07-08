@@ -8,7 +8,7 @@
 
 ### `gatewayAvailableModels`
 
-Real-time model list for a modelGateway (calls LiteLLM /model/list on demand — no cache). Frontend uses this to populate the issue form's "Models" multi-select after the operator picks a modelGateway. @hasRole: read_only or admin (matches virtualKeys permissioning).
+Distinct model names that are bound to the given modelGateway AND have at least one backend physical model in a healthy state (status ∈ {full_healthy, partial_outage}). Sourced from the `provider_models` table — the periodic health-check worker keeps `status` up to date, so this list reflects the operator-console's "what's currently usable" view. Used to populate the issue form's "Models" multi-select after the operator picks a modelGateway. @hasRole: read_only or admin (matches virtualKeys permissioning).
 
 ```graphql
 gatewayAvailableModels(gatewayConnectionId: ID!): [String!]!
@@ -169,9 +169,7 @@ Returned only at issue / regenerate time — carries the secret, which is never 
 | `organizationId` | `String!` | Required. Drives tenant scope + LiteLLM team routing. |
 | `name` | `String!` | Required. Human-readable label. |
 | `modelGateway` | `ID!` | Required. References the GatewayConnection that issues this key and will receive every model+route check. Resolver verifies each entry in `models` against the gateway's live model list (gatewayAvailableModels) before mint. |
-| `agentId` | `ID` | Optional. Can be left unbound at issue and later set via associateVirtualKeyAgent(virtualKeyId, agentId). |
-| `duration` | `String` | Friendly duration input. Accepts "<n>d" / "<n>h" / "<n>w" / "<n>m". When set, server computes expiresAt = now + duration. If both duration and expiresAt are provided, duration takes precedence (expiresAt is silently overridden; logged once at server side). |
-| `expiresAt` | `Time` | — |
+| `duration` | `String` | Friendly duration input. Accepts "<n>d" / "<n>h" / "<n>w" / "<n>m". The server computes expiresAt = now + duration and persists it on the returned VirtualKey. This is the ONLY way to set an expiry at issue time; callers cannot pass an absolute timestamp. |
 | `models` | `[String!]` | Optional. Models named MUST be a subset of `modelGateway`'s live model list (verified server-side via gatewayAvailableModels). Resolver 400s on stale names. Empty = omit (litellm default = no restriction). |
 | `maxBudget` | `Float` | — |
 | `budgetDuration` | `String` | — |

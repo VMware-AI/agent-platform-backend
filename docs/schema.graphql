@@ -477,9 +477,7 @@ input IssueVirtualKeyInput {
 	organizationId: String!
 	name: String!
 	modelGateway: ID!
-	agentId: ID
 	duration: String
-	expiresAt: Time
 	models: [String!]
 	maxBudget: Float
 	budgetDuration: String
