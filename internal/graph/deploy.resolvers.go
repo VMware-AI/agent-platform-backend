@@ -721,3 +721,13 @@ func maskKey(key string) string {
 	return key[:4] + "****" + key[len(key)-4:]
 }
 
+
+// RequestAgentUpgrade is a stub for the generated schema contract. Full
+// implementation will be wired when the upgrade subsystem is integrated.
+func (r *mutationResolver) RequestAgentUpgrade(ctx context.Context, agentID string, targetVersion string) (bool, error) {
+	return false, fmt.Errorf("agent upgrade not yet implemented")
+}
+
+func (r *mutationResolver) UpgradeAgents(ctx context.Context, agentIds []string, targetVersion string) (int, error) {
+	return 0, fmt.Errorf("batch upgrade not yet implemented")
+}
