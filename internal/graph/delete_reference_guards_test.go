@@ -82,10 +82,12 @@ func TestDeleteDepartment_RefusedWhenHasActiveKeys(t *testing.T) {
 		t.Fatalf("CreateDepartment: %v", err)
 	}
 	did := uuid.MustParse(dept.ID)
-	// A live key minted under this department's litellm team (team_id = dept id).
+	// A live key minted under this department (organization_id = dept id; the
+	// model-routing schema replaced the prior team_id with organization_id).
 	vk, err := r.Ent.VirtualKey.Create().
-		SetLitellmKey("sk-live").SetUserID(uuid.New()).
-		SetTeamID(did.String()).SetStatus(virtualkey.StatusActive).Save(ctx)
+		SetLitellmKey("sk-live").SetMaskedKey("sk-***").SetName("dept-live-key").
+		SetModelGatewayID(uuid.New()).
+		SetOrganizationID(did.String()).SetStatus(virtualkey.StatusActive).Save(ctx)
 	if err != nil {
 		t.Fatalf("seed virtual key: %v", err)
 	}

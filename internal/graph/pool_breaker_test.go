@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-
-	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 )
 
 // TestPoolBreakerRegistry_PerEndpointIsolation: an endpoint that always
@@ -17,7 +15,7 @@ func TestPoolBreakerRegistry_PerEndpointIsolation(t *testing.T) {
 	cbA := r.get("vc-a")
 	for i := 0; i < 5; i++ {
 		_, _ = cbA.Execute(func() (any, error) {
-			return nil, &vcenter.RetryableError{Err: errors.New("connection refused")}
+			return nil, errors.New("connection refused")
 		})
 	}
 	// endpoint B has a fresh breaker; should still execute normally.

@@ -25,8 +25,9 @@ func TestAgents_ConnectionContract(t *testing.T) {
 		SetPasswordHash("x").SetRole("user").SaveX(bg)
 	bob := r.Ent.User.Create().SetUsername("bob").SetEmail("bob@corp.com").
 		SetPasswordHash("x").SetRole("user").SaveX(bg)
-	keyA := r.Ent.VirtualKey.Create().SetLitellmKey("sk-a").SetUserID(alice.ID).
-		SetModels([]string{"smart"}).SetAlias("alice-key").SaveX(bg)
+	keyA := r.Ent.VirtualKey.Create().SetLitellmKey("sk-a").
+		SetMaskedKey("sk-***").SetOrganizationID("org-conn").SetModelGatewayID(uuid.New()).
+		SetModels([]string{"smart"}).SetName("alice-key").SaveX(bg)
 
 	mk := func(name, kind string, status agent.Status, owner uuid.UUID, key *uuid.UUID) {
 		c := r.Ent.Agent.Create().SetName(name).SetAgentType(kind).

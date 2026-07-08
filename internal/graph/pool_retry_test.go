@@ -5,8 +5,6 @@ import (
 	"errors"
 	"testing"
 	"time"
-
-	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 )
 
 // TestRetrySync_ExhaustsRetriesOnRetryable: a function that always returns
@@ -16,7 +14,7 @@ func TestRetrySync_ExhaustsRetriesOnRetryable(t *testing.T) {
 	calls := 0
 	err := retrySync(context.Background(), 2, func(ctx context.Context) error {
 		calls++
-		return &vcenter.RetryableError{Err: errors.New("connection refused")}
+		return errors.New("connection refused")
 	})
 	if err == nil {
 		t.Fatal("expected non-nil after exhausting retries")
@@ -53,7 +51,7 @@ func TestRetrySync_StopsOnContextCancel(t *testing.T) {
 	calls := 0
 	err := retrySync(ctx, 5, func(ctx context.Context) error {
 		calls++
-		return &vcenter.RetryableError{Err: errors.New("transient")}
+		return errors.New("transient")
 	})
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("expected context.Canceled, got %v", err)
@@ -72,7 +70,7 @@ func TestRetrySync_SuccessAfterRetries(t *testing.T) {
 	err := retrySync(context.Background(), 3, func(ctx context.Context) error {
 		calls++
 		if calls < 2 {
-			return &vcenter.RetryableError{Err: errors.New("transient")}
+			return errors.New("transient")
 		}
 		return nil
 	})

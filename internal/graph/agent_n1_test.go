@@ -168,9 +168,10 @@ func TestAgents_NoN1_OwnerAndKeyBatched(t *testing.T) {
 	for i := range keys {
 		vk := e.ent.VirtualKey.Create().
 			SetLitellmKey("sk-" + string(rune('a'+i))).
-			SetUserID(owners[0]).
+			SetMaskedKey("sk-***").SetOrganizationID("org-n1").
+			SetModelGatewayID(uuid.New()).
 			SetModels([]string{"smart"}).
-			SetAlias("key-" + string(rune('a'+i))).SaveX(bg)
+			SetName("key-" + string(rune('a'+i))).SaveX(bg)
 		keys[i] = vk.ID
 	}
 	for i := 0; i < n; i++ {
@@ -234,8 +235,9 @@ func TestAgents_NilSafety_DeletedOwnerAndKey(t *testing.T) {
 
 	owner := e.ent.User.Create().SetUsername("ghost").SetEmail("ghost@x.io").
 		SetPasswordHash("x").SetRole("user").SaveX(bg)
-	vk := e.ent.VirtualKey.Create().SetLitellmKey("sk-ghost").SetUserID(owner.ID).
-		SetModels([]string{"smart"}).SetAlias("ghost-key").SaveX(bg)
+	vk := e.ent.VirtualKey.Create().SetLitellmKey("sk-ghost").
+		SetMaskedKey("sk-***").SetOrganizationID("org-n1").SetModelGatewayID(uuid.New()).
+		SetModels([]string{"smart"}).SetName("ghost-key").SaveX(bg)
 
 	// Agent points at an owner id and a key id that we then delete: the FK ids
 	// stay on the agent row, but the related rows vanish.
