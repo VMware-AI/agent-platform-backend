@@ -929,6 +929,7 @@ type ProviderModelInfoConnection {
 input ProviderModelInfoFilterInput {
 	search: String
 	status: ProviderModelStatus
+	modelGatewayId: ID
 }
 input ProviderModelInfoSort {
 	field: ProviderModelInfoSortField!
@@ -937,6 +938,7 @@ input ProviderModelInfoSort {
 enum ProviderModelInfoSortField {
 	NAME
 	STATUS
+	GATEWAY
 }
 enum ProviderModelProvider {
 	custom

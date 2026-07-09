@@ -636,14 +636,26 @@ func (r *queryResolver) ProviderModelInfo(ctx context.Context, filter *model.Pro
 		if filter.Status != nil {
 			q = q.Where(providermodel.StatusEQ(providermodel.Status(*filter.Status)))
 		}
+		if filter.ModelGatewayID != nil && *filter.ModelGatewayID != "" {
+			mgID, err := uuid.Parse(*filter.ModelGatewayID)
+			if err != nil {
+				return nil, gqlerror.Errorf("invalid modelGatewayId")
+			}
+			q = q.Where(providermodel.ModelGatewayIDEQ(mgID))
+		}
 	}
 
-	// Apply sort.
+	// Apply sort. Direction is intentionally not honored today — every
+	// field sorts Asc (see schema comment on ProviderModelInfoSortField).
+	// GATEWAY sorts by the FK column; ties are broken by name so the page
+	// stays stable across calls with the same gateway.
 	switch {
 	case sort != nil && sort.Field == model.ProviderModelInfoSortFieldName:
 		q = q.Order(ent.Asc(providermodel.FieldName))
 	case sort != nil && sort.Field == model.ProviderModelInfoSortFieldStatus:
 		q = q.Order(ent.Asc(providermodel.FieldStatus))
+	case sort != nil && sort.Field == model.ProviderModelInfoSortFieldGateway:
+		q = q.Order(ent.Asc(providermodel.FieldModelGatewayID), ent.Asc(providermodel.FieldName))
 	default:
 		q = q.Order(ent.Asc(providermodel.FieldStatus), ent.Asc(providermodel.FieldName))
 	}

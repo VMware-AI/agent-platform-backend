@@ -7496,10 +7496,15 @@ type ProviderModelInfoConnection {
   size: Int!
 }
 
-# 0.1.x: 只保留 NAME 与 STATUS;时间维度排序在 console UI 内部按本地时间戳兜底
+# 0.1.x: NAME / STATUS / GATEWAY sort. Direction is currently ignored
+# server-side — every field sorts Asc to match the rest of the codebase's
+# paginated-query convention. The console UI flips the visual order client-side
+# when a Desc order is requested, so a future direction-aware rewrite can land
+# in one place without breaking the wire contract.
 enum ProviderModelInfoSortField {
   NAME
   STATUS
+  GATEWAY
 }
 
 input ProviderModelInfoSort {
@@ -7510,6 +7515,10 @@ input ProviderModelInfoSort {
 input ProviderModelInfoFilterInput {
   search: String
   status: ProviderModelStatus
+  # Filter to a single modelGateway (the FK column on provider_models).
+  # Operator Console uses this to scope the model list to one gateway when
+  # the operator picks a gateway in the filter bar; null = all gateways.
+  modelGatewayId: ID
 }
 
 extend type Query {
@@ -34582,7 +34591,7 @@ func (ec *executionContext) unmarshalInputProviderModelInfoFilterInput(ctx conte
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"search", "status"}
+	fieldsInOrder := [...]string{"search", "status", "modelGatewayId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -34603,6 +34612,13 @@ func (ec *executionContext) unmarshalInputProviderModelInfoFilterInput(ctx conte
 				return it, err
 			}
 			it.Status = data
+		case "modelGatewayId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("modelGatewayId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ModelGatewayID = data
 		}
 	}
 	return it, nil

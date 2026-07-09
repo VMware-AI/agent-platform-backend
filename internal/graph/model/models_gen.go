@@ -839,8 +839,9 @@ type ProviderModelInfoConnection struct {
 }
 
 type ProviderModelInfoFilterInput struct {
-	Search *string               `json:"search,omitempty"`
-	Status *providermodel.Status `json:"status,omitempty"`
+	Search         *string               `json:"search,omitempty"`
+	Status         *providermodel.Status `json:"status,omitempty"`
+	ModelGatewayID *string               `json:"modelGatewayId,omitempty"`
 }
 
 type ProviderModelInfoSort struct {
@@ -2619,18 +2620,20 @@ func (e PasswordMode) MarshalJSON() ([]byte, error) {
 type ProviderModelInfoSortField string
 
 const (
-	ProviderModelInfoSortFieldName   ProviderModelInfoSortField = "NAME"
-	ProviderModelInfoSortFieldStatus ProviderModelInfoSortField = "STATUS"
+	ProviderModelInfoSortFieldName    ProviderModelInfoSortField = "NAME"
+	ProviderModelInfoSortFieldStatus  ProviderModelInfoSortField = "STATUS"
+	ProviderModelInfoSortFieldGateway ProviderModelInfoSortField = "GATEWAY"
 )
 
 var AllProviderModelInfoSortField = []ProviderModelInfoSortField{
 	ProviderModelInfoSortFieldName,
 	ProviderModelInfoSortFieldStatus,
+	ProviderModelInfoSortFieldGateway,
 }
 
 func (e ProviderModelInfoSortField) IsValid() bool {
 	switch e {
-	case ProviderModelInfoSortFieldName, ProviderModelInfoSortFieldStatus:
+	case ProviderModelInfoSortFieldName, ProviderModelInfoSortFieldStatus, ProviderModelInfoSortFieldGateway:
 		return true
 	}
 	return false
