@@ -65,6 +65,9 @@ type VirtualKey {
   # console's progress bar reads these directly).
   spend: Float!
   lastActiveAt: Time
+  # 前端传入的 user_id,LiteLLM gateway 也用这个值作为 user_id。
+  # 必填,IssueVirtualKeyInput 强制要求前端传值,后端不做默认。
+  userId: String!
 }
 
 # Returned only at issue / regenerate time — carries the secret, which is
@@ -121,6 +124,10 @@ input IssueVirtualKeyInput {
   keyType: String
   autoRotate: Boolean
   rotationInterval: String
+  # Required. LiteLLM /key/generate 现在校验 user_id 非空。
+  # 前端必须传一个非空字符串;后端透传到 ent.VirtualKey.user_id
+  # 和 gateway.GenerateKeyRequest.UserID,不做默认值兜底。
+  userId: String!
 }
 
 extend type Query {
