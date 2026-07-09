@@ -63,6 +63,8 @@ const (
 	FieldAutoRotate = "auto_rotate"
 	// FieldRotationInterval holds the string denoting the rotation_interval field in the database.
 	FieldRotationInterval = "rotation_interval"
+	// FieldUserID holds the string denoting the user_id field in the database.
+	FieldUserID = "user_id"
 	// FieldLastActiveAt holds the string denoting the last_active_at field in the database.
 	FieldLastActiveAt = "last_active_at"
 	// FieldSpend holds the string denoting the spend field in the database.
@@ -98,6 +100,7 @@ var Columns = []string{
 	FieldKeyType,
 	FieldAutoRotate,
 	FieldRotationInterval,
+	FieldUserID,
 	FieldLastActiveAt,
 	FieldSpend,
 }
@@ -131,6 +134,8 @@ var (
 	DefaultKeyType string
 	// DefaultAutoRotate holds the default value on creation for the "auto_rotate" field.
 	DefaultAutoRotate bool
+	// UserIDValidator is a validator for the "user_id" field. It is called by the builders before save.
+	UserIDValidator func(string) error
 	// DefaultSpend holds the default value on creation for the "spend" field.
 	DefaultSpend int
 	// DefaultID holds the default value on creation for the "id" field.
@@ -275,6 +280,11 @@ func ByAutoRotate(opts ...sql.OrderTermOption) OrderOption {
 // ByRotationInterval orders the results by the rotation_interval field.
 func ByRotationInterval(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRotationInterval, opts...).ToFunc()
+}
+
+// ByUserID orders the results by the user_id field.
+func ByUserID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUserID, opts...).ToFunc()
 }
 
 // ByLastActiveAt orders the results by the last_active_at field.

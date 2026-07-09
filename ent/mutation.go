@@ -22605,6 +22605,7 @@ type VirtualKeyMutation struct {
 	key_type                 *string
 	auto_rotate              *bool
 	rotation_interval        *string
+	user_id                  *string
 	last_active_at           *time.Time
 	spend                    *int
 	addspend                 *int
@@ -23896,6 +23897,42 @@ func (m *VirtualKeyMutation) ResetRotationInterval() {
 	delete(m.clearedFields, virtualkey.FieldRotationInterval)
 }
 
+// SetUserID sets the "user_id" field.
+func (m *VirtualKeyMutation) SetUserID(s string) {
+	m.user_id = &s
+}
+
+// UserID returns the value of the "user_id" field in the mutation.
+func (m *VirtualKeyMutation) UserID() (r string, exists bool) {
+	v := m.user_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUserID returns the old "user_id" field's value of the VirtualKey entity.
+// If the VirtualKey object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VirtualKeyMutation) OldUserID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUserID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUserID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUserID: %w", err)
+	}
+	return oldValue.UserID, nil
+}
+
+// ResetUserID resets all changes to the "user_id" field.
+func (m *VirtualKeyMutation) ResetUserID() {
+	m.user_id = nil
+}
+
 // SetLastActiveAt sets the "last_active_at" field.
 func (m *VirtualKeyMutation) SetLastActiveAt(t time.Time) {
 	m.last_active_at = &t
@@ -24049,7 +24086,7 @@ func (m *VirtualKeyMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *VirtualKeyMutation) Fields() []string {
-	fields := make([]string, 0, 26)
+	fields := make([]string, 0, 27)
 	if m.created_at != nil {
 		fields = append(fields, virtualkey.FieldCreatedAt)
 	}
@@ -24122,6 +24159,9 @@ func (m *VirtualKeyMutation) Fields() []string {
 	if m.rotation_interval != nil {
 		fields = append(fields, virtualkey.FieldRotationInterval)
 	}
+	if m.user_id != nil {
+		fields = append(fields, virtualkey.FieldUserID)
+	}
 	if m.last_active_at != nil {
 		fields = append(fields, virtualkey.FieldLastActiveAt)
 	}
@@ -24184,6 +24224,8 @@ func (m *VirtualKeyMutation) Field(name string) (ent.Value, bool) {
 		return m.AutoRotate()
 	case virtualkey.FieldRotationInterval:
 		return m.RotationInterval()
+	case virtualkey.FieldUserID:
+		return m.UserID()
 	case virtualkey.FieldLastActiveAt:
 		return m.LastActiveAt()
 	case virtualkey.FieldSpend:
@@ -24245,6 +24287,8 @@ func (m *VirtualKeyMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldAutoRotate(ctx)
 	case virtualkey.FieldRotationInterval:
 		return m.OldRotationInterval(ctx)
+	case virtualkey.FieldUserID:
+		return m.OldUserID(ctx)
 	case virtualkey.FieldLastActiveAt:
 		return m.OldLastActiveAt(ctx)
 	case virtualkey.FieldSpend:
@@ -24425,6 +24469,13 @@ func (m *VirtualKeyMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetRotationInterval(v)
+		return nil
+	case virtualkey.FieldUserID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUserID(v)
 		return nil
 	case virtualkey.FieldLastActiveAt:
 		v, ok := value.(time.Time)
@@ -24722,6 +24773,9 @@ func (m *VirtualKeyMutation) ResetField(name string) error {
 		return nil
 	case virtualkey.FieldRotationInterval:
 		m.ResetRotationInterval()
+		return nil
+	case virtualkey.FieldUserID:
+		m.ResetUserID()
 		return nil
 	case virtualkey.FieldLastActiveAt:
 		m.ResetLastActiveAt()

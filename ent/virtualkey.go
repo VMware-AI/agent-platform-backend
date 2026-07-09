@@ -67,6 +67,8 @@ type VirtualKey struct {
 	AutoRotate bool `json:"auto_rotate,omitempty"`
 	// RotationInterval holds the value of the "rotation_interval" field.
 	RotationInterval string `json:"rotation_interval,omitempty"`
+	// UserID holds the value of the "user_id" field.
+	UserID string `json:"user_id,omitempty"`
 	// LastActiveAt holds the value of the "last_active_at" field.
 	LastActiveAt *time.Time `json:"last_active_at,omitempty"`
 	// Spend holds the value of the "spend" field.
@@ -89,7 +91,7 @@ func (*VirtualKey) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case virtualkey.FieldMaxParallelRequests, virtualkey.FieldTpmLimit, virtualkey.FieldRpmLimit, virtualkey.FieldSpend:
 			values[i] = new(sql.NullInt64)
-		case virtualkey.FieldLitellmKey, virtualkey.FieldLitellmToken, virtualkey.FieldMaskedKey, virtualkey.FieldName, virtualkey.FieldTpmLimitType, virtualkey.FieldRpmLimitType, virtualkey.FieldBudgetDuration, virtualkey.FieldStatus, virtualkey.FieldKeyType, virtualkey.FieldRotationInterval:
+		case virtualkey.FieldLitellmKey, virtualkey.FieldLitellmToken, virtualkey.FieldMaskedKey, virtualkey.FieldName, virtualkey.FieldTpmLimitType, virtualkey.FieldRpmLimitType, virtualkey.FieldBudgetDuration, virtualkey.FieldStatus, virtualkey.FieldKeyType, virtualkey.FieldRotationInterval, virtualkey.FieldUserID:
 			values[i] = new(sql.NullString)
 		case virtualkey.FieldCreatedAt, virtualkey.FieldUpdatedAt, virtualkey.FieldExpiresAt, virtualkey.FieldLastActiveAt:
 			values[i] = new(sql.NullTime)
@@ -268,6 +270,12 @@ func (_m *VirtualKey) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.RotationInterval = value.String
 			}
+		case virtualkey.FieldUserID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field user_id", values[i])
+			} else if value.Valid {
+				_m.UserID = value.String
+			}
 		case virtualkey.FieldLastActiveAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field last_active_at", values[i])
@@ -390,6 +398,9 @@ func (_m *VirtualKey) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("rotation_interval=")
 	builder.WriteString(_m.RotationInterval)
+	builder.WriteString(", ")
+	builder.WriteString("user_id=")
+	builder.WriteString(_m.UserID)
 	builder.WriteString(", ")
 	if v := _m.LastActiveAt; v != nil {
 		builder.WriteString("last_active_at=")

@@ -301,6 +301,12 @@ func (_c *VirtualKeyCreate) SetNillableRotationInterval(v *string) *VirtualKeyCr
 	return _c
 }
 
+// SetUserID sets the "user_id" field.
+func (_c *VirtualKeyCreate) SetUserID(v string) *VirtualKeyCreate {
+	_c.mutation.SetUserID(v)
+	return _c
+}
+
 // SetLastActiveAt sets the "last_active_at" field.
 func (_c *VirtualKeyCreate) SetLastActiveAt(v time.Time) *VirtualKeyCreate {
 	_c.mutation.SetLastActiveAt(v)
@@ -464,6 +470,14 @@ func (_c *VirtualKeyCreate) check() error {
 	if _, ok := _c.mutation.AutoRotate(); !ok {
 		return &ValidationError{Name: "auto_rotate", err: errors.New(`ent: missing required field "VirtualKey.auto_rotate"`)}
 	}
+	if _, ok := _c.mutation.UserID(); !ok {
+		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "VirtualKey.user_id"`)}
+	}
+	if v, ok := _c.mutation.UserID(); ok {
+		if err := virtualkey.UserIDValidator(v); err != nil {
+			return &ValidationError{Name: "user_id", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.user_id": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -594,6 +608,10 @@ func (_c *VirtualKeyCreate) createSpec() (*VirtualKey, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.RotationInterval(); ok {
 		_spec.SetField(virtualkey.FieldRotationInterval, field.TypeString, value)
 		_node.RotationInterval = value
+	}
+	if value, ok := _c.mutation.UserID(); ok {
+		_spec.SetField(virtualkey.FieldUserID, field.TypeString, value)
+		_node.UserID = value
 	}
 	if value, ok := _c.mutation.LastActiveAt(); ok {
 		_spec.SetField(virtualkey.FieldLastActiveAt, field.TypeTime, value)

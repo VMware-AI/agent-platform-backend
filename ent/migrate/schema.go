@@ -753,6 +753,7 @@ var (
 		{Name: "key_type", Type: field.TypeString, Default: "default"},
 		{Name: "auto_rotate", Type: field.TypeBool, Default: false},
 		{Name: "rotation_interval", Type: field.TypeString, Nullable: true},
+		{Name: "user_id", Type: field.TypeString},
 		{Name: "last_active_at", Type: field.TypeTime, Nullable: true},
 		{Name: "spend", Type: field.TypeInt, Nullable: true, Default: 0},
 	}

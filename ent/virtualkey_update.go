@@ -451,6 +451,20 @@ func (_u *VirtualKeyUpdate) ClearRotationInterval() *VirtualKeyUpdate {
 	return _u
 }
 
+// SetUserID sets the "user_id" field.
+func (_u *VirtualKeyUpdate) SetUserID(v string) *VirtualKeyUpdate {
+	_u.mutation.SetUserID(v)
+	return _u
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (_u *VirtualKeyUpdate) SetNillableUserID(v *string) *VirtualKeyUpdate {
+	if v != nil {
+		_u.SetUserID(*v)
+	}
+	return _u
+}
+
 // SetLastActiveAt sets the "last_active_at" field.
 func (_u *VirtualKeyUpdate) SetLastActiveAt(v time.Time) *VirtualKeyUpdate {
 	_u.mutation.SetLastActiveAt(v)
@@ -559,6 +573,11 @@ func (_u *VirtualKeyUpdate) check() error {
 	if v, ok := _u.mutation.Status(); ok {
 		if err := virtualkey.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.UserID(); ok {
+		if err := virtualkey.UserIDValidator(v); err != nil {
+			return &ValidationError{Name: "user_id", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.user_id": %w`, err)}
 		}
 	}
 	return nil
@@ -719,6 +738,9 @@ func (_u *VirtualKeyUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if _u.mutation.RotationIntervalCleared() {
 		_spec.ClearField(virtualkey.FieldRotationInterval, field.TypeString)
+	}
+	if value, ok := _u.mutation.UserID(); ok {
+		_spec.SetField(virtualkey.FieldUserID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.LastActiveAt(); ok {
 		_spec.SetField(virtualkey.FieldLastActiveAt, field.TypeTime, value)
@@ -1177,6 +1199,20 @@ func (_u *VirtualKeyUpdateOne) ClearRotationInterval() *VirtualKeyUpdateOne {
 	return _u
 }
 
+// SetUserID sets the "user_id" field.
+func (_u *VirtualKeyUpdateOne) SetUserID(v string) *VirtualKeyUpdateOne {
+	_u.mutation.SetUserID(v)
+	return _u
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (_u *VirtualKeyUpdateOne) SetNillableUserID(v *string) *VirtualKeyUpdateOne {
+	if v != nil {
+		_u.SetUserID(*v)
+	}
+	return _u
+}
+
 // SetLastActiveAt sets the "last_active_at" field.
 func (_u *VirtualKeyUpdateOne) SetLastActiveAt(v time.Time) *VirtualKeyUpdateOne {
 	_u.mutation.SetLastActiveAt(v)
@@ -1298,6 +1334,11 @@ func (_u *VirtualKeyUpdateOne) check() error {
 	if v, ok := _u.mutation.Status(); ok {
 		if err := virtualkey.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.UserID(); ok {
+		if err := virtualkey.UserIDValidator(v); err != nil {
+			return &ValidationError{Name: "user_id", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.user_id": %w`, err)}
 		}
 	}
 	return nil
@@ -1475,6 +1516,9 @@ func (_u *VirtualKeyUpdateOne) sqlSave(ctx context.Context) (_node *VirtualKey, 
 	}
 	if _u.mutation.RotationIntervalCleared() {
 		_spec.ClearField(virtualkey.FieldRotationInterval, field.TypeString)
+	}
+	if value, ok := _u.mutation.UserID(); ok {
+		_spec.SetField(virtualkey.FieldUserID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.LastActiveAt(); ok {
 		_spec.SetField(virtualkey.FieldLastActiveAt, field.TypeTime, value)

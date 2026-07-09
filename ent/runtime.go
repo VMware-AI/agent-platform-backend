@@ -807,8 +807,12 @@ func init() {
 	virtualkeyDescAutoRotate := virtualkeyFields[21].Descriptor()
 	// virtualkey.DefaultAutoRotate holds the default value on creation for the auto_rotate field.
 	virtualkey.DefaultAutoRotate = virtualkeyDescAutoRotate.Default.(bool)
+	// virtualkeyDescUserID is the schema descriptor for user_id field.
+	virtualkeyDescUserID := virtualkeyFields[23].Descriptor()
+	// virtualkey.UserIDValidator is a validator for the "user_id" field. It is called by the builders before save.
+	virtualkey.UserIDValidator = virtualkeyDescUserID.Validators[0].(func(string) error)
 	// virtualkeyDescSpend is the schema descriptor for spend field.
-	virtualkeyDescSpend := virtualkeyFields[24].Descriptor()
+	virtualkeyDescSpend := virtualkeyFields[25].Descriptor()
 	// virtualkey.DefaultSpend holds the default value on creation for the spend field.
 	virtualkey.DefaultSpend = virtualkeyDescSpend.Default.(int)
 	// virtualkeyDescID is the schema descriptor for id field.
