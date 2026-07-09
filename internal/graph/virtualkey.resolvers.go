@@ -38,6 +38,9 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 	if input.ModelGateway == "" {
 		return nil, gqlerror.Errorf("modelGateway is required")
 	}
+	if input.UserID == "" {
+		return nil, gqlerror.Errorf("userId is required")
+	}
 
 	// 1) Direct gateway lookup by id (replaces the prior
 	//    team→department→gateway derivation).
@@ -115,6 +118,7 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 	// `metadata.tags` (matches the deploy flows' `metadata: map[...]`
 	// usage and lets us grow metadata without more top-level fields).
 	gReq := gateway.GenerateKeyRequest{
+		UserID:              input.UserID,
 		Models:              input.Models,
 		MaxBudget:           input.MaxBudget,
 		BudgetDuration:      vkDerefStr(input.BudgetDuration, ""),
@@ -145,6 +149,7 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		SetLitellmKey(resp.Key).
 		SetLitellmToken(resp.Token).
 		SetMaskedKey(redactKey(resp.Key)).
+		SetUserID(input.UserID).
 		SetName(input.Name).
 		SetModelGatewayID(mgID).
 		SetModels(input.Models).
