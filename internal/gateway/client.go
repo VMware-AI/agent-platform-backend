@@ -166,7 +166,12 @@ type TeamInfo struct {
 // GenerateKeyRequest mints a per-user virtual key (LLD-04 §3). Budget/rate
 // limits are set HERE (per-key), never globally (research §2.3).
 type GenerateKeyRequest struct {
-	UserID              string   `json:"user_id,omitempty"`
+	UserID string `json:"user_id,omitempty"`
+	// KeyAlias is the human-readable name forwarded to LiteLLM as `key_alias`.
+	// The platform-side ent.VirtualKey.Name is the source of truth for our
+	// display; we mirror it onto the gateway so /key/list shows it too and
+	// spend.go's list-render path can use it as a label.
+	KeyAlias            string   `json:"key_alias,omitempty"`
 	TeamID              string   `json:"team_id,omitempty"`
 	Models              []string `json:"models,omitempty"`
 	MaxBudget           *float64 `json:"max_budget,omitempty"`

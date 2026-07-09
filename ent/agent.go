@@ -46,7 +46,28 @@ type Agent struct {
 	TenantID *uuid.UUID `json:"tenant_id,omitempty"`
 	// EnvironmentID holds the value of the "environment_id" field.
 	EnvironmentID *uuid.UUID `json:"environment_id,omitempty"`
-	selectValues  sql.SelectValues
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the AgentQuery when eager-loading is set.
+	Edges        AgentEdges `json:"edges"`
+	selectValues sql.SelectValues
+}
+
+// AgentEdges holds the relations/edges for other nodes in the graph.
+type AgentEdges struct {
+	// VirtualKeys holds the value of the virtual_keys edge.
+	VirtualKeys []*VirtualKey `json:"virtual_keys,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// VirtualKeysOrErr returns the VirtualKeys value or an error if the edge
+// was not loaded in eager-loading.
+func (e AgentEdges) VirtualKeysOrErr() ([]*VirtualKey, error) {
+	if e.loadedTypes[0] {
+		return e.VirtualKeys, nil
+	}
+	return nil, &NotLoadedError{edge: "virtual_keys"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -185,6 +206,11 @@ func (_m *Agent) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *Agent) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryVirtualKeys queries the "virtual_keys" edge of the Agent entity.
+func (_m *Agent) QueryVirtualKeys() *VirtualKeyQuery {
+	return NewAgentClient(_m.config).QueryVirtualKeys(_m)
 }
 
 // Update returns a builder for updating this Agent.

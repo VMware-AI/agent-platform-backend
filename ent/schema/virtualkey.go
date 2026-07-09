@@ -3,6 +3,7 @@ package schema
 import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -73,6 +74,22 @@ func (VirtualKey) Fields() []ent.Field {
 		field.String("user_id").NotEmpty(),
 		field.Time("last_active_at").Optional().Nillable(),
 		field.Int("spend").Optional().Default(0),
+	}
+}
+
+func (VirtualKey) Edges() []ent.Edge {
+	return []ent.Edge{
+		// Soft FK on agent_id → Agent. The column stays as a plain UUID
+		// field (no FK constraint) — see tenant_scope.go on the "soft
+		// reference" rationale. The edge is what gives GraphQL the
+		// `agent: Agent` nested-object field without a hand-rolled join.
+		// "virtual_keys" is the canonical Ref name; the Agent side has no
+		// matching edge (one-directional by design — see schema/agent.go
+		// for the rationale on skipping the back-edge).
+		edge.From("agent", Agent.Type).
+			Ref("virtual_keys").
+			Field("agent_id").
+			Unique(),
 	}
 }
 

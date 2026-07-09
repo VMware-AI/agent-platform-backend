@@ -1012,7 +1012,7 @@ type Query {
 	contentLibraryItems(resourcePoolId: ID!, libraryName: String!): [ContentLibraryItem!]! @hasRole(any: [admin])
 	platformSettings: PlatformSettings! @hasRole(any: [admin])
 	gatewayAvailableModels(gatewayConnectionId: ID!): [String!]! @hasRole(any: [admin,read_only])
-	virtualKeys(agentId: ID, modelGateway: ID): [VirtualKey!]! @hasRole(any: [admin,read_only])
+	virtualKeys(agentName: String, modelGateway: ID, nameContains: String, modelContains: String, orderBy: VirtualKeyOrderBy): [VirtualKey!]! @hasRole(any: [admin,read_only])
 }
 input RecordRequestLogInput {
 	requestId: String!
@@ -1418,7 +1418,7 @@ type VirtualKey {
 	name: String!
 	maskedKey: String!
 	modelGateway: ModelGateway!
-	agentId: ID
+	agent: Agent
 	models: [String!]!
 	maxBudget: Float
 	status: VirtualKeyStatus!
@@ -1441,6 +1441,11 @@ type VirtualKey {
 	spend: Float!
 	lastActiveAt: Time
 	userId: String!
+}
+enum VirtualKeyOrderBy {
+	CREATED_DESC
+	NAME_ASC
+	NAME_DESC
 }
 enum VirtualKeyStatus {
 	active

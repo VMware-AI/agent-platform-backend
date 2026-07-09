@@ -735,7 +735,6 @@ var (
 		{Name: "litellm_token", Type: field.TypeString, Nullable: true},
 		{Name: "masked_key", Type: field.TypeString},
 		{Name: "name", Type: field.TypeString},
-		{Name: "agent_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "model_gateway_id", Type: field.TypeUUID},
 		{Name: "models", Type: field.TypeJSON, Nullable: true},
 		{Name: "max_budget", Type: field.TypeFloat64, Nullable: true},
@@ -756,17 +755,26 @@ var (
 		{Name: "user_id", Type: field.TypeString},
 		{Name: "last_active_at", Type: field.TypeTime, Nullable: true},
 		{Name: "spend", Type: field.TypeInt, Nullable: true, Default: 0},
+		{Name: "agent_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// VirtualKeysTable holds the schema information for the "virtual_keys" table.
 	VirtualKeysTable = &schema.Table{
 		Name:       "virtual_keys",
 		Columns:    VirtualKeysColumns,
 		PrimaryKey: []*schema.Column{VirtualKeysColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "virtual_keys_agents_virtual_keys",
+				Columns:    []*schema.Column{VirtualKeysColumns[27]},
+				RefColumns: []*schema.Column{AgentsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "virtualkey_agent_id",
 				Unique:  true,
-				Columns: []*schema.Column{VirtualKeysColumns[7]},
+				Columns: []*schema.Column{VirtualKeysColumns[27]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "status <> 'revoked'",
 				},
@@ -886,6 +894,7 @@ var (
 
 func init() {
 	OvaTemplateVersionsTable.ForeignKeys[0].RefTable = OvaTemplateFamiliesTable
+	VirtualKeysTable.ForeignKeys[0].RefTable = AgentsTable
 	AgentConfigKnowledgeTable.ForeignKeys[0].RefTable = AgentConfigsTable
 	AgentConfigKnowledgeTable.ForeignKeys[1].RefTable = ArtifactsTable
 	RolePermissionsTable.ForeignKeys[0].RefTable = RolesTable

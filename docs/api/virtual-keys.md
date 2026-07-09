@@ -23,10 +23,10 @@ gatewayAvailableModels(gatewayConnectionId: ID!): [String!]!
 
 ### `virtualKeys`
 
-agentId and modelGateway are independent optional filters; all null → all keys in the current tenant. Multiple set → intersection.
+agentName, modelGateway, nameContains, and modelContains are independent optional filters; all null → all keys in the current tenant. Multiple set → intersection. - agentName: case-insensitive substring match against the bound agent's `name` (via virtualkey.HasAgentWith — a single subquery, not N+1). Empty/missing `agent` rows (just-issued keys) are excluded. - nameContains: case-insensitive substring match on the human-readable name (ent.NameContainsFold; unindexed). - modelContains: case-insensitive substring match against ANY element of the `models` array (raw SQL EXISTS/unnest; unindexed). Accepts a partial model id like "gpt-4" and matches e.g. "openai/gpt-4o". orderBy defaults to CREATED_DESC (newest first); NAME_ASC / NAME_DESC sort by the human-readable name.
 
 ```graphql
-virtualKeys(agentId: ID, modelGateway: ID): [VirtualKey!]!
+virtualKeys(agentName: String, modelGateway: ID, nameContains: String, modelContains: String, orderBy: VirtualKeyOrderBy): [VirtualKey!]!
 ```
 
 - **Returns:** `[VirtualKey!]!`
@@ -34,8 +34,11 @@ virtualKeys(agentId: ID, modelGateway: ID): [VirtualKey!]!
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
-| `agentId` | `ID` | no | — |
+| `agentName` | `String` | no | — |
 | `modelGateway` | `ID` | no | — |
+| `nameContains` | `String` | no | — |
+| `modelContains` | `String` | no | — |
+| `orderBy` | `VirtualKeyOrderBy` | no | — |
 
 ## Mutations
 
@@ -135,7 +138,7 @@ Returned only at issue / regenerate time — carries the secret, which is never 
 | `name` | `String!` | Human-readable label. Required since 2026-07 refactor. |
 | `maskedKey` | `String!` | Persistent, safe-to-display preview of the secret (e.g. "sk-aBcD...XyZ"). Always populated; updated alongside any secret change. |
 | `modelGateway` | `ModelGateway!` | Nested object: the modelGateway that issued this key. Maps to the ent `model_gateway_id` column (renamed from `gateway_connection_id`). Required since per-agent-per-org refactor — every VirtualKey is bound to exactly one modelGateway. The frontend renders this as the "gateway" pill on the operator console. |
-| `agentId` | `ID` | — |
+| `agent` | `Agent` | Nested agent object bound to this key (loaded via the ent `agent_id` → `agent` edge). Null when the key has not been bound yet (e.g. just-issued, before associateVirtualKeyAgent runs). The 1:1 active-key-per-agent invariant is enforced by a DB partial unique index; see IssueVirtualKey / associateVirtualKeyAgent. |
 | `models` | `[String!]!` | — |
 | `maxBudget` | `Float` | — |
 | `status` | `VirtualKeyStatus!` | — |
@@ -206,6 +209,16 @@ RoutePermission — frontend multi-select enum mapped to /v1/* paths (LiteLLM de
 | `EMBEDDINGS` | — |
 | `IMAGES` | — |
 | `AUDIO` | — |
+
+### VirtualKeyOrderBy
+
+*Enum*
+
+| Value | Description |
+|-------|-------------|
+| `CREATED_DESC` | — |
+| `NAME_ASC` | — |
+| `NAME_DESC` | — |
 
 ### VirtualKeyStatus
 

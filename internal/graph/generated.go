@@ -743,7 +743,7 @@ type ComplexityRoot struct {
 		UserRoles               func(childComplexity int, userID string) int
 		Users                   func(childComplexity int, filter *model.UserFilter, pagination *model.Pagination, sort *model.UserSort) int
 		VMTemplates             func(childComplexity int, resourcePoolID string) int
-		VirtualKeys             func(childComplexity int, agentID *string, modelGateway *string) int
+		VirtualKeys             func(childComplexity int, agentName *string, modelGateway *string, nameContains *string, modelContains *string, orderBy *model.VirtualKeyOrderBy) int
 		VsphereNetworks         func(childComplexity int, resourcePoolID string) int
 		VsphereResourcePools    func(childComplexity int, resourcePoolID string) int
 	}
@@ -945,7 +945,7 @@ type ComplexityRoot struct {
 	}
 
 	VirtualKey struct {
-		AgentID             func(childComplexity int) int
+		Agent               func(childComplexity int) int
 		AllowedRoutes       func(childComplexity int) int
 		AutoRotate          func(childComplexity int) int
 		Blocked             func(childComplexity int) int
@@ -1142,7 +1142,7 @@ type QueryResolver interface {
 	ContentLibraryItems(ctx context.Context, resourcePoolID string, libraryName string) ([]model.ContentLibraryItem, error)
 	PlatformSettings(ctx context.Context) (*model.PlatformSettings, error)
 	GatewayAvailableModels(ctx context.Context, gatewayConnectionID string) ([]string, error)
-	VirtualKeys(ctx context.Context, agentID *string, modelGateway *string) ([]model.VirtualKey, error)
+	VirtualKeys(ctx context.Context, agentName *string, modelGateway *string, nameContains *string, modelContains *string, orderBy *model.VirtualKeyOrderBy) ([]model.VirtualKey, error)
 }
 type UserResolver interface {
 	DisplayName(ctx context.Context, obj *model.User) (string, error)
@@ -4704,7 +4704,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Query.VirtualKeys(childComplexity, args["agentId"].(*string), args["modelGateway"].(*string)), true
+		return e.ComplexityRoot.Query.VirtualKeys(childComplexity, args["agentName"].(*string), args["modelGateway"].(*string), args["nameContains"].(*string), args["modelContains"].(*string), args["orderBy"].(*model.VirtualKeyOrderBy)), true
 	case "Query.vsphereNetworks":
 		if e.ComplexityRoot.Query.VsphereNetworks == nil {
 			break
@@ -5479,12 +5479,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.VMTemplate.UUID(childComplexity), true
 
-	case "VirtualKey.agentId":
-		if e.ComplexityRoot.VirtualKey.AgentID == nil {
+	case "VirtualKey.agent":
+		if e.ComplexityRoot.VirtualKey.Agent == nil {
 			break
 		}
 
-		return e.ComplexityRoot.VirtualKey.AgentID(childComplexity), true
+		return e.ComplexityRoot.VirtualKey.Agent(childComplexity), true
 	case "VirtualKey.allowedRoutes":
 		if e.ComplexityRoot.VirtualKey.AllowedRoutes == nil {
 			break
@@ -7981,7 +7981,12 @@ type VirtualKey {
   # to exactly one modelGateway. The frontend renders this as the
   # "gateway" pill on the operator console.
   modelGateway: ModelGateway!
-  agentId: ID
+  # Nested agent object bound to this key (loaded via the ent
+  # ` + "`" + `agent_id` + "`" + ` → ` + "`" + `agent` + "`" + ` edge). Null when the key has not been bound yet
+  # (e.g. just-issued, before associateVirtualKeyAgent runs). The 1:1
+  # active-key-per-agent invariant is enforced by a DB partial unique
+  # index; see IssueVirtualKey / associateVirtualKeyAgent.
+  agent: Agent
   models: [String!]!
   maxBudget: Float
   status: VirtualKeyStatus!
@@ -8090,10 +8095,34 @@ extend type Query {
   gatewayAvailableModels(gatewayConnectionId: ID!): [String!]!
     @hasRole(any: [admin, read_only])
 
-  # agentId and modelGateway are independent optional filters; all null
-  # → all keys in the current tenant. Multiple set → intersection.
-  virtualKeys(agentId: ID, modelGateway: ID): [VirtualKey!]!
+  # agentName, modelGateway, nameContains, and modelContains are independent
+  # optional filters; all null → all keys in the current tenant. Multiple
+  # set → intersection.
+  # - agentName: case-insensitive substring match against the bound
+  #   agent's ` + "`" + `name` + "`" + ` (via virtualkey.HasAgentWith — a single subquery,
+  #   not N+1). Empty/missing ` + "`" + `agent` + "`" + ` rows (just-issued keys) are
+  #   excluded.
+  # - nameContains: case-insensitive substring match on the human-readable
+  #   name (ent.NameContainsFold; unindexed).
+  # - modelContains: case-insensitive substring match against ANY element
+  #   of the ` + "`" + `models` + "`" + ` array (raw SQL EXISTS/unnest; unindexed). Accepts a
+  #   partial model id like "gpt-4" and matches e.g. "openai/gpt-4o".
+  # orderBy defaults to CREATED_DESC (newest first); NAME_ASC / NAME_DESC
+  # sort by the human-readable name.
+  virtualKeys(
+    agentName: String,
+    modelGateway: ID,
+    nameContains: String,
+    modelContains: String,
+    orderBy: VirtualKeyOrderBy
+  ): [VirtualKey!]!
     @hasRole(any: [admin, read_only])
+}
+
+enum VirtualKeyOrderBy {
+  CREATED_DESC
+  NAME_ASC
+  NAME_DESC
 }
 
 extend type Mutation {
@@ -9666,8 +9695,8 @@ func (ec *executionContext) childFields_VirtualKey(ctx context.Context, field gr
 		return ec.fieldContext_VirtualKey_maskedKey(ctx, field)
 	case "modelGateway":
 		return ec.fieldContext_VirtualKey_modelGateway(ctx, field)
-	case "agentId":
-		return ec.fieldContext_VirtualKey_agentId(ctx, field)
+	case "agent":
+		return ec.fieldContext_VirtualKey_agent(ctx, field)
 	case "models":
 		return ec.fieldContext_VirtualKey_models(ctx, field)
 	case "maxBudget":
@@ -11803,14 +11832,14 @@ func (ec *executionContext) field_Query_users_args(ctx context.Context, rawArgs 
 func (ec *executionContext) field_Query_virtualKeys_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "agentId",
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "agentName",
 		func(ctx context.Context, v any) (*string, error) {
-			return ec.unmarshalOID2ᚖstring(ctx, v)
+			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["agentId"] = arg0
+	args["agentName"] = arg0
 	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "modelGateway",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOID2ᚖstring(ctx, v)
@@ -11819,6 +11848,30 @@ func (ec *executionContext) field_Query_virtualKeys_args(ctx context.Context, ra
 		return nil, err
 	}
 	args["modelGateway"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "nameContains",
+		func(ctx context.Context, v any) (*string, error) {
+			return ec.unmarshalOString2ᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["nameContains"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "modelContains",
+		func(ctx context.Context, v any) (*string, error) {
+			return ec.unmarshalOString2ᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["modelContains"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "orderBy",
+		func(ctx context.Context, v any) (*model.VirtualKeyOrderBy, error) {
+			return ec.unmarshalOVirtualKeyOrderBy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKeyOrderBy(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["orderBy"] = arg4
 	return args, nil
 }
 
@@ -27867,7 +27920,7 @@ func (ec *executionContext) _Query_virtualKeys(ctx context.Context, field graphq
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().VirtualKeys(ctx, fc.Args["agentId"].(*string), fc.Args["modelGateway"].(*string))
+			return ec.Resolvers.Query().VirtualKeys(ctx, fc.Args["agentName"].(*string), fc.Args["modelGateway"].(*string), fc.Args["nameContains"].(*string), fc.Args["modelContains"].(*string), fc.Args["orderBy"].(*model.VirtualKeyOrderBy))
 		},
 		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
 			directive0 := next
@@ -31050,27 +31103,36 @@ func (ec *executionContext) fieldContext_VirtualKey_modelGateway(_ context.Conte
 	return fc, nil
 }
 
-func (ec *executionContext) _VirtualKey_agentId(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
+func (ec *executionContext) _VirtualKey_agent(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_VirtualKey_agentId(ctx, field)
+			return ec.fieldContext_VirtualKey_agent(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return obj.AgentID, nil
+			return obj.Agent, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
-			return ec.marshalOID2ᚖstring(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Agent) graphql.Marshaler {
+			return ec.marshalOAgent2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgent(ctx, selections, v)
 		},
 		true,
 		false,
 	)
 }
-func (ec *executionContext) fieldContext_VirtualKey_agentId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type ID does not have child fields"))
+func (ec *executionContext) fieldContext_VirtualKey_agent(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VirtualKey",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Agent(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _VirtualKey_models(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
@@ -43968,8 +44030,8 @@ func (ec *executionContext) _VirtualKey(ctx context.Context, sel ast.SelectionSe
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "agentId":
-			out.Values[i] = ec._VirtualKey_agentId(ctx, field, obj)
+		case "agent":
+			out.Values[i] = ec._VirtualKey_agent(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
@@ -47314,6 +47376,13 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 	return res
 }
 
+func (ec *executionContext) marshalOAgent2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgent(ctx context.Context, sel ast.SelectionSet, v *model.Agent) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Agent(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalOAgentApiKey2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentAPIKey(ctx context.Context, sel ast.SelectionSet, v *model.AgentAPIKey) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -47893,6 +47962,22 @@ func (ec *executionContext) unmarshalOVAppPropertyInput2ᚕgithubᚗcomᚋVMware
 		}
 	}
 	return res, nil
+}
+
+func (ec *executionContext) unmarshalOVirtualKeyOrderBy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKeyOrderBy(ctx context.Context, v any) (*model.VirtualKeyOrderBy, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.VirtualKeyOrderBy)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOVirtualKeyOrderBy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKeyOrderBy(ctx context.Context, sel ast.SelectionSet, v *model.VirtualKeyOrderBy) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

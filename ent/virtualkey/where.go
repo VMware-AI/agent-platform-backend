@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
 	"github.com/google/uuid"
 )
@@ -538,26 +539,6 @@ func AgentIDIn(vs ...uuid.UUID) predicate.VirtualKey {
 // AgentIDNotIn applies the NotIn predicate on the "agent_id" field.
 func AgentIDNotIn(vs ...uuid.UUID) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldNotIn(FieldAgentID, vs...))
-}
-
-// AgentIDGT applies the GT predicate on the "agent_id" field.
-func AgentIDGT(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldGT(FieldAgentID, v))
-}
-
-// AgentIDGTE applies the GTE predicate on the "agent_id" field.
-func AgentIDGTE(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldGTE(FieldAgentID, v))
-}
-
-// AgentIDLT applies the LT predicate on the "agent_id" field.
-func AgentIDLT(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldLT(FieldAgentID, v))
-}
-
-// AgentIDLTE applies the LTE predicate on the "agent_id" field.
-func AgentIDLTE(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldLTE(FieldAgentID, v))
 }
 
 // AgentIDIsNil applies the IsNil predicate on the "agent_id" field.
@@ -1458,6 +1439,29 @@ func SpendIsNil() predicate.VirtualKey {
 // SpendNotNil applies the NotNil predicate on the "spend" field.
 func SpendNotNil() predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldNotNull(FieldSpend))
+}
+
+// HasAgent applies the HasEdge predicate on the "agent" edge.
+func HasAgent() predicate.VirtualKey {
+	return predicate.VirtualKey(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, AgentTable, AgentColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAgentWith applies the HasEdge predicate on the "agent" edge with a given conditions (other predicates).
+func HasAgentWith(preds ...predicate.Agent) predicate.VirtualKey {
+	return predicate.VirtualKey(func(s *sql.Selector) {
+		step := newAgentStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

@@ -1259,7 +1259,7 @@ type VirtualKey struct {
 	Name                string           `json:"name"`
 	MaskedKey           string           `json:"maskedKey"`
 	ModelGateway        *ModelGateway    `json:"modelGateway"`
-	AgentID             *string          `json:"agentId,omitempty"`
+	Agent               *Agent           `json:"agent,omitempty"`
 	Models              []string         `json:"models"`
 	MaxBudget           *float64         `json:"maxBudget,omitempty"`
 	Status              VirtualKeyStatus `json:"status"`
@@ -3322,6 +3322,63 @@ func (e *UserSortField) UnmarshalJSON(b []byte) error {
 }
 
 func (e UserSortField) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type VirtualKeyOrderBy string
+
+const (
+	VirtualKeyOrderByCreatedDesc VirtualKeyOrderBy = "CREATED_DESC"
+	VirtualKeyOrderByNameAsc     VirtualKeyOrderBy = "NAME_ASC"
+	VirtualKeyOrderByNameDesc    VirtualKeyOrderBy = "NAME_DESC"
+)
+
+var AllVirtualKeyOrderBy = []VirtualKeyOrderBy{
+	VirtualKeyOrderByCreatedDesc,
+	VirtualKeyOrderByNameAsc,
+	VirtualKeyOrderByNameDesc,
+}
+
+func (e VirtualKeyOrderBy) IsValid() bool {
+	switch e {
+	case VirtualKeyOrderByCreatedDesc, VirtualKeyOrderByNameAsc, VirtualKeyOrderByNameDesc:
+		return true
+	}
+	return false
+}
+
+func (e VirtualKeyOrderBy) String() string {
+	return string(e)
+}
+
+func (e *VirtualKeyOrderBy) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = VirtualKeyOrderBy(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid VirtualKeyOrderBy", str)
+	}
+	return nil
+}
+
+func (e VirtualKeyOrderBy) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *VirtualKeyOrderBy) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e VirtualKeyOrderBy) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

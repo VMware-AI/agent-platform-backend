@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/google/uuid"
 )
@@ -349,6 +350,11 @@ func (_c *VirtualKeyCreate) SetNillableID(v *uuid.UUID) *VirtualKeyCreate {
 	return _c
 }
 
+// SetAgent sets the "agent" edge to the Agent entity.
+func (_c *VirtualKeyCreate) SetAgent(v *Agent) *VirtualKeyCreate {
+	return _c.SetAgentID(v.ID)
+}
+
 // Mutation returns the VirtualKeyMutation object of the builder.
 func (_c *VirtualKeyCreate) Mutation() *VirtualKeyMutation {
 	return _c.mutation
@@ -537,10 +543,6 @@ func (_c *VirtualKeyCreate) createSpec() (*VirtualKey, *sqlgraph.CreateSpec) {
 		_spec.SetField(virtualkey.FieldName, field.TypeString, value)
 		_node.Name = value
 	}
-	if value, ok := _c.mutation.AgentID(); ok {
-		_spec.SetField(virtualkey.FieldAgentID, field.TypeUUID, value)
-		_node.AgentID = &value
-	}
 	if value, ok := _c.mutation.ModelGatewayID(); ok {
 		_spec.SetField(virtualkey.FieldModelGatewayID, field.TypeUUID, value)
 		_node.ModelGatewayID = value
@@ -620,6 +622,23 @@ func (_c *VirtualKeyCreate) createSpec() (*VirtualKey, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Spend(); ok {
 		_spec.SetField(virtualkey.FieldSpend, field.TypeInt, value)
 		_node.Spend = value
+	}
+	if nodes := _c.mutation.AgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   virtualkey.AgentTable,
+			Columns: []string{virtualkey.AgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.AgentID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

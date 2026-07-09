@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -13,17 +14,19 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
+	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/google/uuid"
 )
 
 // AgentQuery is the builder for querying Agent entities.
 type AgentQuery struct {
 	config
-	ctx        *QueryContext
-	order      []agent.OrderOption
-	inters     []Interceptor
-	predicates []predicate.Agent
-	modifiers  []func(*sql.Selector)
+	ctx             *QueryContext
+	order           []agent.OrderOption
+	inters          []Interceptor
+	predicates      []predicate.Agent
+	withVirtualKeys *VirtualKeyQuery
+	modifiers       []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -58,6 +61,28 @@ func (_q *AgentQuery) Unique(unique bool) *AgentQuery {
 func (_q *AgentQuery) Order(o ...agent.OrderOption) *AgentQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryVirtualKeys chains the current query on the "virtual_keys" edge.
+func (_q *AgentQuery) QueryVirtualKeys() *VirtualKeyQuery {
+	query := (&VirtualKeyClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agent.Table, agent.FieldID, selector),
+			sqlgraph.To(virtualkey.Table, virtualkey.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, agent.VirtualKeysTable, agent.VirtualKeysColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Agent entity from the query.
@@ -247,16 +272,28 @@ func (_q *AgentQuery) Clone() *AgentQuery {
 		return nil
 	}
 	return &AgentQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]agent.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.Agent{}, _q.predicates...),
+		config:          _q.config,
+		ctx:             _q.ctx.Clone(),
+		order:           append([]agent.OrderOption{}, _q.order...),
+		inters:          append([]Interceptor{}, _q.inters...),
+		predicates:      append([]predicate.Agent{}, _q.predicates...),
+		withVirtualKeys: _q.withVirtualKeys.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
 		modifiers: append([]func(*sql.Selector){}, _q.modifiers...),
 	}
+}
+
+// WithVirtualKeys tells the query-builder to eager-load the nodes that are connected to
+// the "virtual_keys" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *AgentQuery) WithVirtualKeys(opts ...func(*VirtualKeyQuery)) *AgentQuery {
+	query := (&VirtualKeyClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withVirtualKeys = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -335,8 +372,11 @@ func (_q *AgentQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *AgentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Agent, error) {
 	var (
-		nodes = []*Agent{}
-		_spec = _q.querySpec()
+		nodes       = []*Agent{}
+		_spec       = _q.querySpec()
+		loadedTypes = [1]bool{
+			_q.withVirtualKeys != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Agent).scanValues(nil, columns)
@@ -344,6 +384,7 @@ func (_q *AgentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Agent,
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Agent{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	if len(_q.modifiers) > 0 {
@@ -358,7 +399,48 @@ func (_q *AgentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Agent,
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withVirtualKeys; query != nil {
+		if err := _q.loadVirtualKeys(ctx, query, nodes,
+			func(n *Agent) { n.Edges.VirtualKeys = []*VirtualKey{} },
+			func(n *Agent, e *VirtualKey) { n.Edges.VirtualKeys = append(n.Edges.VirtualKeys, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *AgentQuery) loadVirtualKeys(ctx context.Context, query *VirtualKeyQuery, nodes []*Agent, init func(*Agent), assign func(*Agent, *VirtualKey)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Agent)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(virtualkey.FieldAgentID)
+	}
+	query.Where(predicate.VirtualKey(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(agent.VirtualKeysColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.AgentID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "agent_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "agent_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (_q *AgentQuery) sqlCount(ctx context.Context) (int, error) {

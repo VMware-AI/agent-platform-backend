@@ -11,7 +11,9 @@ import (
 	"log"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"github.com/VMware-AI/agent-platform-backend/ent"
+	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/providermodel"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
@@ -118,7 +120,12 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 	// `metadata.tags` (matches the deploy flows' `metadata: map[...]`
 	// usage and lets us grow metadata without more top-level fields).
 	gReq := gateway.GenerateKeyRequest{
-		UserID:              input.UserID,
+		UserID: input.UserID,
+		// Mirror the platform-side name onto LiteLLM's `key_alias` so
+		// /key/list and spend reports show it (spend.go falls back to
+		// KeyAlias when present). ent.VirtualKey.Name remains the
+		// source of truth on our side.
+		KeyAlias:            input.Name,
 		Models:              input.Models,
 		MaxBudget:           input.MaxBudget,
 		BudgetDuration:      vkDerefStr(input.BudgetDuration, ""),
@@ -245,7 +252,7 @@ func (r *mutationResolver) RegenerateVirtualKey(ctx context.Context, id string) 
 		r.audit(ctx, "key.regenerate", "virtual_key", vkID.String(), false, actorID(auth.FromContext(ctx)))
 		return nil, fmt.Errorf("gateway regenerate: %w", err)
 	}
-	updated, err := r.Ent.VirtualKey.UpdateOneID(vkID).
+	_, err = r.Ent.VirtualKey.UpdateOneID(vkID).
 		SetLitellmKey(resp.Key).
 		SetLitellmToken(resp.Token).
 		SetMaskedKey(redactKey(resp.Key)).
@@ -254,8 +261,18 @@ func (r *mutationResolver) RegenerateVirtualKey(ctx context.Context, id string) 
 		r.audit(ctx, "key.regenerate", "virtual_key", vkID.String(), false, actorID(auth.FromContext(ctx)))
 		return nil, fmt.Errorf("persist regenerated virtual_key: %w", err)
 	}
+	// Re-read with the agent edge eager-loaded — UpdateOne.Save returns a
+	// row without edges populated, but toModelVirtualKey now reads the
+	// nested agent object (see mappers.go).
+	withAgent, qerr := r.Ent.VirtualKey.Query().
+		Where(virtualkey.ID(vkID)).
+		WithAgent().
+		Only(context.WithoutCancel(ctx))
+	if qerr != nil {
+		return nil, fmt.Errorf("reload virtual_key with agent: %w", qerr)
+	}
 	r.audit(ctx, "key.regenerate", "virtual_key", vkID.String(), true, actorID(auth.FromContext(ctx)))
-	mapped, merr := toModelVirtualKey(ctx, r.Resolver, updated)
+	mapped, merr := toModelVirtualKey(ctx, r.Resolver, withAgent)
 	if merr != nil {
 		return nil, merr
 	}
@@ -291,12 +308,20 @@ func (r *mutationResolver) SetVirtualKeyEnabled(ctx context.Context, id string, 
 	if !enabled {
 		status = virtualkey.StatusDisabled
 	}
-	updated, err := r.Ent.VirtualKey.UpdateOne(vk).SetStatus(status).Save(ctx)
-	if err != nil {
+	if _, err := r.Ent.VirtualKey.UpdateOne(vk).SetStatus(status).Save(ctx); err != nil {
 		return nil, err
 	}
+	// Re-read with agent edge (toModelVirtualKey now renders the nested
+	// `agent` GraphQL field; UpdateOne.Save doesn't auto-load edges).
+	withAgent, qerr := r.Ent.VirtualKey.Query().
+		Where(virtualkey.ID(vkID)).
+		WithAgent().
+		Only(ctx)
+	if qerr != nil {
+		return nil, qerr
+	}
 	r.audit(ctx, "key.set_enabled", "virtual_key", vkID.String(), true, actorID(auth.FromContext(ctx)))
-	return toModelVirtualKey(ctx, r.Resolver, updated)
+	return toModelVirtualKey(ctx, r.Resolver, withAgent)
 }
 
 // AssociateVirtualKeyAgent binds (or rebinds) an existing key to an agent.
@@ -323,12 +348,20 @@ func (r *mutationResolver) AssociateVirtualKeyAgent(ctx context.Context, virtual
 	if qerr != nil && !ent.IsNotFound(qerr) {
 		return nil, qerr
 	}
-	updated, err := r.Ent.VirtualKey.UpdateOneID(vkID).SetAgentID(aID).Save(ctx)
+	_, err = r.Ent.VirtualKey.UpdateOneID(vkID).SetAgentID(aID).Save(ctx)
 	if err != nil {
 		return nil, err
 	}
+	// Re-read with agent edge eager-loaded.
+	withAgent, qerr := r.Ent.VirtualKey.Query().
+		Where(virtualkey.ID(vkID)).
+		WithAgent().
+		Only(ctx)
+	if qerr != nil {
+		return nil, qerr
+	}
 	r.audit(ctx, "key.associate_agent", "virtual_key", vkID.String(), true, actorID(auth.FromContext(ctx)))
-	return toModelVirtualKey(ctx, r.Resolver, updated)
+	return toModelVirtualKey(ctx, r.Resolver, withAgent)
 }
 
 // GatewayAvailableModels returns the distinct model names whose backed
@@ -366,17 +399,27 @@ func (r *queryResolver) GatewayAvailableModels(ctx context.Context, gatewayConne
 	return out, nil
 }
 
-// VirtualKeys lists keys with two optional filters: agentId and
-// modelGateway. All null → all keys in current tenant. Multiple set →
-// intersection. Secrets are never returned (only maskedKey on each row).
-func (r *queryResolver) VirtualKeys(ctx context.Context, agentID *string, modelGateway *string) ([]model.VirtualKey, error) {
-	q := r.Ent.VirtualKey.Query()
-	if agentID != nil {
-		aID, err := uuid.Parse(*agentID)
-		if err != nil {
-			return nil, gqlerror.Errorf("invalid agentId")
-		}
-		q = q.Where(virtualkey.AgentIDEQ(aID))
+// VirtualKeys lists keys with optional filters: agentName, modelGateway,
+// nameContains (case-insensitive substring match on the human-readable
+// name, ent.NameContainsFold), and modelContains (case-insensitive
+// substring match against ANY element of the `models` text[] array, via
+// raw SQL EXISTS/unnest — ent doesn't generate `contains` predicates on
+// array columns). All null → all keys in current tenant. Multiple set →
+// intersection. orderBy defaults to CREATED_DESC (newest first); NAME_ASC /
+// NAME_DESC sort by the human-readable name. Secrets are never returned
+// (only maskedKey on each row). Neither nameContains nor modelContains is
+// indexed; agentName is via HasAgentWith subquery. Acceptable while
+// per-tenant key counts stay small (operator-curated).
+func (r *queryResolver) VirtualKeys(ctx context.Context, agentName *string, modelGateway *string, nameContains *string, modelContains *string, orderBy *model.VirtualKeyOrderBy) ([]model.VirtualKey, error) {
+	// WithAgent() eagerly populates k.Edges.Agent in one batched query,
+	// so toModelVirtualKey can render the nested `agent` GraphQL field
+	// without N+1.
+	q := r.Ent.VirtualKey.Query().WithAgent()
+	if agentName != nil && *agentName != "" {
+		// ent.HasAgentWith emits a single SQL subquery — keys whose bound
+		// agent's name case-fold-matches the substring. Rows with a NULL
+		// agent_id are excluded (they have no agent to match).
+		q = q.Where(virtualkey.HasAgentWith(agent.NameContainsFold(*agentName)))
 	}
 	if modelGateway != nil {
 		mgID, err := uuid.Parse(*modelGateway)
@@ -385,7 +428,34 @@ func (r *queryResolver) VirtualKeys(ctx context.Context, agentID *string, modelG
 		}
 		q = q.Where(virtualkey.ModelGatewayIDEQ(mgID))
 	}
-	keys, err := q.Order(orderNewest).All(ctx)
+	if nameContains != nil && *nameContains != "" {
+		q = q.Where(virtualkey.NameContainsFold(*nameContains))
+	}
+	if modelContains != nil && *modelContains != "" {
+		// PG-only: unnest the text[] column to rows and case-fold-match
+		// each. ent has no generated predicate for array containment, so
+		// we emit raw SQL via sql.ExprP (parameterized — no injection).
+		// Postgres is the project's only supported backend (LLD-04); any
+		// future sqlite/test backend will see a clear SQL error rather
+		// than silently drop the filter.
+		q = q.Where(func(s *sql.Selector) {
+			s.Where(sql.ExprP(
+				"EXISTS (SELECT 1 FROM unnest("+virtualkey.Table+"."+virtualkey.FieldModels+") AS m WHERE LOWER(m) LIKE LOWER(?))",
+				*modelContains,
+			))
+		})
+	}
+	switch {
+	case orderBy != nil && *orderBy == model.VirtualKeyOrderByNameAsc:
+		q = q.Order(virtualkey.ByName(), orderByKey)
+	case orderBy != nil && *orderBy == model.VirtualKeyOrderByNameDesc:
+		q = q.Order(virtualkey.ByName(), ent.Desc(), orderByKey)
+	default:
+		// CREATED_DESC (the schema default) — match historical behaviour
+		// so existing callers see no change.
+		q = q.Order(orderNewest)
+	}
+	keys, err := q.All(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -4,7 +4,7 @@ Postman v2.1 collection for the GraphQL API at `agent-platform-backend`.
 
 ## Files
 
-- `agent-platform-backend.postman_collection.json` — 14 grouped folders, 111 requests covering every GraphQL query/mutation in the schema.
+- `agent-platform-backend.postman_collection.json` — 13 grouped folders, 74 requests covering every GraphQL query/mutation in the schema.
 
 ## Quick start
 
@@ -47,7 +47,7 @@ Either one works; the collection uses the Bearer path.
 | Model Gateways (LITELLM) | 7 | Page + sync summary + test connection (id-based + dry-run pre-create) |
 | Provider Models | 10 | providerModelInfo (paged/filter/sort) + create/update/delete + per-spec CRUD (add/update/delete/block) + on-demand probe/refresh (status = full_healthy/partial_outage/full_outage/unknown) |
 | Model Routes | 6 | Create / Update / Delete / SetEnabled / SyncRouterSettings (gatewayConnections + upsertModelRoute + RouterTier surface retired) |
-| Virtual Keys | 7 | Issue/Revoke/Regenerate/SetEnabled/AssociateAgent — `secret` returned ONCE; `GatewayAvailableModels` for issue-form cross-check |
+| Virtual Keys | 7 | Issue/Revoke/Regenerate/SetEnabled/AssociateAgent — `secret` returned ONCE; `GatewayAvailableModels` for issue-form cross-check. All selection sets use a `VirtualKeyFields` fragment (id, alias, userId, agentId, status, expiresAt, createdAt) that the generator inlines at build time so the request is a single self-contained GraphQL document. |
 | Rate Limit Policies | 4 | rpm/tpm, enabled, delete (refused while keys reference it) |
 | Agents (Deployed) | 17 | List, lifecycle, snapshots, agent configs, rotation, enrollment revoke |
 | Deploy (Marketplace OVA) | 6 | OVA families + versions + DeployAgent + vmTemplates |

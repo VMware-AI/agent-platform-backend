@@ -129,7 +129,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation ChangePassword($oldPassword: String!, $newPassword: String!) {\\n    changePassword(oldPassword: $oldPassword, newPassword: $newPassword)\\n  }\",\n  \"variables\": {\n    \"$oldPassword\": \"\",\n    \"$newPassword\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation ChangePassword($oldPassword: String!, $newPassword: String!) {\\n    changePassword(oldPassword: $oldPassword, newPassword: $newPassword)\\n  }\",\n  \"variables\": {\n    \"oldPassword\": \"\",\n    \"newPassword\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -192,7 +192,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query DashboardOverview($recentLimit: Int, $noticeLimit: Int) {\\n    dashboardOverview(recentLimit: $recentLimit, noticeLimit: $noticeLimit) {\\n      stats {\\n        totalAgents\\n        runningAgents\\n        stoppedAgents\\n        exceptionAgents\\n        totalVirtualKeys\\n        totalGateways\\n        totalResourcePools\\n        totalUsers\\n        monthlyCalls\\n        monthlyTokens\\n        monthlyCost\\n      }\\n      recentAgents {\\n        id\\n        name\\n        agentName\\n        status\\n        createdAt\\n      }\\n      notices {\\n        id\\n        text\\n        status\\n        occurredAt\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$recentLimit\": 0,\n    \"$noticeLimit\": 0\n  }\n}"
+              "raw": "{\n  \"query\": \"query DashboardOverview($recentLimit: Int, $noticeLimit: Int) {\\n    dashboardOverview(recentLimit: $recentLimit, noticeLimit: $noticeLimit) {\\n      stats {\\n        totalAgents\\n        runningAgents\\n        stoppedAgents\\n        exceptionAgents\\n        totalVirtualKeys\\n        totalGateways\\n        totalResourcePools\\n        totalUsers\\n        monthlyCalls\\n        monthlyTokens\\n        monthlyCost\\n      }\\n      recentAgents {\\n        id\\n        name\\n        agentName\\n        status\\n        createdAt\\n      }\\n      notices {\\n        id\\n        text\\n        status\\n        occurredAt\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"recentLimit\": 0,\n    \"noticeLimit\": 0\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -226,7 +226,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"fragment AccountUserFields on AccountUser {\\n    id\\n    username\\n    displayName\\n    email\\n    role {\\n      id\\n      name\\n    }\\n    connectionStatus\\n    lastLoginAt\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\\n\\n  query Users($filter: UserFilter, $pagination: Pagination, $sort: UserSort) {\\n    users(filter: $filter, pagination: $pagination, sort: $sort) {\\n      nodes {\\n        ...AccountUserFields\\n      }\\n      totalCount\\n      pageInfo {\\n        page\\n        pageSize\\n        totalPages\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$filter\": null,\n    \"$pagination\": null,\n    \"$sort\": null\n  }\n}"
+              "raw": "{\n  \"query\": \"query Users($filter: UserFilter, $pagination: Pagination, $sort: UserSort) {\\n    users(filter: $filter, pagination: $pagination, sort: $sort) {\\n      nodes {\\n        id\\n        username\\n        displayName\\n        email\\n        role {\\n          id\\n          name\\n        }\\n        connectionStatus\\n        lastLoginAt\\n        enabled\\n        createdAt\\n        updatedAt\\n      }\\n      totalCount\\n      pageInfo {\\n        page\\n        pageSize\\n        totalPages\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"filter\": null,\n    \"pagination\": null,\n    \"sort\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -255,7 +255,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query UserExists($username: String, $email: String) {\\n    userExists(username: $username, email: $email)\\n  }\",\n  \"variables\": {\n    \"$username\": \"\",\n    \"$email\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query UserExists($username: String, $email: String) {\\n    userExists(username: $username, email: $email)\\n  }\",\n  \"variables\": {\n    \"username\": \"\",\n    \"email\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -284,7 +284,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"fragment AccountUserFields on AccountUser {\\n    id\\n    username\\n    displayName\\n    email\\n    role {\\n      id\\n      name\\n    }\\n    connectionStatus\\n    lastLoginAt\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\\n\\n  query UsersByRole($roleId: ID!) {\\n    users(filter: { roleId: $roleId }) {\\n      nodes {\\n        ...AccountUserFields\\n      }\\n      totalCount\\n    }\\n  }\",\n  \"variables\": {\n    \"$roleId\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query UsersByRole($roleId: ID!) {\\n    users(filter: { roleId: $roleId }) {\\n      nodes {\\n        id\\n        username\\n        displayName\\n        email\\n        role {\\n          id\\n          name\\n        }\\n        connectionStatus\\n        lastLoginAt\\n        enabled\\n        createdAt\\n        updatedAt\\n      }\\n      totalCount\\n    }\\n  }\",\n  \"variables\": {\n    \"roleId\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -313,7 +313,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"fragment AccountUserFields on AccountUser {\\n    id\\n    username\\n    displayName\\n    email\\n    role {\\n      id\\n      name\\n    }\\n    connectionStatus\\n    lastLoginAt\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\\n\\n  mutation CreateUser($input: CreateUserInput!) {\\n    createUser(input: $input) {\\n      user {\\n        ...AccountUserFields\\n      }\\n      generatedPassword\\n    }\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation CreateUser($input: CreateUserInput!) {\\n    createUser(input: $input) {\\n      user {\\n        id\\n        username\\n        displayName\\n        email\\n        role {\\n          id\\n          name\\n        }\\n        connectionStatus\\n        lastLoginAt\\n        enabled\\n        createdAt\\n        updatedAt\\n      }\\n      generatedPassword\\n    }\\n  }\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -342,7 +342,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"fragment AccountUserFields on AccountUser {\\n    id\\n    username\\n    displayName\\n    email\\n    role {\\n      id\\n      name\\n    }\\n    connectionStatus\\n    lastLoginAt\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\\n\\n  mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {\\n    updateUser(id: $id, input: $input) {\\n      ...AccountUserFields\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\",\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {\\n    updateUser(id: $id, input: $input) {\\n      id\\n      username\\n      displayName\\n      email\\n      role {\\n        id\\n        name\\n      }\\n      connectionStatus\\n      lastLoginAt\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\",\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -371,7 +371,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeleteUser($id: ID!) {\\n    deleteUser(id: $id) {\\n      id\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation DeleteUser($id: ID!) {\\n    deleteUser(id: $id) {\\n      id\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -400,7 +400,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"fragment AccountUserFields on AccountUser {\\n    id\\n    username\\n    displayName\\n    email\\n    role {\\n      id\\n      name\\n    }\\n    connectionStatus\\n    lastLoginAt\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\\n\\n  mutation ResetUserPassword($id: ID!) {\\n    resetUserPassword(id: $id) {\\n      user {\\n        ...AccountUserFields\\n      }\\n      generatedPassword\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation ResetUserPassword($id: ID!) {\\n    resetUserPassword(id: $id) {\\n      user {\\n        id\\n        username\\n        displayName\\n        email\\n        role {\\n          id\\n          name\\n        }\\n        connectionStatus\\n        lastLoginAt\\n        enabled\\n        createdAt\\n        updatedAt\\n      }\\n      generatedPassword\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -429,7 +429,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"fragment AccountUserFields on AccountUser {\\n    id\\n    username\\n    displayName\\n    email\\n    role {\\n      id\\n      name\\n    }\\n    connectionStatus\\n    lastLoginAt\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\\n\\n  mutation ToggleUserEnabled($id: ID!) {\\n    toggleUserEnabled(id: $id) {\\n      user {\\n        ...AccountUserFields\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation ToggleUserEnabled($id: ID!) {\\n    toggleUserEnabled(id: $id) {\\n      user {\\n        id\\n        username\\n        displayName\\n        email\\n        role {\\n          id\\n          name\\n        }\\n        connectionStatus\\n        lastLoginAt\\n        enabled\\n        createdAt\\n        updatedAt\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -458,7 +458,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"fragment RoleFields on Role {\\n    id\\n    name\\n    description\\n    userCount\\n    builtIn\\n  }\\n\\n  query Roles {\\n    roles {\\n      nodes {\\n        ...RoleFields\\n      }\\n      totalCount\\n      pageInfo {\\n        page\\n        pageSize\\n        totalPages\\n      }\\n    }\\n  }\",\n  \"variables\": {}\n}"
+              "raw": "{\n  \"query\": \"query Roles {\\n    roles {\\n      nodes {\\n        id\\n        name\\n        description\\n        userCount\\n        builtIn\\n      }\\n      totalCount\\n      pageInfo {\\n        page\\n        pageSize\\n        totalPages\\n      }\\n    }\\n  }\",\n  \"variables\": {}\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -487,7 +487,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"fragment RoleFields on Role {\\n    id\\n    name\\n    description\\n    userCount\\n    builtIn\\n  }\\n\\n  query Role($id: ID!) {\\n    role(id: $id) {\\n      ...RoleFields\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query Role($id: ID!) {\\n    role(id: $id) {\\n      id\\n      name\\n      description\\n      userCount\\n      builtIn\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -516,7 +516,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query RoleUsersMin($roleId: ID!) {\\n    users(filter: { roleId: $roleId }) {\\n      nodes {\\n        id\\n        username\\n        email\\n        enabled\\n      }\\n      totalCount\\n    }\\n  }\",\n  \"variables\": {\n    \"$roleId\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query RoleUsersMin($roleId: ID!) {\\n    users(filter: { roleId: $roleId }) {\\n      nodes {\\n        id\\n        username\\n        email\\n        enabled\\n      }\\n      totalCount\\n    }\\n  }\",\n  \"variables\": {\n    \"roleId\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -550,7 +550,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"fragment ResourcePoolFields on ResourcePool {\\n    id\\n    name\\n    endpoint\\n    contentLibraryName\\n    insecure\\n    syncStatus\\n    lastSyncedAt\\n    createdAt\\n    updatedAt\\n  }\\n\\n  query ResourcePools(\\n    $filter: ResourcePoolFilter\\n    $pagination: Pagination\\n    $sort: ResourcePoolSort\\n  ) {\\n    resourcePools(filter: $filter, pagination: $pagination, sort: $sort) {\\n      nodes {\\n        ...ResourcePoolFields\\n      }\\n      totalCount\\n      pageInfo {\\n        page\\n        pageSize\\n        totalPages\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$filter\": null\n  }\n}"
+              "raw": "{\n  \"query\": \"query ResourcePools(\\n    $filter: ResourcePoolFilter\\n    $pagination: Pagination\\n    $sort: ResourcePoolSort\\n  ) {\\n    resourcePools(filter: $filter, pagination: $pagination, sort: $sort) {\\n      nodes {\\n        id\\n        name\\n        endpoint\\n        contentLibraryName\\n        insecure\\n        syncStatus\\n        lastSyncedAt\\n        createdAt\\n        updatedAt\\n      }\\n      totalCount\\n      pageInfo {\\n        page\\n        pageSize\\n        totalPages\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"filter\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -579,7 +579,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"fragment ResourcePoolInventoryFields on ResourcePool {\\n    datacenters {\\n      name\\n      path\\n      clusters {\\n        name\\n        path\\n        esxiHosts {\\n          name\\n          path\\n        }\\n        resourcePools {\\n          name\\n          path\\n        }\\n      }\\n      datastores {\\n        name\\n        path\\n      }\\n      networks {\\n        name\\n        path\\n      }\\n      folders {\\n        name\\n        path\\n      }\\n      storagePolicies {\\n        name\\n        path\\n      }\\n    }\\n  }\\n\\n  query ResourcePool($id: ID!) {\\n    resourcePool(id: $id) {\\n      ...ResourcePoolInventoryFields\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query ResourcePool($id: ID!) {\\n    resourcePool(id: $id) {\\n      datacenters {\\n        name\\n        path\\n        clusters {\\n          name\\n          path\\n          esxiHosts {\\n            name\\n            path\\n          }\\n          resourcePools {\\n            name\\n            path\\n          }\\n        }\\n        datastores {\\n          name\\n          path\\n        }\\n        networks {\\n          name\\n          path\\n        }\\n        folders {\\n          name\\n          path\\n        }\\n        storagePolicies {\\n          name\\n          path\\n        }\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -608,7 +608,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"fragment ResourcePoolFields on ResourcePool {\\n    id\\n    name\\n    endpoint\\n    contentLibraryName\\n    insecure\\n    syncStatus\\n    lastSyncedAt\\n    createdAt\\n    updatedAt\\n  }\\n\\n  mutation CreateResourcePool($input: CreateResourcePoolInput!) {\\n    createResourcePool(input: $input) {\\n      pool {\\n        ...ResourcePoolFields\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation CreateResourcePool($input: CreateResourcePoolInput!) {\\n    createResourcePool(input: $input) {\\n      pool {\\n        id\\n        name\\n        endpoint\\n        contentLibraryName\\n        insecure\\n        syncStatus\\n        lastSyncedAt\\n        createdAt\\n        updatedAt\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -637,7 +637,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"fragment ResourcePoolFields on ResourcePool {\\n    id\\n    name\\n    endpoint\\n    contentLibraryName\\n    insecure\\n    syncStatus\\n    lastSyncedAt\\n    createdAt\\n    updatedAt\\n  }\\n\\n  mutation UpdateResourcePool($id: ID!, $input: UpdateResourcePoolInput!) {\\n    updateResourcePool(id: $id, input: $input) {\\n      pool {\\n        ...ResourcePoolFields\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\",\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation UpdateResourcePool($id: ID!, $input: UpdateResourcePoolInput!) {\\n    updateResourcePool(id: $id, input: $input) {\\n      pool {\\n        id\\n        name\\n        endpoint\\n        contentLibraryName\\n        insecure\\n        syncStatus\\n        lastSyncedAt\\n        createdAt\\n        updatedAt\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\",\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -666,7 +666,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeleteResourcePool($id: ID!) {\\n    deleteResourcePool(id: $id) {\\n      id\\n      deletedName\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation DeleteResourcePool($id: ID!) {\\n    deleteResourcePool(id: $id) {\\n      id\\n      deletedName\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -695,7 +695,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"fragment ResourcePoolFields on ResourcePool {\\n    id\\n    name\\n    endpoint\\n    contentLibraryName\\n    insecure\\n    syncStatus\\n    lastSyncedAt\\n    createdAt\\n    updatedAt\\n  }\\n\\n  mutation SyncResourcePool($id: ID!) {\\n    syncResourcePool(id: $id) {\\n      pool {\\n        ...ResourcePoolFields\\n      }\\n      syncedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation SyncResourcePool($id: ID!) {\\n    syncResourcePool(id: $id) {\\n      pool {\\n        id\\n        name\\n        endpoint\\n        contentLibraryName\\n        insecure\\n        syncStatus\\n        lastSyncedAt\\n        createdAt\\n        updatedAt\\n      }\\n      syncedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -724,7 +724,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation TestResourcePoolConnection($input: TestResourcePoolConnectionInput!) {\\n    testResourcePoolConnection(input: $input) {\\n      ok\\n      message\\n      detail {\\n        vSphereVersion\\n        contentLibraries\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation TestResourcePoolConnection($input: TestResourcePoolConnectionInput!) {\\n    testResourcePoolConnection(input: $input) {\\n      ok\\n      message\\n      detail {\\n        vSphereVersion\\n        contentLibraries\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -753,7 +753,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query VsphereResourcePools($resourcePoolId: ID!) {\\n    vsphereResourcePools(resourcePoolId: $resourcePoolId) {\\n      name\\n      path\\n    }\\n  }\",\n  \"variables\": {\n    \"$resourcePoolId\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query VsphereResourcePools($resourcePoolId: ID!) {\\n    vsphereResourcePools(resourcePoolId: $resourcePoolId) {\\n      name\\n      path\\n    }\\n  }\",\n  \"variables\": {\n    \"resourcePoolId\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -782,7 +782,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query VsphereNetworks($resourcePoolId: ID!) {\\n    vsphereNetworks(resourcePoolId: $resourcePoolId) {\\n      name\\n      path\\n      type\\n      dvsName\\n    }\\n  }\",\n  \"variables\": {\n    \"$resourcePoolId\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query VsphereNetworks($resourcePoolId: ID!) {\\n    vsphereNetworks(resourcePoolId: $resourcePoolId) {\\n      name\\n      path\\n      type\\n      dvsName\\n    }\\n  }\",\n  \"variables\": {\n    \"resourcePoolId\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -816,7 +816,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query ModelGateways($filter: ModelGatewayFilterInput, $page: PageInput!, $sort: ModelGatewaySort) {\\n    modelGateways(filter: $filter, page: $page, sort: $sort) {\\n      nodes {\\n        ...ModelGatewayFields\\n      }\\n      totalCount\\n    }\\n    modelGatewaySyncSummary {\\n      state\\n      lastSyncedAt\\n      successCount\\n      failedCount\\n      message\\n    }\\n  }\\n  \\n  fragment ModelGatewayFields on ModelGateway {\\n    id\\n    name\\n    provider\\n    endpoint\\n    backendModelCount\\n    loadBalancingStrategy\\n    lastSyncAt\\n    lastSyncStatus\\n    lastSyncMessage\\n    createdAt\\n    updatedAt\\n  }\",\n  \"variables\": {\n    \"$filter\": {},\n    \"$page\": {},\n    \"$sort\": null\n  }\n}"
+              "raw": "{\n  \"query\": \"query ModelGateways($filter: ModelGatewayFilterInput, $page: PageInput!, $sort: ModelGatewaySort) {\\n    modelGateways(filter: $filter, page: $page, sort: $sort) {\\n      nodes {\\n        id\\n        name\\n        provider\\n        endpoint\\n        backendModelCount\\n        loadBalancingStrategy\\n        lastSyncAt\\n        lastSyncStatus\\n        lastSyncMessage\\n        createdAt\\n        updatedAt\\n      }\\n      totalCount\\n    }\\n    modelGatewaySyncSummary {\\n      state\\n      lastSyncedAt\\n      successCount\\n      failedCount\\n      message\\n    }\\n  }\",\n  \"variables\": {\n    \"filter\": {},\n    \"page\": {},\n    \"sort\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -845,7 +845,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query ModelGatewayById($id: ID!) {\\n  modelGatewayById(id: $id) {\\n    ...ModelGatewayFields\\n  }\\n}\\n\\nfragment ModelGatewayFields on ModelGateway {\\n  id\\n  name\\n  endpoint\\n  backendModelCount\\n  loadBalancingStrategy\\n  lastSyncAt\\n  lastSyncStatus\\n  lastSyncMessage\\n  createdAt\\n  updatedAt\\n  # NOTE: masterKey / masterKeyRef NOT selected \\u2014 wire-level guard.\\n}\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query ModelGatewayById($id: ID!) {\\n  modelGatewayById(id: $id) {\\n    id\\n    name\\n    endpoint\\n    backendModelCount\\n    loadBalancingStrategy\\n    lastSyncAt\\n    lastSyncStatus\\n    lastSyncMessage\\n    createdAt\\n    updatedAt\\n    # NOTE: masterKey / masterKeyRef NOT selected \\u2014 wire-level guard.\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -903,7 +903,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateModelGateway($input: ModelGatewayInput!) {\\n    createModelGateway(input: $input) {\\n      ...ModelGatewayFields\\n    }\\n  }\\n  \\n  fragment ModelGatewayFields on ModelGateway {\\n    id\\n    name\\n    provider\\n    endpoint\\n    backendModelCount\\n    loadBalancingStrategy\\n    lastSyncAt\\n    lastSyncStatus\\n    lastSyncMessage\\n    createdAt\\n    updatedAt\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation CreateModelGateway($input: ModelGatewayInput!) {\\n    createModelGateway(input: $input) {\\n      id\\n      name\\n      provider\\n      endpoint\\n      backendModelCount\\n      loadBalancingStrategy\\n      lastSyncAt\\n      lastSyncStatus\\n      lastSyncMessage\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -932,7 +932,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeleteModelGateway($id: ID!) {\\n    deleteModelGateway(id: $id) {\\n      deletedID\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation DeleteModelGateway($id: ID!) {\\n    deleteModelGateway(id: $id) {\\n      deletedID\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -961,7 +961,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SyncModelGatewayConnection($id: ID!) {\\n    syncModelGatewayConnection(id: $id) {\\n      success\\n      message\\n      gateway {\\n        ...ModelGatewayFields\\n      }\\n    }\\n  }\\n  \\n  fragment ModelGatewayFields on ModelGateway {\\n    id\\n    name\\n    provider\\n    endpoint\\n    backendModelCount\\n    loadBalancingStrategy\\n    lastSyncAt\\n    lastSyncStatus\\n    lastSyncMessage\\n    createdAt\\n    updatedAt\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation SyncModelGatewayConnection($id: ID!) {\\n    syncModelGatewayConnection(id: $id) {\\n      success\\n      message\\n      gateway {\\n        id\\n        name\\n        provider\\n        endpoint\\n        backendModelCount\\n        loadBalancingStrategy\\n        lastSyncAt\\n        lastSyncStatus\\n        lastSyncMessage\\n        createdAt\\n        updatedAt\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -990,7 +990,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation TestNewModelGatewayConnection($input: TestModelGatewayConnectionInput!) {\\n    testNewModelGatewayConnection(input: $input) {\\n      success\\n      message\\n      testedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation TestNewModelGatewayConnection($input: TestModelGatewayConnectionInput!) {\\n    testNewModelGatewayConnection(input: $input) {\\n      success\\n      message\\n      testedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1024,7 +1024,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query ProviderModelInfo($filter: ProviderModelInfoFilterInput, $page: PageInput!, $sort: ProviderModelInfoSort) {\\n  providerModelInfo(filter: $filter, page: $page, sort: $sort) {\\n    data {\\n      ...ProviderModelFields\\n    }\\n    total_count\\n    current_page\\n    total_pages\\n    size\\n  }\\n}\",\n  \"variables\": {\n    \"$filter\": {},\n    \"$page\": {},\n    \"$sort\": null\n  }\n}"
+              "raw": "{\n  \"query\": \"query ProviderModelInfo($filter: ProviderModelInfoFilterInput, $page: PageInput!, $sort: ProviderModelInfoSort) {\\n  providerModelInfo(filter: $filter, page: $page, sort: $sort) {\\n    data {\\n      ...ProviderModelFields\\n    }\\n    total_count\\n    current_page\\n    total_pages\\n    size\\n  }\\n}\",\n  \"variables\": {\n    \"filter\": {},\n    \"page\": {},\n    \"sort\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1053,7 +1053,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateProviderModel($input: CreateProviderModelInput!) {\\n  createProviderModel(input: $input) {\\n    ...ProviderModelFields\\n  }\\n}\\n\\nfragment ProviderModelFields on ProviderModel {\\n  id\\n  name\\n  status\\n  createdAt\\n  updatedAt\\n  lastCheckedAt\\n  modelGateway {\\n    id\\n    name\\n    endpoint\\n  }\\n  modelSpecs {\\n    litellmParams {\\n      model\\n      apiBase\\n      apiKeyRef\\n      customLlmProvider\\n    }\\n    modelInfo {\\n      id\\n      blocked\\n      additionalProp1 {\\n        status\\n        message\\n      }\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation CreateProviderModel($input: CreateProviderModelInput!) {\\n  createProviderModel(input: $input) {\\n    id\\n    name\\n    status\\n    createdAt\\n    updatedAt\\n    lastCheckedAt\\n    modelGateway {\\n      id\\n      name\\n      endpoint\\n    }\\n    modelSpecs {\\n      litellmParams {\\n        model\\n        apiBase\\n        apiKeyRef\\n        customLlmProvider\\n      }\\n      modelInfo {\\n        id\\n        blocked\\n        additionalProp1 {\\n          status\\n          message\\n        }\\n      }\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1082,7 +1082,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpdateProviderModel($input: UpdateProviderModelInput!) {\\n  updateProviderModel(input: $input) {\\n    ...ProviderModelFields\\n  }\\n}\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation UpdateProviderModel($input: UpdateProviderModelInput!) {\\n  updateProviderModel(input: $input) {\\n    ...ProviderModelFields\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1111,7 +1111,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeleteProviderModel($id: ID!) {\\n  deleteProviderModel(id: $id)\\n}\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation DeleteProviderModel($id: ID!) {\\n  deleteProviderModel(id: $id)\\n}\",\n  \"variables\": {\n    \"id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1140,7 +1140,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation AddProviderModelSpec($input: AddProviderModelSpecInput!) {\\n  addProviderModelSpec(input: $input) {\\n    ...ProviderModelFields\\n  }\\n}\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation AddProviderModelSpec($input: AddProviderModelSpecInput!) {\\n  addProviderModelSpec(input: $input) {\\n    ...ProviderModelFields\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1169,7 +1169,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpdateProviderModelSpec($input: UpdateProviderModelSpecInput!) {\\n  updateProviderModelSpec(input: $input) {\\n    ...ProviderModelFields\\n  }\\n}\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation UpdateProviderModelSpec($input: UpdateProviderModelSpecInput!) {\\n  updateProviderModelSpec(input: $input) {\\n    ...ProviderModelFields\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1198,7 +1198,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeleteProviderModelSpec($input: ProviderModelSpecIDInput!) {\\n  deleteProviderModelSpec(input: $input) {\\n    ...ProviderModelFields\\n  }\\n}\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation DeleteProviderModelSpec($input: ProviderModelSpecIDInput!) {\\n  deleteProviderModelSpec(input: $input) {\\n    ...ProviderModelFields\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1227,7 +1227,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation BlockProviderModelSpec($input: ProviderModelSpecBlockInput!) {\\n  blockProviderModelSpec(input: $input) {\\n    ...ProviderModelFields\\n  }\\n}\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation BlockProviderModelSpec($input: ProviderModelSpecBlockInput!) {\\n  blockProviderModelSpec(input: $input) {\\n    ...ProviderModelFields\\n  }\\n}\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1256,7 +1256,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation TestProviderConnection($name: String!) {\\n  testProviderConnection(name: $name)\\n}\",\n  \"variables\": {\n    \"$name\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation TestProviderConnection($name: String!) {\\n  testProviderConnection(name: $name)\\n}\",\n  \"variables\": {\n    \"name\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1285,7 +1285,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation RefreshProviderModelStatus($id: ID!) {\\n  refreshProviderModelStatus(id: $id) {\\n    ...ProviderModelFields\\n  }\\n}\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation RefreshProviderModelStatus($id: ID!) {\\n  refreshProviderModelStatus(id: $id) {\\n    ...ProviderModelFields\\n  }\\n}\",\n  \"variables\": {\n    \"id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1319,7 +1319,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query ModelRoutes {\\n    modelRoutes {\\n      ...ModelRouteFields\\n    }\\n  }\\n  \\n  fragment ModelRouteFields on ModelRoute {\\n    id\\n    name\\n    backendGatewayId\\n    gatewayName\\n    supportedModels\\n    uiStrategy\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\",\n  \"variables\": {}\n}"
+              "raw": "{\n  \"query\": \"query ModelRoutes {\\n    modelRoutes {\\n      id\\n      name\\n      backendGatewayId\\n      gatewayName\\n      supportedModels\\n      uiStrategy\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {}\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1348,7 +1348,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateModelRoute($input: CreateModelRouteInput!) {\\n    createModelRoute(input: $input) {\\n      ...ModelRouteFields\\n    }\\n  }\\n  \\n  fragment ModelRouteFields on ModelRoute {\\n    id\\n    name\\n    backendGatewayId\\n    gatewayName\\n    supportedModels\\n    uiStrategy\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation CreateModelRoute($input: CreateModelRouteInput!) {\\n    createModelRoute(input: $input) {\\n      id\\n      name\\n      backendGatewayId\\n      gatewayName\\n      supportedModels\\n      uiStrategy\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1377,7 +1377,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpdateModelRoute($id: ID!, $input: UpdateModelRouteInput!) {\\n    updateModelRoute(id: $id, input: $input) {\\n      ...ModelRouteFields\\n    }\\n  }\\n  \\n  fragment ModelRouteFields on ModelRoute {\\n    id\\n    name\\n    backendGatewayId\\n    gatewayName\\n    supportedModels\\n    uiStrategy\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\",\n  \"variables\": {\n    \"$id\": \"\",\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation UpdateModelRoute($id: ID!, $input: UpdateModelRouteInput!) {\\n    updateModelRoute(id: $id, input: $input) {\\n      id\\n      name\\n      backendGatewayId\\n      gatewayName\\n      supportedModels\\n      uiStrategy\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\",\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1406,7 +1406,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SetModelRouteEnabled($id: ID!, $enabled: Boolean!) {\\n    setModelRouteEnabled(id: $id, enabled: $enabled) {\\n      ...ModelRouteFields\\n    }\\n  }\\n  \\n  fragment ModelRouteFields on ModelRoute {\\n    id\\n    name\\n    backendGatewayId\\n    gatewayName\\n    supportedModels\\n    uiStrategy\\n    enabled\\n    createdAt\\n    updatedAt\\n  }\",\n  \"variables\": {\n    \"$id\": \"\",\n    \"$enabled\": false\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation SetModelRouteEnabled($id: ID!, $enabled: Boolean!) {\\n    setModelRouteEnabled(id: $id, enabled: $enabled) {\\n      id\\n      name\\n      backendGatewayId\\n      gatewayName\\n      supportedModels\\n      uiStrategy\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\",\n    \"enabled\": false\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1435,7 +1435,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation DeleteModelRoute($id: ID!) {\\n    deleteModelRoute(id: $id)\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation DeleteModelRoute($id: ID!) {\\n    deleteModelRoute(id: $id)\\n  }\",\n  \"variables\": {\n    \"id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1469,7 +1469,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query VirtualKeys($userId: ID) {\\n    virtualKeys(userId: $userId) {\\n      ...VirtualKeyFields\\n    }\\n  }\\n  \\n  fragment VirtualKeyFields on VirtualKey {\\n    id\\n    alias\\n    userId\\n    agentId\\n    status\\n    expiresAt\\n    createdAt\\n  }\",\n  \"variables\": {\n    \"$userId\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query VirtualKeys($userId: ID) {\\n    virtualKeys(userId: $userId) {\\n      id\\n      name\\n      maskedKey\\n      userId\\n      agentId\\n      modelGateway {\\n        id\\n        name\\n        provider\\n        endpoint\\n      }\\n      models\\n      status\\n      keyType\\n      blocked\\n      expiresAt\\n      duration\\n      lastActiveAt\\n      spend\\n      maxBudget\\n      budgetDuration\\n      maxParallelRequests\\n      rpmLimit\\n      tpmLimit\\n      rpmLimitType\\n      tpmLimitType\\n      allowedRoutes\\n      tags\\n      autoRotate\\n      rotationInterval\\n      createdAt\\n      updatedAt\\n    }\\n  }\\n\\n  # See IssueVirtualKey.graphql for the canonical VirtualKeyFields fragment.\",\n  \"variables\": {\n    \"userId\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1498,7 +1498,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation IssueVirtualKey($input: IssueVirtualKeyInput!) {\\n    issueVirtualKey(input: $input) {\\n      secret\\n      virtualKey {\\n        ...VirtualKeyFields\\n      }\\n    }\\n  }\\n  \\n  fragment VirtualKeyFields on VirtualKey {\\n    id\\n    alias\\n    userId\\n    agentId\\n    status\\n    expiresAt\\n    createdAt\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation IssueVirtualKey($input: IssueVirtualKeyInput!) {\\n    issueVirtualKey(input: $input) {\\n      secret\\n      virtualKey {\\n        id\\n        name\\n        maskedKey\\n        userId\\n        agentId\\n        modelGateway {\\n          id\\n          name\\n          provider\\n          endpoint\\n        }\\n        models\\n        status\\n        keyType\\n        blocked\\n        expiresAt\\n        duration\\n        lastActiveAt\\n        spend\\n        maxBudget\\n        budgetDuration\\n        maxParallelRequests\\n        rpmLimit\\n        tpmLimit\\n        rpmLimitType\\n        tpmLimitType\\n        allowedRoutes\\n        tags\\n        autoRotate\\n        rotationInterval\\n        createdAt\\n        updatedAt\\n      }\\n    }\\n  }\\n\\n  # Selection set kept in sync with the GraphQL `VirtualKey` type \\u2014 every\\n  # field a console surface (list, detail, issue confirmation) is expected\\n  # to display. Update both this fragment and the IssueVirtualKey /\\n  # RegenerateVirtualKey / SetVirtualKeyEnabled / VirtualKeys / AssociateVirtualKeyAgent\\n  # fixtures when the schema gains or drops a field.\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1527,7 +1527,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation RevokeVirtualKey($id: ID!) {\\n    revokeVirtualKey(id: $id)\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation RevokeVirtualKey($id: ID!) {\\n    revokeVirtualKey(id: $id)\\n  }\",\n  \"variables\": {\n    \"id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1556,7 +1556,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation RegenerateVirtualKey($id: ID!) {\\n    regenerateVirtualKey(id: $id) {\\n      secret\\n      virtualKey {\\n        ...VirtualKeyFields\\n      }\\n    }\\n  }\\n  \\n  fragment VirtualKeyFields on VirtualKey {\\n    id\\n    alias\\n    userId\\n    agentId\\n    status\\n    expiresAt\\n    createdAt\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation RegenerateVirtualKey($id: ID!) {\\n    regenerateVirtualKey(id: $id) {\\n      secret\\n      virtualKey {\\n        id\\n        name\\n        maskedKey\\n        userId\\n        agentId\\n        modelGateway {\\n          id\\n          name\\n          provider\\n          endpoint\\n        }\\n        models\\n        status\\n        keyType\\n        blocked\\n        expiresAt\\n        duration\\n        lastActiveAt\\n        spend\\n        maxBudget\\n        budgetDuration\\n        maxParallelRequests\\n        rpmLimit\\n        tpmLimit\\n        rpmLimitType\\n        tpmLimitType\\n        allowedRoutes\\n        tags\\n        autoRotate\\n        rotationInterval\\n        createdAt\\n        updatedAt\\n      }\\n    }\\n  }\\n\\n  # See IssueVirtualKey.graphql for the canonical VirtualKeyFields fragment \\u2014\\n  # kept in sync across all fixtures that select VirtualKey so the generated\\n  # Postman request bodies are interchangeable.\",\n  \"variables\": {\n    \"id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1585,7 +1585,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SetVirtualKeyEnabled($id: ID!, $enabled: Boolean!) {\\n    setVirtualKeyEnabled(id: $id, enabled: $enabled) {\\n      ...VirtualKeyFields\\n    }\\n  }\\n  \\n  fragment VirtualKeyFields on VirtualKey {\\n    id\\n    alias\\n    userId\\n    agentId\\n    status\\n    expiresAt\\n    createdAt\\n  }\",\n  \"variables\": {\n    \"$id\": \"\",\n    \"$enabled\": false\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation SetVirtualKeyEnabled($id: ID!, $enabled: Boolean!) {\\n    setVirtualKeyEnabled(id: $id, enabled: $enabled) {\\n      id\\n      name\\n      maskedKey\\n      userId\\n      agentId\\n      modelGateway {\\n        id\\n        name\\n        provider\\n        endpoint\\n      }\\n      models\\n      status\\n      keyType\\n      blocked\\n      expiresAt\\n      duration\\n      lastActiveAt\\n      spend\\n      maxBudget\\n      budgetDuration\\n      maxParallelRequests\\n      rpmLimit\\n      tpmLimit\\n      rpmLimitType\\n      tpmLimitType\\n      allowedRoutes\\n      tags\\n      autoRotate\\n      rotationInterval\\n      createdAt\\n      updatedAt\\n    }\\n  }\\n\\n  # See IssueVirtualKey.graphql for the canonical VirtualKeyFields fragment.\",\n  \"variables\": {\n    \"id\": \"\",\n    \"enabled\": false\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1595,6 +1595,64 @@
               "path": []
             },
             "description": "Mutation SetVirtualKeyEnabled \u2014 generated from internal/graph/testdata/client_operations/SetVirtualKeyEnabled.graphql. Replace the variable stubs with real IDs before sending."
+          },
+          "response": []
+        },
+        {
+          "name": "AssociateVirtualKeyAgent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation AssociateVirtualKeyAgent($virtualKeyId: ID!, $agentId: ID!) {\\n    associateVirtualKeyAgent(virtualKeyId: $virtualKeyId, agentId: $agentId) {\\n      id\\n      name\\n      maskedKey\\n      userId\\n      agentId\\n      modelGateway {\\n        id\\n        name\\n        provider\\n        endpoint\\n      }\\n      models\\n      status\\n      keyType\\n      blocked\\n      expiresAt\\n      duration\\n      lastActiveAt\\n      spend\\n      maxBudget\\n      budgetDuration\\n      maxParallelRequests\\n      rpmLimit\\n      tpmLimit\\n      rpmLimitType\\n      tpmLimitType\\n      allowedRoutes\\n      tags\\n      autoRotate\\n      rotationInterval\\n      createdAt\\n      updatedAt\\n    }\\n  }\\n\\n  # See IssueVirtualKey.graphql for the canonical VirtualKeyFields fragment.\",\n  \"variables\": {\n    \"virtualKeyId\": \"\",\n    \"agentId\": \"\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": []
+            },
+            "description": "Mutation AssociateVirtualKeyAgent \u2014 generated from internal/graph/testdata/client_operations/AssociateVirtualKeyAgent.graphql. Replace the variable stubs with real IDs before sending."
+          },
+          "response": []
+        },
+        {
+          "name": "GatewayAvailableModels",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query GatewayAvailableModels($gatewayConnectionId: ID!) {\\n    gatewayAvailableModels(gatewayConnectionId: $gatewayConnectionId)\\n  }\",\n  \"variables\": {\n    \"gatewayConnectionId\": \"\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": []
+            },
+            "description": "Query GatewayAvailableModels \u2014 generated from internal/graph/testdata/client_operations/GatewayAvailableModels.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         }
@@ -1619,7 +1677,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query Agents($filter: AgentFilter, $pagination: Pagination, $sort: AgentSort) {\\n    agents(filter: $filter, pagination: $pagination, sort: $sort) {\\n      nodes {\\n        id\\n        name\\n        type\\n        status\\n        apiKey {\\n          id\\n          name\\n        }\\n        owner {\\n          id\\n          displayName\\n          email\\n        }\\n        createdAt\\n        updatedAt\\n        endpoint\\n      }\\n      totalCount\\n      pageInfo {\\n        page\\n        pageSize\\n        totalPages\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$filter\": null,\n    \"$pagination\": null,\n    \"$sort\": null\n  }\n}"
+              "raw": "{\n  \"query\": \"query Agents($filter: AgentFilter, $pagination: Pagination, $sort: AgentSort) {\\n    agents(filter: $filter, pagination: $pagination, sort: $sort) {\\n      nodes {\\n        id\\n        name\\n        type\\n        status\\n        apiKey {\\n          id\\n          name\\n        }\\n        owner {\\n          id\\n          displayName\\n          email\\n        }\\n        createdAt\\n        updatedAt\\n        endpoint\\n      }\\n      totalCount\\n      pageInfo {\\n        page\\n        pageSize\\n        totalPages\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"filter\": null,\n    \"pagination\": null,\n    \"sort\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1648,7 +1706,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query Agent($id: ID!) {\\n    agent(id: $id) {\\n      id\\n      name\\n      type\\n      status\\n      apiKey {\\n        id\\n        name\\n      }\\n      owner {\\n        id\\n        displayName\\n        email\\n      }\\n      credentials {\\n        username\\n      }\\n      endpoint\\n      templateFamilyId\\n      templateVersionId\\n      resourcePoolId\\n      typeLabel\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query Agent($id: ID!) {\\n    agent(id: $id) {\\n      id\\n      name\\n      type\\n      status\\n      apiKey {\\n        id\\n        name\\n      }\\n      owner {\\n        id\\n        displayName\\n        email\\n      }\\n      credentials {\\n        username\\n      }\\n      endpoint\\n      templateFamilyId\\n      templateVersionId\\n      resourcePoolId\\n      typeLabel\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1677,7 +1735,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SetAgentStatus($id: ID!, $status: AgentStatus!) {\\n    setAgentStatus(id: $id, status: $status) {\\n      id\\n      status\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"$id\": \"\",\n    \"$status\": null\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation SetAgentStatus($id: ID!, $status: AgentStatus!) {\\n    setAgentStatus(id: $id, status: $status) {\\n      id\\n      status\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\",\n    \"status\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1706,7 +1764,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation RecycleAgent($input: RecycleAgentInput!) {\\n    recycleAgent(input: $input) {\\n      id\\n      status\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation RecycleAgent($input: RecycleAgentInput!) {\\n    recycleAgent(input: $input) {\\n      id\\n      status\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1735,7 +1793,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query AgentConfigs($agentType: String) {\\n    agentConfigs(agentType: $agentType) {\\n      ...AgentConfigFields\\n    }\\n  }\\n  \\n  fragment AgentConfigFields on AgentConfig {\\n    id\\n    name\\n    agentType\\n    isDefault\\n    artifactId\\n    knowledge {\\n      ...KnowledgeArtifactFields\\n    }\\n    createdAt\\n  }\\n  \\n  fragment KnowledgeArtifactFields on Artifact {\\n    id\\n    name\\n    kind\\n    version\\n    uri\\n    sha256\\n    createdAt\\n  }\",\n  \"variables\": {\n    \"$agentType\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query AgentConfigs($agentType: String) {\\n    agentConfigs(agentType: $agentType) {\\n      id\\n      name\\n      agentType\\n      isDefault\\n      artifactId\\n      knowledge {\\n        id\\n        name\\n        kind\\n        version\\n        uri\\n        sha256\\n        createdAt\\n      }\\n      createdAt\\n    }\\n  }\",\n  \"variables\": {\n    \"agentType\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1764,7 +1822,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SetAgentConfigKnowledge($configId: ID!, $knowledgeArtifactIds: [ID!]!) {\\n    setAgentConfigKnowledge(configId: $configId, knowledgeArtifactIds: $knowledgeArtifactIds) {\\n      ...AgentConfigFields\\n    }\\n  }\\n  \\n  fragment AgentConfigFields on AgentConfig {\\n    id\\n    name\\n    agentType\\n    isDefault\\n    artifactId\\n    knowledge {\\n      ...KnowledgeArtifactFields\\n    }\\n    createdAt\\n  }\\n  \\n  fragment KnowledgeArtifactFields on Artifact {\\n    id\\n    name\\n    kind\\n    version\\n    uri\\n    sha256\\n    createdAt\\n  }\",\n  \"variables\": {\n    \"$configId\": \"\",\n    \"$knowledgeArtifactIds\": []\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation SetAgentConfigKnowledge($configId: ID!, $knowledgeArtifactIds: [ID!]!) {\\n    setAgentConfigKnowledge(configId: $configId, knowledgeArtifactIds: $knowledgeArtifactIds) {\\n      id\\n      name\\n      agentType\\n      isDefault\\n      artifactId\\n      knowledge {\\n        id\\n        name\\n        kind\\n        version\\n        uri\\n        sha256\\n        createdAt\\n      }\\n      createdAt\\n    }\\n  }\",\n  \"variables\": {\n    \"configId\": \"\",\n    \"knowledgeArtifactIds\": []\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1798,7 +1856,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"fragment OvaTemplateFamilyFields on OvaTemplateFamily {\\n    id\\n    name\\n    type\\n    description\\n    tools\\n    skills\\n    scenarios\\n    iconShape\\n    iconColor\\n    latestVersion\\n    createdAt\\n    updatedAt\\n    versions {\\n      id\\n      familyId\\n      version\\n      ovaIdentifier\\n      notes\\n      createdAt\\n    }\\n  }\\n\\n  query OvaTemplateFamilies(\\n    $filter: OvaTemplateFamilyFilter\\n    $pagination: Pagination\\n    $sort: OvaTemplateFamilySort\\n  ) {\\n    ovaTemplateFamilies(filter: $filter, pagination: $pagination, sort: $sort) {\\n      nodes {\\n        ...OvaTemplateFamilyFields\\n      }\\n      totalCount\\n      pageInfo {\\n        page\\n        pageSize\\n        totalPages\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$filter\": null\n  }\n}"
+              "raw": "{\n  \"query\": \"query OvaTemplateFamilies(\\n    $filter: OvaTemplateFamilyFilter\\n    $pagination: Pagination\\n    $sort: OvaTemplateFamilySort\\n  ) {\\n    ovaTemplateFamilies(filter: $filter, pagination: $pagination, sort: $sort) {\\n      nodes {\\n        id\\n        name\\n        type\\n        description\\n        tools\\n        skills\\n        scenarios\\n        iconShape\\n        iconColor\\n        latestVersion\\n        createdAt\\n        updatedAt\\n        versions {\\n          id\\n          familyId\\n          version\\n          ovaIdentifier\\n          notes\\n          createdAt\\n        }\\n      }\\n      totalCount\\n      pageInfo {\\n        page\\n        pageSize\\n        totalPages\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"filter\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1827,7 +1885,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"fragment OvaTemplateVersionFields on OvaTemplateVersion {\\n    id\\n    familyId\\n    version\\n    ovaIdentifier\\n    notes\\n    createdAt\\n  }\\n\\n  query OvaTemplateVersions($familyId: ID, $pagination: Pagination) {\\n    ovaTemplateVersions(familyId: $familyId, pagination: $pagination) {\\n      nodes {\\n        ...OvaTemplateVersionFields\\n      }\\n      totalCount\\n      pageInfo {\\n        page\\n        pageSize\\n        totalPages\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$familyId\": \"\",\n    \"$pagination\": null\n  }\n}"
+              "raw": "{\n  \"query\": \"query OvaTemplateVersions($familyId: ID, $pagination: Pagination) {\\n    ovaTemplateVersions(familyId: $familyId, pagination: $pagination) {\\n      nodes {\\n        id\\n        familyId\\n        version\\n        ovaIdentifier\\n        notes\\n        createdAt\\n      }\\n      totalCount\\n      pageInfo {\\n        page\\n        pageSize\\n        totalPages\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"familyId\": \"\",\n    \"pagination\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1856,7 +1914,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"fragment OvaTemplateFamilyFields on OvaTemplateFamily {\\n    id\\n    name\\n    type\\n    description\\n    tools\\n    skills\\n    scenarios\\n    iconShape\\n    iconColor\\n    latestVersion\\n    createdAt\\n    updatedAt\\n    versions {\\n      id\\n      familyId\\n      version\\n      ovaIdentifier\\n      notes\\n      createdAt\\n    }\\n  }\\n\\n  mutation CreateOvaTemplateFamily($input: CreateOvaTemplateFamilyInput!) {\\n    createOvaTemplateFamily(input: $input) {\\n      family {\\n        ...OvaTemplateFamilyFields\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation CreateOvaTemplateFamily($input: CreateOvaTemplateFamilyInput!) {\\n    createOvaTemplateFamily(input: $input) {\\n      family {\\n        id\\n        name\\n        type\\n        description\\n        tools\\n        skills\\n        scenarios\\n        iconShape\\n        iconColor\\n        latestVersion\\n        createdAt\\n        updatedAt\\n        versions {\\n          id\\n          familyId\\n          version\\n          ovaIdentifier\\n          notes\\n          createdAt\\n        }\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1885,7 +1943,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"fragment OvaTemplateVersionFields on OvaTemplateVersion {\\n    id\\n    familyId\\n    version\\n    ovaIdentifier\\n    notes\\n    createdAt\\n  }\\n\\n  mutation AddOvaTemplateVersion($input: AddOvaTemplateVersionInput!) {\\n    addOvaTemplateVersion(input: $input) {\\n      version {\\n        ...OvaTemplateVersionFields\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation AddOvaTemplateVersion($input: AddOvaTemplateVersionInput!) {\\n    addOvaTemplateVersion(input: $input) {\\n      version {\\n        id\\n        familyId\\n        version\\n        ovaIdentifier\\n        notes\\n        createdAt\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1914,7 +1972,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"fragment OvaTemplateVersionFields on OvaTemplateVersion {\\n    id\\n    familyId\\n    version\\n    ovaIdentifier\\n    notes\\n    createdAt\\n  }\\n\\n  mutation DeployAgent($input: DeployAgentInput!) {\\n    deployAgent(input: $input) {\\n      agent {\\n        id\\n        name\\n        type\\n        status\\n        endpoint\\n        createdAt\\n        updatedAt\\n        apiKey {\\n          id\\n          name\\n        }\\n        credentials {\\n          username\\n        }\\n        templateFamilyId\\n        templateVersionId\\n        resourcePoolId\\n      }\\n      virtualKeySecret\\n      templateVersion {\\n        ...OvaTemplateVersionFields\\n      }\\n      resourcePool {\\n        id\\n        name\\n        endpoint\\n        syncStatus\\n        lastSyncedAt\\n        datacenters {\\n          name\\n        }\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation DeployAgent($input: DeployAgentInput!) {\\n    deployAgent(input: $input) {\\n      agent {\\n        id\\n        name\\n        type\\n        status\\n        endpoint\\n        createdAt\\n        updatedAt\\n        apiKey {\\n          id\\n          name\\n        }\\n        credentials {\\n          username\\n        }\\n        templateFamilyId\\n        templateVersionId\\n        resourcePoolId\\n      }\\n      virtualKeySecret\\n      templateVersion {\\n        id\\n        familyId\\n        version\\n        ovaIdentifier\\n        notes\\n        createdAt\\n      }\\n      resourcePool {\\n        id\\n        name\\n        endpoint\\n        syncStatus\\n        lastSyncedAt\\n        datacenters {\\n          name\\n        }\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1948,7 +2006,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query KnowledgeArtifacts {\\n    artifacts(kind: knowledge) {\\n      ...KnowledgeArtifactFields\\n    }\\n  }\\n  \\n  fragment KnowledgeArtifactFields on Artifact {\\n    id\\n    name\\n    kind\\n    version\\n    uri\\n    sha256\\n    createdAt\\n  }\",\n  \"variables\": {}\n}"
+              "raw": "{\n  \"query\": \"query KnowledgeArtifacts {\\n    artifacts(kind: knowledge) {\\n      id\\n      name\\n      kind\\n      version\\n      uri\\n      sha256\\n      createdAt\\n    }\\n  }\",\n  \"variables\": {}\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1977,7 +2035,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query ContentLibraries($resourcePoolId: ID!) {\\n    contentLibraries(resourcePoolId: $resourcePoolId)\\n  }\",\n  \"variables\": {\n    \"$resourcePoolId\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query ContentLibraries($resourcePoolId: ID!) {\\n    contentLibraries(resourcePoolId: $resourcePoolId)\\n  }\",\n  \"variables\": {\n    \"resourcePoolId\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -2006,7 +2064,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query ContentLibraryItems($resourcePoolId: ID!, $libraryName: String!) {\\n    contentLibraryItems(resourcePoolId: $resourcePoolId, libraryName: $libraryName) {\\n      name\\n      type\\n    }\\n  }\",\n  \"variables\": {\n    \"$resourcePoolId\": \"\",\n    \"$libraryName\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query ContentLibraryItems($resourcePoolId: ID!, $libraryName: String!) {\\n    contentLibraryItems(resourcePoolId: $resourcePoolId, libraryName: $libraryName) {\\n      name\\n      type\\n    }\\n  }\",\n  \"variables\": {\n    \"resourcePoolId\": \"\",\n    \"libraryName\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -2040,7 +2098,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query Budgets($scope: BudgetScope!) {\\n    budgets(scope: $scope) {\\n      scope\\n      label\\n      spend\\n      maxBudget\\n      remaining\\n      budgetResetAt\\n      utilizationPct\\n    }\\n  }\",\n  \"variables\": {\n    \"$scope\": null\n  }\n}"
+              "raw": "{\n  \"query\": \"query Budgets($scope: BudgetScope!) {\\n    budgets(scope: $scope) {\\n      scope\\n      label\\n      spend\\n      maxBudget\\n      remaining\\n      budgetResetAt\\n      utilizationPct\\n    }\\n  }\",\n  \"variables\": {\n    \"scope\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -2069,7 +2127,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query SpendReport($input: SpendReportInput!) {\\n    spendReport(input: $input) {\\n      from\\n      to\\n      groupBy\\n      rows {\\n        key\\n        label\\n        spend\\n        promptTokens\\n        completionTokens\\n        totalTokens\\n        requests\\n      }\\n      totals {\\n        spend\\n        promptTokens\\n        completionTokens\\n        totalTokens\\n        requests\\n      }\\n      byDay {\\n        date\\n        spend\\n        totalTokens\\n      }\\n      gateways {\\n        gatewayId\\n        gatewayName\\n        ok\\n        error\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"query SpendReport($input: SpendReportInput!) {\\n    spendReport(input: $input) {\\n      from\\n      to\\n      groupBy\\n      rows {\\n        key\\n        label\\n        spend\\n        promptTokens\\n        completionTokens\\n        totalTokens\\n        requests\\n      }\\n      totals {\\n        spend\\n        promptTokens\\n        completionTokens\\n        totalTokens\\n        requests\\n      }\\n      byDay {\\n        date\\n        spend\\n        totalTokens\\n      }\\n      gateways {\\n        gatewayId\\n        gatewayName\\n        ok\\n        error\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -2103,7 +2161,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query RequestLogs($filter: RequestLogFilter, $page: PageInput) {\\n    requestLogs(filter: $filter, page: $page) {\\n      items {\\n        ...RequestLogFields\\n      }\\n      total\\n    }\\n  }\\n  \\n  fragment RequestLogFields on RequestLog {\\n    id\\n    requestId\\n    userId\\n    agentId\\n    model\\n    inputTokens\\n    outputTokens\\n    latencyMs\\n    statusCode\\n    detail\\n    createdAt\\n  }\",\n  \"variables\": {\n    \"$filter\": null,\n    \"$page\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"query RequestLogs($filter: RequestLogFilter, $page: PageInput) {\\n    requestLogs(filter: $filter, page: $page) {\\n      items {\\n        id\\n        requestId\\n        userId\\n        agentId\\n        model\\n        inputTokens\\n        outputTokens\\n        latencyMs\\n        statusCode\\n        detail\\n        createdAt\\n      }\\n      total\\n    }\\n  }\",\n  \"variables\": {\n    \"filter\": null,\n    \"page\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -2132,7 +2190,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query RequestMetrics(\\n    $from: Time!\\n    $to: Time!\\n    $granularity: RequestMetricsBucketGranularity!\\n    $filter: RequestMetricsFilter\\n  ) {\\n    requestMetrics(from: $from, to: $to, granularity: $granularity, filter: $filter) {\\n      rangeStart\\n      rangeEnd\\n      granularity\\n      summary {\\n        totalRequests\\n        totalErrors\\n        errorRate\\n        avgLatencyMs\\n        p50LatencyMs\\n        p95LatencyMs\\n        p99LatencyMs\\n        totalInputTokens\\n        totalOutputTokens\\n      }\\n      buckets {\\n        timestamp\\n        requestCount\\n        errorCount\\n        avgLatencyMs\\n        p95LatencyMs\\n        inputTokensTotal\\n        outputTokensTotal\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$from\": null\n  }\n}"
+              "raw": "{\n  \"query\": \"query RequestMetrics(\\n    $from: Time!\\n    $to: Time!\\n    $granularity: RequestMetricsBucketGranularity!\\n    $filter: RequestMetricsFilter\\n  ) {\\n    requestMetrics(from: $from, to: $to, granularity: $granularity, filter: $filter) {\\n      rangeStart\\n      rangeEnd\\n      granularity\\n      summary {\\n        totalRequests\\n        totalErrors\\n        errorRate\\n        avgLatencyMs\\n        p50LatencyMs\\n        p95LatencyMs\\n        p99LatencyMs\\n        totalInputTokens\\n        totalOutputTokens\\n      }\\n      buckets {\\n        timestamp\\n        requestCount\\n        errorCount\\n        avgLatencyMs\\n        p95LatencyMs\\n        inputTokensTotal\\n        outputTokensTotal\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"from\": null\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -2161,7 +2219,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query AuditLogs($filter: AuditFilter, $page: PageInput) {\\n    auditLogs(filter: $filter, page: $page) {\\n      items {\\n        id\\n        actorUserId\\n        actorName\\n        action\\n        resourceType\\n        resourceId\\n        ip\\n        result\\n        detail\\n        createdAt\\n      }\\n      total\\n    }\\n  }\",\n  \"variables\": {\n    \"$filter\": null,\n    \"$page\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"query AuditLogs($filter: AuditFilter, $page: PageInput) {\\n    auditLogs(filter: $filter, page: $page) {\\n      items {\\n        id\\n        actorUserId\\n        actorName\\n        action\\n        resourceType\\n        resourceId\\n        ip\\n        result\\n        detail\\n        createdAt\\n      }\\n      total\\n    }\\n  }\",\n  \"variables\": {\n    \"filter\": null,\n    \"page\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -2190,7 +2248,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query MeteringOverview($range: MeteringTimeRange, $userId: ID) {\\n    meteringOverview(range: $range, userId: $userId) {\\n      range\\n      totalInputTokens\\n      totalOutputTokens\\n      totalTokens\\n      totalRequests\\n      byAgent {\\n        agentId\\n        agentName\\n        inputTokens\\n        outputTokens\\n        totalTokens\\n        requests\\n        cost\\n      }\\n      byModel {\\n        model\\n        inputTokens\\n        outputTokens\\n        totalTokens\\n        requests\\n        cost\\n      }\\n      byDay {\\n        date\\n        inputTokens\\n        outputTokens\\n        totalTokens\\n        requests\\n        cost\\n      }\\n      cost {\\n        totalCost\\n        monthlyCost\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"$range\": null,\n    \"$userId\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query MeteringOverview($range: MeteringTimeRange, $userId: ID) {\\n    meteringOverview(range: $range, userId: $userId) {\\n      range\\n      totalInputTokens\\n      totalOutputTokens\\n      totalTokens\\n      totalRequests\\n      byAgent {\\n        agentId\\n        agentName\\n        inputTokens\\n        outputTokens\\n        totalTokens\\n        requests\\n        cost\\n      }\\n      byModel {\\n        model\\n        inputTokens\\n        outputTokens\\n        totalTokens\\n        requests\\n        cost\\n      }\\n      byDay {\\n        date\\n        inputTokens\\n        outputTokens\\n        totalTokens\\n        requests\\n        cost\\n      }\\n      cost {\\n        totalCost\\n        monthlyCost\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"range\": null,\n    \"userId\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",

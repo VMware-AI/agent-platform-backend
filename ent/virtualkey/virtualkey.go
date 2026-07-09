@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -69,8 +70,17 @@ const (
 	FieldLastActiveAt = "last_active_at"
 	// FieldSpend holds the string denoting the spend field in the database.
 	FieldSpend = "spend"
+	// EdgeAgent holds the string denoting the agent edge name in mutations.
+	EdgeAgent = "agent"
 	// Table holds the table name of the virtualkey in the database.
 	Table = "virtual_keys"
+	// AgentTable is the table that holds the agent relation/edge.
+	AgentTable = "virtual_keys"
+	// AgentInverseTable is the table name for the Agent entity.
+	// It exists in this package in order to avoid circular dependency with the "agent" package.
+	AgentInverseTable = "agents"
+	// AgentColumn is the table column denoting the agent relation/edge.
+	AgentColumn = "agent_id"
 )
 
 // Columns holds all SQL columns for virtualkey fields.
@@ -295,4 +305,18 @@ func ByLastActiveAt(opts ...sql.OrderTermOption) OrderOption {
 // BySpend orders the results by the spend field.
 func BySpend(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSpend, opts...).ToFunc()
+}
+
+// ByAgentField orders the results by agent field.
+func ByAgentField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAgentStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newAgentStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AgentInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, AgentTable, AgentColumn),
+	)
 }

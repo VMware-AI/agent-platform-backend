@@ -33,7 +33,12 @@ type VirtualKey {
   # to exactly one modelGateway. The frontend renders this as the
   # "gateway" pill on the operator console.
   modelGateway: ModelGateway!
-  agentId: ID
+  # Nested agent object bound to this key (loaded via the ent
+  # `agent_id` → `agent` edge). Null when the key has not been bound yet
+  # (e.g. just-issued, before associateVirtualKeyAgent runs). The 1:1
+  # active-key-per-agent invariant is enforced by a DB partial unique
+  # index; see IssueVirtualKey / associateVirtualKeyAgent.
+  agent: Agent
   models: [String!]!
   maxBudget: Float
   status: VirtualKeyStatus!
@@ -142,10 +147,34 @@ extend type Query {
   gatewayAvailableModels(gatewayConnectionId: ID!): [String!]!
     @hasRole(any: [admin, read_only])
 
-  # agentId and modelGateway are independent optional filters; all null
-  # → all keys in the current tenant. Multiple set → intersection.
-  virtualKeys(agentId: ID, modelGateway: ID): [VirtualKey!]!
+  # agentName, modelGateway, nameContains, and modelContains are independent
+  # optional filters; all null → all keys in the current tenant. Multiple
+  # set → intersection.
+  # - agentName: case-insensitive substring match against the bound
+  #   agent's `name` (via virtualkey.HasAgentWith — a single subquery,
+  #   not N+1). Empty/missing `agent` rows (just-issued keys) are
+  #   excluded.
+  # - nameContains: case-insensitive substring match on the human-readable
+  #   name (ent.NameContainsFold; unindexed).
+  # - modelContains: case-insensitive substring match against ANY element
+  #   of the `models` array (raw SQL EXISTS/unnest; unindexed). Accepts a
+  #   partial model id like "gpt-4" and matches e.g. "openai/gpt-4o".
+  # orderBy defaults to CREATED_DESC (newest first); NAME_ASC / NAME_DESC
+  # sort by the human-readable name.
+  virtualKeys(
+    agentName: String,
+    modelGateway: ID,
+    nameContains: String,
+    modelContains: String,
+    orderBy: VirtualKeyOrderBy
+  ): [VirtualKey!]!
     @hasRole(any: [admin, read_only])
+}
+
+enum VirtualKeyOrderBy {
+  CREATED_DESC
+  NAME_ASC
+  NAME_DESC
 }
 
 extend type Mutation {

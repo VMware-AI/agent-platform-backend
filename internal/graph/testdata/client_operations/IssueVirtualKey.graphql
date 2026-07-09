@@ -6,13 +6,45 @@ mutation IssueVirtualKey($input: IssueVirtualKeyInput!) {
       }
     }
   }
-  
+
+  # Selection set kept in sync with the GraphQL `VirtualKey` type — every
+  # field a console surface (list, detail, issue confirmation) is expected
+  # to display. Update both this fragment and the IssueVirtualKey /
+  # RegenerateVirtualKey / SetVirtualKeyEnabled / VirtualKeys / AssociateVirtualKeyAgent
+  # fixtures when the schema gains or drops a field.
   fragment VirtualKeyFields on VirtualKey {
     id
-    alias
+    name
+    maskedKey
     userId
-    agentId
+    agent {
+      id
+    }
+    modelGateway {
+      id
+      name
+      provider
+      endpoint
+    }
+    models
     status
+    keyType
+    blocked
     expiresAt
+    duration
+    lastActiveAt
+    spend
+    maxBudget
+    budgetDuration
+    maxParallelRequests
+    rpmLimit
+    tpmLimit
+    rpmLimitType
+    tpmLimitType
+    allowedRoutes
+    tags
+    autoRotate
+    rotationInterval
     createdAt
+    updatedAt
   }

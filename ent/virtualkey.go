@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/google/uuid"
 )
@@ -72,8 +73,31 @@ type VirtualKey struct {
 	// LastActiveAt holds the value of the "last_active_at" field.
 	LastActiveAt *time.Time `json:"last_active_at,omitempty"`
 	// Spend holds the value of the "spend" field.
-	Spend        int `json:"spend,omitempty"`
+	Spend int `json:"spend,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the VirtualKeyQuery when eager-loading is set.
+	Edges        VirtualKeyEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// VirtualKeyEdges holds the relations/edges for other nodes in the graph.
+type VirtualKeyEdges struct {
+	// Agent holds the value of the agent edge.
+	Agent *Agent `json:"agent,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// AgentOrErr returns the Agent value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e VirtualKeyEdges) AgentOrErr() (*Agent, error) {
+	if e.Agent != nil {
+		return e.Agent, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: agent.Label}
+	}
+	return nil, &NotLoadedError{edge: "agent"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -300,6 +324,11 @@ func (_m *VirtualKey) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *VirtualKey) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryAgent queries the "agent" edge of the VirtualKey entity.
+func (_m *VirtualKey) QueryAgent() *AgentQuery {
+	return NewVirtualKeyClient(_m.config).QueryAgent(_m)
 }
 
 // Update returns a builder for updating this VirtualKey.

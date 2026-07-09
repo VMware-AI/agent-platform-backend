@@ -1,15 +1,10 @@
-mutation RegenerateVirtualKey($id: ID!) {
-    regenerateVirtualKey(id: $id) {
-      secret
-      virtualKey {
-        ...VirtualKeyFields
-      }
+mutation AssociateVirtualKeyAgent($virtualKeyId: ID!, $agentId: ID!) {
+    associateVirtualKeyAgent(virtualKeyId: $virtualKeyId, agentId: $agentId) {
+      ...VirtualKeyFields
     }
   }
 
-  # See IssueVirtualKey.graphql for the canonical VirtualKeyFields fragment —
-  # kept in sync across all fixtures that select VirtualKey so the generated
-  # Postman request bodies are interchangeable.
+  # See IssueVirtualKey.graphql for the canonical VirtualKeyFields fragment.
   fragment VirtualKeyFields on VirtualKey {
     id
     name

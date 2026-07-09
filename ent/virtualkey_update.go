@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
+	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/google/uuid"
@@ -512,9 +513,20 @@ func (_u *VirtualKeyUpdate) ClearSpend() *VirtualKeyUpdate {
 	return _u
 }
 
+// SetAgent sets the "agent" edge to the Agent entity.
+func (_u *VirtualKeyUpdate) SetAgent(v *Agent) *VirtualKeyUpdate {
+	return _u.SetAgentID(v.ID)
+}
+
 // Mutation returns the VirtualKeyMutation object of the builder.
 func (_u *VirtualKeyUpdate) Mutation() *VirtualKeyMutation {
 	return _u.mutation
+}
+
+// ClearAgent clears the "agent" edge to the Agent entity.
+func (_u *VirtualKeyUpdate) ClearAgent() *VirtualKeyUpdate {
+	_u.mutation.ClearAgent()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -618,12 +630,6 @@ func (_u *VirtualKeyUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(virtualkey.FieldName, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.AgentID(); ok {
-		_spec.SetField(virtualkey.FieldAgentID, field.TypeUUID, value)
-	}
-	if _u.mutation.AgentIDCleared() {
-		_spec.ClearField(virtualkey.FieldAgentID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.ModelGatewayID(); ok {
 		_spec.SetField(virtualkey.FieldModelGatewayID, field.TypeUUID, value)
@@ -756,6 +762,35 @@ func (_u *VirtualKeyUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if _u.mutation.SpendCleared() {
 		_spec.ClearField(virtualkey.FieldSpend, field.TypeInt)
+	}
+	if _u.mutation.AgentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   virtualkey.AgentTable,
+			Columns: []string{virtualkey.AgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agent.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   virtualkey.AgentTable,
+			Columns: []string{virtualkey.AgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
@@ -1260,9 +1295,20 @@ func (_u *VirtualKeyUpdateOne) ClearSpend() *VirtualKeyUpdateOne {
 	return _u
 }
 
+// SetAgent sets the "agent" edge to the Agent entity.
+func (_u *VirtualKeyUpdateOne) SetAgent(v *Agent) *VirtualKeyUpdateOne {
+	return _u.SetAgentID(v.ID)
+}
+
 // Mutation returns the VirtualKeyMutation object of the builder.
 func (_u *VirtualKeyUpdateOne) Mutation() *VirtualKeyMutation {
 	return _u.mutation
+}
+
+// ClearAgent clears the "agent" edge to the Agent entity.
+func (_u *VirtualKeyUpdateOne) ClearAgent() *VirtualKeyUpdateOne {
+	_u.mutation.ClearAgent()
+	return _u
 }
 
 // Where appends a list predicates to the VirtualKeyUpdate builder.
@@ -1397,12 +1443,6 @@ func (_u *VirtualKeyUpdateOne) sqlSave(ctx context.Context) (_node *VirtualKey, 
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(virtualkey.FieldName, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.AgentID(); ok {
-		_spec.SetField(virtualkey.FieldAgentID, field.TypeUUID, value)
-	}
-	if _u.mutation.AgentIDCleared() {
-		_spec.ClearField(virtualkey.FieldAgentID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.ModelGatewayID(); ok {
 		_spec.SetField(virtualkey.FieldModelGatewayID, field.TypeUUID, value)
 	}
@@ -1534,6 +1574,35 @@ func (_u *VirtualKeyUpdateOne) sqlSave(ctx context.Context) (_node *VirtualKey, 
 	}
 	if _u.mutation.SpendCleared() {
 		_spec.ClearField(virtualkey.FieldSpend, field.TypeInt)
+	}
+	if _u.mutation.AgentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   virtualkey.AgentTable,
+			Columns: []string{virtualkey.AgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agent.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   virtualkey.AgentTable,
+			Columns: []string{virtualkey.AgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &VirtualKey{config: _u.config}
