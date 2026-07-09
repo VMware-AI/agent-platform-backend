@@ -971,6 +971,7 @@ type ComplexityRoot struct {
 		TpmLimit            func(childComplexity int) int
 		TpmLimitType        func(childComplexity int) int
 		UpdatedAt           func(childComplexity int) int
+		UserID              func(childComplexity int) int
 	}
 
 	VsphereNetwork struct {
@@ -5634,6 +5635,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.VirtualKey.UpdatedAt(childComplexity), true
+	case "VirtualKey.userId":
+		if e.ComplexityRoot.VirtualKey.UserID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VirtualKey.UserID(childComplexity), true
 
 	case "VsphereNetwork.dvsName":
 		if e.ComplexityRoot.VsphereNetwork.DvsName == nil {
@@ -8006,6 +8013,9 @@ type VirtualKey {
   # console's progress bar reads these directly).
   spend: Float!
   lastActiveAt: Time
+  # 前端传入的 user_id,LiteLLM gateway 也用这个值作为 user_id。
+  # 必填,IssueVirtualKeyInput 强制要求前端传值,后端不做默认。
+  userId: String!
 }
 
 # Returned only at issue / regenerate time — carries the secret, which is
@@ -8062,6 +8072,10 @@ input IssueVirtualKeyInput {
   keyType: String
   autoRotate: Boolean
   rotationInterval: String
+  # Required. LiteLLM /key/generate 现在校验 user_id 非空。
+  # 前端必须传一个非空字符串;后端透传到 ent.VirtualKey.user_id
+  # 和 gateway.GenerateKeyRequest.UserID,不做默认值兜底。
+  userId: String!
 }
 
 extend type Query {
@@ -9696,6 +9710,8 @@ func (ec *executionContext) childFields_VirtualKey(ctx context.Context, field gr
 		return ec.fieldContext_VirtualKey_spend(ctx, field)
 	case "lastActiveAt":
 		return ec.fieldContext_VirtualKey_lastActiveAt(ctx, field)
+	case "userId":
+		return ec.fieldContext_VirtualKey_userId(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type VirtualKey", field.Name)
 }
@@ -31540,6 +31556,29 @@ func (ec *executionContext) fieldContext_VirtualKey_lastActiveAt(_ context.Conte
 	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
+func (ec *executionContext) _VirtualKey_userId(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VirtualKey_userId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.UserID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_VirtualKey_userId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _VsphereNetwork_name(ctx context.Context, field graphql.CollectedField, obj *model.VsphereNetwork) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -33847,7 +33886,7 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "modelGateway", "duration", "models", "maxBudget", "budgetDuration", "maxParallelRequests", "rpmLimit", "tpmLimit", "rpmLimitType", "tpmLimitType", "allowedRoutes", "metadata", "keyType", "autoRotate", "rotationInterval"}
+	fieldsInOrder := [...]string{"name", "modelGateway", "duration", "models", "maxBudget", "budgetDuration", "maxParallelRequests", "rpmLimit", "tpmLimit", "rpmLimitType", "tpmLimitType", "allowedRoutes", "metadata", "keyType", "autoRotate", "rotationInterval", "userId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -33966,6 +34005,13 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 				return it, err
 			}
 			it.RotationInterval = data
+		case "userId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UserID = data
 		}
 	}
 	return it, nil
@@ -44030,6 +44076,11 @@ func (ec *executionContext) _VirtualKey(ctx context.Context, sel ast.SelectionSe
 		case "lastActiveAt":
 			out.Values[i] = ec._VirtualKey_lastActiveAt(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "userId":
+			out.Values[i] = ec._VirtualKey_userId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		default:

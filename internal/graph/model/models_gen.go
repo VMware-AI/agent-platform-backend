@@ -507,6 +507,7 @@ type IssueVirtualKeyInput struct {
 	KeyType             *string        `json:"keyType,omitempty"`
 	AutoRotate          *bool          `json:"autoRotate,omitempty"`
 	RotationInterval    *string        `json:"rotationInterval,omitempty"`
+	UserID              string         `json:"userId"`
 }
 
 type IssuedVirtualKey struct {
@@ -1280,6 +1281,7 @@ type VirtualKey struct {
 	RotationInterval    *string          `json:"rotationInterval,omitempty"`
 	Spend               float64          `json:"spend"`
 	LastActiveAt        *time.Time       `json:"lastActiveAt,omitempty"`
+	UserID              string           `json:"userId"`
 }
 
 type VsphereNetwork struct {
