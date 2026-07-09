@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -27,8 +28,6 @@ const (
 	FieldMaskedKey = "masked_key"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
-	// FieldOrganizationID holds the string denoting the organization_id field in the database.
-	FieldOrganizationID = "organization_id"
 	// FieldAgentID holds the string denoting the agent_id field in the database.
 	FieldAgentID = "agent_id"
 	// FieldModelGatewayID holds the string denoting the model_gateway_id field in the database.
@@ -65,12 +64,23 @@ const (
 	FieldAutoRotate = "auto_rotate"
 	// FieldRotationInterval holds the string denoting the rotation_interval field in the database.
 	FieldRotationInterval = "rotation_interval"
+	// FieldUserID holds the string denoting the user_id field in the database.
+	FieldUserID = "user_id"
 	// FieldLastActiveAt holds the string denoting the last_active_at field in the database.
 	FieldLastActiveAt = "last_active_at"
 	// FieldSpend holds the string denoting the spend field in the database.
 	FieldSpend = "spend"
+	// EdgeAgent holds the string denoting the agent edge name in mutations.
+	EdgeAgent = "agent"
 	// Table holds the table name of the virtualkey in the database.
 	Table = "virtual_keys"
+	// AgentTable is the table that holds the agent relation/edge.
+	AgentTable = "virtual_keys"
+	// AgentInverseTable is the table name for the Agent entity.
+	// It exists in this package in order to avoid circular dependency with the "agent" package.
+	AgentInverseTable = "agents"
+	// AgentColumn is the table column denoting the agent relation/edge.
+	AgentColumn = "agent_id"
 )
 
 // Columns holds all SQL columns for virtualkey fields.
@@ -82,7 +92,6 @@ var Columns = []string{
 	FieldLitellmToken,
 	FieldMaskedKey,
 	FieldName,
-	FieldOrganizationID,
 	FieldAgentID,
 	FieldModelGatewayID,
 	FieldModels,
@@ -101,6 +110,7 @@ var Columns = []string{
 	FieldKeyType,
 	FieldAutoRotate,
 	FieldRotationInterval,
+	FieldUserID,
 	FieldLastActiveAt,
 	FieldSpend,
 }
@@ -128,14 +138,14 @@ var (
 	MaskedKeyValidator func(string) error
 	// NameValidator is a validator for the "name" field. It is called by the builders before save.
 	NameValidator func(string) error
-	// OrganizationIDValidator is a validator for the "organization_id" field. It is called by the builders before save.
-	OrganizationIDValidator func(string) error
 	// DefaultBlocked holds the default value on creation for the "blocked" field.
 	DefaultBlocked bool
 	// DefaultKeyType holds the default value on creation for the "key_type" field.
 	DefaultKeyType string
 	// DefaultAutoRotate holds the default value on creation for the "auto_rotate" field.
 	DefaultAutoRotate bool
+	// UserIDValidator is a validator for the "user_id" field. It is called by the builders before save.
+	UserIDValidator func(string) error
 	// DefaultSpend holds the default value on creation for the "spend" field.
 	DefaultSpend int
 	// DefaultID holds the default value on creation for the "id" field.
@@ -205,11 +215,6 @@ func ByMaskedKey(opts ...sql.OrderTermOption) OrderOption {
 // ByName orders the results by the name field.
 func ByName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldName, opts...).ToFunc()
-}
-
-// ByOrganizationID orders the results by the organization_id field.
-func ByOrganizationID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldOrganizationID, opts...).ToFunc()
 }
 
 // ByAgentID orders the results by the agent_id field.
@@ -287,6 +292,11 @@ func ByRotationInterval(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRotationInterval, opts...).ToFunc()
 }
 
+// ByUserID orders the results by the user_id field.
+func ByUserID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUserID, opts...).ToFunc()
+}
+
 // ByLastActiveAt orders the results by the last_active_at field.
 func ByLastActiveAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLastActiveAt, opts...).ToFunc()
@@ -295,4 +305,18 @@ func ByLastActiveAt(opts ...sql.OrderTermOption) OrderOption {
 // BySpend orders the results by the spend field.
 func BySpend(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSpend, opts...).ToFunc()
+}
+
+// ByAgentField orders the results by agent field.
+func ByAgentField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAgentStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newAgentStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AgentInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, AgentTable, AgentColumn),
+	)
 }

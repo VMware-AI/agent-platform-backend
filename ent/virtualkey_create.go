@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/google/uuid"
 )
@@ -78,12 +79,6 @@ func (_c *VirtualKeyCreate) SetMaskedKey(v string) *VirtualKeyCreate {
 // SetName sets the "name" field.
 func (_c *VirtualKeyCreate) SetName(v string) *VirtualKeyCreate {
 	_c.mutation.SetName(v)
-	return _c
-}
-
-// SetOrganizationID sets the "organization_id" field.
-func (_c *VirtualKeyCreate) SetOrganizationID(v string) *VirtualKeyCreate {
-	_c.mutation.SetOrganizationID(v)
 	return _c
 }
 
@@ -307,6 +302,12 @@ func (_c *VirtualKeyCreate) SetNillableRotationInterval(v *string) *VirtualKeyCr
 	return _c
 }
 
+// SetUserID sets the "user_id" field.
+func (_c *VirtualKeyCreate) SetUserID(v string) *VirtualKeyCreate {
+	_c.mutation.SetUserID(v)
+	return _c
+}
+
 // SetLastActiveAt sets the "last_active_at" field.
 func (_c *VirtualKeyCreate) SetLastActiveAt(v time.Time) *VirtualKeyCreate {
 	_c.mutation.SetLastActiveAt(v)
@@ -347,6 +348,11 @@ func (_c *VirtualKeyCreate) SetNillableID(v *uuid.UUID) *VirtualKeyCreate {
 		_c.SetID(*v)
 	}
 	return _c
+}
+
+// SetAgent sets the "agent" edge to the Agent entity.
+func (_c *VirtualKeyCreate) SetAgent(v *Agent) *VirtualKeyCreate {
+	return _c.SetAgentID(v.ID)
 }
 
 // Mutation returns the VirtualKeyMutation object of the builder.
@@ -450,14 +456,6 @@ func (_c *VirtualKeyCreate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.name": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.OrganizationID(); !ok {
-		return &ValidationError{Name: "organization_id", err: errors.New(`ent: missing required field "VirtualKey.organization_id"`)}
-	}
-	if v, ok := _c.mutation.OrganizationID(); ok {
-		if err := virtualkey.OrganizationIDValidator(v); err != nil {
-			return &ValidationError{Name: "organization_id", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.organization_id": %w`, err)}
-		}
-	}
 	if _, ok := _c.mutation.ModelGatewayID(); !ok {
 		return &ValidationError{Name: "model_gateway_id", err: errors.New(`ent: missing required field "VirtualKey.model_gateway_id"`)}
 	}
@@ -477,6 +475,14 @@ func (_c *VirtualKeyCreate) check() error {
 	}
 	if _, ok := _c.mutation.AutoRotate(); !ok {
 		return &ValidationError{Name: "auto_rotate", err: errors.New(`ent: missing required field "VirtualKey.auto_rotate"`)}
+	}
+	if _, ok := _c.mutation.UserID(); !ok {
+		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "VirtualKey.user_id"`)}
+	}
+	if v, ok := _c.mutation.UserID(); ok {
+		if err := virtualkey.UserIDValidator(v); err != nil {
+			return &ValidationError{Name: "user_id", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.user_id": %w`, err)}
+		}
 	}
 	return nil
 }
@@ -536,14 +542,6 @@ func (_c *VirtualKeyCreate) createSpec() (*VirtualKey, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Name(); ok {
 		_spec.SetField(virtualkey.FieldName, field.TypeString, value)
 		_node.Name = value
-	}
-	if value, ok := _c.mutation.OrganizationID(); ok {
-		_spec.SetField(virtualkey.FieldOrganizationID, field.TypeString, value)
-		_node.OrganizationID = value
-	}
-	if value, ok := _c.mutation.AgentID(); ok {
-		_spec.SetField(virtualkey.FieldAgentID, field.TypeUUID, value)
-		_node.AgentID = &value
 	}
 	if value, ok := _c.mutation.ModelGatewayID(); ok {
 		_spec.SetField(virtualkey.FieldModelGatewayID, field.TypeUUID, value)
@@ -613,6 +611,10 @@ func (_c *VirtualKeyCreate) createSpec() (*VirtualKey, *sqlgraph.CreateSpec) {
 		_spec.SetField(virtualkey.FieldRotationInterval, field.TypeString, value)
 		_node.RotationInterval = value
 	}
+	if value, ok := _c.mutation.UserID(); ok {
+		_spec.SetField(virtualkey.FieldUserID, field.TypeString, value)
+		_node.UserID = value
+	}
 	if value, ok := _c.mutation.LastActiveAt(); ok {
 		_spec.SetField(virtualkey.FieldLastActiveAt, field.TypeTime, value)
 		_node.LastActiveAt = &value
@@ -620,6 +622,23 @@ func (_c *VirtualKeyCreate) createSpec() (*VirtualKey, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Spend(); ok {
 		_spec.SetField(virtualkey.FieldSpend, field.TypeInt, value)
 		_node.Spend = value
+	}
+	if nodes := _c.mutation.AgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   virtualkey.AgentTable,
+			Columns: []string{virtualkey.AgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.AgentID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

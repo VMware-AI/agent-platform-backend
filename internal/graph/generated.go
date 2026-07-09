@@ -552,6 +552,7 @@ type ComplexityRoot struct {
 		IssueVirtualKey                func(childComplexity int, input model.IssueVirtualKeyInput) int
 		Login                          func(childComplexity int, input model.LoginInput) int
 		Logout                         func(childComplexity int) int
+		PurgeRevokedVirtualKeys        func(childComplexity int, beforeTime time.Time) int
 		ReconfigAgentVM                func(childComplexity int, agentID string, resource *model.AgentResourceInput, network *model.AgentNetworkInput, vAppProperties []model.VAppPropertyInput) int
 		RecordRequestLog               func(childComplexity int, input model.RecordRequestLogInput) int
 		RecordTokenUsage               func(childComplexity int, input model.RecordTokenUsageInput) int
@@ -696,6 +697,11 @@ type ComplexityRoot struct {
 		TotalPages  func(childComplexity int) int
 	}
 
+	PurgeResult struct {
+		DeletedCount             func(childComplexity int) int
+		OldestRemainingUpdatedAt func(childComplexity int) int
+	}
+
 	Query struct {
 		Agent                   func(childComplexity int, id string) int
 		AgentConfigs            func(childComplexity int, agentType *string) int
@@ -743,7 +749,7 @@ type ComplexityRoot struct {
 		UserRoles               func(childComplexity int, userID string) int
 		Users                   func(childComplexity int, filter *model.UserFilter, pagination *model.Pagination, sort *model.UserSort) int
 		VMTemplates             func(childComplexity int, resourcePoolID string) int
-		VirtualKeys             func(childComplexity int, organizationID *string, agentID *string, modelGateway *string) int
+		VirtualKeys             func(childComplexity int, agentName *string, modelGateway *string, nameContains *string, nameEquals *string, modelContains *string, orderBy *model.VirtualKeyOrderBy) int
 		VsphereNetworks         func(childComplexity int, resourcePoolID string) int
 		VsphereResourcePools    func(childComplexity int, resourcePoolID string) int
 	}
@@ -945,7 +951,7 @@ type ComplexityRoot struct {
 	}
 
 	VirtualKey struct {
-		AgentID             func(childComplexity int) int
+		Agent               func(childComplexity int) int
 		AllowedRoutes       func(childComplexity int) int
 		AutoRotate          func(childComplexity int) int
 		Blocked             func(childComplexity int) int
@@ -962,7 +968,6 @@ type ComplexityRoot struct {
 		ModelGateway        func(childComplexity int) int
 		Models              func(childComplexity int) int
 		Name                func(childComplexity int) int
-		OrganizationID      func(childComplexity int) int
 		RotationInterval    func(childComplexity int) int
 		RpmLimit            func(childComplexity int) int
 		RpmLimitType        func(childComplexity int) int
@@ -972,6 +977,7 @@ type ComplexityRoot struct {
 		TpmLimit            func(childComplexity int) int
 		TpmLimitType        func(childComplexity int) int
 		UpdatedAt           func(childComplexity int) int
+		UserID              func(childComplexity int) int
 	}
 
 	VsphereNetwork struct {
@@ -1082,6 +1088,7 @@ type MutationResolver interface {
 	RegenerateVirtualKey(ctx context.Context, id string) (*model.IssuedVirtualKey, error)
 	SetVirtualKeyEnabled(ctx context.Context, id string, enabled bool) (*model.VirtualKey, error)
 	AssociateVirtualKeyAgent(ctx context.Context, virtualKeyID string, agentID string) (*model.VirtualKey, error)
+	PurgeRevokedVirtualKeys(ctx context.Context, beforeTime time.Time) (*model.PurgeResult, error)
 }
 type OvaTemplateFamilyResolver interface {
 	LatestVersion(ctx context.Context, obj *model.OvaTemplateFamily) (*string, error)
@@ -1142,7 +1149,7 @@ type QueryResolver interface {
 	ContentLibraryItems(ctx context.Context, resourcePoolID string, libraryName string) ([]model.ContentLibraryItem, error)
 	PlatformSettings(ctx context.Context) (*model.PlatformSettings, error)
 	GatewayAvailableModels(ctx context.Context, gatewayConnectionID string) ([]string, error)
-	VirtualKeys(ctx context.Context, organizationID *string, agentID *string, modelGateway *string) ([]model.VirtualKey, error)
+	VirtualKeys(ctx context.Context, agentName *string, modelGateway *string, nameContains *string, nameEquals *string, modelContains *string, orderBy *model.VirtualKeyOrderBy) ([]model.VirtualKey, error)
 }
 type UserResolver interface {
 	DisplayName(ctx context.Context, obj *model.User) (string, error)
@@ -3388,6 +3395,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.Logout(childComplexity), true
+	case "Mutation.purgeRevokedVirtualKeys":
+		if e.ComplexityRoot.Mutation.PurgeRevokedVirtualKeys == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_purgeRevokedVirtualKeys_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.PurgeRevokedVirtualKeys(childComplexity, args["beforeTime"].(time.Time)), true
 	case "Mutation.reconfigAgentVM":
 		if e.ComplexityRoot.Mutation.ReconfigAgentVM == nil {
 			break
@@ -4247,6 +4265,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.ProviderModelInfoConnection.TotalPages(childComplexity), true
 
+	case "PurgeResult.deletedCount":
+		if e.ComplexityRoot.PurgeResult.DeletedCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PurgeResult.DeletedCount(childComplexity), true
+	case "PurgeResult.oldestRemainingUpdatedAt":
+		if e.ComplexityRoot.PurgeResult.OldestRemainingUpdatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PurgeResult.OldestRemainingUpdatedAt(childComplexity), true
+
 	case "Query.agent":
 		if e.ComplexityRoot.Query.Agent == nil {
 			break
@@ -4704,7 +4735,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Query.VirtualKeys(childComplexity, args["organizationId"].(*string), args["agentId"].(*string), args["modelGateway"].(*string)), true
+		return e.ComplexityRoot.Query.VirtualKeys(childComplexity, args["agentName"].(*string), args["modelGateway"].(*string), args["nameContains"].(*string), args["nameEquals"].(*string), args["modelContains"].(*string), args["orderBy"].(*model.VirtualKeyOrderBy)), true
 	case "Query.vsphereNetworks":
 		if e.ComplexityRoot.Query.VsphereNetworks == nil {
 			break
@@ -5479,12 +5510,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.VMTemplate.UUID(childComplexity), true
 
-	case "VirtualKey.agentId":
-		if e.ComplexityRoot.VirtualKey.AgentID == nil {
+	case "VirtualKey.agent":
+		if e.ComplexityRoot.VirtualKey.Agent == nil {
 			break
 		}
 
-		return e.ComplexityRoot.VirtualKey.AgentID(childComplexity), true
+		return e.ComplexityRoot.VirtualKey.Agent(childComplexity), true
 	case "VirtualKey.allowedRoutes":
 		if e.ComplexityRoot.VirtualKey.AllowedRoutes == nil {
 			break
@@ -5581,12 +5612,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.VirtualKey.Name(childComplexity), true
-	case "VirtualKey.organizationId":
-		if e.ComplexityRoot.VirtualKey.OrganizationID == nil {
-			break
-		}
-
-		return e.ComplexityRoot.VirtualKey.OrganizationID(childComplexity), true
 	case "VirtualKey.rotationInterval":
 		if e.ComplexityRoot.VirtualKey.RotationInterval == nil {
 			break
@@ -5641,6 +5666,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.VirtualKey.UpdatedAt(childComplexity), true
+	case "VirtualKey.userId":
+		if e.ComplexityRoot.VirtualKey.UserID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.VirtualKey.UserID(childComplexity), true
 
 	case "VsphereNetwork.dvsName":
 		if e.ComplexityRoot.VsphereNetwork.DvsName == nil {
@@ -7503,10 +7534,15 @@ type ProviderModelInfoConnection {
   size: Int!
 }
 
-# 0.1.x: 只保留 NAME 与 STATUS;时间维度排序在 console UI 内部按本地时间戳兜底
+# 0.1.x: NAME / STATUS / GATEWAY sort. Direction is currently ignored
+# server-side — every field sorts Asc to match the rest of the codebase's
+# paginated-query convention. The console UI flips the visual order client-side
+# when a Desc order is requested, so a future direction-aware rewrite can land
+# in one place without breaking the wire contract.
 enum ProviderModelInfoSortField {
   NAME
   STATUS
+  GATEWAY
 }
 
 input ProviderModelInfoSort {
@@ -7517,6 +7553,10 @@ input ProviderModelInfoSort {
 input ProviderModelInfoFilterInput {
   search: String
   status: ProviderModelStatus
+  # Filter to a single modelGateway (the FK column on provider_models).
+  # Operator Console uses this to scope the model list to one gateway when
+  # the operator picks a gateway in the filter bar; null = all gateways.
+  modelGatewayId: ID
 }
 
 extend type Query {
@@ -7966,16 +8006,18 @@ type VirtualKey {
   # Persistent, safe-to-display preview of the secret (e.g. "sk-aBcD...XyZ").
   # Always populated; updated alongside any secret change.
   maskedKey: String!
-  # Organization this key belongs to. Required. Drives both tenant
-  # isolation and LiteLLM team routing.
-  organizationId: String!
   # Nested object: the modelGateway that issued this key. Maps to the ent
   # ` + "`" + `model_gateway_id` + "`" + ` column (renamed from ` + "`" + `gateway_connection_id` + "`" + `).
   # Required since per-agent-per-org refactor — every VirtualKey is bound
   # to exactly one modelGateway. The frontend renders this as the
   # "gateway" pill on the operator console.
   modelGateway: ModelGateway!
-  agentId: ID
+  # Nested agent object bound to this key (loaded via the ent
+  # ` + "`" + `agent_id` + "`" + ` → ` + "`" + `agent` + "`" + ` edge). Null when the key has not been bound yet
+  # (e.g. just-issued, before associateVirtualKeyAgent runs). The 1:1
+  # active-key-per-agent invariant is enforced by a DB partial unique
+  # index; see IssueVirtualKey / associateVirtualKeyAgent.
+  agent: Agent
   models: [String!]!
   maxBudget: Float
   status: VirtualKeyStatus!
@@ -8007,6 +8049,9 @@ type VirtualKey {
   # console's progress bar reads these directly).
   spend: Float!
   lastActiveAt: Time
+  # 前端传入的 user_id,LiteLLM gateway 也用这个值作为 user_id。
+  # 必填,IssueVirtualKeyInput 强制要求前端传值,后端不做默认。
+  userId: String!
 }
 
 # Returned only at issue / regenerate time — carries the secret, which is
@@ -8025,8 +8070,6 @@ enum LimitType {
 }
 
 input IssueVirtualKeyInput {
-  # Required. Drives tenant scope + LiteLLM team routing.
-  organizationId: String!
   # Required. Human-readable label.
   name: String!
   # Required. References the GatewayConnection that issues this key and
@@ -8034,15 +8077,11 @@ input IssueVirtualKeyInput {
   # ` + "`" + `models` + "`" + ` against the gateway's live model list (gatewayAvailableModels)
   # before mint.
   modelGateway: ID!
-  # Optional. Can be left unbound at issue and later set via
-  # associateVirtualKeyAgent(virtualKeyId, agentId).
-  agentId: ID
   # Friendly duration input. Accepts "<n>d" / "<n>h" / "<n>w" / "<n>m".
-  # When set, server computes expiresAt = now + duration. If both duration
-  # and expiresAt are provided, duration takes precedence (expiresAt is
-  # silently overridden; logged once at server side).
+  # The server computes expiresAt = now + duration and persists it on the
+  # returned VirtualKey. This is the ONLY way to set an expiry at issue
+  # time; callers cannot pass an absolute timestamp.
   duration: String
-  expiresAt: Time
   # Optional. Models named MUST be a subset of ` + "`" + `modelGateway` + "`" + `'s live model
   # list (verified server-side via gatewayAvailableModels). Resolver 400s
   # on stale names. Empty = omit (litellm default = no restriction).
@@ -8057,27 +8096,80 @@ input IssueVirtualKeyInput {
   # allowedRoutes — when the form's "Allow All Routes" switch is ON, the
   # frontend OMITS this field. When OFF, it sends the explicit list.
   allowedRoutes: [String!]
-  tags: [String!]
-  blocked: Boolean
+  # Auxiliary key metadata forwarded to the gateway as-is (mirrors the
+  # ` + "`" + `metadata` + "`" + ` map on the /key/generate wire body; see also the deploy
+  # flows that already use this for ` + "`" + `{"agent": ...}` + "`" + `). Tags now live
+  # under ` + "`" + `metadata.tags` + "`" + ` (e.g. ` + "`" + `{"tags": ["project:demo","env:test"]}` + "`" + `)
+  # rather than as a top-level field. The resolver translates back to
+  # ` + "`" + `tags` + "`" + ` on the persisted VirtualKey so the read-side response and
+  # the ent column remain unchanged.
+  metadata: Map
   # Operational / catalog metadata (LiteLLM design doc §4.2).
   keyType: String
   autoRotate: Boolean
   rotationInterval: String
+  # Required. LiteLLM /key/generate 现在校验 user_id 非空。
+  # 前端必须传一个非空字符串;后端透传到 ent.VirtualKey.user_id
+  # 和 gateway.GenerateKeyRequest.UserID,不做默认值兜底。
+  userId: String!
 }
 
 extend type Query {
-  # Real-time model list for a modelGateway (calls LiteLLM /model/list on
-  # demand — no cache). Frontend uses this to populate the issue form's
+  # Distinct model names that are bound to the given modelGateway AND
+  # have at least one backend physical model in a healthy state
+  # (status ∈ {full_healthy, partial_outage}). Sourced from the
+  # ` + "`" + `provider_models` + "`" + ` table — the periodic health-check worker keeps
+  # ` + "`" + `status` + "`" + ` up to date, so this list reflects the operator-console's
+  # "what's currently usable" view. Used to populate the issue form's
   # "Models" multi-select after the operator picks a modelGateway.
   # @hasRole: read_only or admin (matches virtualKeys permissioning).
   gatewayAvailableModels(gatewayConnectionId: ID!): [String!]!
     @hasRole(any: [admin, read_only])
 
-  # organizationId, agentId, and modelGateway are independent optional
-  # filters; all null → all keys in the current tenant. Multiple set →
-  # intersection.
-  virtualKeys(organizationId: ID, agentId: ID, modelGateway: ID): [VirtualKey!]!
+  # agentName, modelGateway, nameContains, and modelContains are independent
+  # optional filters; all null → all keys in the current tenant. Multiple
+  # set → intersection.
+  # - agentName: case-insensitive substring match against the bound
+  #   agent's ` + "`" + `name` + "`" + ` (via virtualkey.HasAgentWith — a single subquery,
+  #   not N+1). Empty/missing ` + "`" + `agent` + "`" + ` rows (just-issued keys) are
+  #   excluded.
+  # - nameContains: case-insensitive substring match on the human-readable
+  #   name (ent.NameContainsFold; unindexed).
+  # - modelContains: case-insensitive substring match against ANY element
+  #   of the ` + "`" + `models` + "`" + ` array (raw SQL EXISTS/unnest; unindexed). Accepts a
+  #   partial model id like "gpt-4" and matches e.g. "openai/gpt-4o".
+  # orderBy defaults to CREATED_DESC (newest first); NAME_ASC / NAME_DESC
+  # sort by the human-readable name.
+  virtualKeys(
+    agentName: String,
+    modelGateway: ID,
+    nameContains: String,
+    # Exact-match on VirtualKey.name (case-sensitive, B-tree indexed via
+    # the (model_gateway_id, name) partial unique index when scoped by
+    # modelGateway; falls back to a sequential scan otherwise). Powers
+    # the issue form's live "name already exists" check before the user
+    # submits — backend still re-validates on save, this is just UX.
+    nameEquals: String,
+    modelContains: String,
+    orderBy: VirtualKeyOrderBy
+  ): [VirtualKey!]!
     @hasRole(any: [admin, read_only])
+}
+
+enum VirtualKeyOrderBy {
+  CREATED_DESC
+  NAME_ASC
+  NAME_DESC
+}
+
+# Result of ` + "`" + `purgeRevokedVirtualKeys` + "`" + `. ` + "`" + `deletedCount` + "`" + ` is the number of
+# rows physically removed (NOT marked revoked — revoked was already
+# terminal); ` + "`" + `oldestRemainingUpdatedAt` + "`" + ` lets an operator decide whether
+# to schedule another purge pass — if it's still well in the past,
+# they're not done yet.
+type PurgeResult {
+  deletedCount: Int!
+  oldestRemainingUpdatedAt: Time
 }
 
 extend type Mutation {
@@ -8099,6 +8191,20 @@ extend type Mutation {
   # authoritative gate; the resolver also pre-checks for a clean 409).
   associateVirtualKeyAgent(virtualKeyId: ID!, agentId: ID!): VirtualKey!
     @hasPermission(perm: "key:manage")
+  # Permanently delete every VirtualKey with status=revoked AND
+  # updated_at < beforeTime. This is the only sanctioned way to
+  # physically shrink the virtual_keys table; revocation alone flips
+  # status and leaves the row in place for audit + spend history. Audit
+  # log entries that referenced the purged rows will keep their
+  # resource_id strings (audit_log has no FK) — the key detail will
+  # just become "已清除" in the audit-log viewer. Admin-only because
+  # the action is irreversible.
+  # beforeTime MUST be in the past (resolver 422s otherwise) — a
+  # future timestamp would silently delete rows updated in the next
+  # few hundred ms, which is exactly the kind of footgun admin
+  # permissions shouldn't enable.
+  purgeRevokedVirtualKeys(beforeTime: Time!): PurgeResult!
+    @hasRole(any: [admin])
 }
 `, BuiltIn: false},
 }
@@ -9248,6 +9354,16 @@ func (ec *executionContext) childFields_ProviderModelInfoConnection(ctx context.
 	return nil, fmt.Errorf("no field named %q was found under type ProviderModelInfoConnection", field.Name)
 }
 
+func (ec *executionContext) childFields_PurgeResult(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "deletedCount":
+		return ec.fieldContext_PurgeResult_deletedCount(ctx, field)
+	case "oldestRemainingUpdatedAt":
+		return ec.fieldContext_PurgeResult_oldestRemainingUpdatedAt(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type PurgeResult", field.Name)
+}
+
 func (ec *executionContext) childFields_RequestLog(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -9648,12 +9764,10 @@ func (ec *executionContext) childFields_VirtualKey(ctx context.Context, field gr
 		return ec.fieldContext_VirtualKey_name(ctx, field)
 	case "maskedKey":
 		return ec.fieldContext_VirtualKey_maskedKey(ctx, field)
-	case "organizationId":
-		return ec.fieldContext_VirtualKey_organizationId(ctx, field)
 	case "modelGateway":
 		return ec.fieldContext_VirtualKey_modelGateway(ctx, field)
-	case "agentId":
-		return ec.fieldContext_VirtualKey_agentId(ctx, field)
+	case "agent":
+		return ec.fieldContext_VirtualKey_agent(ctx, field)
 	case "models":
 		return ec.fieldContext_VirtualKey_models(ctx, field)
 	case "maxBudget":
@@ -9696,6 +9810,8 @@ func (ec *executionContext) childFields_VirtualKey(ctx context.Context, field gr
 		return ec.fieldContext_VirtualKey_spend(ctx, field)
 	case "lastActiveAt":
 		return ec.fieldContext_VirtualKey_lastActiveAt(ctx, field)
+	case "userId":
+		return ec.fieldContext_VirtualKey_userId(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type VirtualKey", field.Name)
 }
@@ -10381,6 +10497,20 @@ func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawAr
 		return nil, err
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_purgeRevokedVirtualKeys_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "beforeTime",
+		func(ctx context.Context, v any) (time.Time, error) {
+			return ec.unmarshalNTime2timeᚐTime(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["beforeTime"] = arg0
 	return args, nil
 }
 
@@ -11787,30 +11917,54 @@ func (ec *executionContext) field_Query_users_args(ctx context.Context, rawArgs 
 func (ec *executionContext) field_Query_virtualKeys_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "organizationId",
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "agentName",
+		func(ctx context.Context, v any) (*string, error) {
+			return ec.unmarshalOString2ᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["agentName"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "modelGateway",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOID2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["organizationId"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "agentId",
+	args["modelGateway"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "nameContains",
 		func(ctx context.Context, v any) (*string, error) {
-			return ec.unmarshalOID2ᚖstring(ctx, v)
+			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["agentId"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "modelGateway",
+	args["nameContains"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "nameEquals",
 		func(ctx context.Context, v any) (*string, error) {
-			return ec.unmarshalOID2ᚖstring(ctx, v)
+			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["modelGateway"] = arg2
+	args["nameEquals"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "modelContains",
+		func(ctx context.Context, v any) (*string, error) {
+			return ec.unmarshalOString2ᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["modelContains"] = arg4
+	arg5, err := graphql.ProcessArgField(ctx, rawArgs, "orderBy",
+		func(ctx context.Context, v any) (*model.VirtualKeyOrderBy, error) {
+			return ec.unmarshalOVirtualKeyOrderBy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKeyOrderBy(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["orderBy"] = arg5
 	return args, nil
 }
 
@@ -23685,6 +23839,68 @@ func (ec *executionContext) fieldContext_Mutation_associateVirtualKeyAgent(ctx c
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_purgeRevokedVirtualKeys(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_purgeRevokedVirtualKeys(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().PurgeRevokedVirtualKeys(ctx, fc.Args["beforeTime"].(time.Time))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.PurgeResult
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.PurgeResult
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.PurgeResult) graphql.Marshaler {
+			return ec.marshalNPurgeResult2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPurgeResult(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_purgeRevokedVirtualKeys(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PurgeResult(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_purgeRevokedVirtualKeys_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _OVFProperty_key(ctx context.Context, field graphql.CollectedField, obj *model.OVFProperty) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -25213,6 +25429,52 @@ func (ec *executionContext) _ProviderModelInfoConnection_size(ctx context.Contex
 }
 func (ec *executionContext) fieldContext_ProviderModelInfoConnection_size(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ProviderModelInfoConnection", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _PurgeResult_deletedCount(ctx context.Context, field graphql.CollectedField, obj *model.PurgeResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PurgeResult_deletedCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DeletedCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_PurgeResult_deletedCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PurgeResult", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _PurgeResult_oldestRemainingUpdatedAt(ctx context.Context, field graphql.CollectedField, obj *model.PurgeResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PurgeResult_oldestRemainingUpdatedAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OldestRemainingUpdatedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *time.Time) graphql.Marshaler {
+			return ec.marshalOTime2ᚖtimeᚐTime(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_PurgeResult_oldestRemainingUpdatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PurgeResult", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
 func (ec *executionContext) _Query_me(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -27859,7 +28121,7 @@ func (ec *executionContext) _Query_virtualKeys(ctx context.Context, field graphq
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().VirtualKeys(ctx, fc.Args["organizationId"].(*string), fc.Args["agentId"].(*string), fc.Args["modelGateway"].(*string))
+			return ec.Resolvers.Query().VirtualKeys(ctx, fc.Args["agentName"].(*string), fc.Args["modelGateway"].(*string), fc.Args["nameContains"].(*string), fc.Args["nameEquals"].(*string), fc.Args["modelContains"].(*string), fc.Args["orderBy"].(*model.VirtualKeyOrderBy))
 		},
 		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
 			directive0 := next
@@ -31010,29 +31272,6 @@ func (ec *executionContext) fieldContext_VirtualKey_maskedKey(_ context.Context,
 	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
-func (ec *executionContext) _VirtualKey_organizationId(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_VirtualKey_organizationId(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.OrganizationID, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_VirtualKey_organizationId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
 func (ec *executionContext) _VirtualKey_modelGateway(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -31065,27 +31304,36 @@ func (ec *executionContext) fieldContext_VirtualKey_modelGateway(_ context.Conte
 	return fc, nil
 }
 
-func (ec *executionContext) _VirtualKey_agentId(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
+func (ec *executionContext) _VirtualKey_agent(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_VirtualKey_agentId(ctx, field)
+			return ec.fieldContext_VirtualKey_agent(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return obj.AgentID, nil
+			return obj.Agent, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
-			return ec.marshalOID2ᚖstring(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Agent) graphql.Marshaler {
+			return ec.marshalOAgent2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgent(ctx, selections, v)
 		},
 		true,
 		false,
 	)
 }
-func (ec *executionContext) fieldContext_VirtualKey_agentId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type ID does not have child fields"))
+func (ec *executionContext) fieldContext_VirtualKey_agent(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VirtualKey",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Agent(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _VirtualKey_models(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
@@ -31569,6 +31817,29 @@ func (ec *executionContext) _VirtualKey_lastActiveAt(ctx context.Context, field 
 }
 func (ec *executionContext) fieldContext_VirtualKey_lastActiveAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _VirtualKey_userId(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_VirtualKey_userId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.UserID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_VirtualKey_userId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _VsphereNetwork_name(ctx context.Context, field graphql.CollectedField, obj *model.VsphereNetwork) (ret graphql.Marshaler) {
@@ -33878,20 +34149,13 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"organizationId", "name", "modelGateway", "agentId", "duration", "expiresAt", "models", "maxBudget", "budgetDuration", "maxParallelRequests", "rpmLimit", "tpmLimit", "rpmLimitType", "tpmLimitType", "allowedRoutes", "tags", "blocked", "keyType", "autoRotate", "rotationInterval"}
+	fieldsInOrder := [...]string{"name", "modelGateway", "duration", "models", "maxBudget", "budgetDuration", "maxParallelRequests", "rpmLimit", "tpmLimit", "rpmLimitType", "tpmLimitType", "allowedRoutes", "metadata", "keyType", "autoRotate", "rotationInterval", "userId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "organizationId":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("organizationId"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.OrganizationID = data
 		case "name":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
 			data, err := ec.unmarshalNString2string(ctx, v)
@@ -33906,13 +34170,6 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 				return it, err
 			}
 			it.ModelGateway = data
-		case "agentId":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("agentId"))
-			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.AgentID = data
 		case "duration":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("duration"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -33920,13 +34177,6 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 				return it, err
 			}
 			it.Duration = data
-		case "expiresAt":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("expiresAt"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ExpiresAt = data
 		case "models":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("models"))
 			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
@@ -33990,20 +34240,13 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 				return it, err
 			}
 			it.AllowedRoutes = data
-		case "tags":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("tags"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+		case "metadata":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("metadata"))
+			data, err := ec.unmarshalOMap2map(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.Tags = data
-		case "blocked":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("blocked"))
-			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Blocked = data
+			it.Metadata = data
 		case "keyType":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyType"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -34025,6 +34268,13 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 				return it, err
 			}
 			it.RotationInterval = data
+		case "userId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UserID = data
 		}
 	}
 	return it, nil
@@ -34650,7 +34900,7 @@ func (ec *executionContext) unmarshalInputProviderModelInfoFilterInput(ctx conte
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"search", "status"}
+	fieldsInOrder := [...]string{"search", "status", "modelGatewayId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -34671,6 +34921,13 @@ func (ec *executionContext) unmarshalInputProviderModelInfoFilterInput(ctx conte
 				return it, err
 			}
 			it.Status = data
+		case "modelGatewayId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("modelGatewayId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ModelGatewayID = data
 		}
 	}
 	return it, nil
@@ -40422,6 +40679,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "purgeRevokedVirtualKeys":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_purgeRevokedVirtualKeys(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -41267,6 +41531,50 @@ func (ec *executionContext) _ProviderModelInfoConnection(ctx context.Context, se
 		case "size":
 			out.Values[i] = ec._ProviderModelInfoConnection_size(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var purgeResultImplementors = []string{"PurgeResult"}
+
+func (ec *executionContext) _PurgeResult(ctx context.Context, sel ast.SelectionSet, obj *model.PurgeResult) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, purgeResultImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PurgeResult")
+		case "deletedCount":
+			out.Values[i] = ec._PurgeResult_deletedCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "oldestRemainingUpdatedAt":
+			out.Values[i] = ec._PurgeResult_oldestRemainingUpdatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
 		default:
@@ -43969,18 +44277,13 @@ func (ec *executionContext) _VirtualKey(ctx context.Context, sel ast.SelectionSe
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "organizationId":
-			out.Values[i] = ec._VirtualKey_organizationId(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "modelGateway":
 			out.Values[i] = ec._VirtualKey_modelGateway(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "agentId":
-			out.Values[i] = ec._VirtualKey_agentId(ctx, field, obj)
+		case "agent":
+			out.Values[i] = ec._VirtualKey_agent(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
@@ -44087,6 +44390,11 @@ func (ec *executionContext) _VirtualKey(ctx context.Context, sel ast.SelectionSe
 		case "lastActiveAt":
 			out.Values[i] = ec._VirtualKey_lastActiveAt(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "userId":
+			out.Values[i] = ec._VirtualKey_userId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		default:
@@ -46383,6 +46691,20 @@ func (ec *executionContext) marshalNProviderModelStatus2githubᚗcomᚋVMwareᚑ
 	return res
 }
 
+func (ec *executionContext) marshalNPurgeResult2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPurgeResult(ctx context.Context, sel ast.SelectionSet, v model.PurgeResult) graphql.Marshaler {
+	return ec._PurgeResult(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPurgeResult2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPurgeResult(ctx context.Context, sel ast.SelectionSet, v *model.PurgeResult) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PurgeResult(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNRecordRequestLogInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRecordRequestLogInput(ctx context.Context, v any) (model.RecordRequestLogInput, error) {
 	res, err := ec.unmarshalInputRecordRequestLogInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -47320,6 +47642,13 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 	return res
 }
 
+func (ec *executionContext) marshalOAgent2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgent(ctx context.Context, sel ast.SelectionSet, v *model.Agent) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Agent(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalOAgentApiKey2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgentAPIKey(ctx context.Context, sel ast.SelectionSet, v *model.AgentAPIKey) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -47899,6 +48228,22 @@ func (ec *executionContext) unmarshalOVAppPropertyInput2ᚕgithubᚗcomᚋVMware
 		}
 	}
 	return res, nil
+}
+
+func (ec *executionContext) unmarshalOVirtualKeyOrderBy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKeyOrderBy(ctx context.Context, v any) (*model.VirtualKeyOrderBy, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.VirtualKeyOrderBy)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOVirtualKeyOrderBy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKeyOrderBy(ctx context.Context, sel ast.SelectionSet, v *model.VirtualKeyOrderBy) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

@@ -129,25 +129,6 @@ func (r *Resolver) assertUserInCallerTenant(ctx context.Context, id uuid.UUID) e
 	return nil
 }
 
-// assertVirtualKeyOwnerTenant enforces the tenant 404 oracle for by-id virtual-key
-// mutations (revoke / regenerate / setEnabled): a key whose owning user is in
-// another tenant reads as missing to a tenant-admin, so it cannot revoke / rotate
-// / toggle another tenant's billable key by id. Platform admin: any.
-func (r *Resolver) assertVirtualKeyOwnerTenant(ctx context.Context, vk *ent.VirtualKey) error {
-	// Only constrain an authed caller — no-auth ctx occurs only in resolver-level
-	// tests (the schema @hasRole directive enforces auth in prod).
-	if auth.FromContext(ctx) == nil {
-		return nil
-	}
-	// Per-agent-per-org refactor (2026-07): a VirtualKey has no UserID —
-	// it belongs to an organization, not a user. The owner-trail guard
-	// therefore cannot reference the key's owner; for now we treat any
-	// key as resolvable to its organization (not its user) and let the
-	// caller's tenant scope apply. Follow-up: wire organization → tenant
-	// mapping (see plan/spec §3.4).
-	return nil
-}
-
 // assertAgentReferenceVisible enforces the agent-visibility rule (LLD-10 §1.3,
 // the same three tracks as agentVisibilityPredicates) for a by-id agent
 // REFERENCE supplied to a mutation (e.g. IssueVirtualKey's agentId): admin → any;

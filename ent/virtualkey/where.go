@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
 	"github.com/google/uuid"
 )
@@ -85,11 +86,6 @@ func Name(v string) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldEQ(FieldName, v))
 }
 
-// OrganizationID applies equality check predicate on the "organization_id" field. It's identical to OrganizationIDEQ.
-func OrganizationID(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldEQ(FieldOrganizationID, v))
-}
-
 // AgentID applies equality check predicate on the "agent_id" field. It's identical to AgentIDEQ.
 func AgentID(v uuid.UUID) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldEQ(FieldAgentID, v))
@@ -158,6 +154,11 @@ func AutoRotate(v bool) predicate.VirtualKey {
 // RotationInterval applies equality check predicate on the "rotation_interval" field. It's identical to RotationIntervalEQ.
 func RotationInterval(v string) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldEQ(FieldRotationInterval, v))
+}
+
+// UserID applies equality check predicate on the "user_id" field. It's identical to UserIDEQ.
+func UserID(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldUserID, v))
 }
 
 // LastActiveAt applies equality check predicate on the "last_active_at" field. It's identical to LastActiveAtEQ.
@@ -520,71 +521,6 @@ func NameContainsFold(v string) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldContainsFold(FieldName, v))
 }
 
-// OrganizationIDEQ applies the EQ predicate on the "organization_id" field.
-func OrganizationIDEQ(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldEQ(FieldOrganizationID, v))
-}
-
-// OrganizationIDNEQ applies the NEQ predicate on the "organization_id" field.
-func OrganizationIDNEQ(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldNEQ(FieldOrganizationID, v))
-}
-
-// OrganizationIDIn applies the In predicate on the "organization_id" field.
-func OrganizationIDIn(vs ...string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldIn(FieldOrganizationID, vs...))
-}
-
-// OrganizationIDNotIn applies the NotIn predicate on the "organization_id" field.
-func OrganizationIDNotIn(vs ...string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldNotIn(FieldOrganizationID, vs...))
-}
-
-// OrganizationIDGT applies the GT predicate on the "organization_id" field.
-func OrganizationIDGT(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldGT(FieldOrganizationID, v))
-}
-
-// OrganizationIDGTE applies the GTE predicate on the "organization_id" field.
-func OrganizationIDGTE(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldGTE(FieldOrganizationID, v))
-}
-
-// OrganizationIDLT applies the LT predicate on the "organization_id" field.
-func OrganizationIDLT(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldLT(FieldOrganizationID, v))
-}
-
-// OrganizationIDLTE applies the LTE predicate on the "organization_id" field.
-func OrganizationIDLTE(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldLTE(FieldOrganizationID, v))
-}
-
-// OrganizationIDContains applies the Contains predicate on the "organization_id" field.
-func OrganizationIDContains(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldContains(FieldOrganizationID, v))
-}
-
-// OrganizationIDHasPrefix applies the HasPrefix predicate on the "organization_id" field.
-func OrganizationIDHasPrefix(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldHasPrefix(FieldOrganizationID, v))
-}
-
-// OrganizationIDHasSuffix applies the HasSuffix predicate on the "organization_id" field.
-func OrganizationIDHasSuffix(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldHasSuffix(FieldOrganizationID, v))
-}
-
-// OrganizationIDEqualFold applies the EqualFold predicate on the "organization_id" field.
-func OrganizationIDEqualFold(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldEqualFold(FieldOrganizationID, v))
-}
-
-// OrganizationIDContainsFold applies the ContainsFold predicate on the "organization_id" field.
-func OrganizationIDContainsFold(v string) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldContainsFold(FieldOrganizationID, v))
-}
-
 // AgentIDEQ applies the EQ predicate on the "agent_id" field.
 func AgentIDEQ(v uuid.UUID) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldEQ(FieldAgentID, v))
@@ -603,26 +539,6 @@ func AgentIDIn(vs ...uuid.UUID) predicate.VirtualKey {
 // AgentIDNotIn applies the NotIn predicate on the "agent_id" field.
 func AgentIDNotIn(vs ...uuid.UUID) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldNotIn(FieldAgentID, vs...))
-}
-
-// AgentIDGT applies the GT predicate on the "agent_id" field.
-func AgentIDGT(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldGT(FieldAgentID, v))
-}
-
-// AgentIDGTE applies the GTE predicate on the "agent_id" field.
-func AgentIDGTE(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldGTE(FieldAgentID, v))
-}
-
-// AgentIDLT applies the LT predicate on the "agent_id" field.
-func AgentIDLT(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldLT(FieldAgentID, v))
-}
-
-// AgentIDLTE applies the LTE predicate on the "agent_id" field.
-func AgentIDLTE(v uuid.UUID) predicate.VirtualKey {
-	return predicate.VirtualKey(sql.FieldLTE(FieldAgentID, v))
 }
 
 // AgentIDIsNil applies the IsNil predicate on the "agent_id" field.
@@ -1360,6 +1276,71 @@ func RotationIntervalContainsFold(v string) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldContainsFold(FieldRotationInterval, v))
 }
 
+// UserIDEQ applies the EQ predicate on the "user_id" field.
+func UserIDEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEQ(FieldUserID, v))
+}
+
+// UserIDNEQ applies the NEQ predicate on the "user_id" field.
+func UserIDNEQ(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNEQ(FieldUserID, v))
+}
+
+// UserIDIn applies the In predicate on the "user_id" field.
+func UserIDIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldIn(FieldUserID, vs...))
+}
+
+// UserIDNotIn applies the NotIn predicate on the "user_id" field.
+func UserIDNotIn(vs ...string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldNotIn(FieldUserID, vs...))
+}
+
+// UserIDGT applies the GT predicate on the "user_id" field.
+func UserIDGT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGT(FieldUserID, v))
+}
+
+// UserIDGTE applies the GTE predicate on the "user_id" field.
+func UserIDGTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldGTE(FieldUserID, v))
+}
+
+// UserIDLT applies the LT predicate on the "user_id" field.
+func UserIDLT(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLT(FieldUserID, v))
+}
+
+// UserIDLTE applies the LTE predicate on the "user_id" field.
+func UserIDLTE(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldLTE(FieldUserID, v))
+}
+
+// UserIDContains applies the Contains predicate on the "user_id" field.
+func UserIDContains(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContains(FieldUserID, v))
+}
+
+// UserIDHasPrefix applies the HasPrefix predicate on the "user_id" field.
+func UserIDHasPrefix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasPrefix(FieldUserID, v))
+}
+
+// UserIDHasSuffix applies the HasSuffix predicate on the "user_id" field.
+func UserIDHasSuffix(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldHasSuffix(FieldUserID, v))
+}
+
+// UserIDEqualFold applies the EqualFold predicate on the "user_id" field.
+func UserIDEqualFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldEqualFold(FieldUserID, v))
+}
+
+// UserIDContainsFold applies the ContainsFold predicate on the "user_id" field.
+func UserIDContainsFold(v string) predicate.VirtualKey {
+	return predicate.VirtualKey(sql.FieldContainsFold(FieldUserID, v))
+}
+
 // LastActiveAtEQ applies the EQ predicate on the "last_active_at" field.
 func LastActiveAtEQ(v time.Time) predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldEQ(FieldLastActiveAt, v))
@@ -1458,6 +1439,29 @@ func SpendIsNil() predicate.VirtualKey {
 // SpendNotNil applies the NotNil predicate on the "spend" field.
 func SpendNotNil() predicate.VirtualKey {
 	return predicate.VirtualKey(sql.FieldNotNull(FieldSpend))
+}
+
+// HasAgent applies the HasEdge predicate on the "agent" edge.
+func HasAgent() predicate.VirtualKey {
+	return predicate.VirtualKey(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, AgentTable, AgentColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAgentWith applies the HasEdge predicate on the "agent" edge with a given conditions (other predicates).
+func HasAgentWith(preds ...predicate.Agent) predicate.VirtualKey {
+	return predicate.VirtualKey(func(s *sql.Selector) {
+		step := newAgentStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
+	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/predicate"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/google/uuid"
@@ -95,20 +96,6 @@ func (_u *VirtualKeyUpdate) SetName(v string) *VirtualKeyUpdate {
 func (_u *VirtualKeyUpdate) SetNillableName(v *string) *VirtualKeyUpdate {
 	if v != nil {
 		_u.SetName(*v)
-	}
-	return _u
-}
-
-// SetOrganizationID sets the "organization_id" field.
-func (_u *VirtualKeyUpdate) SetOrganizationID(v string) *VirtualKeyUpdate {
-	_u.mutation.SetOrganizationID(v)
-	return _u
-}
-
-// SetNillableOrganizationID sets the "organization_id" field if the given value is not nil.
-func (_u *VirtualKeyUpdate) SetNillableOrganizationID(v *string) *VirtualKeyUpdate {
-	if v != nil {
-		_u.SetOrganizationID(*v)
 	}
 	return _u
 }
@@ -465,6 +452,20 @@ func (_u *VirtualKeyUpdate) ClearRotationInterval() *VirtualKeyUpdate {
 	return _u
 }
 
+// SetUserID sets the "user_id" field.
+func (_u *VirtualKeyUpdate) SetUserID(v string) *VirtualKeyUpdate {
+	_u.mutation.SetUserID(v)
+	return _u
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (_u *VirtualKeyUpdate) SetNillableUserID(v *string) *VirtualKeyUpdate {
+	if v != nil {
+		_u.SetUserID(*v)
+	}
+	return _u
+}
+
 // SetLastActiveAt sets the "last_active_at" field.
 func (_u *VirtualKeyUpdate) SetLastActiveAt(v time.Time) *VirtualKeyUpdate {
 	_u.mutation.SetLastActiveAt(v)
@@ -512,9 +513,20 @@ func (_u *VirtualKeyUpdate) ClearSpend() *VirtualKeyUpdate {
 	return _u
 }
 
+// SetAgent sets the "agent" edge to the Agent entity.
+func (_u *VirtualKeyUpdate) SetAgent(v *Agent) *VirtualKeyUpdate {
+	return _u.SetAgentID(v.ID)
+}
+
 // Mutation returns the VirtualKeyMutation object of the builder.
 func (_u *VirtualKeyUpdate) Mutation() *VirtualKeyMutation {
 	return _u.mutation
+}
+
+// ClearAgent clears the "agent" edge to the Agent entity.
+func (_u *VirtualKeyUpdate) ClearAgent() *VirtualKeyUpdate {
+	_u.mutation.ClearAgent()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -570,14 +582,14 @@ func (_u *VirtualKeyUpdate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.name": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.OrganizationID(); ok {
-		if err := virtualkey.OrganizationIDValidator(v); err != nil {
-			return &ValidationError{Name: "organization_id", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.organization_id": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := virtualkey.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.UserID(); ok {
+		if err := virtualkey.UserIDValidator(v); err != nil {
+			return &ValidationError{Name: "user_id", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.user_id": %w`, err)}
 		}
 	}
 	return nil
@@ -618,15 +630,6 @@ func (_u *VirtualKeyUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(virtualkey.FieldName, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.OrganizationID(); ok {
-		_spec.SetField(virtualkey.FieldOrganizationID, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.AgentID(); ok {
-		_spec.SetField(virtualkey.FieldAgentID, field.TypeUUID, value)
-	}
-	if _u.mutation.AgentIDCleared() {
-		_spec.ClearField(virtualkey.FieldAgentID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.ModelGatewayID(); ok {
 		_spec.SetField(virtualkey.FieldModelGatewayID, field.TypeUUID, value)
@@ -742,6 +745,9 @@ func (_u *VirtualKeyUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if _u.mutation.RotationIntervalCleared() {
 		_spec.ClearField(virtualkey.FieldRotationInterval, field.TypeString)
 	}
+	if value, ok := _u.mutation.UserID(); ok {
+		_spec.SetField(virtualkey.FieldUserID, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.LastActiveAt(); ok {
 		_spec.SetField(virtualkey.FieldLastActiveAt, field.TypeTime, value)
 	}
@@ -756,6 +762,35 @@ func (_u *VirtualKeyUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if _u.mutation.SpendCleared() {
 		_spec.ClearField(virtualkey.FieldSpend, field.TypeInt)
+	}
+	if _u.mutation.AgentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   virtualkey.AgentTable,
+			Columns: []string{virtualkey.AgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agent.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   virtualkey.AgentTable,
+			Columns: []string{virtualkey.AgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
@@ -843,20 +878,6 @@ func (_u *VirtualKeyUpdateOne) SetName(v string) *VirtualKeyUpdateOne {
 func (_u *VirtualKeyUpdateOne) SetNillableName(v *string) *VirtualKeyUpdateOne {
 	if v != nil {
 		_u.SetName(*v)
-	}
-	return _u
-}
-
-// SetOrganizationID sets the "organization_id" field.
-func (_u *VirtualKeyUpdateOne) SetOrganizationID(v string) *VirtualKeyUpdateOne {
-	_u.mutation.SetOrganizationID(v)
-	return _u
-}
-
-// SetNillableOrganizationID sets the "organization_id" field if the given value is not nil.
-func (_u *VirtualKeyUpdateOne) SetNillableOrganizationID(v *string) *VirtualKeyUpdateOne {
-	if v != nil {
-		_u.SetOrganizationID(*v)
 	}
 	return _u
 }
@@ -1213,6 +1234,20 @@ func (_u *VirtualKeyUpdateOne) ClearRotationInterval() *VirtualKeyUpdateOne {
 	return _u
 }
 
+// SetUserID sets the "user_id" field.
+func (_u *VirtualKeyUpdateOne) SetUserID(v string) *VirtualKeyUpdateOne {
+	_u.mutation.SetUserID(v)
+	return _u
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (_u *VirtualKeyUpdateOne) SetNillableUserID(v *string) *VirtualKeyUpdateOne {
+	if v != nil {
+		_u.SetUserID(*v)
+	}
+	return _u
+}
+
 // SetLastActiveAt sets the "last_active_at" field.
 func (_u *VirtualKeyUpdateOne) SetLastActiveAt(v time.Time) *VirtualKeyUpdateOne {
 	_u.mutation.SetLastActiveAt(v)
@@ -1260,9 +1295,20 @@ func (_u *VirtualKeyUpdateOne) ClearSpend() *VirtualKeyUpdateOne {
 	return _u
 }
 
+// SetAgent sets the "agent" edge to the Agent entity.
+func (_u *VirtualKeyUpdateOne) SetAgent(v *Agent) *VirtualKeyUpdateOne {
+	return _u.SetAgentID(v.ID)
+}
+
 // Mutation returns the VirtualKeyMutation object of the builder.
 func (_u *VirtualKeyUpdateOne) Mutation() *VirtualKeyMutation {
 	return _u.mutation
+}
+
+// ClearAgent clears the "agent" edge to the Agent entity.
+func (_u *VirtualKeyUpdateOne) ClearAgent() *VirtualKeyUpdateOne {
+	_u.mutation.ClearAgent()
+	return _u
 }
 
 // Where appends a list predicates to the VirtualKeyUpdate builder.
@@ -1331,14 +1377,14 @@ func (_u *VirtualKeyUpdateOne) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.name": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.OrganizationID(); ok {
-		if err := virtualkey.OrganizationIDValidator(v); err != nil {
-			return &ValidationError{Name: "organization_id", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.organization_id": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := virtualkey.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.UserID(); ok {
+		if err := virtualkey.UserIDValidator(v); err != nil {
+			return &ValidationError{Name: "user_id", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.user_id": %w`, err)}
 		}
 	}
 	return nil
@@ -1396,15 +1442,6 @@ func (_u *VirtualKeyUpdateOne) sqlSave(ctx context.Context) (_node *VirtualKey, 
 	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(virtualkey.FieldName, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.OrganizationID(); ok {
-		_spec.SetField(virtualkey.FieldOrganizationID, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.AgentID(); ok {
-		_spec.SetField(virtualkey.FieldAgentID, field.TypeUUID, value)
-	}
-	if _u.mutation.AgentIDCleared() {
-		_spec.ClearField(virtualkey.FieldAgentID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.ModelGatewayID(); ok {
 		_spec.SetField(virtualkey.FieldModelGatewayID, field.TypeUUID, value)
@@ -1520,6 +1557,9 @@ func (_u *VirtualKeyUpdateOne) sqlSave(ctx context.Context) (_node *VirtualKey, 
 	if _u.mutation.RotationIntervalCleared() {
 		_spec.ClearField(virtualkey.FieldRotationInterval, field.TypeString)
 	}
+	if value, ok := _u.mutation.UserID(); ok {
+		_spec.SetField(virtualkey.FieldUserID, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.LastActiveAt(); ok {
 		_spec.SetField(virtualkey.FieldLastActiveAt, field.TypeTime, value)
 	}
@@ -1534,6 +1574,35 @@ func (_u *VirtualKeyUpdateOne) sqlSave(ctx context.Context) (_node *VirtualKey, 
 	}
 	if _u.mutation.SpendCleared() {
 		_spec.ClearField(virtualkey.FieldSpend, field.TypeInt)
+	}
+	if _u.mutation.AgentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   virtualkey.AgentTable,
+			Columns: []string{virtualkey.AgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agent.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   virtualkey.AgentTable,
+			Columns: []string{virtualkey.AgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &VirtualKey{config: _u.config}

@@ -1,0 +1,3 @@
+query GatewayAvailableModels($gatewayConnectionId: ID!) {
+    gatewayAvailableModels(gatewayConnectionId: $gatewayConnectionId)
+  }

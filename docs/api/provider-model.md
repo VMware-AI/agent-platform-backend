@@ -344,6 +344,7 @@ CreateProviderModelInput: name + modelSpecs + modelGateway
 |-------|------|-------------|
 | `search` | `String` | — |
 | `status` | `ProviderModelStatus` | — |
+| `modelGatewayId` | `ID` | Filter to a single modelGateway (the FK column on provider_models). Operator Console uses this to scope the model list to one gateway when the operator picks a gateway in the filter bar; null = all gateways. |
 
 ### ProviderModelInfoSort
 
@@ -425,12 +426,13 @@ CreateProviderModelInput: name + modelSpecs + modelGateway
 
 *Enum*
 
-0.1.x: 只保留 NAME 与 STATUS;时间维度排序在 console UI 内部按本地时间戳兜底
+0.1.x: NAME / STATUS / GATEWAY sort. Direction is currently ignored server-side — every field sorts Asc to match the rest of the codebase's paginated-query convention. The console UI flips the visual order client-side when a Desc order is requested, so a future direction-aware rewrite can land in one place without breaking the wire contract.
 
 | Value | Description |
 |-------|-------------|
 | `NAME` | — |
 | `STATUS` | — |
+| `GATEWAY` | — |
 
 ### ProviderModelProvider
 

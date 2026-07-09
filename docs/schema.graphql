@@ -474,12 +474,9 @@ enum InstallMethod {
 	unset
 }
 input IssueVirtualKeyInput {
-	organizationId: String!
 	name: String!
 	modelGateway: ID!
-	agentId: ID
 	duration: String
-	expiresAt: Time
 	models: [String!]
 	maxBudget: Float
 	budgetDuration: String
@@ -489,11 +486,11 @@ input IssueVirtualKeyInput {
 	rpmLimitType: String
 	tpmLimitType: String
 	allowedRoutes: [String!]
-	tags: [String!]
-	blocked: Boolean
+	metadata: Map
 	keyType: String
 	autoRotate: Boolean
 	rotationInterval: String
+	userId: String!
 }
 type IssuedVirtualKey {
 	virtualKey: VirtualKey!
@@ -804,6 +801,7 @@ type Mutation {
 	regenerateVirtualKey(id: ID!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
 	setVirtualKeyEnabled(id: ID!, enabled: Boolean!): VirtualKey! @hasPermission(perm: "key:manage")
 	associateVirtualKeyAgent(virtualKeyId: ID!, agentId: ID!): VirtualKey! @hasPermission(perm: "key:manage")
+	purgeRevokedVirtualKeys(beforeTime: Time!): PurgeResult! @hasRole(any: [admin])
 }
 type OVFProperty {
 	key: String!
@@ -933,6 +931,7 @@ type ProviderModelInfoConnection {
 input ProviderModelInfoFilterInput {
 	search: String
 	status: ProviderModelStatus
+	modelGatewayId: ID
 }
 input ProviderModelInfoSort {
 	field: ProviderModelInfoSortField!
@@ -941,6 +940,7 @@ input ProviderModelInfoSort {
 enum ProviderModelInfoSortField {
 	NAME
 	STATUS
+	GATEWAY
 }
 enum ProviderModelProvider {
 	custom
@@ -963,6 +963,10 @@ enum ProviderModelStatus {
 	partial_outage
 	full_outage
 	unknown
+}
+type PurgeResult {
+	deletedCount: Int!
+	oldestRemainingUpdatedAt: Time
 }
 type Query {
 	me: User!
@@ -1013,7 +1017,7 @@ type Query {
 	contentLibraryItems(resourcePoolId: ID!, libraryName: String!): [ContentLibraryItem!]! @hasRole(any: [admin])
 	platformSettings: PlatformSettings! @hasRole(any: [admin])
 	gatewayAvailableModels(gatewayConnectionId: ID!): [String!]! @hasRole(any: [admin,read_only])
-	virtualKeys(organizationId: ID, agentId: ID, modelGateway: ID): [VirtualKey!]! @hasRole(any: [admin,read_only])
+	virtualKeys(agentName: String, modelGateway: ID, nameContains: String, nameEquals: String, modelContains: String, orderBy: VirtualKeyOrderBy): [VirtualKey!]! @hasRole(any: [admin,read_only])
 }
 input RecordRequestLogInput {
 	requestId: String!
@@ -1418,9 +1422,8 @@ type VirtualKey {
 	id: ID!
 	name: String!
 	maskedKey: String!
-	organizationId: String!
 	modelGateway: ModelGateway!
-	agentId: ID
+	agent: Agent
 	models: [String!]!
 	maxBudget: Float
 	status: VirtualKeyStatus!
@@ -1442,6 +1445,12 @@ type VirtualKey {
 	rotationInterval: String
 	spend: Float!
 	lastActiveAt: Time
+	userId: String!
+}
+enum VirtualKeyOrderBy {
+	CREATED_DESC
+	NAME_ASC
+	NAME_DESC
 }
 enum VirtualKeyStatus {
 	active

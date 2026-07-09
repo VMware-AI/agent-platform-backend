@@ -1,0 +1,13 @@
+# purgeRevokedVirtualKeys — admin-only bulk deletion of revoked keys
+# past a wall-clock cutoff. No new mutation in spirit (rows already
+# terminal); this is a physical-DB-only action that complements the
+# status-driven governance. Resolver enforces `beforeTime` is in the
+# past (rejects future timestamps as a footgun guard). See
+# agent-platform-backend/internal/graph/virtualkey.resolvers.go for
+# the audit encoding.
+mutation PurgeRevokedVirtualKeys($beforeTime: Time!) {
+    purgeRevokedVirtualKeys(beforeTime: $beforeTime) {
+      deletedCount
+      oldestRemainingUpdatedAt
+    }
+  }

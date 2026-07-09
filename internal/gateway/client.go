@@ -136,10 +136,6 @@ type Client interface {
 	// RegenerateKey rotates a key's secret, returning the new one (POST
 	// /key/{key}/regenerate). The governance row/binding is unchanged. LLD-04 §3.
 	RegenerateKey(ctx context.Context, key string) (*KeyResponse, error)
-	// ListAvailableModels enumerates the models the gateway currently
-	// advertises (GET /model/list). Used by gatewayAvailableModels query
-	// and by IssueVirtualKey's pre-mint cross-check. Real-time; no cache.
-	ListAvailableModels(ctx context.Context) ([]string, error)
 	CreateTeam(ctx context.Context, req TeamRequest) (*TeamResponse, error)
 	DeleteTeam(ctx context.Context, teamID string) error
 	// ListKeys enumerates the keys the gateway currently holds, for
@@ -170,24 +166,31 @@ type TeamInfo struct {
 // GenerateKeyRequest mints a per-user virtual key (LLD-04 §3). Budget/rate
 // limits are set HERE (per-key), never globally (research §2.3).
 type GenerateKeyRequest struct {
-	UserID              string            `json:"user_id,omitempty"`
-	TeamID              string            `json:"team_id,omitempty"`
-	Models              []string          `json:"models,omitempty"`
-	MaxBudget           *float64          `json:"max_budget,omitempty"`
-	BudgetDuration      string            `json:"budget_duration,omitempty"`
-	RPMLimit            *int              `json:"rpm_limit,omitempty"`
-	TPMLimit            *int              `json:"tpm_limit,omitempty"`
-	RPMLimitType        string            `json:"rpm_limit_type,omitempty"`
-	TPMLimitType        string            `json:"tpm_limit_type,omitempty"`
-	MaxParallelRequests *int              `json:"max_parallel_requests,omitempty"`
-	AllowedRoutes       []string          `json:"allowed_routes,omitempty"`
-	Tags                []string          `json:"tags,omitempty"`
-	Blocked             *bool             `json:"blocked,omitempty"`
-	KeyType             string            `json:"key_type,omitempty"`
-	AutoRotate          *bool             `json:"auto_rotate,omitempty"`
-	RotationInterval    string            `json:"rotation_interval,omitempty"`
-	OrganizationID      string            `json:"organization_id,omitempty"`
-	Metadata            map[string]string `json:"metadata,omitempty"`
+	UserID string `json:"user_id,omitempty"`
+	// KeyAlias is the human-readable name forwarded to LiteLLM as `key_alias`.
+	// The platform-side ent.VirtualKey.Name is the source of truth for our
+	// display; we mirror it onto the gateway so /key/list shows it too and
+	// spend.go's list-render path can use it as a label.
+	KeyAlias            string   `json:"key_alias,omitempty"`
+	TeamID              string   `json:"team_id,omitempty"`
+	Models              []string `json:"models,omitempty"`
+	MaxBudget           *float64 `json:"max_budget,omitempty"`
+	BudgetDuration      string   `json:"budget_duration,omitempty"`
+	RPMLimit            *int     `json:"rpm_limit,omitempty"`
+	TPMLimit            *int     `json:"tpm_limit,omitempty"`
+	RPMLimitType        string   `json:"rpm_limit_type,omitempty"`
+	TPMLimitType        string   `json:"tpm_limit_type,omitempty"`
+	MaxParallelRequests *int     `json:"max_parallel_requests,omitempty"`
+	AllowedRoutes       []string `json:"allowed_routes,omitempty"`
+	Tags                []string `json:"tags,omitempty"`
+	Blocked             *bool    `json:"blocked,omitempty"`
+	KeyType             string   `json:"key_type,omitempty"`
+	AutoRotate          *bool    `json:"auto_rotate,omitempty"`
+	RotationInterval    string   `json:"rotation_interval,omitempty"`
+	// Metadata is opaque auxiliary payload forwarded to the gateway as-is.
+	// Values may be scalars (the deploy flows' "agent": <name>) or nested
+	// JSON (the issue flow's "tags": [...]).
+	Metadata map[string]any `json:"metadata,omitempty"`
 }
 
 // KeyResponse is the result of generating/regenerating a key.
@@ -325,26 +328,6 @@ func (c *HTTPClient) ListTeams(ctx context.Context) ([]TeamInfo, error) {
 		teams = append(teams, TeamInfo{TeamID: t.TeamID, Alias: t.TeamAlias})
 	}
 	return teams, nil
-}
-
-// ListAvailableModels enumerates the gateway's model catalog via
-// GET /model/list. LiteLLM returns a top-level array of objects whose
-// `id` field is the model name used by /key/generate's `models` param.
-func (c *HTTPClient) ListAvailableModels(ctx context.Context) ([]string, error) {
-	var raw []struct {
-		ID string `json:"id"`
-	}
-	if err := c.get(ctx, "/model/list", &raw); err != nil {
-		return nil, err
-	}
-	models := make([]string, 0, len(raw))
-	for _, m := range raw {
-		if m.ID == "" {
-			continue // unidentifiable entry
-		}
-		models = append(models, m.ID)
-	}
-	return models, nil
 }
 
 // --- Low-level HTTP ---

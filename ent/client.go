@@ -540,6 +540,22 @@ func (c *AgentClient) GetX(ctx context.Context, id uuid.UUID) *Agent {
 	return obj
 }
 
+// QueryVirtualKeys queries the virtual_keys edge of a Agent.
+func (c *AgentClient) QueryVirtualKeys(_m *Agent) *VirtualKeyQuery {
+	query := (&VirtualKeyClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agent.Table, agent.FieldID, id),
+			sqlgraph.To(virtualkey.Table, virtualkey.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, agent.VirtualKeysTable, agent.VirtualKeysColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *AgentClient) Hooks() []Hook {
 	return c.hooks.Agent
@@ -4257,6 +4273,22 @@ func (c *VirtualKeyClient) GetX(ctx context.Context, id uuid.UUID) *VirtualKey {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryAgent queries the agent edge of a VirtualKey.
+func (c *VirtualKeyClient) QueryAgent(_m *VirtualKey) *AgentQuery {
+	query := (&AgentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(virtualkey.Table, virtualkey.FieldID, id),
+			sqlgraph.To(agent.Table, agent.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, virtualkey.AgentTable, virtualkey.AgentColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
