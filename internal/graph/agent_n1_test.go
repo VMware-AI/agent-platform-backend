@@ -59,7 +59,7 @@ func (d *countingDriver) reset() {
 // test package): a VirtualKey builder pre-filled with the schema's required set.
 func seedVK(ec *ent.Client, key string) *ent.VirtualKeyCreate {
 	return ec.VirtualKey.Create().SetLitellmKey(key).SetMaskedKey("sk-***").
-		SetName(key).SetOrganizationID("org-test").SetModelGatewayID(uuid.New())
+		SetName(key).SetModelGatewayID(uuid.New())
 }
 
 type n1Env struct {

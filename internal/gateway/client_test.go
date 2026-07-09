@@ -30,7 +30,7 @@ func TestGenerateKey(t *testing.T) {
 	resp, err := c.GenerateKey(context.Background(), GenerateKeyRequest{
 		UserID: "u1", TeamID: "t1", Models: []string{"smart"},
 		MaxBudget: &budget, BudgetDuration: "30d", RPMLimit: &rpm,
-		Metadata: map[string]string{"department": "research"},
+		Metadata: map[string]any{"department": "research"},
 	})
 	if err != nil {
 		t.Fatalf("GenerateKey: %v", err)

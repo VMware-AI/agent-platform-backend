@@ -743,7 +743,7 @@ type ComplexityRoot struct {
 		UserRoles               func(childComplexity int, userID string) int
 		Users                   func(childComplexity int, filter *model.UserFilter, pagination *model.Pagination, sort *model.UserSort) int
 		VMTemplates             func(childComplexity int, resourcePoolID string) int
-		VirtualKeys             func(childComplexity int, organizationID *string, agentID *string, modelGateway *string) int
+		VirtualKeys             func(childComplexity int, agentID *string, modelGateway *string) int
 		VsphereNetworks         func(childComplexity int, resourcePoolID string) int
 		VsphereResourcePools    func(childComplexity int, resourcePoolID string) int
 	}
@@ -962,7 +962,6 @@ type ComplexityRoot struct {
 		ModelGateway        func(childComplexity int) int
 		Models              func(childComplexity int) int
 		Name                func(childComplexity int) int
-		OrganizationID      func(childComplexity int) int
 		RotationInterval    func(childComplexity int) int
 		RpmLimit            func(childComplexity int) int
 		RpmLimitType        func(childComplexity int) int
@@ -1142,7 +1141,7 @@ type QueryResolver interface {
 	ContentLibraryItems(ctx context.Context, resourcePoolID string, libraryName string) ([]model.ContentLibraryItem, error)
 	PlatformSettings(ctx context.Context) (*model.PlatformSettings, error)
 	GatewayAvailableModels(ctx context.Context, gatewayConnectionID string) ([]string, error)
-	VirtualKeys(ctx context.Context, organizationID *string, agentID *string, modelGateway *string) ([]model.VirtualKey, error)
+	VirtualKeys(ctx context.Context, agentID *string, modelGateway *string) ([]model.VirtualKey, error)
 }
 type UserResolver interface {
 	DisplayName(ctx context.Context, obj *model.User) (string, error)
@@ -4704,7 +4703,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Query.VirtualKeys(childComplexity, args["organizationId"].(*string), args["agentId"].(*string), args["modelGateway"].(*string)), true
+		return e.ComplexityRoot.Query.VirtualKeys(childComplexity, args["agentId"].(*string), args["modelGateway"].(*string)), true
 	case "Query.vsphereNetworks":
 		if e.ComplexityRoot.Query.VsphereNetworks == nil {
 			break
@@ -5581,12 +5580,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.VirtualKey.Name(childComplexity), true
-	case "VirtualKey.organizationId":
-		if e.ComplexityRoot.VirtualKey.OrganizationID == nil {
-			break
-		}
-
-		return e.ComplexityRoot.VirtualKey.OrganizationID(childComplexity), true
 	case "VirtualKey.rotationInterval":
 		if e.ComplexityRoot.VirtualKey.RotationInterval == nil {
 			break
@@ -7966,9 +7959,6 @@ type VirtualKey {
   # Persistent, safe-to-display preview of the secret (e.g. "sk-aBcD...XyZ").
   # Always populated; updated alongside any secret change.
   maskedKey: String!
-  # Organization this key belongs to. Required. Drives both tenant
-  # isolation and LiteLLM team routing.
-  organizationId: String!
   # Nested object: the modelGateway that issued this key. Maps to the ent
   # ` + "`" + `model_gateway_id` + "`" + ` column (renamed from ` + "`" + `gateway_connection_id` + "`" + `).
   # Required since per-agent-per-org refactor — every VirtualKey is bound
@@ -8025,8 +8015,6 @@ enum LimitType {
 }
 
 input IssueVirtualKeyInput {
-  # Required. Drives tenant scope + LiteLLM team routing.
-  organizationId: String!
   # Required. Human-readable label.
   name: String!
   # Required. References the GatewayConnection that issues this key and
@@ -8053,7 +8041,14 @@ input IssueVirtualKeyInput {
   # allowedRoutes — when the form's "Allow All Routes" switch is ON, the
   # frontend OMITS this field. When OFF, it sends the explicit list.
   allowedRoutes: [String!]
-  tags: [String!]
+  # Auxiliary key metadata forwarded to the gateway as-is (mirrors the
+  # ` + "`" + `metadata` + "`" + ` map on the /key/generate wire body; see also the deploy
+  # flows that already use this for ` + "`" + `{"agent": ...}` + "`" + `). Tags now live
+  # under ` + "`" + `metadata.tags` + "`" + ` (e.g. ` + "`" + `{"tags": ["project:demo","env:test"]}` + "`" + `)
+  # rather than as a top-level field. The resolver translates back to
+  # ` + "`" + `tags` + "`" + ` on the persisted VirtualKey so the read-side response and
+  # the ent column remain unchanged.
+  metadata: Map
   # Operational / catalog metadata (LiteLLM design doc §4.2).
   keyType: String
   autoRotate: Boolean
@@ -8072,10 +8067,9 @@ extend type Query {
   gatewayAvailableModels(gatewayConnectionId: ID!): [String!]!
     @hasRole(any: [admin, read_only])
 
-  # organizationId, agentId, and modelGateway are independent optional
-  # filters; all null → all keys in the current tenant. Multiple set →
-  # intersection.
-  virtualKeys(organizationId: ID, agentId: ID, modelGateway: ID): [VirtualKey!]!
+  # agentId and modelGateway are independent optional filters; all null
+  # → all keys in the current tenant. Multiple set → intersection.
+  virtualKeys(agentId: ID, modelGateway: ID): [VirtualKey!]!
     @hasRole(any: [admin, read_only])
 }
 
@@ -9647,8 +9641,6 @@ func (ec *executionContext) childFields_VirtualKey(ctx context.Context, field gr
 		return ec.fieldContext_VirtualKey_name(ctx, field)
 	case "maskedKey":
 		return ec.fieldContext_VirtualKey_maskedKey(ctx, field)
-	case "organizationId":
-		return ec.fieldContext_VirtualKey_organizationId(ctx, field)
 	case "modelGateway":
 		return ec.fieldContext_VirtualKey_modelGateway(ctx, field)
 	case "agentId":
@@ -11786,30 +11778,22 @@ func (ec *executionContext) field_Query_users_args(ctx context.Context, rawArgs 
 func (ec *executionContext) field_Query_virtualKeys_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "organizationId",
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "agentId",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOID2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["organizationId"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "agentId",
+	args["agentId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "modelGateway",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOID2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["agentId"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "modelGateway",
-		func(ctx context.Context, v any) (*string, error) {
-			return ec.unmarshalOID2ᚖstring(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["modelGateway"] = arg2
+	args["modelGateway"] = arg1
 	return args, nil
 }
 
@@ -27858,7 +27842,7 @@ func (ec *executionContext) _Query_virtualKeys(ctx context.Context, field graphq
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().VirtualKeys(ctx, fc.Args["organizationId"].(*string), fc.Args["agentId"].(*string), fc.Args["modelGateway"].(*string))
+			return ec.Resolvers.Query().VirtualKeys(ctx, fc.Args["agentId"].(*string), fc.Args["modelGateway"].(*string))
 		},
 		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
 			directive0 := next
@@ -31009,29 +30993,6 @@ func (ec *executionContext) fieldContext_VirtualKey_maskedKey(_ context.Context,
 	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
-func (ec *executionContext) _VirtualKey_organizationId(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_VirtualKey_organizationId(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.OrganizationID, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_VirtualKey_organizationId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("VirtualKey", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
 func (ec *executionContext) _VirtualKey_modelGateway(ctx context.Context, field graphql.CollectedField, obj *model.VirtualKey) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -33877,20 +33838,13 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"organizationId", "name", "modelGateway", "duration", "models", "maxBudget", "budgetDuration", "maxParallelRequests", "rpmLimit", "tpmLimit", "rpmLimitType", "tpmLimitType", "allowedRoutes", "tags", "keyType", "autoRotate", "rotationInterval"}
+	fieldsInOrder := [...]string{"name", "modelGateway", "duration", "models", "maxBudget", "budgetDuration", "maxParallelRequests", "rpmLimit", "tpmLimit", "rpmLimitType", "tpmLimitType", "allowedRoutes", "metadata", "keyType", "autoRotate", "rotationInterval"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "organizationId":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("organizationId"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.OrganizationID = data
 		case "name":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
 			data, err := ec.unmarshalNString2string(ctx, v)
@@ -33975,13 +33929,13 @@ func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Conte
 				return it, err
 			}
 			it.AllowedRoutes = data
-		case "tags":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("tags"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+		case "metadata":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("metadata"))
+			data, err := ec.unmarshalOMap2map(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.Tags = data
+			it.Metadata = data
 		case "keyType":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyType"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -43944,11 +43898,6 @@ func (ec *executionContext) _VirtualKey(ctx context.Context, sel ast.SelectionSe
 			}
 		case "maskedKey":
 			out.Values[i] = ec._VirtualKey_maskedKey(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "organizationId":
-			out.Values[i] = ec._VirtualKey_organizationId(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

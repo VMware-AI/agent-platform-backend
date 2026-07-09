@@ -166,24 +166,26 @@ type TeamInfo struct {
 // GenerateKeyRequest mints a per-user virtual key (LLD-04 §3). Budget/rate
 // limits are set HERE (per-key), never globally (research §2.3).
 type GenerateKeyRequest struct {
-	UserID              string            `json:"user_id,omitempty"`
-	TeamID              string            `json:"team_id,omitempty"`
-	Models              []string          `json:"models,omitempty"`
-	MaxBudget           *float64          `json:"max_budget,omitempty"`
-	BudgetDuration      string            `json:"budget_duration,omitempty"`
-	RPMLimit            *int              `json:"rpm_limit,omitempty"`
-	TPMLimit            *int              `json:"tpm_limit,omitempty"`
-	RPMLimitType        string            `json:"rpm_limit_type,omitempty"`
-	TPMLimitType        string            `json:"tpm_limit_type,omitempty"`
-	MaxParallelRequests *int              `json:"max_parallel_requests,omitempty"`
-	AllowedRoutes       []string          `json:"allowed_routes,omitempty"`
-	Tags                []string          `json:"tags,omitempty"`
-	Blocked             *bool             `json:"blocked,omitempty"`
-	KeyType             string            `json:"key_type,omitempty"`
-	AutoRotate          *bool             `json:"auto_rotate,omitempty"`
-	RotationInterval    string            `json:"rotation_interval,omitempty"`
-	OrganizationID      string            `json:"organization_id,omitempty"`
-	Metadata            map[string]string `json:"metadata,omitempty"`
+	UserID              string   `json:"user_id,omitempty"`
+	TeamID              string   `json:"team_id,omitempty"`
+	Models              []string `json:"models,omitempty"`
+	MaxBudget           *float64 `json:"max_budget,omitempty"`
+	BudgetDuration      string   `json:"budget_duration,omitempty"`
+	RPMLimit            *int     `json:"rpm_limit,omitempty"`
+	TPMLimit            *int     `json:"tpm_limit,omitempty"`
+	RPMLimitType        string   `json:"rpm_limit_type,omitempty"`
+	TPMLimitType        string   `json:"tpm_limit_type,omitempty"`
+	MaxParallelRequests *int     `json:"max_parallel_requests,omitempty"`
+	AllowedRoutes       []string `json:"allowed_routes,omitempty"`
+	Tags                []string `json:"tags,omitempty"`
+	Blocked             *bool    `json:"blocked,omitempty"`
+	KeyType             string   `json:"key_type,omitempty"`
+	AutoRotate          *bool    `json:"auto_rotate,omitempty"`
+	RotationInterval    string   `json:"rotation_interval,omitempty"`
+	// Metadata is opaque auxiliary payload forwarded to the gateway as-is.
+	// Values may be scalars (the deploy flows' "agent": <name>) or nested
+	// JSON (the issue flow's "tags": [...]).
+	Metadata map[string]any `json:"metadata,omitempty"`
 }
 
 // KeyResponse is the result of generating/regenerating a key.

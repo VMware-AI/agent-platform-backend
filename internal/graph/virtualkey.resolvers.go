@@ -32,9 +32,6 @@ import (
 // invariant. Compensating gw.DeleteKey on DB persist failure prevents
 // orphans at the gateway side.
 func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.IssueVirtualKeyInput) (*model.IssuedVirtualKey, error) {
-	if input.OrganizationID == "" {
-		return nil, gqlerror.Errorf("organizationId is required")
-	}
 	if input.Name == "" {
 		return nil, gqlerror.Errorf("name is required")
 	}
@@ -114,8 +111,10 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 
 	// 4) Build gateway request. Field names match the regenerated
 	// gateway.GenerateKeyRequest (see internal/gateway/client.go).
+	// Tags are no longer a top-level wire field — they ride under
+	// `metadata.tags` (matches the deploy flows' `metadata: map[...]`
+	// usage and lets us grow metadata without more top-level fields).
 	gReq := gateway.GenerateKeyRequest{
-		OrganizationID:      input.OrganizationID,
 		Models:              input.Models,
 		MaxBudget:           input.MaxBudget,
 		BudgetDuration:      vkDerefStr(input.BudgetDuration, ""),
@@ -125,7 +124,7 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		RPMLimitType:        vkDerefStr(input.RpmLimitType, ""),
 		TPMLimitType:        vkDerefStr(input.TpmLimitType, ""),
 		AllowedRoutes:       input.AllowedRoutes,
-		Tags:                input.Tags,
+		Metadata:            input.Metadata,
 		KeyType:             vkDerefStr(input.KeyType, ""),
 		AutoRotate:          input.AutoRotate,
 		RotationInterval:    vkDerefStr(input.RotationInterval, ""),
@@ -147,7 +146,6 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		SetLitellmToken(resp.Token).
 		SetMaskedKey(redactKey(resp.Key)).
 		SetName(input.Name).
-		SetOrganizationID(input.OrganizationID).
 		SetModelGatewayID(mgID).
 		SetModels(input.Models).
 		SetMaxBudget(vkDerefFloat64(input.MaxBudget, 0)).
@@ -157,7 +155,7 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		SetTpmLimitType(vkDerefStr(input.TpmLimitType, "")).
 		SetRpmLimitType(vkDerefStr(input.RpmLimitType, "")).
 		SetBudgetDuration(vkDerefStr(input.BudgetDuration, "")).
-		SetTags(input.Tags).
+		SetTags(metadataTagsAsStrings(input.Metadata)).
 		SetAllowedRoutes(input.AllowedRoutes).
 		SetKeyType(vkDerefStr(input.KeyType, "default")).
 		SetAutoRotate(vkDerefBool(input.AutoRotate, false)).
@@ -363,15 +361,11 @@ func (r *queryResolver) GatewayAvailableModels(ctx context.Context, gatewayConne
 	return out, nil
 }
 
-// VirtualKeys lists keys with three optional filters: organizationId,
-// agentId, modelGateway. All null → all keys in current tenant. Multiple
-// set → intersection. Secrets are never returned (only maskedKey on each
-// row).
-func (r *queryResolver) VirtualKeys(ctx context.Context, organizationID *string, agentID *string, modelGateway *string) ([]model.VirtualKey, error) {
+// VirtualKeys lists keys with two optional filters: agentId and
+// modelGateway. All null → all keys in current tenant. Multiple set →
+// intersection. Secrets are never returned (only maskedKey on each row).
+func (r *queryResolver) VirtualKeys(ctx context.Context, agentID *string, modelGateway *string) ([]model.VirtualKey, error) {
 	q := r.Ent.VirtualKey.Query()
-	if organizationID != nil {
-		q = q.Where(virtualkey.OrganizationIDEQ(*organizationID))
-	}
 	if agentID != nil {
 		aID, err := uuid.Parse(*agentID)
 		if err != nil {
@@ -385,11 +379,6 @@ func (r *queryResolver) VirtualKeys(ctx context.Context, organizationID *string,
 			return nil, gqlerror.Errorf("invalid modelGateway")
 		}
 		q = q.Where(virtualkey.ModelGatewayIDEQ(mgID))
-	}
-	// TODO(follow-up): replace this denyAll fallback with a real
-	// organizationId → tenant resolution (see spec §3.4 + §7 follow-ups).
-	if d := tenantScopeFor(ctx); d.apply && d.denyAll {
-		q = q.Where(virtualkey.OrganizationIDEQ("")) // impossible match
 	}
 	keys, err := q.Order(orderNewest).All(ctx)
 	if err != nil {

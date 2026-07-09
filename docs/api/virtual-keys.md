@@ -23,10 +23,10 @@ gatewayAvailableModels(gatewayConnectionId: ID!): [String!]!
 
 ### `virtualKeys`
 
-organizationId, agentId, and modelGateway are independent optional filters; all null → all keys in the current tenant. Multiple set → intersection.
+agentId and modelGateway are independent optional filters; all null → all keys in the current tenant. Multiple set → intersection.
 
 ```graphql
-virtualKeys(organizationId: ID, agentId: ID, modelGateway: ID): [VirtualKey!]!
+virtualKeys(agentId: ID, modelGateway: ID): [VirtualKey!]!
 ```
 
 - **Returns:** `[VirtualKey!]!`
@@ -34,7 +34,6 @@ virtualKeys(organizationId: ID, agentId: ID, modelGateway: ID): [VirtualKey!]!
 
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
-| `organizationId` | `ID` | no | — |
 | `agentId` | `ID` | no | — |
 | `modelGateway` | `ID` | no | — |
 
@@ -135,7 +134,6 @@ Returned only at issue / regenerate time — carries the secret, which is never 
 | `id` | `ID!` | — |
 | `name` | `String!` | Human-readable label. Required since 2026-07 refactor. |
 | `maskedKey` | `String!` | Persistent, safe-to-display preview of the secret (e.g. "sk-aBcD...XyZ"). Always populated; updated alongside any secret change. |
-| `organizationId` | `String!` | Organization this key belongs to. Required. Drives both tenant isolation and LiteLLM team routing. |
 | `modelGateway` | `ModelGateway!` | Nested object: the modelGateway that issued this key. Maps to the ent `model_gateway_id` column (renamed from `gateway_connection_id`). Required since per-agent-per-org refactor — every VirtualKey is bound to exactly one modelGateway. The frontend renders this as the "gateway" pill on the operator console. |
 | `agentId` | `ID` | — |
 | `models` | `[String!]!` | — |
@@ -166,7 +164,6 @@ Returned only at issue / regenerate time — carries the secret, which is never 
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `organizationId` | `String!` | Required. Drives tenant scope + LiteLLM team routing. |
 | `name` | `String!` | Required. Human-readable label. |
 | `modelGateway` | `ID!` | Required. References the GatewayConnection that issues this key and will receive every model+route check. Resolver verifies each entry in `models` against the gateway's live model list (gatewayAvailableModels) before mint. |
 | `duration` | `String` | Friendly duration input. Accepts "<n>d" / "<n>h" / "<n>w" / "<n>m". The server computes expiresAt = now + duration and persists it on the returned VirtualKey. This is the ONLY way to set an expiry at issue time; callers cannot pass an absolute timestamp. |
@@ -179,7 +176,7 @@ Returned only at issue / regenerate time — carries the secret, which is never 
 | `rpmLimitType` | `String` | — |
 | `tpmLimitType` | `String` | — |
 | `allowedRoutes` | `[String!]` | allowedRoutes — when the form's "Allow All Routes" switch is ON, the frontend OMITS this field. When OFF, it sends the explicit list. |
-| `tags` | `[String!]` | — |
+| `metadata` | `Map` | Auxiliary key metadata forwarded to the gateway as-is (mirrors the `metadata` map on the /key/generate wire body; see also the deploy flows that already use this for `{"agent": ...}`). Tags now live under `metadata.tags` (e.g. `{"tags": ["project:demo","env:test"]}`) rather than as a top-level field. The resolver translates back to `tags` on the persisted VirtualKey so the read-side response and the ent column remain unchanged. |
 | `keyType` | `String` | Operational / catalog metadata (LiteLLM design doc §4.2). |
 | `autoRotate` | `Boolean` | — |
 | `rotationInterval` | `String` | — |

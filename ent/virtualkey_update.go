@@ -99,20 +99,6 @@ func (_u *VirtualKeyUpdate) SetNillableName(v *string) *VirtualKeyUpdate {
 	return _u
 }
 
-// SetOrganizationID sets the "organization_id" field.
-func (_u *VirtualKeyUpdate) SetOrganizationID(v string) *VirtualKeyUpdate {
-	_u.mutation.SetOrganizationID(v)
-	return _u
-}
-
-// SetNillableOrganizationID sets the "organization_id" field if the given value is not nil.
-func (_u *VirtualKeyUpdate) SetNillableOrganizationID(v *string) *VirtualKeyUpdate {
-	if v != nil {
-		_u.SetOrganizationID(*v)
-	}
-	return _u
-}
-
 // SetAgentID sets the "agent_id" field.
 func (_u *VirtualKeyUpdate) SetAgentID(v uuid.UUID) *VirtualKeyUpdate {
 	_u.mutation.SetAgentID(v)
@@ -570,11 +556,6 @@ func (_u *VirtualKeyUpdate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.name": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.OrganizationID(); ok {
-		if err := virtualkey.OrganizationIDValidator(v); err != nil {
-			return &ValidationError{Name: "organization_id", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.organization_id": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := virtualkey.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.status": %w`, err)}
@@ -618,9 +599,6 @@ func (_u *VirtualKeyUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(virtualkey.FieldName, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.OrganizationID(); ok {
-		_spec.SetField(virtualkey.FieldOrganizationID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.AgentID(); ok {
 		_spec.SetField(virtualkey.FieldAgentID, field.TypeUUID, value)
@@ -843,20 +821,6 @@ func (_u *VirtualKeyUpdateOne) SetName(v string) *VirtualKeyUpdateOne {
 func (_u *VirtualKeyUpdateOne) SetNillableName(v *string) *VirtualKeyUpdateOne {
 	if v != nil {
 		_u.SetName(*v)
-	}
-	return _u
-}
-
-// SetOrganizationID sets the "organization_id" field.
-func (_u *VirtualKeyUpdateOne) SetOrganizationID(v string) *VirtualKeyUpdateOne {
-	_u.mutation.SetOrganizationID(v)
-	return _u
-}
-
-// SetNillableOrganizationID sets the "organization_id" field if the given value is not nil.
-func (_u *VirtualKeyUpdateOne) SetNillableOrganizationID(v *string) *VirtualKeyUpdateOne {
-	if v != nil {
-		_u.SetOrganizationID(*v)
 	}
 	return _u
 }
@@ -1331,11 +1295,6 @@ func (_u *VirtualKeyUpdateOne) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.name": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.OrganizationID(); ok {
-		if err := virtualkey.OrganizationIDValidator(v); err != nil {
-			return &ValidationError{Name: "organization_id", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.organization_id": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := virtualkey.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.status": %w`, err)}
@@ -1396,9 +1355,6 @@ func (_u *VirtualKeyUpdateOne) sqlSave(ctx context.Context) (_node *VirtualKey, 
 	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(virtualkey.FieldName, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.OrganizationID(); ok {
-		_spec.SetField(virtualkey.FieldOrganizationID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.AgentID(); ok {
 		_spec.SetField(virtualkey.FieldAgentID, field.TypeUUID, value)

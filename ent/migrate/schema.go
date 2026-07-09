@@ -735,7 +735,6 @@ var (
 		{Name: "litellm_token", Type: field.TypeString, Nullable: true},
 		{Name: "masked_key", Type: field.TypeString},
 		{Name: "name", Type: field.TypeString},
-		{Name: "organization_id", Type: field.TypeString},
 		{Name: "agent_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "model_gateway_id", Type: field.TypeUUID},
 		{Name: "models", Type: field.TypeJSON, Nullable: true},
@@ -766,7 +765,7 @@ var (
 			{
 				Name:    "virtualkey_agent_id",
 				Unique:  true,
-				Columns: []*schema.Column{VirtualKeysColumns[8]},
+				Columns: []*schema.Column{VirtualKeysColumns[7]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "status <> 'revoked'",
 				},

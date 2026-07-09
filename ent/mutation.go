@@ -22580,7 +22580,6 @@ type VirtualKeyMutation struct {
 	litellm_token            *string
 	masked_key               *string
 	name                     *string
-	organization_id          *string
 	agent_id                 *uuid.UUID
 	model_gateway_id         *uuid.UUID
 	models                   *[]string
@@ -22946,42 +22945,6 @@ func (m *VirtualKeyMutation) OldName(ctx context.Context) (v string, err error) 
 // ResetName resets all changes to the "name" field.
 func (m *VirtualKeyMutation) ResetName() {
 	m.name = nil
-}
-
-// SetOrganizationID sets the "organization_id" field.
-func (m *VirtualKeyMutation) SetOrganizationID(s string) {
-	m.organization_id = &s
-}
-
-// OrganizationID returns the value of the "organization_id" field in the mutation.
-func (m *VirtualKeyMutation) OrganizationID() (r string, exists bool) {
-	v := m.organization_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldOrganizationID returns the old "organization_id" field's value of the VirtualKey entity.
-// If the VirtualKey object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *VirtualKeyMutation) OldOrganizationID(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldOrganizationID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldOrganizationID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldOrganizationID: %w", err)
-	}
-	return oldValue.OrganizationID, nil
-}
-
-// ResetOrganizationID resets all changes to the "organization_id" field.
-func (m *VirtualKeyMutation) ResetOrganizationID() {
-	m.organization_id = nil
 }
 
 // SetAgentID sets the "agent_id" field.
@@ -24086,7 +24049,7 @@ func (m *VirtualKeyMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *VirtualKeyMutation) Fields() []string {
-	fields := make([]string, 0, 27)
+	fields := make([]string, 0, 26)
 	if m.created_at != nil {
 		fields = append(fields, virtualkey.FieldCreatedAt)
 	}
@@ -24104,9 +24067,6 @@ func (m *VirtualKeyMutation) Fields() []string {
 	}
 	if m.name != nil {
 		fields = append(fields, virtualkey.FieldName)
-	}
-	if m.organization_id != nil {
-		fields = append(fields, virtualkey.FieldOrganizationID)
 	}
 	if m.agent_id != nil {
 		fields = append(fields, virtualkey.FieldAgentID)
@@ -24188,8 +24148,6 @@ func (m *VirtualKeyMutation) Field(name string) (ent.Value, bool) {
 		return m.MaskedKey()
 	case virtualkey.FieldName:
 		return m.Name()
-	case virtualkey.FieldOrganizationID:
-		return m.OrganizationID()
 	case virtualkey.FieldAgentID:
 		return m.AgentID()
 	case virtualkey.FieldModelGatewayID:
@@ -24251,8 +24209,6 @@ func (m *VirtualKeyMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldMaskedKey(ctx)
 	case virtualkey.FieldName:
 		return m.OldName(ctx)
-	case virtualkey.FieldOrganizationID:
-		return m.OldOrganizationID(ctx)
 	case virtualkey.FieldAgentID:
 		return m.OldAgentID(ctx)
 	case virtualkey.FieldModelGatewayID:
@@ -24343,13 +24299,6 @@ func (m *VirtualKeyMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetName(v)
-		return nil
-	case virtualkey.FieldOrganizationID:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetOrganizationID(v)
 		return nil
 	case virtualkey.FieldAgentID:
 		v, ok := value.(uuid.UUID)
@@ -24719,9 +24668,6 @@ func (m *VirtualKeyMutation) ResetField(name string) error {
 		return nil
 	case virtualkey.FieldName:
 		m.ResetName()
-		return nil
-	case virtualkey.FieldOrganizationID:
-		m.ResetOrganizationID()
 		return nil
 	case virtualkey.FieldAgentID:
 		m.ResetAgentID()

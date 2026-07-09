@@ -27,8 +27,6 @@ const (
 	FieldMaskedKey = "masked_key"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
-	// FieldOrganizationID holds the string denoting the organization_id field in the database.
-	FieldOrganizationID = "organization_id"
 	// FieldAgentID holds the string denoting the agent_id field in the database.
 	FieldAgentID = "agent_id"
 	// FieldModelGatewayID holds the string denoting the model_gateway_id field in the database.
@@ -82,7 +80,6 @@ var Columns = []string{
 	FieldLitellmToken,
 	FieldMaskedKey,
 	FieldName,
-	FieldOrganizationID,
 	FieldAgentID,
 	FieldModelGatewayID,
 	FieldModels,
@@ -128,8 +125,6 @@ var (
 	MaskedKeyValidator func(string) error
 	// NameValidator is a validator for the "name" field. It is called by the builders before save.
 	NameValidator func(string) error
-	// OrganizationIDValidator is a validator for the "organization_id" field. It is called by the builders before save.
-	OrganizationIDValidator func(string) error
 	// DefaultBlocked holds the default value on creation for the "blocked" field.
 	DefaultBlocked bool
 	// DefaultKeyType holds the default value on creation for the "key_type" field.
@@ -205,11 +200,6 @@ func ByMaskedKey(opts ...sql.OrderTermOption) OrderOption {
 // ByName orders the results by the name field.
 func ByName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldName, opts...).ToFunc()
-}
-
-// ByOrganizationID orders the results by the organization_id field.
-func ByOrganizationID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldOrganizationID, opts...).ToFunc()
 }
 
 // ByAgentID orders the results by the agent_id field.

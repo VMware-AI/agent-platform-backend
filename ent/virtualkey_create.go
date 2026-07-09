@@ -81,12 +81,6 @@ func (_c *VirtualKeyCreate) SetName(v string) *VirtualKeyCreate {
 	return _c
 }
 
-// SetOrganizationID sets the "organization_id" field.
-func (_c *VirtualKeyCreate) SetOrganizationID(v string) *VirtualKeyCreate {
-	_c.mutation.SetOrganizationID(v)
-	return _c
-}
-
 // SetAgentID sets the "agent_id" field.
 func (_c *VirtualKeyCreate) SetAgentID(v uuid.UUID) *VirtualKeyCreate {
 	_c.mutation.SetAgentID(v)
@@ -450,14 +444,6 @@ func (_c *VirtualKeyCreate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.name": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.OrganizationID(); !ok {
-		return &ValidationError{Name: "organization_id", err: errors.New(`ent: missing required field "VirtualKey.organization_id"`)}
-	}
-	if v, ok := _c.mutation.OrganizationID(); ok {
-		if err := virtualkey.OrganizationIDValidator(v); err != nil {
-			return &ValidationError{Name: "organization_id", err: fmt.Errorf(`ent: validator failed for field "VirtualKey.organization_id": %w`, err)}
-		}
-	}
 	if _, ok := _c.mutation.ModelGatewayID(); !ok {
 		return &ValidationError{Name: "model_gateway_id", err: errors.New(`ent: missing required field "VirtualKey.model_gateway_id"`)}
 	}
@@ -536,10 +522,6 @@ func (_c *VirtualKeyCreate) createSpec() (*VirtualKey, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Name(); ok {
 		_spec.SetField(virtualkey.FieldName, field.TypeString, value)
 		_node.Name = value
-	}
-	if value, ok := _c.mutation.OrganizationID(); ok {
-		_spec.SetField(virtualkey.FieldOrganizationID, field.TypeString, value)
-		_node.OrganizationID = value
 	}
 	if value, ok := _c.mutation.AgentID(); ok {
 		_spec.SetField(virtualkey.FieldAgentID, field.TypeUUID, value)

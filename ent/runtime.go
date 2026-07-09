@@ -795,24 +795,20 @@ func init() {
 	virtualkeyDescName := virtualkeyFields[4].Descriptor()
 	// virtualkey.NameValidator is a validator for the "name" field. It is called by the builders before save.
 	virtualkey.NameValidator = virtualkeyDescName.Validators[0].(func(string) error)
-	// virtualkeyDescOrganizationID is the schema descriptor for organization_id field.
-	virtualkeyDescOrganizationID := virtualkeyFields[5].Descriptor()
-	// virtualkey.OrganizationIDValidator is a validator for the "organization_id" field. It is called by the builders before save.
-	virtualkey.OrganizationIDValidator = virtualkeyDescOrganizationID.Validators[0].(func(string) error)
 	// virtualkeyDescBlocked is the schema descriptor for blocked field.
-	virtualkeyDescBlocked := virtualkeyFields[20].Descriptor()
+	virtualkeyDescBlocked := virtualkeyFields[19].Descriptor()
 	// virtualkey.DefaultBlocked holds the default value on creation for the blocked field.
 	virtualkey.DefaultBlocked = virtualkeyDescBlocked.Default.(bool)
 	// virtualkeyDescKeyType is the schema descriptor for key_type field.
-	virtualkeyDescKeyType := virtualkeyFields[21].Descriptor()
+	virtualkeyDescKeyType := virtualkeyFields[20].Descriptor()
 	// virtualkey.DefaultKeyType holds the default value on creation for the key_type field.
 	virtualkey.DefaultKeyType = virtualkeyDescKeyType.Default.(string)
 	// virtualkeyDescAutoRotate is the schema descriptor for auto_rotate field.
-	virtualkeyDescAutoRotate := virtualkeyFields[22].Descriptor()
+	virtualkeyDescAutoRotate := virtualkeyFields[21].Descriptor()
 	// virtualkey.DefaultAutoRotate holds the default value on creation for the auto_rotate field.
 	virtualkey.DefaultAutoRotate = virtualkeyDescAutoRotate.Default.(bool)
 	// virtualkeyDescSpend is the schema descriptor for spend field.
-	virtualkeyDescSpend := virtualkeyFields[25].Descriptor()
+	virtualkeyDescSpend := virtualkeyFields[24].Descriptor()
 	// virtualkey.DefaultSpend holds the default value on creation for the spend field.
 	virtualkey.DefaultSpend = virtualkeyDescSpend.Default.(int)
 	// virtualkeyDescID is the schema descriptor for id field.

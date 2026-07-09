@@ -27,9 +27,6 @@ type VirtualKey {
   # Persistent, safe-to-display preview of the secret (e.g. "sk-aBcD...XyZ").
   # Always populated; updated alongside any secret change.
   maskedKey: String!
-  # Organization this key belongs to. Required. Drives both tenant
-  # isolation and LiteLLM team routing.
-  organizationId: String!
   # Nested object: the modelGateway that issued this key. Maps to the ent
   # `model_gateway_id` column (renamed from `gateway_connection_id`).
   # Required since per-agent-per-org refactor — every VirtualKey is bound
@@ -86,8 +83,6 @@ enum LimitType {
 }
 
 input IssueVirtualKeyInput {
-  # Required. Drives tenant scope + LiteLLM team routing.
-  organizationId: String!
   # Required. Human-readable label.
   name: String!
   # Required. References the GatewayConnection that issues this key and
@@ -114,7 +109,14 @@ input IssueVirtualKeyInput {
   # allowedRoutes — when the form's "Allow All Routes" switch is ON, the
   # frontend OMITS this field. When OFF, it sends the explicit list.
   allowedRoutes: [String!]
-  tags: [String!]
+  # Auxiliary key metadata forwarded to the gateway as-is (mirrors the
+  # `metadata` map on the /key/generate wire body; see also the deploy
+  # flows that already use this for `{"agent": ...}`). Tags now live
+  # under `metadata.tags` (e.g. `{"tags": ["project:demo","env:test"]}`)
+  # rather than as a top-level field. The resolver translates back to
+  # `tags` on the persisted VirtualKey so the read-side response and
+  # the ent column remain unchanged.
+  metadata: Map
   # Operational / catalog metadata (LiteLLM design doc §4.2).
   keyType: String
   autoRotate: Boolean
@@ -133,10 +135,9 @@ extend type Query {
   gatewayAvailableModels(gatewayConnectionId: ID!): [String!]!
     @hasRole(any: [admin, read_only])
 
-  # organizationId, agentId, and modelGateway are independent optional
-  # filters; all null → all keys in the current tenant. Multiple set →
-  # intersection.
-  virtualKeys(organizationId: ID, agentId: ID, modelGateway: ID): [VirtualKey!]!
+  # agentId and modelGateway are independent optional filters; all null
+  # → all keys in the current tenant. Multiple set → intersection.
+  virtualKeys(agentId: ID, modelGateway: ID): [VirtualKey!]!
     @hasRole(any: [admin, read_only])
 }
 

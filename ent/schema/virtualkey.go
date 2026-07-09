@@ -37,11 +37,6 @@ func (VirtualKey) Fields() []ent.Field {
 		// Human-readable label, required since 2026-07 refactor (replaces
 		// the prior optional alias column).
 		field.String("name").NotEmpty(),
-		// Organization this key belongs to. Required since the per-agent-per-org
-		// refactor; replaces the prior optional "team_id" / "organization_id"
-		// pair. Used both as the tenant-scope root and as the LiteLLM team
-		// identifier on the wire.
-		field.String("organization_id").NotEmpty(),
 		field.UUID("agent_id", uuid.UUID{}).Optional().Nillable(),
 		// The modelGateway that ISSUED this key. Its whole lifecycle
 		// (revoke/regenerate/recycle/reconcile) routes by this, decoupled from

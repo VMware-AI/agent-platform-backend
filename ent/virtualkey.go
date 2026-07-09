@@ -31,8 +31,6 @@ type VirtualKey struct {
 	MaskedKey string `json:"-"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
-	// OrganizationID holds the value of the "organization_id" field.
-	OrganizationID string `json:"organization_id,omitempty"`
 	// AgentID holds the value of the "agent_id" field.
 	AgentID *uuid.UUID `json:"agent_id,omitempty"`
 	// ModelGatewayID holds the value of the "model_gateway_id" field.
@@ -91,7 +89,7 @@ func (*VirtualKey) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case virtualkey.FieldMaxParallelRequests, virtualkey.FieldTpmLimit, virtualkey.FieldRpmLimit, virtualkey.FieldSpend:
 			values[i] = new(sql.NullInt64)
-		case virtualkey.FieldLitellmKey, virtualkey.FieldLitellmToken, virtualkey.FieldMaskedKey, virtualkey.FieldName, virtualkey.FieldOrganizationID, virtualkey.FieldTpmLimitType, virtualkey.FieldRpmLimitType, virtualkey.FieldBudgetDuration, virtualkey.FieldStatus, virtualkey.FieldKeyType, virtualkey.FieldRotationInterval:
+		case virtualkey.FieldLitellmKey, virtualkey.FieldLitellmToken, virtualkey.FieldMaskedKey, virtualkey.FieldName, virtualkey.FieldTpmLimitType, virtualkey.FieldRpmLimitType, virtualkey.FieldBudgetDuration, virtualkey.FieldStatus, virtualkey.FieldKeyType, virtualkey.FieldRotationInterval:
 			values[i] = new(sql.NullString)
 		case virtualkey.FieldCreatedAt, virtualkey.FieldUpdatedAt, virtualkey.FieldExpiresAt, virtualkey.FieldLastActiveAt:
 			values[i] = new(sql.NullTime)
@@ -153,12 +151,6 @@ func (_m *VirtualKey) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field name", values[i])
 			} else if value.Valid {
 				_m.Name = value.String
-			}
-		case virtualkey.FieldOrganizationID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field organization_id", values[i])
-			} else if value.Valid {
-				_m.OrganizationID = value.String
 			}
 		case virtualkey.FieldAgentID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -340,9 +332,6 @@ func (_m *VirtualKey) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("name=")
 	builder.WriteString(_m.Name)
-	builder.WriteString(", ")
-	builder.WriteString("organization_id=")
-	builder.WriteString(_m.OrganizationID)
 	builder.WriteString(", ")
 	if v := _m.AgentID; v != nil {
 		builder.WriteString("agent_id=")

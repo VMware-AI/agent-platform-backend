@@ -491,23 +491,22 @@ type Image struct {
 }
 
 type IssueVirtualKeyInput struct {
-	OrganizationID      string   `json:"organizationId"`
-	Name                string   `json:"name"`
-	ModelGateway        string   `json:"modelGateway"`
-	Duration            *string  `json:"duration,omitempty"`
-	Models              []string `json:"models,omitempty"`
-	MaxBudget           *float64 `json:"maxBudget,omitempty"`
-	BudgetDuration      *string  `json:"budgetDuration,omitempty"`
-	MaxParallelRequests *int     `json:"maxParallelRequests,omitempty"`
-	RpmLimit            *int     `json:"rpmLimit,omitempty"`
-	TpmLimit            *int     `json:"tpmLimit,omitempty"`
-	RpmLimitType        *string  `json:"rpmLimitType,omitempty"`
-	TpmLimitType        *string  `json:"tpmLimitType,omitempty"`
-	AllowedRoutes       []string `json:"allowedRoutes,omitempty"`
-	Tags                []string `json:"tags,omitempty"`
-	KeyType             *string  `json:"keyType,omitempty"`
-	AutoRotate          *bool    `json:"autoRotate,omitempty"`
-	RotationInterval    *string  `json:"rotationInterval,omitempty"`
+	Name                string         `json:"name"`
+	ModelGateway        string         `json:"modelGateway"`
+	Duration            *string        `json:"duration,omitempty"`
+	Models              []string       `json:"models,omitempty"`
+	MaxBudget           *float64       `json:"maxBudget,omitempty"`
+	BudgetDuration      *string        `json:"budgetDuration,omitempty"`
+	MaxParallelRequests *int           `json:"maxParallelRequests,omitempty"`
+	RpmLimit            *int           `json:"rpmLimit,omitempty"`
+	TpmLimit            *int           `json:"tpmLimit,omitempty"`
+	RpmLimitType        *string        `json:"rpmLimitType,omitempty"`
+	TpmLimitType        *string        `json:"tpmLimitType,omitempty"`
+	AllowedRoutes       []string       `json:"allowedRoutes,omitempty"`
+	Metadata            map[string]any `json:"metadata,omitempty"`
+	KeyType             *string        `json:"keyType,omitempty"`
+	AutoRotate          *bool          `json:"autoRotate,omitempty"`
+	RotationInterval    *string        `json:"rotationInterval,omitempty"`
 }
 
 type IssuedVirtualKey struct {
@@ -1257,7 +1256,6 @@ type VirtualKey struct {
 	ID                  string           `json:"id"`
 	Name                string           `json:"name"`
 	MaskedKey           string           `json:"maskedKey"`
-	OrganizationID      string           `json:"organizationId"`
 	ModelGateway        *ModelGateway    `json:"modelGateway"`
 	AgentID             *string          `json:"agentId,omitempty"`
 	Models              []string         `json:"models"`

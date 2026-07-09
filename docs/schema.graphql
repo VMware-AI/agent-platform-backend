@@ -474,7 +474,6 @@ enum InstallMethod {
 	unset
 }
 input IssueVirtualKeyInput {
-	organizationId: String!
 	name: String!
 	modelGateway: ID!
 	duration: String
@@ -487,7 +486,7 @@ input IssueVirtualKeyInput {
 	rpmLimitType: String
 	tpmLimitType: String
 	allowedRoutes: [String!]
-	tags: [String!]
+	metadata: Map
 	keyType: String
 	autoRotate: Boolean
 	rotationInterval: String
@@ -1010,7 +1009,7 @@ type Query {
 	contentLibraryItems(resourcePoolId: ID!, libraryName: String!): [ContentLibraryItem!]! @hasRole(any: [admin])
 	platformSettings: PlatformSettings! @hasRole(any: [admin])
 	gatewayAvailableModels(gatewayConnectionId: ID!): [String!]! @hasRole(any: [admin,read_only])
-	virtualKeys(organizationId: ID, agentId: ID, modelGateway: ID): [VirtualKey!]! @hasRole(any: [admin,read_only])
+	virtualKeys(agentId: ID, modelGateway: ID): [VirtualKey!]! @hasRole(any: [admin,read_only])
 }
 input RecordRequestLogInput {
 	requestId: String!
@@ -1415,7 +1414,6 @@ type VirtualKey {
 	id: ID!
 	name: String!
 	maskedKey: String!
-	organizationId: String!
 	modelGateway: ModelGateway!
 	agentId: ID
 	models: [String!]!

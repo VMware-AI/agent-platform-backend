@@ -84,3 +84,38 @@ func vkDerefFloat64(p *float64, def float64) float64 {
 	}
 	return *p
 }
+
+// metadataTagsAsStrings pulls the "tags" entry out of the metadata map and
+// projects it to []string for the ent Tags column. Tags now travel under
+// `metadata.tags` on IssueVirtualKeyInput (matches the /key/generate wire
+// shape and the deploy flows' metadata-bucket usage), but the persisted
+// `VirtualKey.tags` column and read-side GraphQL field stay flat. Returns
+// nil for an empty/missing entry — the caller passes that to SetTags, which
+// is the same nil vs. []string{} semantics tagsOrEmpty already normalizes
+// on the read path.
+//
+// Robustness: non-string entries inside the array are dropped (no error),
+// so a stray `{"tags":[1, "ok"]}` becomes `["ok"]`. A malformed top-level
+// "tags" (e.g. a string or object instead of an array) yields nil — the
+// resolver treats that as "no tags supplied" rather than 400ing, because
+// metadata is intentionally loose.
+func metadataTagsAsStrings(metadata map[string]any) []string {
+	if metadata == nil {
+		return nil
+	}
+	raw, ok := metadata["tags"]
+	if !ok || raw == nil {
+		return nil
+	}
+	arr, ok := raw.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]string, 0, len(arr))
+	for _, t := range arr {
+		if s, ok := t.(string); ok {
+			out = append(out, s)
+		}
+	}
+	return out
+}
