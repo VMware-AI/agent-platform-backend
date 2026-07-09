@@ -67,6 +67,10 @@ func (VirtualKey) Fields() []ent.Field {
 		field.String("key_type").Default("default"),
 		field.Bool("auto_rotate").Default(false),
 		field.String("rotation_interval").Optional(), // "30d" etc
+		// 前端传入的 user_id;与 gateway.GenerateKeyRequest.UserID 直传。
+		// NotEmpty(dev-only:历史行没这个列,prod ALTER 会失败 — 后续 prod
+		// 数据迁移是另一个工作,见 spec out-of-scope)。
+		field.String("user_id").NotEmpty(),
 		field.Time("last_active_at").Optional().Nillable(),
 		field.Int("spend").Optional().Default(0),
 	}
