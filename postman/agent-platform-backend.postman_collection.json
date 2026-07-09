@@ -1469,7 +1469,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query VirtualKeys($userId: ID) {\\n    virtualKeys(userId: $userId) {\\n      id\\n      name\\n      maskedKey\\n      userId\\n      agentId\\n      modelGateway {\\n        id\\n        name\\n        provider\\n        endpoint\\n      }\\n      models\\n      status\\n      keyType\\n      blocked\\n      expiresAt\\n      duration\\n      lastActiveAt\\n      spend\\n      maxBudget\\n      budgetDuration\\n      maxParallelRequests\\n      rpmLimit\\n      tpmLimit\\n      rpmLimitType\\n      tpmLimitType\\n      allowedRoutes\\n      tags\\n      autoRotate\\n      rotationInterval\\n      createdAt\\n      updatedAt\\n    }\\n  }\\n\\n  # See IssueVirtualKey.graphql for the canonical VirtualKeyFields fragment.\",\n  \"variables\": {\n    \"userId\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"query VirtualKeys($agentName: String) {\\n    virtualKeys(agentName: $agentName) {\\n      id\\n      name\\n      maskedKey\\n      userId\\n      agent {\\n        id\\n      }\\n      modelGateway {\\n        id\\n        name\\n        provider\\n        endpoint\\n      }\\n      models\\n      status\\n      keyType\\n      blocked\\n      expiresAt\\n      duration\\n      lastActiveAt\\n      spend\\n      maxBudget\\n      budgetDuration\\n      maxParallelRequests\\n      rpmLimit\\n      tpmLimit\\n      rpmLimitType\\n      tpmLimitType\\n      allowedRoutes\\n      tags\\n      autoRotate\\n      rotationInterval\\n      createdAt\\n      updatedAt\\n    }\\n  }\\n\\n  # See IssueVirtualKey.graphql for the canonical VirtualKeyFields fragment.\",\n  \"variables\": {\n    \"agentName\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1498,7 +1498,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation IssueVirtualKey($input: IssueVirtualKeyInput!) {\\n    issueVirtualKey(input: $input) {\\n      secret\\n      virtualKey {\\n        id\\n        name\\n        maskedKey\\n        userId\\n        agentId\\n        modelGateway {\\n          id\\n          name\\n          provider\\n          endpoint\\n        }\\n        models\\n        status\\n        keyType\\n        blocked\\n        expiresAt\\n        duration\\n        lastActiveAt\\n        spend\\n        maxBudget\\n        budgetDuration\\n        maxParallelRequests\\n        rpmLimit\\n        tpmLimit\\n        rpmLimitType\\n        tpmLimitType\\n        allowedRoutes\\n        tags\\n        autoRotate\\n        rotationInterval\\n        createdAt\\n        updatedAt\\n      }\\n    }\\n  }\\n\\n  # Selection set kept in sync with the GraphQL `VirtualKey` type \\u2014 every\\n  # field a console surface (list, detail, issue confirmation) is expected\\n  # to display. Update both this fragment and the IssueVirtualKey /\\n  # RegenerateVirtualKey / SetVirtualKeyEnabled / VirtualKeys / AssociateVirtualKeyAgent\\n  # fixtures when the schema gains or drops a field.\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation IssueVirtualKey($input: IssueVirtualKeyInput!) {\\n    issueVirtualKey(input: $input) {\\n      secret\\n      virtualKey {\\n        id\\n        name\\n        maskedKey\\n        userId\\n        agent {\\n          id\\n        }\\n        modelGateway {\\n          id\\n          name\\n          provider\\n          endpoint\\n        }\\n        models\\n        status\\n        keyType\\n        blocked\\n        expiresAt\\n        duration\\n        lastActiveAt\\n        spend\\n        maxBudget\\n        budgetDuration\\n        maxParallelRequests\\n        rpmLimit\\n        tpmLimit\\n        rpmLimitType\\n        tpmLimitType\\n        allowedRoutes\\n        tags\\n        autoRotate\\n        rotationInterval\\n        createdAt\\n        updatedAt\\n      }\\n    }\\n  }\\n\\n  # Selection set kept in sync with the GraphQL `VirtualKey` type \\u2014 every\\n  # field a console surface (list, detail, issue confirmation) is expected\\n  # to display. Update both this fragment and the IssueVirtualKey /\\n  # RegenerateVirtualKey / SetVirtualKeyEnabled / VirtualKeys / AssociateVirtualKeyAgent\\n  # fixtures when the schema gains or drops a field.\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1556,7 +1556,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation RegenerateVirtualKey($id: ID!) {\\n    regenerateVirtualKey(id: $id) {\\n      secret\\n      virtualKey {\\n        id\\n        name\\n        maskedKey\\n        userId\\n        agentId\\n        modelGateway {\\n          id\\n          name\\n          provider\\n          endpoint\\n        }\\n        models\\n        status\\n        keyType\\n        blocked\\n        expiresAt\\n        duration\\n        lastActiveAt\\n        spend\\n        maxBudget\\n        budgetDuration\\n        maxParallelRequests\\n        rpmLimit\\n        tpmLimit\\n        rpmLimitType\\n        tpmLimitType\\n        allowedRoutes\\n        tags\\n        autoRotate\\n        rotationInterval\\n        createdAt\\n        updatedAt\\n      }\\n    }\\n  }\\n\\n  # See IssueVirtualKey.graphql for the canonical VirtualKeyFields fragment \\u2014\\n  # kept in sync across all fixtures that select VirtualKey so the generated\\n  # Postman request bodies are interchangeable.\",\n  \"variables\": {\n    \"id\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation RegenerateVirtualKey($id: ID!) {\\n    regenerateVirtualKey(id: $id) {\\n      secret\\n      virtualKey {\\n        id\\n        name\\n        maskedKey\\n        userId\\n        agent {\\n          id\\n        }\\n        modelGateway {\\n          id\\n          name\\n          provider\\n          endpoint\\n        }\\n        models\\n        status\\n        keyType\\n        blocked\\n        expiresAt\\n        duration\\n        lastActiveAt\\n        spend\\n        maxBudget\\n        budgetDuration\\n        maxParallelRequests\\n        rpmLimit\\n        tpmLimit\\n        rpmLimitType\\n        tpmLimitType\\n        allowedRoutes\\n        tags\\n        autoRotate\\n        rotationInterval\\n        createdAt\\n        updatedAt\\n      }\\n    }\\n  }\\n\\n  # See IssueVirtualKey.graphql for the canonical VirtualKeyFields fragment \\u2014\\n  # kept in sync across all fixtures that select VirtualKey so the generated\\n  # Postman request bodies are interchangeable.\",\n  \"variables\": {\n    \"id\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1585,7 +1585,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SetVirtualKeyEnabled($id: ID!, $enabled: Boolean!) {\\n    setVirtualKeyEnabled(id: $id, enabled: $enabled) {\\n      id\\n      name\\n      maskedKey\\n      userId\\n      agentId\\n      modelGateway {\\n        id\\n        name\\n        provider\\n        endpoint\\n      }\\n      models\\n      status\\n      keyType\\n      blocked\\n      expiresAt\\n      duration\\n      lastActiveAt\\n      spend\\n      maxBudget\\n      budgetDuration\\n      maxParallelRequests\\n      rpmLimit\\n      tpmLimit\\n      rpmLimitType\\n      tpmLimitType\\n      allowedRoutes\\n      tags\\n      autoRotate\\n      rotationInterval\\n      createdAt\\n      updatedAt\\n    }\\n  }\\n\\n  # See IssueVirtualKey.graphql for the canonical VirtualKeyFields fragment.\",\n  \"variables\": {\n    \"id\": \"\",\n    \"enabled\": false\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation SetVirtualKeyEnabled($id: ID!, $enabled: Boolean!) {\\n    setVirtualKeyEnabled(id: $id, enabled: $enabled) {\\n      id\\n      name\\n      maskedKey\\n      userId\\n      agent {\\n        id\\n      }\\n      modelGateway {\\n        id\\n        name\\n        provider\\n        endpoint\\n      }\\n      models\\n      status\\n      keyType\\n      blocked\\n      expiresAt\\n      duration\\n      lastActiveAt\\n      spend\\n      maxBudget\\n      budgetDuration\\n      maxParallelRequests\\n      rpmLimit\\n      tpmLimit\\n      rpmLimitType\\n      tpmLimitType\\n      allowedRoutes\\n      tags\\n      autoRotate\\n      rotationInterval\\n      createdAt\\n      updatedAt\\n    }\\n  }\\n\\n  # See IssueVirtualKey.graphql for the canonical VirtualKeyFields fragment.\",\n  \"variables\": {\n    \"id\": \"\",\n    \"enabled\": false\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1614,7 +1614,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation AssociateVirtualKeyAgent($virtualKeyId: ID!, $agentId: ID!) {\\n    associateVirtualKeyAgent(virtualKeyId: $virtualKeyId, agentId: $agentId) {\\n      id\\n      name\\n      maskedKey\\n      userId\\n      agentId\\n      modelGateway {\\n        id\\n        name\\n        provider\\n        endpoint\\n      }\\n      models\\n      status\\n      keyType\\n      blocked\\n      expiresAt\\n      duration\\n      lastActiveAt\\n      spend\\n      maxBudget\\n      budgetDuration\\n      maxParallelRequests\\n      rpmLimit\\n      tpmLimit\\n      rpmLimitType\\n      tpmLimitType\\n      allowedRoutes\\n      tags\\n      autoRotate\\n      rotationInterval\\n      createdAt\\n      updatedAt\\n    }\\n  }\\n\\n  # See IssueVirtualKey.graphql for the canonical VirtualKeyFields fragment.\",\n  \"variables\": {\n    \"virtualKeyId\": \"\",\n    \"agentId\": \"\"\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation AssociateVirtualKeyAgent($virtualKeyId: ID!, $agentId: ID!) {\\n    associateVirtualKeyAgent(virtualKeyId: $virtualKeyId, agentId: $agentId) {\\n      id\\n      name\\n      maskedKey\\n      userId\\n      agent {\\n        id\\n      }\\n      modelGateway {\\n        id\\n        name\\n        provider\\n        endpoint\\n      }\\n      models\\n      status\\n      keyType\\n      blocked\\n      expiresAt\\n      duration\\n      lastActiveAt\\n      spend\\n      maxBudget\\n      budgetDuration\\n      maxParallelRequests\\n      rpmLimit\\n      tpmLimit\\n      rpmLimitType\\n      tpmLimitType\\n      allowedRoutes\\n      tags\\n      autoRotate\\n      rotationInterval\\n      createdAt\\n      updatedAt\\n    }\\n  }\\n\\n  # See IssueVirtualKey.graphql for the canonical VirtualKeyFields fragment.\",\n  \"variables\": {\n    \"virtualKeyId\": \"\",\n    \"agentId\": \"\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -2258,6 +2258,69 @@
               "path": []
             },
             "description": "Query MeteringOverview \u2014 generated from internal/graph/testdata/client_operations/MeteringOverview.graphql. Replace the variable stubs with real IDs before sending."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Other (unmapped)",
+      "item": [
+        {
+          "name": "CloneVirtualKey",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"# CloneVirtualKey \\u2014 front-end clone path uses issueVirtualKey with the\\n# source row's governance fields mapped into IssueVirtualKeyInput\\n# (see agent-platform-console/src/utils/virtualKey.ts). There is NO\\n# dedicated cloneVirtualKey mutation on the backend: per LLD-04\\n# \\\"rotate, don't mutate\\\", every LiteLLM key is issued exactly once\\n# with its full governance payload, then either regenerated (rotates\\n# the secret only) or revoked (terminal). This fixture exists purely as\\n# a Postman codegen template documenting that pattern so a future\\n# \\\"add updateVirtualKey mutation\\\" PR is forced to re-evaluate\\n# LiteLLM's /key/update field set (max_budget / rpm_limit / tpm_limit\\n# / blocked only) before going in.\\nmutation CloneVirtualKey($input: IssueVirtualKeyInput!) {\\n    issueVirtualKey(input: $input) {\\n      secret\\n      virtualKey {\\n        id\\n        name\\n        maskedKey\\n        userId\\n        agent {\\n          id\\n        }\\n        modelGateway {\\n          id\\n          name\\n          provider\\n          endpoint\\n        }\\n        models\\n        status\\n        keyType\\n        blocked\\n        expiresAt\\n        duration\\n        lastActiveAt\\n        spend\\n        maxBudget\\n        budgetDuration\\n        maxParallelRequests\\n        rpmLimit\\n        tpmLimit\\n        rpmLimitType\\n        tpmLimitType\\n        allowedRoutes\\n        tags\\n        autoRotate\\n        rotationInterval\\n        createdAt\\n        updatedAt\\n      }\\n    }\\n  }\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": []
+            },
+            "description": "Mutation CloneVirtualKey \u2014 generated from internal/graph/testdata/client_operations/CloneVirtualKey.graphql. Replace the variable stubs with real IDs before sending."
+          },
+          "response": []
+        },
+        {
+          "name": "PurgeRevokedVirtualKeys",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"# purgeRevokedVirtualKeys \\u2014 admin-only bulk deletion of revoked keys\\n# past a wall-clock cutoff. No new mutation in spirit (rows already\\n# terminal); this is a physical-DB-only action that complements the\\n# status-driven governance. Resolver enforces `beforeTime` is in the\\n# past (rejects future timestamps as a footgun guard). See\\n# agent-platform-backend/internal/graph/virtualkey.resolvers.go for\\n# the audit encoding.\\nmutation PurgeRevokedVirtualKeys($beforeTime: Time!) {\\n    purgeRevokedVirtualKeys(beforeTime: $beforeTime) {\\n      deletedCount\\n      oldestRemainingUpdatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"beforeTime\": null\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": []
+            },
+            "description": "Mutation PurgeRevokedVirtualKeys \u2014 generated from internal/graph/testdata/client_operations/PurgeRevokedVirtualKeys.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         }

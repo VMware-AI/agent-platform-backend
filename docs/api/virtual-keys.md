@@ -21,25 +21,6 @@ gatewayAvailableModels(gatewayConnectionId: ID!): [String!]!
 |----------|------|----------|---------|
 | `gatewayConnectionId` | `ID!` | yes | — |
 
-### `virtualKeys`
-
-agentName, modelGateway, nameContains, and modelContains are independent optional filters; all null → all keys in the current tenant. Multiple set → intersection. - agentName: case-insensitive substring match against the bound agent's `name` (via virtualkey.HasAgentWith — a single subquery, not N+1). Empty/missing `agent` rows (just-issued keys) are excluded. - nameContains: case-insensitive substring match on the human-readable name (ent.NameContainsFold; unindexed). - modelContains: case-insensitive substring match against ANY element of the `models` array (raw SQL EXISTS/unnest; unindexed). Accepts a partial model id like "gpt-4" and matches e.g. "openai/gpt-4o". orderBy defaults to CREATED_DESC (newest first); NAME_ASC / NAME_DESC sort by the human-readable name.
-
-```graphql
-virtualKeys(agentName: String, modelGateway: ID, nameContains: String, modelContains: String, orderBy: VirtualKeyOrderBy): [VirtualKey!]!
-```
-
-- **Returns:** `[VirtualKey!]!`
-- **Auth:** `@hasRole(any: [admin, read_only])`
-
-| Argument | Type | Required | Default |
-|----------|------|----------|---------|
-| `agentName` | `String` | no | — |
-| `modelGateway` | `ID` | no | — |
-| `nameContains` | `String` | no | — |
-| `modelContains` | `String` | no | — |
-| `orderBy` | `VirtualKeyOrderBy` | no | — |
-
 ## Mutations
 
 ### `issueVirtualKey`
@@ -115,6 +96,21 @@ associateVirtualKeyAgent(virtualKeyId: ID!, agentId: ID!): VirtualKey!
 | `virtualKeyId` | `ID!` | yes | — |
 | `agentId` | `ID!` | yes | — |
 
+### `purgeRevokedVirtualKeys`
+
+Permanently delete every VirtualKey with status=revoked AND updated_at < beforeTime. This is the only sanctioned way to physically shrink the virtual_keys table; revocation alone flips status and leaves the row in place for audit + spend history. Audit log entries that referenced the purged rows will keep their resource_id strings (audit_log has no FK) — the key detail will just become "已清除" in the audit-log viewer. Admin-only because the action is irreversible. beforeTime MUST be in the past (resolver 422s otherwise) — a future timestamp would silently delete rows updated in the next few hundred ms, which is exactly the kind of footgun admin permissions shouldn't enable.
+
+```graphql
+purgeRevokedVirtualKeys(beforeTime: Time!): PurgeResult!
+```
+
+- **Returns:** `PurgeResult!`
+- **Auth:** `@hasRole(any: [admin])`
+
+| Argument | Type | Required | Default |
+|----------|------|----------|---------|
+| `beforeTime` | `Time!` | yes | — |
+
 ## Types
 
 ### IssuedVirtualKey
@@ -127,6 +123,17 @@ Returned only at issue / regenerate time — carries the secret, which is never 
 |-------|------|-------------|
 | `virtualKey` | `VirtualKey!` | — |
 | `secret` | `String!` | — |
+
+### PurgeResult
+
+*Object*
+
+Result of `purgeRevokedVirtualKeys`. `deletedCount` is the number of rows physically removed (NOT marked revoked — revoked was already terminal); `oldestRemainingUpdatedAt` lets an operator decide whether to schedule another purge pass — if it's still well in the past, they're not done yet.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `deletedCount` | `Int!` | — |
+| `oldestRemainingUpdatedAt` | `Time` | — |
 
 ### VirtualKey
 

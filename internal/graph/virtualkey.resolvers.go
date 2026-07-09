@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -180,6 +181,23 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 
 	vk, err := create.Save(ctx)
 	if err != nil {
+		// Distinguish the (model_gateway_id, name) partial-unique violation
+		// from other persist failures so the user gets a clean "名称
+		// 已存在" instead of the raw psql message. ConstraintError's
+		// underlying message includes the index name from migrate/schema.go;
+		// we match on that — there's no public field on ent.ConstraintError
+		// exposing it, and we want to avoid diving into pgconn.PgError
+		// internals from this layer.
+		if ent.IsConstraintError(err) && strings.Contains(err.Error(), "virtualkey_model_gateway_id_name") {
+			// Compensating gw.DeleteKey — the gateway already minted the
+			// secret; without rollback we'd orphan the litellm-side key.
+			cctx := context.WithoutCancel(ctx)
+			if derr := gw.DeleteKey(cctx, resp.Key); derr != nil {
+				log.Printf("compensating gw.DeleteKey failed: %v", derr)
+			}
+			r.audit(ctx, "key.issue", "virtual_key", "", false, actorID(auth.FromContext(ctx)))
+			return nil, gqlerror.Errorf("令牌名称已存在,请换一个名称")
+		}
 		// Compensating revoke on gateway (detached context: original may
 		// already be canceled/timed-out).
 		cctx := context.WithoutCancel(ctx)
@@ -364,6 +382,55 @@ func (r *mutationResolver) AssociateVirtualKeyAgent(ctx context.Context, virtual
 	return toModelVirtualKey(ctx, r.Resolver, withAgent)
 }
 
+// PurgeRevokedVirtualKeys is the resolver for the purgeRevokedVirtualKeys field.
+func (r *mutationResolver) PurgeRevokedVirtualKeys(ctx context.Context, beforeTime time.Time) (*model.PurgeResult, error) {
+	// beforeTime must be in the past — otherwise a wall-clock skew or a
+	// "now + buffer" call would silently include rows updated in the
+	// next few hundred ms. Reject at the resolver layer so the error is
+	// visible to the operator before anything leaves the DB.
+	if !beforeTime.Before(time.Now()) {
+		return nil, gqlerror.Errorf("beforeTime must be in the past (got %s)", beforeTime.Format(time.RFC3339))
+	}
+
+	n, err := r.Ent.VirtualKey.Delete().
+		Where(
+			virtualkey.StatusEQ(virtualkey.StatusRevoked),
+			virtualkey.UpdatedAtLT(beforeTime),
+		).
+		Exec(ctx)
+	if err != nil {
+		r.audit(ctx, "key.purge", "virtual_key", fmt.Sprintf("before=%s", beforeTime.Format(time.RFC3339)), false, actorID(auth.FromContext(ctx)))
+		return nil, fmt.Errorf("purge virtual_keys: %w", err)
+	}
+
+	// Survey the surviving revoked rows so the operator can decide
+	// whether to schedule another pass. Best-effort — if this query
+	// fails (rare: post-delete race with a concurrent issue), we still
+	// return deletedCount; the operator just gets oldestRemaining=nil.
+	oldest, qerr := r.Ent.VirtualKey.Query().
+		Where(virtualkey.StatusEQ(virtualkey.StatusRevoked)).
+		Order(ent.Asc(virtualkey.FieldUpdatedAt)).
+		First(ctx)
+	var oldestPtr *time.Time
+	if qerr == nil && oldest != nil {
+		t := oldest.UpdatedAt
+		oldestPtr = &t
+	}
+
+	// Audit detail encoded into resID — the audit signature is fixed
+	// at audit.go:37 and we don't want to widen it for this single
+	// caller. Format: "before=<rfc3339> deleted=<n>" parses cleanly
+	// from the audit log viewer if needed later.
+	r.audit(ctx, "key.purge", "virtual_key",
+		fmt.Sprintf("before=%s deleted=%d", beforeTime.Format(time.RFC3339), n),
+		true, actorID(auth.FromContext(ctx)))
+
+	return &model.PurgeResult{
+		DeletedCount:             int(n),
+		OldestRemainingUpdatedAt: oldestPtr,
+	}, nil
+}
+
 // GatewayAvailableModels returns the distinct model names whose backed
 // physical model rows exist under the given modelGateway AND whose
 // health status is "at least one backend up" — i.e. status ∈
@@ -410,7 +477,7 @@ func (r *queryResolver) GatewayAvailableModels(ctx context.Context, gatewayConne
 // (only maskedKey on each row). Neither nameContains nor modelContains is
 // indexed; agentName is via HasAgentWith subquery. Acceptable while
 // per-tenant key counts stay small (operator-curated).
-func (r *queryResolver) VirtualKeys(ctx context.Context, agentName *string, modelGateway *string, nameContains *string, modelContains *string, orderBy *model.VirtualKeyOrderBy) ([]model.VirtualKey, error) {
+func (r *queryResolver) VirtualKeys(ctx context.Context, agentName *string, modelGateway *string, nameContains *string, nameEquals *string, modelContains *string, orderBy *model.VirtualKeyOrderBy) ([]model.VirtualKey, error) {
 	// WithAgent() eagerly populates k.Edges.Agent in one batched query,
 	// so toModelVirtualKey can render the nested `agent` GraphQL field
 	// without N+1.
@@ -430,6 +497,18 @@ func (r *queryResolver) VirtualKeys(ctx context.Context, agentName *string, mode
 	}
 	if nameContains != nil && *nameContains != "" {
 		q = q.Where(virtualkey.NameContainsFold(*nameContains))
+	}
+	if nameEquals != nil && *nameEquals != "" {
+		// Exact-match for the issue form's "name already exists" check.
+		// Case-sensitive — matches the (model_gateway_id, name) partial
+		// unique index's behaviour (Postgres text equality is case-
+		// sensitive by default). Using a fold match here would let the
+		// front-end say "no clash" while the back-end still 409s on
+		// "Foo" vs "foo". B-tree covered when scoped by model_gateway_id
+		// (the partial unique index covers equality on the leading
+		// prefix); sequential scan otherwise. Backend re-validates
+		// uniqueness on save; this is UX-grade, not security-grade.
+		q = q.Where(virtualkey.NameEQ(*nameEquals))
 	}
 	if modelContains != nil && *modelContains != "" {
 		// PG-only: unnest the text[] column to rows and case-fold-match

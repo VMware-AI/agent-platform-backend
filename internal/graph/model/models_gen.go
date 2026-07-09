@@ -859,6 +859,11 @@ type ProviderModelSpecIDInput struct {
 	SpecID string `json:"specId"`
 }
 
+type PurgeResult struct {
+	DeletedCount             int        `json:"deletedCount"`
+	OldestRemainingUpdatedAt *time.Time `json:"oldestRemainingUpdatedAt,omitempty"`
+}
+
 type Query struct {
 }
 

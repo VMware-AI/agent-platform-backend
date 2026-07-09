@@ -552,6 +552,7 @@ type ComplexityRoot struct {
 		IssueVirtualKey                func(childComplexity int, input model.IssueVirtualKeyInput) int
 		Login                          func(childComplexity int, input model.LoginInput) int
 		Logout                         func(childComplexity int) int
+		PurgeRevokedVirtualKeys        func(childComplexity int, beforeTime time.Time) int
 		ReconfigAgentVM                func(childComplexity int, agentID string, resource *model.AgentResourceInput, network *model.AgentNetworkInput, vAppProperties []model.VAppPropertyInput) int
 		RecordRequestLog               func(childComplexity int, input model.RecordRequestLogInput) int
 		RecordTokenUsage               func(childComplexity int, input model.RecordTokenUsageInput) int
@@ -696,6 +697,11 @@ type ComplexityRoot struct {
 		TotalPages  func(childComplexity int) int
 	}
 
+	PurgeResult struct {
+		DeletedCount             func(childComplexity int) int
+		OldestRemainingUpdatedAt func(childComplexity int) int
+	}
+
 	Query struct {
 		Agent                   func(childComplexity int, id string) int
 		AgentConfigs            func(childComplexity int, agentType *string) int
@@ -743,7 +749,7 @@ type ComplexityRoot struct {
 		UserRoles               func(childComplexity int, userID string) int
 		Users                   func(childComplexity int, filter *model.UserFilter, pagination *model.Pagination, sort *model.UserSort) int
 		VMTemplates             func(childComplexity int, resourcePoolID string) int
-		VirtualKeys             func(childComplexity int, agentName *string, modelGateway *string, nameContains *string, modelContains *string, orderBy *model.VirtualKeyOrderBy) int
+		VirtualKeys             func(childComplexity int, agentName *string, modelGateway *string, nameContains *string, nameEquals *string, modelContains *string, orderBy *model.VirtualKeyOrderBy) int
 		VsphereNetworks         func(childComplexity int, resourcePoolID string) int
 		VsphereResourcePools    func(childComplexity int, resourcePoolID string) int
 	}
@@ -1082,6 +1088,7 @@ type MutationResolver interface {
 	RegenerateVirtualKey(ctx context.Context, id string) (*model.IssuedVirtualKey, error)
 	SetVirtualKeyEnabled(ctx context.Context, id string, enabled bool) (*model.VirtualKey, error)
 	AssociateVirtualKeyAgent(ctx context.Context, virtualKeyID string, agentID string) (*model.VirtualKey, error)
+	PurgeRevokedVirtualKeys(ctx context.Context, beforeTime time.Time) (*model.PurgeResult, error)
 }
 type OvaTemplateFamilyResolver interface {
 	LatestVersion(ctx context.Context, obj *model.OvaTemplateFamily) (*string, error)
@@ -1142,7 +1149,7 @@ type QueryResolver interface {
 	ContentLibraryItems(ctx context.Context, resourcePoolID string, libraryName string) ([]model.ContentLibraryItem, error)
 	PlatformSettings(ctx context.Context) (*model.PlatformSettings, error)
 	GatewayAvailableModels(ctx context.Context, gatewayConnectionID string) ([]string, error)
-	VirtualKeys(ctx context.Context, agentName *string, modelGateway *string, nameContains *string, modelContains *string, orderBy *model.VirtualKeyOrderBy) ([]model.VirtualKey, error)
+	VirtualKeys(ctx context.Context, agentName *string, modelGateway *string, nameContains *string, nameEquals *string, modelContains *string, orderBy *model.VirtualKeyOrderBy) ([]model.VirtualKey, error)
 }
 type UserResolver interface {
 	DisplayName(ctx context.Context, obj *model.User) (string, error)
@@ -3388,6 +3395,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.Logout(childComplexity), true
+	case "Mutation.purgeRevokedVirtualKeys":
+		if e.ComplexityRoot.Mutation.PurgeRevokedVirtualKeys == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_purgeRevokedVirtualKeys_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.PurgeRevokedVirtualKeys(childComplexity, args["beforeTime"].(time.Time)), true
 	case "Mutation.reconfigAgentVM":
 		if e.ComplexityRoot.Mutation.ReconfigAgentVM == nil {
 			break
@@ -4247,6 +4265,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.ProviderModelInfoConnection.TotalPages(childComplexity), true
 
+	case "PurgeResult.deletedCount":
+		if e.ComplexityRoot.PurgeResult.DeletedCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PurgeResult.DeletedCount(childComplexity), true
+	case "PurgeResult.oldestRemainingUpdatedAt":
+		if e.ComplexityRoot.PurgeResult.OldestRemainingUpdatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PurgeResult.OldestRemainingUpdatedAt(childComplexity), true
+
 	case "Query.agent":
 		if e.ComplexityRoot.Query.Agent == nil {
 			break
@@ -4704,7 +4735,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Query.VirtualKeys(childComplexity, args["agentName"].(*string), args["modelGateway"].(*string), args["nameContains"].(*string), args["modelContains"].(*string), args["orderBy"].(*model.VirtualKeyOrderBy)), true
+		return e.ComplexityRoot.Query.VirtualKeys(childComplexity, args["agentName"].(*string), args["modelGateway"].(*string), args["nameContains"].(*string), args["nameEquals"].(*string), args["modelContains"].(*string), args["orderBy"].(*model.VirtualKeyOrderBy)), true
 	case "Query.vsphereNetworks":
 		if e.ComplexityRoot.Query.VsphereNetworks == nil {
 			break
@@ -8113,6 +8144,12 @@ extend type Query {
     agentName: String,
     modelGateway: ID,
     nameContains: String,
+    # Exact-match on VirtualKey.name (case-sensitive, B-tree indexed via
+    # the (model_gateway_id, name) partial unique index when scoped by
+    # modelGateway; falls back to a sequential scan otherwise). Powers
+    # the issue form's live "name already exists" check before the user
+    # submits — backend still re-validates on save, this is just UX.
+    nameEquals: String,
     modelContains: String,
     orderBy: VirtualKeyOrderBy
   ): [VirtualKey!]!
@@ -8123,6 +8160,16 @@ enum VirtualKeyOrderBy {
   CREATED_DESC
   NAME_ASC
   NAME_DESC
+}
+
+# Result of ` + "`" + `purgeRevokedVirtualKeys` + "`" + `. ` + "`" + `deletedCount` + "`" + ` is the number of
+# rows physically removed (NOT marked revoked — revoked was already
+# terminal); ` + "`" + `oldestRemainingUpdatedAt` + "`" + ` lets an operator decide whether
+# to schedule another purge pass — if it's still well in the past,
+# they're not done yet.
+type PurgeResult {
+  deletedCount: Int!
+  oldestRemainingUpdatedAt: Time
 }
 
 extend type Mutation {
@@ -8144,6 +8191,20 @@ extend type Mutation {
   # authoritative gate; the resolver also pre-checks for a clean 409).
   associateVirtualKeyAgent(virtualKeyId: ID!, agentId: ID!): VirtualKey!
     @hasPermission(perm: "key:manage")
+  # Permanently delete every VirtualKey with status=revoked AND
+  # updated_at < beforeTime. This is the only sanctioned way to
+  # physically shrink the virtual_keys table; revocation alone flips
+  # status and leaves the row in place for audit + spend history. Audit
+  # log entries that referenced the purged rows will keep their
+  # resource_id strings (audit_log has no FK) — the key detail will
+  # just become "已清除" in the audit-log viewer. Admin-only because
+  # the action is irreversible.
+  # beforeTime MUST be in the past (resolver 422s otherwise) — a
+  # future timestamp would silently delete rows updated in the next
+  # few hundred ms, which is exactly the kind of footgun admin
+  # permissions shouldn't enable.
+  purgeRevokedVirtualKeys(beforeTime: Time!): PurgeResult!
+    @hasRole(any: [admin])
 }
 `, BuiltIn: false},
 }
@@ -9293,6 +9354,16 @@ func (ec *executionContext) childFields_ProviderModelInfoConnection(ctx context.
 	return nil, fmt.Errorf("no field named %q was found under type ProviderModelInfoConnection", field.Name)
 }
 
+func (ec *executionContext) childFields_PurgeResult(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "deletedCount":
+		return ec.fieldContext_PurgeResult_deletedCount(ctx, field)
+	case "oldestRemainingUpdatedAt":
+		return ec.fieldContext_PurgeResult_oldestRemainingUpdatedAt(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type PurgeResult", field.Name)
+}
+
 func (ec *executionContext) childFields_RequestLog(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -10426,6 +10497,20 @@ func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawAr
 		return nil, err
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_purgeRevokedVirtualKeys_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "beforeTime",
+		func(ctx context.Context, v any) (time.Time, error) {
+			return ec.unmarshalNTime2timeᚐTime(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["beforeTime"] = arg0
 	return args, nil
 }
 
@@ -11856,22 +11941,30 @@ func (ec *executionContext) field_Query_virtualKeys_args(ctx context.Context, ra
 		return nil, err
 	}
 	args["nameContains"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "modelContains",
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "nameEquals",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["modelContains"] = arg3
-	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "orderBy",
+	args["nameEquals"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "modelContains",
+		func(ctx context.Context, v any) (*string, error) {
+			return ec.unmarshalOString2ᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["modelContains"] = arg4
+	arg5, err := graphql.ProcessArgField(ctx, rawArgs, "orderBy",
 		func(ctx context.Context, v any) (*model.VirtualKeyOrderBy, error) {
 			return ec.unmarshalOVirtualKeyOrderBy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐVirtualKeyOrderBy(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["orderBy"] = arg4
+	args["orderBy"] = arg5
 	return args, nil
 }
 
@@ -23746,6 +23839,68 @@ func (ec *executionContext) fieldContext_Mutation_associateVirtualKeyAgent(ctx c
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_purgeRevokedVirtualKeys(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_purgeRevokedVirtualKeys(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().PurgeRevokedVirtualKeys(ctx, fc.Args["beforeTime"].(time.Time))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal *model.PurgeResult
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.PurgeResult
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *model.PurgeResult) graphql.Marshaler {
+			return ec.marshalNPurgeResult2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPurgeResult(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_purgeRevokedVirtualKeys(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PurgeResult(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_purgeRevokedVirtualKeys_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _OVFProperty_key(ctx context.Context, field graphql.CollectedField, obj *model.OVFProperty) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -25274,6 +25429,52 @@ func (ec *executionContext) _ProviderModelInfoConnection_size(ctx context.Contex
 }
 func (ec *executionContext) fieldContext_ProviderModelInfoConnection_size(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ProviderModelInfoConnection", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _PurgeResult_deletedCount(ctx context.Context, field graphql.CollectedField, obj *model.PurgeResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PurgeResult_deletedCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DeletedCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_PurgeResult_deletedCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PurgeResult", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _PurgeResult_oldestRemainingUpdatedAt(ctx context.Context, field graphql.CollectedField, obj *model.PurgeResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PurgeResult_oldestRemainingUpdatedAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OldestRemainingUpdatedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *time.Time) graphql.Marshaler {
+			return ec.marshalOTime2ᚖtimeᚐTime(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_PurgeResult_oldestRemainingUpdatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PurgeResult", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
 func (ec *executionContext) _Query_me(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -27920,7 +28121,7 @@ func (ec *executionContext) _Query_virtualKeys(ctx context.Context, field graphq
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().VirtualKeys(ctx, fc.Args["agentName"].(*string), fc.Args["modelGateway"].(*string), fc.Args["nameContains"].(*string), fc.Args["modelContains"].(*string), fc.Args["orderBy"].(*model.VirtualKeyOrderBy))
+			return ec.Resolvers.Query().VirtualKeys(ctx, fc.Args["agentName"].(*string), fc.Args["modelGateway"].(*string), fc.Args["nameContains"].(*string), fc.Args["nameEquals"].(*string), fc.Args["modelContains"].(*string), fc.Args["orderBy"].(*model.VirtualKeyOrderBy))
 		},
 		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
 			directive0 := next
@@ -40478,6 +40679,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "purgeRevokedVirtualKeys":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_purgeRevokedVirtualKeys(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -41323,6 +41531,50 @@ func (ec *executionContext) _ProviderModelInfoConnection(ctx context.Context, se
 		case "size":
 			out.Values[i] = ec._ProviderModelInfoConnection_size(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var purgeResultImplementors = []string{"PurgeResult"}
+
+func (ec *executionContext) _PurgeResult(ctx context.Context, sel ast.SelectionSet, obj *model.PurgeResult) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, purgeResultImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PurgeResult")
+		case "deletedCount":
+			out.Values[i] = ec._PurgeResult_deletedCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "oldestRemainingUpdatedAt":
+			out.Values[i] = ec._PurgeResult_oldestRemainingUpdatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
 		default:
@@ -46437,6 +46689,20 @@ func (ec *executionContext) marshalNProviderModelStatus2githubᚗcomᚋVMwareᚑ
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNPurgeResult2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPurgeResult(ctx context.Context, sel ast.SelectionSet, v model.PurgeResult) graphql.Marshaler {
+	return ec._PurgeResult(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPurgeResult2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPurgeResult(ctx context.Context, sel ast.SelectionSet, v *model.PurgeResult) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PurgeResult(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNRecordRequestLogInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRecordRequestLogInput(ctx context.Context, v any) (model.RecordRequestLogInput, error) {

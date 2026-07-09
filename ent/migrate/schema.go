@@ -779,6 +779,14 @@ var (
 					Where: "status <> 'revoked'",
 				},
 			},
+			{
+				Name:    "virtualkey_model_gateway_id_name",
+				Unique:  true,
+				Columns: []*schema.Column{VirtualKeysColumns[7], VirtualKeysColumns[6]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "status <> 'revoked'",
+				},
+			},
 		},
 	}
 	// AgentConfigKnowledgeColumns holds the columns for the "agent_config_knowledge" table.

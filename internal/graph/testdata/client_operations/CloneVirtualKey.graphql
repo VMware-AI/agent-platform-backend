@@ -1,0 +1,56 @@
+# CloneVirtualKey — front-end clone path uses issueVirtualKey with the
+# source row's governance fields mapped into IssueVirtualKeyInput
+# (see agent-platform-console/src/utils/virtualKey.ts). There is NO
+# dedicated cloneVirtualKey mutation on the backend: per LLD-04
+# "rotate, don't mutate", every LiteLLM key is issued exactly once
+# with its full governance payload, then either regenerated (rotates
+# the secret only) or revoked (terminal). This fixture exists purely as
+# a Postman codegen template documenting that pattern so a future
+# "add updateVirtualKey mutation" PR is forced to re-evaluate
+# LiteLLM's /key/update field set (max_budget / rpm_limit / tpm_limit
+# / blocked only) before going in.
+mutation CloneVirtualKey($input: IssueVirtualKeyInput!) {
+    issueVirtualKey(input: $input) {
+      secret
+      virtualKey {
+        ...VirtualKeyFields
+      }
+    }
+  }
+
+  fragment VirtualKeyFields on VirtualKey {
+    id
+    name
+    maskedKey
+    userId
+    agent {
+      id
+    }
+    modelGateway {
+      id
+      name
+      provider
+      endpoint
+    }
+    models
+    status
+    keyType
+    blocked
+    expiresAt
+    duration
+    lastActiveAt
+    spend
+    maxBudget
+    budgetDuration
+    maxParallelRequests
+    rpmLimit
+    tpmLimit
+    rpmLimitType
+    tpmLimitType
+    allowedRoutes
+    tags
+    autoRotate
+    rotationInterval
+    createdAt
+    updatedAt
+  }

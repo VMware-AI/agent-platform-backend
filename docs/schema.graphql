@@ -801,6 +801,7 @@ type Mutation {
 	regenerateVirtualKey(id: ID!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
 	setVirtualKeyEnabled(id: ID!, enabled: Boolean!): VirtualKey! @hasPermission(perm: "key:manage")
 	associateVirtualKeyAgent(virtualKeyId: ID!, agentId: ID!): VirtualKey! @hasPermission(perm: "key:manage")
+	purgeRevokedVirtualKeys(beforeTime: Time!): PurgeResult! @hasRole(any: [admin])
 }
 type OVFProperty {
 	key: String!
@@ -963,6 +964,10 @@ enum ProviderModelStatus {
 	full_outage
 	unknown
 }
+type PurgeResult {
+	deletedCount: Int!
+	oldestRemainingUpdatedAt: Time
+}
 type Query {
 	me: User!
 	auditLogs(filter: AuditFilter, page: PageInput): AuditConnection! @hasPermission(perm: "audit:view")
@@ -1012,7 +1017,7 @@ type Query {
 	contentLibraryItems(resourcePoolId: ID!, libraryName: String!): [ContentLibraryItem!]! @hasRole(any: [admin])
 	platformSettings: PlatformSettings! @hasRole(any: [admin])
 	gatewayAvailableModels(gatewayConnectionId: ID!): [String!]! @hasRole(any: [admin,read_only])
-	virtualKeys(agentName: String, modelGateway: ID, nameContains: String, modelContains: String, orderBy: VirtualKeyOrderBy): [VirtualKey!]! @hasRole(any: [admin,read_only])
+	virtualKeys(agentName: String, modelGateway: ID, nameContains: String, nameEquals: String, modelContains: String, orderBy: VirtualKeyOrderBy): [VirtualKey!]! @hasRole(any: [admin,read_only])
 }
 input RecordRequestLogInput {
 	requestId: String!

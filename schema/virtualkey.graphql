@@ -165,6 +165,12 @@ extend type Query {
     agentName: String,
     modelGateway: ID,
     nameContains: String,
+    # Exact-match on VirtualKey.name (case-sensitive, B-tree indexed via
+    # the (model_gateway_id, name) partial unique index when scoped by
+    # modelGateway; falls back to a sequential scan otherwise). Powers
+    # the issue form's live "name already exists" check before the user
+    # submits — backend still re-validates on save, this is just UX.
+    nameEquals: String,
     modelContains: String,
     orderBy: VirtualKeyOrderBy
   ): [VirtualKey!]!
@@ -175,6 +181,16 @@ enum VirtualKeyOrderBy {
   CREATED_DESC
   NAME_ASC
   NAME_DESC
+}
+
+# Result of `purgeRevokedVirtualKeys`. `deletedCount` is the number of
+# rows physically removed (NOT marked revoked — revoked was already
+# terminal); `oldestRemainingUpdatedAt` lets an operator decide whether
+# to schedule another purge pass — if it's still well in the past,
+# they're not done yet.
+type PurgeResult {
+  deletedCount: Int!
+  oldestRemainingUpdatedAt: Time
 }
 
 extend type Mutation {
@@ -196,4 +212,18 @@ extend type Mutation {
   # authoritative gate; the resolver also pre-checks for a clean 409).
   associateVirtualKeyAgent(virtualKeyId: ID!, agentId: ID!): VirtualKey!
     @hasPermission(perm: "key:manage")
+  # Permanently delete every VirtualKey with status=revoked AND
+  # updated_at < beforeTime. This is the only sanctioned way to
+  # physically shrink the virtual_keys table; revocation alone flips
+  # status and leaves the row in place for audit + spend history. Audit
+  # log entries that referenced the purged rows will keep their
+  # resource_id strings (audit_log has no FK) — the key detail will
+  # just become "已清除" in the audit-log viewer. Admin-only because
+  # the action is irreversible.
+  # beforeTime MUST be in the past (resolver 422s otherwise) — a
+  # future timestamp would silently delete rows updated in the next
+  # few hundred ms, which is exactly the kind of footgun admin
+  # permissions shouldn't enable.
+  purgeRevokedVirtualKeys(beforeTime: Time!): PurgeResult!
+    @hasRole(any: [admin])
 }

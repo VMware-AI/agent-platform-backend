@@ -101,5 +101,19 @@ func (VirtualKey) Indexes() []ent.Index {
 		// key frees the agent to be re-issued; a NULL agent_id (org-level keys
 		// not yet bound to an agent) is naturally unconstrained.
 		index.Fields("agent_id").Unique().Annotations(entsql.IndexWhere("status <> 'revoked'")),
+		// Per-tenant name uniqueness — the schema-level floor that catches
+		// IssueVirtualKey's race window when the resolver-side read-then-
+		// create check would otherwise let two concurrent calls mint keys
+		// with the same display name. We use `model_gateway_id` as the
+		// tenant proxy (every VirtualKey MUST be bound to exactly one
+		// modelGateway since the 2026-07 refactor — see FieldModelGatewayID
+		// above) because the platform-side `tenant_id` column is not on
+		// this table; routing uniqueness by issuing gateway keeps it
+		// semantically clean (keys issued by the same gateway share an
+		// admin scope) while avoiding a migration just for this index.
+		// Partial: a revoked key frees its name for re-use. NULL
+		// model_gateway_id is naturally unconstrained (legacy rows only;
+		// current issue path requires the field).
+		index.Fields("model_gateway_id", "name").Unique().Annotations(entsql.IndexWhere("status <> 'revoked'")),
 	}
 }
