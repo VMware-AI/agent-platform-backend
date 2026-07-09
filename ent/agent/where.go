@@ -110,6 +110,16 @@ func TemplateVersionID(v uuid.UUID) predicate.Agent {
 	return predicate.Agent(sql.FieldEQ(FieldTemplateVersionID, v))
 }
 
+// RunAsUser applies equality check predicate on the "run_as_user" field. It's identical to RunAsUserEQ.
+func RunAsUser(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldEQ(FieldRunAsUser, v))
+}
+
+// StaticIP applies equality check predicate on the "static_ip" field. It's identical to StaticIPEQ.
+func StaticIP(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldEQ(FieldStaticIP, v))
+}
+
 // TenantID applies equality check predicate on the "tenant_id" field. It's identical to TenantIDEQ.
 func TenantID(v uuid.UUID) predicate.Agent {
 	return predicate.Agent(sql.FieldEQ(FieldTenantID, v))
@@ -713,6 +723,156 @@ func TemplateVersionIDIsNil() predicate.Agent {
 // TemplateVersionIDNotNil applies the NotNil predicate on the "template_version_id" field.
 func TemplateVersionIDNotNil() predicate.Agent {
 	return predicate.Agent(sql.FieldNotNull(FieldTemplateVersionID))
+}
+
+// RunAsUserEQ applies the EQ predicate on the "run_as_user" field.
+func RunAsUserEQ(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldEQ(FieldRunAsUser, v))
+}
+
+// RunAsUserNEQ applies the NEQ predicate on the "run_as_user" field.
+func RunAsUserNEQ(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldNEQ(FieldRunAsUser, v))
+}
+
+// RunAsUserIn applies the In predicate on the "run_as_user" field.
+func RunAsUserIn(vs ...string) predicate.Agent {
+	return predicate.Agent(sql.FieldIn(FieldRunAsUser, vs...))
+}
+
+// RunAsUserNotIn applies the NotIn predicate on the "run_as_user" field.
+func RunAsUserNotIn(vs ...string) predicate.Agent {
+	return predicate.Agent(sql.FieldNotIn(FieldRunAsUser, vs...))
+}
+
+// RunAsUserGT applies the GT predicate on the "run_as_user" field.
+func RunAsUserGT(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldGT(FieldRunAsUser, v))
+}
+
+// RunAsUserGTE applies the GTE predicate on the "run_as_user" field.
+func RunAsUserGTE(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldGTE(FieldRunAsUser, v))
+}
+
+// RunAsUserLT applies the LT predicate on the "run_as_user" field.
+func RunAsUserLT(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldLT(FieldRunAsUser, v))
+}
+
+// RunAsUserLTE applies the LTE predicate on the "run_as_user" field.
+func RunAsUserLTE(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldLTE(FieldRunAsUser, v))
+}
+
+// RunAsUserContains applies the Contains predicate on the "run_as_user" field.
+func RunAsUserContains(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldContains(FieldRunAsUser, v))
+}
+
+// RunAsUserHasPrefix applies the HasPrefix predicate on the "run_as_user" field.
+func RunAsUserHasPrefix(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldHasPrefix(FieldRunAsUser, v))
+}
+
+// RunAsUserHasSuffix applies the HasSuffix predicate on the "run_as_user" field.
+func RunAsUserHasSuffix(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldHasSuffix(FieldRunAsUser, v))
+}
+
+// RunAsUserIsNil applies the IsNil predicate on the "run_as_user" field.
+func RunAsUserIsNil() predicate.Agent {
+	return predicate.Agent(sql.FieldIsNull(FieldRunAsUser))
+}
+
+// RunAsUserNotNil applies the NotNil predicate on the "run_as_user" field.
+func RunAsUserNotNil() predicate.Agent {
+	return predicate.Agent(sql.FieldNotNull(FieldRunAsUser))
+}
+
+// RunAsUserEqualFold applies the EqualFold predicate on the "run_as_user" field.
+func RunAsUserEqualFold(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldEqualFold(FieldRunAsUser, v))
+}
+
+// RunAsUserContainsFold applies the ContainsFold predicate on the "run_as_user" field.
+func RunAsUserContainsFold(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldContainsFold(FieldRunAsUser, v))
+}
+
+// StaticIPEQ applies the EQ predicate on the "static_ip" field.
+func StaticIPEQ(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldEQ(FieldStaticIP, v))
+}
+
+// StaticIPNEQ applies the NEQ predicate on the "static_ip" field.
+func StaticIPNEQ(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldNEQ(FieldStaticIP, v))
+}
+
+// StaticIPIn applies the In predicate on the "static_ip" field.
+func StaticIPIn(vs ...string) predicate.Agent {
+	return predicate.Agent(sql.FieldIn(FieldStaticIP, vs...))
+}
+
+// StaticIPNotIn applies the NotIn predicate on the "static_ip" field.
+func StaticIPNotIn(vs ...string) predicate.Agent {
+	return predicate.Agent(sql.FieldNotIn(FieldStaticIP, vs...))
+}
+
+// StaticIPGT applies the GT predicate on the "static_ip" field.
+func StaticIPGT(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldGT(FieldStaticIP, v))
+}
+
+// StaticIPGTE applies the GTE predicate on the "static_ip" field.
+func StaticIPGTE(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldGTE(FieldStaticIP, v))
+}
+
+// StaticIPLT applies the LT predicate on the "static_ip" field.
+func StaticIPLT(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldLT(FieldStaticIP, v))
+}
+
+// StaticIPLTE applies the LTE predicate on the "static_ip" field.
+func StaticIPLTE(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldLTE(FieldStaticIP, v))
+}
+
+// StaticIPContains applies the Contains predicate on the "static_ip" field.
+func StaticIPContains(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldContains(FieldStaticIP, v))
+}
+
+// StaticIPHasPrefix applies the HasPrefix predicate on the "static_ip" field.
+func StaticIPHasPrefix(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldHasPrefix(FieldStaticIP, v))
+}
+
+// StaticIPHasSuffix applies the HasSuffix predicate on the "static_ip" field.
+func StaticIPHasSuffix(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldHasSuffix(FieldStaticIP, v))
+}
+
+// StaticIPIsNil applies the IsNil predicate on the "static_ip" field.
+func StaticIPIsNil() predicate.Agent {
+	return predicate.Agent(sql.FieldIsNull(FieldStaticIP))
+}
+
+// StaticIPNotNil applies the NotNil predicate on the "static_ip" field.
+func StaticIPNotNil() predicate.Agent {
+	return predicate.Agent(sql.FieldNotNull(FieldStaticIP))
+}
+
+// StaticIPEqualFold applies the EqualFold predicate on the "static_ip" field.
+func StaticIPEqualFold(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldEqualFold(FieldStaticIP, v))
+}
+
+// StaticIPContainsFold applies the ContainsFold predicate on the "static_ip" field.
+func StaticIPContainsFold(v string) predicate.Agent {
+	return predicate.Agent(sql.FieldContainsFold(FieldStaticIP, v))
 }
 
 // TenantIDEQ applies the EQ predicate on the "tenant_id" field.

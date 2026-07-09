@@ -49,6 +49,15 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 
 	// 3) Create the agent row up front (status=provisioning) so the VM/key are
 	//    always tied to a persisted owner. tenant from the caller's write scope.
+	var runAs, staticIP string
+	for _, p := range input.OvfProperties {
+		switch p.Key {
+		case "guestinfo.run_as_user":
+			runAs = p.Value
+		case "guestinfo.static_ip":
+			staticIP = p.Value
+		}
+	}
 	ag, err := r.Ent.Agent.Create().
 		SetName(input.Name).
 		SetAgentType(t.fam.Type).
@@ -57,10 +66,13 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		SetResourcePoolID(t.poolID).
 		SetTemplateFamilyID(t.familyID).
 		SetTemplateVersionID(t.versionID).
+		SetRunAsUser(runAs).
+		SetStaticIP(staticIP).
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create agent: %w", err)
 	}
+
 
 	devNoVC := os.Getenv("DEV_NO_VCENTER") == "1" || os.Getenv("DEV_NO_VCENTER") == "true"
 
@@ -637,9 +649,12 @@ func (r *mutationResolver) deployAgentInstant(
 		return nil, fmt.Errorf("remove serial ports from %q: %w", parentVM, err)
 	}
 	if err := conn.PowerOn(ctx, parentVM); err != nil {
-		_ = t.gw.DeleteKey(ctx, key.Key)
-		r.deleteAgentRow(ctx, ag)
-		return nil, fmt.Errorf("power on parent %q: %w", parentVM, err)
+		if !strings.Contains(err.Error(), "Powered on") {
+			_ = t.gw.DeleteKey(ctx, key.Key)
+			r.deleteAgentRow(ctx, ag)
+			return nil, fmt.Errorf("power on parent %q: %w", parentVM, err)
+		}
+		log.Printf("[instant-clone] power on parent %s non-fatal: %v", parentVM, err)
 	}
 	time.Sleep(5 * time.Second)
 
@@ -731,3 +746,4 @@ func (r *mutationResolver) RequestAgentUpgrade(ctx context.Context, agentID stri
 func (r *mutationResolver) UpgradeAgents(ctx context.Context, agentIds []string, targetVersion string) (int, error) {
 	return 0, fmt.Errorf("batch upgrade not yet implemented")
 }
+

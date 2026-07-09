@@ -65,11 +65,20 @@ func (r *agentResolver) Owner(ctx context.Context, obj *model.Agent) (*model.Use
 // so only `username` is returned. Nil if the owner is gone. The User row is
 // batched via the request loader and shared with the Owner resolver (N+1 kill).
 func (r *agentResolver) Credentials(ctx context.Context, obj *model.Agent) (*model.AgentCredentials, error) {
+	if id, err := uuid.Parse(obj.ID); err == nil {
+		if ag, err := r.Ent.Agent.Get(ctx, id); err == nil {
+			return &model.AgentCredentials{
+				Username:     ag.RunAsUser,
+				IP:           ag.StaticIP,
+				PasswordHint: "VMware1!",
+			}, nil
+		}
+	}
 	u, err := r.loadUser(ctx, obj.OwnerUserID)
 	if err != nil || u == nil {
 		return nil, err
 	}
-	return &model.AgentCredentials{Username: u.Username}, nil
+	return &model.AgentCredentials{Username: u.Username, PasswordHint: "VMware1!"}, nil
 }
 
 // VMResources resolves Agent.vmResources — live VM hardware from vCenter.

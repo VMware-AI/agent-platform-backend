@@ -39,6 +39,10 @@ const (
 	FieldTemplateFamilyID = "template_family_id"
 	// FieldTemplateVersionID holds the string denoting the template_version_id field in the database.
 	FieldTemplateVersionID = "template_version_id"
+	// FieldRunAsUser holds the string denoting the run_as_user field in the database.
+	FieldRunAsUser = "run_as_user"
+	// FieldStaticIP holds the string denoting the static_ip field in the database.
+	FieldStaticIP = "static_ip"
 	// FieldTenantID holds the string denoting the tenant_id field in the database.
 	FieldTenantID = "tenant_id"
 	// FieldEnvironmentID holds the string denoting the environment_id field in the database.
@@ -62,6 +66,8 @@ var Columns = []string{
 	FieldResourcePoolID,
 	FieldTemplateFamilyID,
 	FieldTemplateVersionID,
+	FieldRunAsUser,
+	FieldStaticIP,
 	FieldTenantID,
 	FieldEnvironmentID,
 }
@@ -87,6 +93,10 @@ var (
 	NameValidator func(string) error
 	// AgentTypeValidator is a validator for the "agent_type" field. It is called by the builders before save.
 	AgentTypeValidator func(string) error
+	// DefaultRunAsUser holds the default value on creation for the "run_as_user" field.
+	DefaultRunAsUser string
+	// DefaultStaticIP holds the default value on creation for the "static_ip" field.
+	DefaultStaticIP string
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -185,6 +195,16 @@ func ByTemplateFamilyID(opts ...sql.OrderTermOption) OrderOption {
 // ByTemplateVersionID orders the results by the template_version_id field.
 func ByTemplateVersionID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTemplateVersionID, opts...).ToFunc()
+}
+
+// ByRunAsUser orders the results by the run_as_user field.
+func ByRunAsUser(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRunAsUser, opts...).ToFunc()
+}
+
+// ByStaticIP orders the results by the static_ip field.
+func ByStaticIP(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldStaticIP, opts...).ToFunc()
 }
 
 // ByTenantID orders the results by the tenant_id field.
