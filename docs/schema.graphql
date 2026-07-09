@@ -490,6 +490,7 @@ input IssueVirtualKeyInput {
 	keyType: String
 	autoRotate: Boolean
 	rotationInterval: String
+	userId: String!
 }
 type IssuedVirtualKey {
 	virtualKey: VirtualKey!
@@ -1439,6 +1440,7 @@ type VirtualKey {
 	rotationInterval: String
 	spend: Float!
 	lastActiveAt: Time
+	userId: String!
 }
 enum VirtualKeyStatus {
 	active

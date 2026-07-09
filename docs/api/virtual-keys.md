@@ -157,6 +157,7 @@ Returned only at issue / regenerate time — carries the secret, which is never 
 | `rotationInterval` | `String` | — |
 | `spend` | `Float!` | Live spend + last-active (refreshed by the periodic worker; the console's progress bar reads these directly). |
 | `lastActiveAt` | `Time` | — |
+| `userId` | `String!` | 前端传入的 user_id,LiteLLM gateway 也用这个值作为 user_id。 必填,IssueVirtualKeyInput 强制要求前端传值,后端不做默认。 |
 
 ### IssueVirtualKeyInput
 
@@ -180,6 +181,7 @@ Returned only at issue / regenerate time — carries the secret, which is never 
 | `keyType` | `String` | Operational / catalog metadata (LiteLLM design doc §4.2). |
 | `autoRotate` | `Boolean` | — |
 | `rotationInterval` | `String` | — |
+| `userId` | `String!` | Required. LiteLLM /key/generate 现在校验 user_id 非空。 前端必须传一个非空字符串;后端透传到 ent.VirtualKey.user_id 和 gateway.GenerateKeyRequest.UserID,不做默认值兜底。 |
 
 ### LimitType
 
