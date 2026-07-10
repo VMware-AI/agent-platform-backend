@@ -624,12 +624,11 @@ func (r *mutationResolver) deployAgentInstant(
 
 	// 1. Issue gateway key.
 	key, err := t.gw.GenerateKey(ctx, gateway.GenerateKeyRequest{
-		UserID:         ag.OwnerUserID.String(),
-		TeamID:         t.deployTeamID,
-		Models:         nil,
-		MaxBudget:      input.MaxBudget,
-		OrganizationID: ag.TenantID.String(),
-		Metadata:       map[string]string{"agent": ag.Name},
+		UserID:    ag.OwnerUserID.String(),
+		TeamID:    t.deployTeamID,
+		Models:    nil,
+		MaxBudget: input.MaxBudget,
+		Metadata:  map[string]any{"agent": ag.Name},
 	})
 	if err != nil {
 		r.deleteAgentRow(ctx, ag)
@@ -696,8 +695,7 @@ func (r *mutationResolver) deployAgentInstant(
 		SetMaskedKey(maskKey(key.Key)).
 		SetModelGatewayID(t.gwConn.ID).
 		SetModels(nil).
-		SetName(ag.Name).
-		SetOrganizationID(ag.TenantID.String())
+		SetName(ag.Name)
 	if key.Token != "" {
 		vkCreate.SetLitellmToken(key.Token)
 	}
