@@ -48,20 +48,6 @@ updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute!
 | `id` | `ID!` | yes | — |
 | `input` | `UpdateModelRouteInput!` | yes | — |
 
-### `setModelRouteEnabled`
-
-```graphql
-setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute!
-```
-
-- **Returns:** `ModelRoute!`
-- **Auth:** `@hasRole(any: [admin])`
-
-| Argument | Type | Required | Default |
-|----------|------|----------|---------|
-| `id` | `ID!` | yes | — |
-| `enabled` | `Boolean!` | yes | — |
-
 ### `deleteModelRoute`
 
 ```graphql
@@ -77,7 +63,7 @@ deleteModelRoute(id: ID!): Boolean!
 
 ### `syncRouterSettings`
 
-Atomic 全量聚合覆盖刷新 — re-aggregates every active ModelRoute and POSTs the full router_settings payload to /config/update, grouped by modelGatewayId. Triggered automatically after a route save; exposed as a mutation so the console can call it explicitly. Each gateway receives only the routes bound to it.
+Atomic 全量聚合覆盖刷新 — re-aggregates every ModelRoute and POSTs the full router_settings payload to /config/update, grouped by modelGatewayId. Triggered automatically after a route save; exposed as a mutation so the console can call it explicitly. Each gateway receives only the routes bound to it.
 
 ```graphql
 syncRouterSettings: Boolean!
@@ -101,7 +87,6 @@ syncRouterSettings: Boolean!
 | `upstreams` | `[String!]!` | — |
 | `supportedModels` | `[String!]!` | Console alias for `upstreams` — the models this route can serve (模型路由 page). |
 | `strategy` | `LoadBalancingStrategy!` | The litellm LoadBalanceStrategy applied at push time. The console form exposes only the friendly values (round-robin / weighted / random); the backend translates these into the litellm enum below and persists here. |
-| `enabled` | `Boolean!` | — |
 | `createdAt` | `Time!` | — |
 | `updatedAt` | `Time!` | — |
 | `fallbacks` | `[String!]!` | Fallback chains (LiteLLM design doc §3.2) |
@@ -120,7 +105,6 @@ Console 模型路由 create form (创建路由). modelAlias is set to name; supp
 | `modelGatewayId` | `ID!` | — |
 | `supportedModels` | `[String!]` | — |
 | `strategy` | `LoadBalancingStrategy` | — |
-| `enabled` | `Boolean` | — |
 | `fallbacks` | `[String!]` | — |
 | `contextWindowFallbacks` | `[String!]` | — |
 | `contentPolicyFallbacks` | `[String!]` | — |
@@ -137,7 +121,6 @@ Console 模型路由 edit form (编辑路由). All fields optional — only set 
 | `modelGatewayId` | `ID` | — |
 | `supportedModels` | `[String!]` | — |
 | `strategy` | `LoadBalancingStrategy` | — |
-| `enabled` | `Boolean` | — |
 | `fallbacks` | `[String!]` | — |
 | `contextWindowFallbacks` | `[String!]` | — |
 | `contentPolicyFallbacks` | `[String!]` | — |

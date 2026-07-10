@@ -481,7 +481,6 @@ type ComplexityRoot struct {
 		ContentPolicyFallbacks func(childComplexity int) int
 		ContextWindowFallbacks func(childComplexity int) int
 		CreatedAt              func(childComplexity int) int
-		Enabled                func(childComplexity int) int
 		Fallbacks              func(childComplexity int) int
 		ID                     func(childComplexity int) int
 		ModelAlias             func(childComplexity int) int
@@ -568,7 +567,6 @@ type ComplexityRoot struct {
 		SetAgentConfigKnowledge        func(childComplexity int, configID string, knowledgeArtifactIds []string) int
 		SetAgentStatus                 func(childComplexity int, id string, status model.AgentStatus) int
 		SetDefaultAgentConfig          func(childComplexity int, id string) int
-		SetModelRouteEnabled           func(childComplexity int, id string, enabled bool) int
 		SetRolePermissions             func(childComplexity int, roleID string, permissionKeys []string) int
 		SetVirtualKeyEnabled           func(childComplexity int, id string, enabled bool) int
 		SnapshotAgent                  func(childComplexity int, input model.SnapshotAgentInput) int
@@ -1046,7 +1044,6 @@ type MutationResolver interface {
 	RevokeAgentEnrollment(ctx context.Context, agentID string) (bool, error)
 	CreateModelRoute(ctx context.Context, input model.CreateModelRouteInput) (*model.ModelRoute, error)
 	UpdateModelRoute(ctx context.Context, id string, input model.UpdateModelRouteInput) (*model.ModelRoute, error)
-	SetModelRouteEnabled(ctx context.Context, id string, enabled bool) (*model.ModelRoute, error)
 	DeleteModelRoute(ctx context.Context, id string) (bool, error)
 	SyncRouterSettings(ctx context.Context) (bool, error)
 	RecordTokenUsage(ctx context.Context, input model.RecordTokenUsageInput) (*model.TokenUsage, error)
@@ -2865,12 +2862,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelRoute.CreatedAt(childComplexity), true
-	case "ModelRoute.enabled":
-		if e.ComplexityRoot.ModelRoute.Enabled == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ModelRoute.Enabled(childComplexity), true
 	case "ModelRoute.fallbacks":
 		if e.ComplexityRoot.ModelRoute.Fallbacks == nil {
 			break
@@ -3579,17 +3570,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.SetDefaultAgentConfig(childComplexity, args["id"].(string)), true
-	case "Mutation.setModelRouteEnabled":
-		if e.ComplexityRoot.Mutation.SetModelRouteEnabled == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_setModelRouteEnabled_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.Mutation.SetModelRouteEnabled(childComplexity, args["id"].(string), args["enabled"].(bool)), true
 	case "Mutation.setRolePermissions":
 		if e.ComplexityRoot.Mutation.SetRolePermissions == nil {
 			break
@@ -6662,7 +6642,6 @@ type ModelRoute {
   # exposes only the friendly values (round-robin / weighted / random); the
   # backend translates these into the litellm enum below and persists here.
   strategy: LoadBalancingStrategy!
-  enabled: Boolean!
   createdAt: Time!
   updatedAt: Time!
   # Fallback chains (LiteLLM design doc §3.2)
@@ -6683,7 +6662,6 @@ input CreateModelRouteInput {
   modelGatewayId: ID!
   supportedModels: [String!]
   strategy: LoadBalancingStrategy
-  enabled: Boolean
   fallbacks: [String!]
   contextWindowFallbacks: [String!]
   contentPolicyFallbacks: [String!]
@@ -6696,7 +6674,6 @@ input UpdateModelRouteInput {
   modelGatewayId: ID
   supportedModels: [String!]
   strategy: LoadBalancingStrategy
-  enabled: Boolean
   fallbacks: [String!]
   contextWindowFallbacks: [String!]
   contentPolicyFallbacks: [String!]
@@ -6712,9 +6689,8 @@ extend type Mutation {
   # Model routes CRUD — design doc §3.2
   createModelRoute(input: CreateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
   updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
-  setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute! @hasRole(any: [admin])
   deleteModelRoute(id: ID!): Boolean! @hasRole(any: [admin])
-  # Atomic 全量聚合覆盖刷新 — re-aggregates every active ModelRoute and
+  # Atomic 全量聚合覆盖刷新 — re-aggregates every ModelRoute and
   # POSTs the full router_settings payload to /config/update, grouped by
   # modelGatewayId. Triggered automatically after a route save; exposed
   # as a mutation so the console can call it explicitly. Each gateway
@@ -9067,8 +9043,6 @@ func (ec *executionContext) childFields_ModelRoute(ctx context.Context, field gr
 		return ec.fieldContext_ModelRoute_supportedModels(ctx, field)
 	case "strategy":
 		return ec.fieldContext_ModelRoute_strategy(ctx, field)
-	case "enabled":
-		return ec.fieldContext_ModelRoute_enabled(ctx, field)
 	case "createdAt":
 		return ec.fieldContext_ModelRoute_createdAt(ctx, field)
 	case "updatedAt":
@@ -10790,28 +10764,6 @@ func (ec *executionContext) field_Mutation_setDefaultAgentConfig_args(ctx contex
 		return nil, err
 	}
 	args["id"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_setModelRouteEnabled_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
-		func(ctx context.Context, v any) (string, error) {
-			return ec.unmarshalNID2string(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["id"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "enabled",
-		func(ctx context.Context, v any) (bool, error) {
-			return ec.unmarshalNBoolean2bool(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["enabled"] = arg1
 	return args, nil
 }
 
@@ -18797,29 +18749,6 @@ func (ec *executionContext) fieldContext_ModelRoute_strategy(_ context.Context, 
 	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type LoadBalancingStrategy does not have child fields"))
 }
 
-func (ec *executionContext) _ModelRoute_enabled(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ModelRoute_enabled(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Enabled, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
-			return ec.marshalNBoolean2bool(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_ModelRoute_enabled(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type Boolean does not have child fields"))
-}
-
 func (ec *executionContext) _ModelRoute_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -21306,68 +21235,6 @@ func (ec *executionContext) fieldContext_Mutation_updateModelRoute(ctx context.C
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_updateModelRoute_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_setModelRouteEnabled(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Mutation_setModelRouteEnabled(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().SetModelRouteEnabled(ctx, fc.Args["id"].(string), fc.Args["enabled"].(bool))
-		},
-		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
-			directive0 := next
-
-			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
-				if err != nil {
-					var zeroVal *model.ModelRoute
-					return zeroVal, err
-				}
-				if ec.Directives.HasRole == nil {
-					var zeroVal *model.ModelRoute
-					return zeroVal, errors.New("directive hasRole is not implemented")
-				}
-				return ec.Directives.HasRole(ctx, nil, directive0, any)
-			}
-
-			next = directive1
-			return next
-		},
-		func(ctx context.Context, selections ast.SelectionSet, v *model.ModelRoute) graphql.Marshaler {
-			return ec.marshalNModelRoute2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRoute(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Mutation_setModelRouteEnabled(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_ModelRoute(ctx, field)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_setModelRouteEnabled_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -33531,7 +33398,7 @@ func (ec *executionContext) unmarshalInputCreateModelRouteInput(ctx context.Cont
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "modelGatewayId", "supportedModels", "strategy", "enabled", "fallbacks", "contextWindowFallbacks", "contentPolicyFallbacks"}
+	fieldsInOrder := [...]string{"name", "modelGatewayId", "supportedModels", "strategy", "fallbacks", "contextWindowFallbacks", "contentPolicyFallbacks"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -33566,13 +33433,6 @@ func (ec *executionContext) unmarshalInputCreateModelRouteInput(ctx context.Cont
 				return it, err
 			}
 			it.Strategy = data
-		case "enabled":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("enabled"))
-			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Enabled = data
 		case "fallbacks":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fallbacks"))
 			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
@@ -35659,7 +35519,7 @@ func (ec *executionContext) unmarshalInputUpdateModelRouteInput(ctx context.Cont
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "modelGatewayId", "supportedModels", "strategy", "enabled", "fallbacks", "contextWindowFallbacks", "contentPolicyFallbacks"}
+	fieldsInOrder := [...]string{"name", "modelGatewayId", "supportedModels", "strategy", "fallbacks", "contextWindowFallbacks", "contentPolicyFallbacks"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -35694,13 +35554,6 @@ func (ec *executionContext) unmarshalInputUpdateModelRouteInput(ctx context.Cont
 				return it, err
 			}
 			it.Strategy = data
-		case "enabled":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("enabled"))
-			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Enabled = data
 		case "fallbacks":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fallbacks"))
 			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
@@ -39800,11 +39653,6 @@ func (ec *executionContext) _ModelRoute(ctx context.Context, sel ast.SelectionSe
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "enabled":
-			out.Values[i] = ec._ModelRoute_enabled(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "createdAt":
 			out.Values[i] = ec._ModelRoute_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -40296,13 +40144,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "updateModelRoute":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_updateModelRoute(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "setModelRouteEnabled":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_setModelRouteEnabled(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

@@ -80,11 +80,6 @@ func ModelGatewayID(v uuid.UUID) predicate.ModelRoute {
 	return predicate.ModelRoute(sql.FieldEQ(FieldModelGatewayID, v))
 }
 
-// Enabled applies equality check predicate on the "enabled" field. It's identical to EnabledEQ.
-func Enabled(v bool) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldEQ(FieldEnabled, v))
-}
-
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.ModelRoute {
 	return predicate.ModelRoute(sql.FieldEQ(FieldCreatedAt, v))
@@ -363,16 +358,6 @@ func StrategyIn(vs ...Strategy) predicate.ModelRoute {
 // StrategyNotIn applies the NotIn predicate on the "strategy" field.
 func StrategyNotIn(vs ...Strategy) predicate.ModelRoute {
 	return predicate.ModelRoute(sql.FieldNotIn(FieldStrategy, vs...))
-}
-
-// EnabledEQ applies the EQ predicate on the "enabled" field.
-func EnabledEQ(v bool) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldEQ(FieldEnabled, v))
-}
-
-// EnabledNEQ applies the NEQ predicate on the "enabled" field.
-func EnabledNEQ(v bool) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldNEQ(FieldEnabled, v))
 }
 
 // FallbacksIsNil applies the IsNil predicate on the "fallbacks" field.

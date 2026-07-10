@@ -145,7 +145,7 @@ func AggregateRouterSettings(activeRoutes []*ent.ModelRoute, tiersByAlias map[st
 	}
 	groups := make([]RoutingGroup, 0, len(activeRoutes))
 	for _, r := range activeRoutes {
-		if r == nil || !r.Enabled {
+		if r == nil {
 			continue
 		}
 		strategy := ToLitellmRoutingStrategy(string(r.Strategy))
@@ -189,7 +189,7 @@ func AggregateRouterSettings(activeRoutes []*ent.ModelRoute, tiersByAlias map[st
 func firstFallbackEntries(routes []*ent.ModelRoute, kind string) []FallbackEntry {
 	out := make([]FallbackEntry, 0)
 	for _, r := range routes {
-		if r == nil || !r.Enabled {
+		if r == nil {
 			continue
 		}
 		var entries []string

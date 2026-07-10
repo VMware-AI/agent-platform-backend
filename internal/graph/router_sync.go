@@ -12,12 +12,11 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
-	"github.com/VMware-AI/agent-platform-backend/ent/modelroute"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 )
 
-// StartRouterSettingsSync periodically re-aggregates all enabled ModelRoute
-// rows and POSTs the per-gateway router_settings payload to /config/update.
+// StartRouterSettingsSync periodically re-aggregates every ModelRoute
+// row and POSTs the per-gateway router_settings payload to /config/update.
 // Driven by the LiteLLM design doc §3.2 "原子化路由策略全量覆盖刷新":
 // every save also pushes immediately (see
 // aggregateAndPushRouterSettings on the resolver side), but this worker is
@@ -136,7 +135,7 @@ func (r *Resolver) syncRouterSettingsOnceShortCircuit(ctx context.Context, lastP
 // longer folded into router_settings — the control plane only knows about
 // route-level alias grouping now.
 func (r *Resolver) loadRouterSettingsBuckets(ctx context.Context) (routesByGW map[uuid.UUID][]*ent.ModelRoute, err error) {
-	routes, qerr := r.Ent.ModelRoute.Query().Where(modelroute.Enabled(true)).All(ctx)
+	routes, qerr := r.Ent.ModelRoute.Query().All(ctx)
 	if qerr != nil {
 		return nil, fmt.Errorf("query routes: %w", qerr)
 	}

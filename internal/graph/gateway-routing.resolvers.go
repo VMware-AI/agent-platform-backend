@@ -48,9 +48,6 @@ func (r *mutationResolver) CreateModelRoute(ctx context.Context, input model.Cre
 	if input.Strategy != nil {
 		c.SetStrategy(modelroute.Strategy(string(*input.Strategy)))
 	}
-	if input.Enabled != nil {
-		c.SetEnabled(*input.Enabled)
-	}
 	if input.Fallbacks != nil {
 		c.SetFallbacks(input.Fallbacks)
 	}
@@ -103,30 +100,12 @@ func (r *mutationResolver) UpdateModelRoute(ctx context.Context, id string, inpu
 	if input.Strategy != nil {
 		u.SetStrategy(modelroute.Strategy(string(*input.Strategy)))
 	}
-	if input.Enabled != nil {
-		u.SetEnabled(*input.Enabled)
-	}
 	mr, err := u.Save(ctx)
 	if err != nil {
 		return nil, err
 	}
 	r.audit(ctx, "model_route.update", "model_route", id, true, actorID(auth.FromContext(ctx)))
 	r.AggregateAndPushRouterSettingsFireAndForget(pushTarget)
-	return toModelModelRoute(ctx, r.Resolver, mr)
-}
-
-// SetModelRouteEnabled is the resolver for the setModelRouteEnabled field.
-func (r *mutationResolver) SetModelRouteEnabled(ctx context.Context, id string, enabled bool) (*model.ModelRoute, error) {
-	rid, err := uuid.Parse(id)
-	if err != nil {
-		return nil, gqlerror.Errorf("invalid id")
-	}
-	mr, err := r.Ent.ModelRoute.UpdateOneID(rid).SetEnabled(enabled).Save(ctx)
-	if err != nil {
-		return nil, err
-	}
-	r.audit(ctx, "model_route.set_enabled", "model_route", id, true, actorID(auth.FromContext(ctx)))
-	r.AggregateAndPushRouterSettingsFireAndForget(mr.ModelGatewayID)
 	return toModelModelRoute(ctx, r.Resolver, mr)
 }
 
@@ -159,7 +138,7 @@ func (r *mutationResolver) DeleteModelRoute(ctx context.Context, id string) (boo
 // receives only the routes bound to it. Returns true only when every
 // gateway accepted the push; partial failures surface as GraphQL errors.
 func (r *mutationResolver) SyncRouterSettings(ctx context.Context) (bool, error) {
-	routes, err := r.Ent.ModelRoute.Query().Where(modelroute.Enabled(true)).All(ctx)
+	routes, err := r.Ent.ModelRoute.Query().All(ctx)
 	if err != nil {
 		return false, err
 	}

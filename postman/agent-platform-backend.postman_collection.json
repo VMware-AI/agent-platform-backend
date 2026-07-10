@@ -1319,7 +1319,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query ModelRoutes {\\n    modelRoutes {\\n      id\\n      name\\n      modelGateway { id }\\n      supportedModels\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {}\n}"
+              "raw": "{\n  \"query\": \"query ModelRoutes {\\n    modelRoutes {\\n      id\\n      name\\n      modelGateway { id }\\n      supportedModels\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {}\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1348,7 +1348,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateModelRoute($input: CreateModelRouteInput!) {\\n    createModelRoute(input: $input) {\\n      id\\n      name\\n      modelGateway { id }\\n      supportedModels\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation CreateModelRoute($input: CreateModelRouteInput!) {\\n    createModelRoute(input: $input) {\\n      id\\n      name\\n      modelGateway { id }\\n      supportedModels\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1377,7 +1377,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpdateModelRoute($id: ID!, $input: UpdateModelRouteInput!) {\\n    updateModelRoute(id: $id, input: $input) {\\n      id\\n      name\\n      modelGateway { id }\\n      supportedModels\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\",\n    \"input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation UpdateModelRoute($id: ID!, $input: UpdateModelRouteInput!) {\\n    updateModelRoute(id: $id, input: $input) {\\n      id\\n      name\\n      modelGateway { id }\\n      supportedModels\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\",\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1387,35 +1387,6 @@
               "path": []
             },
             "description": "Mutation UpdateModelRoute \u2014 generated from internal/graph/testdata/client_operations/UpdateModelRoute.graphql. Replace the variable stubs with real IDs before sending."
-          },
-          "response": []
-        },
-        {
-          "name": "SetModelRouteEnabled",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Origin",
-                "value": "{{origin}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SetModelRouteEnabled($id: ID!, $enabled: Boolean!) {\\n    setModelRouteEnabled(id: $id, enabled: $enabled) {\\n      id\\n      name\\n      modelGateway { id }\\n      supportedModels\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\",\n    \"enabled\": false\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": []
-            },
-            "description": "Mutation SetModelRouteEnabled \u2014 generated from internal/graph/testdata/client_operations/SetModelRouteEnabled.graphql. Replace the variable stubs with real IDs before sending."
           },
           "response": []
         },

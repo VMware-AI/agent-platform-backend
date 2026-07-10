@@ -10253,7 +10253,6 @@ type ModelRouteMutation struct {
 	upstreams                      *[]string
 	appendupstreams                []string
 	strategy                       *modelroute.Strategy
-	enabled                        *bool
 	fallbacks                      *[]string
 	appendfallbacks                []string
 	context_window_fallbacks       *[]string
@@ -10651,42 +10650,6 @@ func (m *ModelRouteMutation) ResetStrategy() {
 	m.strategy = nil
 }
 
-// SetEnabled sets the "enabled" field.
-func (m *ModelRouteMutation) SetEnabled(b bool) {
-	m.enabled = &b
-}
-
-// Enabled returns the value of the "enabled" field in the mutation.
-func (m *ModelRouteMutation) Enabled() (r bool, exists bool) {
-	v := m.enabled
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldEnabled returns the old "enabled" field's value of the ModelRoute entity.
-// If the ModelRoute object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ModelRouteMutation) OldEnabled(ctx context.Context) (v bool, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldEnabled is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldEnabled requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldEnabled: %w", err)
-	}
-	return oldValue.Enabled, nil
-}
-
-// ResetEnabled resets all changes to the "enabled" field.
-func (m *ModelRouteMutation) ResetEnabled() {
-	m.enabled = nil
-}
-
 // SetFallbacks sets the "fallbacks" field.
 func (m *ModelRouteMutation) SetFallbacks(s []string) {
 	m.fallbacks = &s
@@ -10916,7 +10879,7 @@ func (m *ModelRouteMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ModelRouteMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 10)
 	if m.created_at != nil {
 		fields = append(fields, modelroute.FieldCreatedAt)
 	}
@@ -10937,9 +10900,6 @@ func (m *ModelRouteMutation) Fields() []string {
 	}
 	if m.strategy != nil {
 		fields = append(fields, modelroute.FieldStrategy)
-	}
-	if m.enabled != nil {
-		fields = append(fields, modelroute.FieldEnabled)
 	}
 	if m.fallbacks != nil {
 		fields = append(fields, modelroute.FieldFallbacks)
@@ -10972,8 +10932,6 @@ func (m *ModelRouteMutation) Field(name string) (ent.Value, bool) {
 		return m.Upstreams()
 	case modelroute.FieldStrategy:
 		return m.Strategy()
-	case modelroute.FieldEnabled:
-		return m.Enabled()
 	case modelroute.FieldFallbacks:
 		return m.Fallbacks()
 	case modelroute.FieldContextWindowFallbacks:
@@ -11003,8 +10961,6 @@ func (m *ModelRouteMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldUpstreams(ctx)
 	case modelroute.FieldStrategy:
 		return m.OldStrategy(ctx)
-	case modelroute.FieldEnabled:
-		return m.OldEnabled(ctx)
 	case modelroute.FieldFallbacks:
 		return m.OldFallbacks(ctx)
 	case modelroute.FieldContextWindowFallbacks:
@@ -11068,13 +11024,6 @@ func (m *ModelRouteMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetStrategy(v)
-		return nil
-	case modelroute.FieldEnabled:
-		v, ok := value.(bool)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetEnabled(v)
 		return nil
 	case modelroute.FieldFallbacks:
 		v, ok := value.([]string)
@@ -11193,9 +11142,6 @@ func (m *ModelRouteMutation) ResetField(name string) error {
 		return nil
 	case modelroute.FieldStrategy:
 		m.ResetStrategy()
-		return nil
-	case modelroute.FieldEnabled:
-		m.ResetEnabled()
 		return nil
 	case modelroute.FieldFallbacks:
 		m.ResetFallbacks()

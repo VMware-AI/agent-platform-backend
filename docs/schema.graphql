@@ -272,7 +272,6 @@ input CreateModelRouteInput {
 	modelGatewayId: ID!
 	supportedModels: [String!]
 	strategy: LoadBalancingStrategy
-	enabled: Boolean
 	fallbacks: [String!]
 	contextWindowFallbacks: [String!]
 	contentPolicyFallbacks: [String!]
@@ -684,7 +683,6 @@ type ModelRoute {
 	upstreams: [String!]!
 	supportedModels: [String!]!
 	strategy: LoadBalancingStrategy!
-	enabled: Boolean!
 	createdAt: Time!
 	updatedAt: Time!
 	fallbacks: [String!]!
@@ -752,7 +750,6 @@ type Mutation {
 	revokeAgentEnrollment(agentId: ID!): Boolean!
 	createModelRoute(input: CreateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
 	updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
-	setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute! @hasRole(any: [admin])
 	deleteModelRoute(id: ID!): Boolean! @hasRole(any: [admin])
 	syncRouterSettings: Boolean! @hasRole(any: [admin])
 	recordTokenUsage(input: RecordTokenUsageInput!): TokenUsage! @hasRole(any: [admin])
@@ -1288,7 +1285,6 @@ input UpdateModelRouteInput {
 	modelGatewayId: ID
 	supportedModels: [String!]
 	strategy: LoadBalancingStrategy
-	enabled: Boolean
 	fallbacks: [String!]
 	contextWindowFallbacks: [String!]
 	contentPolicyFallbacks: [String!]

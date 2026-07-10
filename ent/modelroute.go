@@ -33,8 +33,6 @@ type ModelRoute struct {
 	Upstreams []string `json:"upstreams,omitempty"`
 	// Strategy holds the value of the "strategy" field.
 	Strategy modelroute.Strategy `json:"strategy,omitempty"`
-	// Enabled holds the value of the "enabled" field.
-	Enabled bool `json:"enabled,omitempty"`
 	// Fallbacks holds the value of the "fallbacks" field.
 	Fallbacks []string `json:"fallbacks,omitempty"`
 	// ContextWindowFallbacks holds the value of the "context_window_fallbacks" field.
@@ -51,8 +49,6 @@ func (*ModelRoute) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case modelroute.FieldUpstreams, modelroute.FieldFallbacks, modelroute.FieldContextWindowFallbacks, modelroute.FieldContentPolicyFallbacks:
 			values[i] = new([]byte)
-		case modelroute.FieldEnabled:
-			values[i] = new(sql.NullBool)
 		case modelroute.FieldName, modelroute.FieldModelAlias, modelroute.FieldStrategy:
 			values[i] = new(sql.NullString)
 		case modelroute.FieldCreatedAt, modelroute.FieldUpdatedAt:
@@ -123,12 +119,6 @@ func (_m *ModelRoute) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field strategy", values[i])
 			} else if value.Valid {
 				_m.Strategy = modelroute.Strategy(value.String)
-			}
-		case modelroute.FieldEnabled:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field enabled", values[i])
-			} else if value.Valid {
-				_m.Enabled = value.Bool
 			}
 		case modelroute.FieldFallbacks:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -210,9 +200,6 @@ func (_m *ModelRoute) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("strategy=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Strategy))
-	builder.WriteString(", ")
-	builder.WriteString("enabled=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Enabled))
 	builder.WriteString(", ")
 	builder.WriteString("fallbacks=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Fallbacks))

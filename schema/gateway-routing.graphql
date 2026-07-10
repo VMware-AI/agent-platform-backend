@@ -20,7 +20,6 @@ type ModelRoute {
   # exposes only the friendly values (round-robin / weighted / random); the
   # backend translates these into the litellm enum below and persists here.
   strategy: LoadBalancingStrategy!
-  enabled: Boolean!
   createdAt: Time!
   updatedAt: Time!
   # Fallback chains (LiteLLM design doc §3.2)
@@ -41,7 +40,6 @@ input CreateModelRouteInput {
   modelGatewayId: ID!
   supportedModels: [String!]
   strategy: LoadBalancingStrategy
-  enabled: Boolean
   fallbacks: [String!]
   contextWindowFallbacks: [String!]
   contentPolicyFallbacks: [String!]
@@ -54,7 +52,6 @@ input UpdateModelRouteInput {
   modelGatewayId: ID
   supportedModels: [String!]
   strategy: LoadBalancingStrategy
-  enabled: Boolean
   fallbacks: [String!]
   contextWindowFallbacks: [String!]
   contentPolicyFallbacks: [String!]
@@ -70,9 +67,8 @@ extend type Mutation {
   # Model routes CRUD — design doc §3.2
   createModelRoute(input: CreateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
   updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
-  setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute! @hasRole(any: [admin])
   deleteModelRoute(id: ID!): Boolean! @hasRole(any: [admin])
-  # Atomic 全量聚合覆盖刷新 — re-aggregates every active ModelRoute and
+  # Atomic 全量聚合覆盖刷新 — re-aggregates every ModelRoute and
   # POSTs the full router_settings payload to /config/update, grouped by
   # modelGatewayId. Triggered automatically after a route save; exposed
   # as a mutation so the console can call it explicitly. Each gateway

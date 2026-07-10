@@ -29,8 +29,6 @@ const (
 	FieldUpstreams = "upstreams"
 	// FieldStrategy holds the string denoting the strategy field in the database.
 	FieldStrategy = "strategy"
-	// FieldEnabled holds the string denoting the enabled field in the database.
-	FieldEnabled = "enabled"
 	// FieldFallbacks holds the string denoting the fallbacks field in the database.
 	FieldFallbacks = "fallbacks"
 	// FieldContextWindowFallbacks holds the string denoting the context_window_fallbacks field in the database.
@@ -51,7 +49,6 @@ var Columns = []string{
 	FieldModelGatewayID,
 	FieldUpstreams,
 	FieldStrategy,
-	FieldEnabled,
 	FieldFallbacks,
 	FieldContextWindowFallbacks,
 	FieldContentPolicyFallbacks,
@@ -78,8 +75,6 @@ var (
 	NameValidator func(string) error
 	// ModelAliasValidator is a validator for the "model_alias" field. It is called by the builders before save.
 	ModelAliasValidator func(string) error
-	// DefaultEnabled holds the default value on creation for the "enabled" field.
-	DefaultEnabled bool
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -149,9 +144,4 @@ func ByModelGatewayID(opts ...sql.OrderTermOption) OrderOption {
 // ByStrategy orders the results by the strategy field.
 func ByStrategy(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStrategy, opts...).ToFunc()
-}
-
-// ByEnabled orders the results by the enabled field.
-func ByEnabled(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldEnabled, opts...).ToFunc()
 }

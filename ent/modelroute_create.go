@@ -87,20 +87,6 @@ func (_c *ModelRouteCreate) SetNillableStrategy(v *modelroute.Strategy) *ModelRo
 	return _c
 }
 
-// SetEnabled sets the "enabled" field.
-func (_c *ModelRouteCreate) SetEnabled(v bool) *ModelRouteCreate {
-	_c.mutation.SetEnabled(v)
-	return _c
-}
-
-// SetNillableEnabled sets the "enabled" field if the given value is not nil.
-func (_c *ModelRouteCreate) SetNillableEnabled(v *bool) *ModelRouteCreate {
-	if v != nil {
-		_c.SetEnabled(*v)
-	}
-	return _c
-}
-
 // SetFallbacks sets the "fallbacks" field.
 func (_c *ModelRouteCreate) SetFallbacks(v []string) *ModelRouteCreate {
 	_c.mutation.SetFallbacks(v)
@@ -180,10 +166,6 @@ func (_c *ModelRouteCreate) defaults() {
 		v := modelroute.DefaultStrategy
 		_c.mutation.SetStrategy(v)
 	}
-	if _, ok := _c.mutation.Enabled(); !ok {
-		v := modelroute.DefaultEnabled
-		_c.mutation.SetEnabled(v)
-	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := modelroute.DefaultID()
 		_c.mutation.SetID(v)
@@ -224,9 +206,6 @@ func (_c *ModelRouteCreate) check() error {
 		if err := modelroute.StrategyValidator(v); err != nil {
 			return &ValidationError{Name: "strategy", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.strategy": %w`, err)}
 		}
-	}
-	if _, ok := _c.mutation.Enabled(); !ok {
-		return &ValidationError{Name: "enabled", err: errors.New(`ent: missing required field "ModelRoute.enabled"`)}
 	}
 	return nil
 }
@@ -290,10 +269,6 @@ func (_c *ModelRouteCreate) createSpec() (*ModelRoute, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Strategy(); ok {
 		_spec.SetField(modelroute.FieldStrategy, field.TypeEnum, value)
 		_node.Strategy = value
-	}
-	if value, ok := _c.mutation.Enabled(); ok {
-		_spec.SetField(modelroute.FieldEnabled, field.TypeBool, value)
-		_node.Enabled = value
 	}
 	if value, ok := _c.mutation.Fallbacks(); ok {
 		_spec.SetField(modelroute.FieldFallbacks, field.TypeJSON, value)

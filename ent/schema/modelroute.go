@@ -34,7 +34,6 @@ func (ModelRoute) Fields() []ent.Field {
 		field.Enum("strategy").
 			Values("SIMPLE_SHUFFLE", "LEAST_BUSY", "LATENCY_BASED_ROUTING", "USAGE_BASED_ROUTING_V2", "COST_BASED_ROUTING").
 			Default("SIMPLE_SHUFFLE"),
-		field.Bool("enabled").Default(true),
 		// Fallback chains surfaced to litellm via POST /config/update. Three
 		// independent lists map 1:1 to the doc's three fallback kinds (general /
 		// context-window / content-policy). Each entry is an alias name

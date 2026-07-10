@@ -277,7 +277,6 @@ type CreateModelRouteInput struct {
 	ModelGatewayID         string                 `json:"modelGatewayId"`
 	SupportedModels        []string               `json:"supportedModels,omitempty"`
 	Strategy               *LoadBalancingStrategy `json:"strategy,omitempty"`
-	Enabled                *bool                  `json:"enabled,omitempty"`
 	Fallbacks              []string               `json:"fallbacks,omitempty"`
 	ContextWindowFallbacks []string               `json:"contextWindowFallbacks,omitempty"`
 	ContentPolicyFallbacks []string               `json:"contentPolicyFallbacks,omitempty"`
@@ -674,7 +673,6 @@ type ModelRoute struct {
 	Upstreams              []string              `json:"upstreams"`
 	SupportedModels        []string              `json:"supportedModels"`
 	Strategy               LoadBalancingStrategy `json:"strategy"`
-	Enabled                bool                  `json:"enabled"`
 	CreatedAt              time.Time             `json:"createdAt"`
 	UpdatedAt              time.Time             `json:"updatedAt"`
 	Fallbacks              []string              `json:"fallbacks"`
@@ -1125,7 +1123,6 @@ type UpdateModelRouteInput struct {
 	ModelGatewayID         *string                `json:"modelGatewayId,omitempty"`
 	SupportedModels        []string               `json:"supportedModels,omitempty"`
 	Strategy               *LoadBalancingStrategy `json:"strategy,omitempty"`
-	Enabled                *bool                  `json:"enabled,omitempty"`
 	Fallbacks              []string               `json:"fallbacks,omitempty"`
 	ContextWindowFallbacks []string               `json:"contextWindowFallbacks,omitempty"`
 	ContentPolicyFallbacks []string               `json:"contentPolicyFallbacks,omitempty"`

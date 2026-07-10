@@ -111,20 +111,6 @@ func (_u *ModelRouteUpdate) SetNillableStrategy(v *modelroute.Strategy) *ModelRo
 	return _u
 }
 
-// SetEnabled sets the "enabled" field.
-func (_u *ModelRouteUpdate) SetEnabled(v bool) *ModelRouteUpdate {
-	_u.mutation.SetEnabled(v)
-	return _u
-}
-
-// SetNillableEnabled sets the "enabled" field if the given value is not nil.
-func (_u *ModelRouteUpdate) SetNillableEnabled(v *bool) *ModelRouteUpdate {
-	if v != nil {
-		_u.SetEnabled(*v)
-	}
-	return _u
-}
-
 // SetFallbacks sets the "fallbacks" field.
 func (_u *ModelRouteUpdate) SetFallbacks(v []string) *ModelRouteUpdate {
 	_u.mutation.SetFallbacks(v)
@@ -284,9 +270,6 @@ func (_u *ModelRouteUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.Strategy(); ok {
 		_spec.SetField(modelroute.FieldStrategy, field.TypeEnum, value)
 	}
-	if value, ok := _u.mutation.Enabled(); ok {
-		_spec.SetField(modelroute.FieldEnabled, field.TypeBool, value)
-	}
 	if value, ok := _u.mutation.Fallbacks(); ok {
 		_spec.SetField(modelroute.FieldFallbacks, field.TypeJSON, value)
 	}
@@ -418,20 +401,6 @@ func (_u *ModelRouteUpdateOne) SetStrategy(v modelroute.Strategy) *ModelRouteUpd
 func (_u *ModelRouteUpdateOne) SetNillableStrategy(v *modelroute.Strategy) *ModelRouteUpdateOne {
 	if v != nil {
 		_u.SetStrategy(*v)
-	}
-	return _u
-}
-
-// SetEnabled sets the "enabled" field.
-func (_u *ModelRouteUpdateOne) SetEnabled(v bool) *ModelRouteUpdateOne {
-	_u.mutation.SetEnabled(v)
-	return _u
-}
-
-// SetNillableEnabled sets the "enabled" field if the given value is not nil.
-func (_u *ModelRouteUpdateOne) SetNillableEnabled(v *bool) *ModelRouteUpdateOne {
-	if v != nil {
-		_u.SetEnabled(*v)
 	}
 	return _u
 }
@@ -624,9 +593,6 @@ func (_u *ModelRouteUpdateOne) sqlSave(ctx context.Context) (_node *ModelRoute, 
 	}
 	if value, ok := _u.mutation.Strategy(); ok {
 		_spec.SetField(modelroute.FieldStrategy, field.TypeEnum, value)
-	}
-	if value, ok := _u.mutation.Enabled(); ok {
-		_spec.SetField(modelroute.FieldEnabled, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.Fallbacks(); ok {
 		_spec.SetField(modelroute.FieldFallbacks, field.TypeJSON, value)

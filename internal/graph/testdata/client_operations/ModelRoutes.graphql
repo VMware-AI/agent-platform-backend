@@ -9,7 +9,6 @@ query ModelRoutes {
     name
     modelGateway { id }
     supportedModels
-    enabled
     createdAt
     updatedAt
   }
