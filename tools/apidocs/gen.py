@@ -28,7 +28,8 @@ OUT_DIR = os.path.join(ROOT, "docs", "api")
 DOMAINS = [
     ("agents", "Agents, Templates & Snapshots", ["agent", "deploy"]),
     ("agent-config", "Agent Config, Artifacts, Skills & Images", ["content"]),
-    ("model-gateway", "Model Gateway & Routing", ["modelgateway", "gateway-routing"]),
+    ("model-gateway", "Model Gateways (Connections)", ["modelgateway"]),
+    ("gateway-routing", "Gateway Routing (Model Routes)", ["gateway-routing"]),
     ("provider-model", "Provider Model (Upstream LLM)", ["provider-model"]),
     ("virtual-keys", "Virtual Keys & Rate Limits", ["virtualkey"]),
     ("observability", "Observability (Request Logs, Audit Logs, Metrics)", ["observability"]),
@@ -596,7 +597,8 @@ def render_readme(nav, core_types, core_q, core_m) -> str:
     covers = {
         "agents": "Agent catalog/templates, agent instances, deploy from OVA, snapshots, lifecycle",
         "agent-config": "Agent configs, content-library artifacts, skills, container images",
-        "model-gateway": "Model gateways, gateway connections, upstreams, model routes, difficulty router tiers",
+        "model-gateway": "Model gateways, gateway connections, upstreams, difficulty router tiers",
+        "gateway-routing": "Model routes (gateway routing topology, route CRUD, sync to gateway)",
         "virtual-keys": "Per-user LiteLLM virtual keys and rate-limit policies",
         "observability": "Request logs, audit logs, request metrics, rate-limit policies",
         "metering": "Token usage and cost aggregation (metering center)",
