@@ -37,3 +37,12 @@ func readOnlyCtx() context.Context {
 
 func ptr[T any](v T) *T { return &v }
 
+// seedVirtualKey returns a VirtualKey builder pre-filled with every field the
+// model-routing schema REQUIRES (masked_key / name / model_gateway_id) so seed
+// sites only chain what the test is about (SetAgentID, SetStatus, SetModels,
+// …). One home for the required set: the next required column is added here
+// once, not hunted across N test files.
+func seedVirtualKey(ec *ent.Client, key string) *ent.VirtualKeyCreate {
+	return ec.VirtualKey.Create().SetLitellmKey(key).SetMaskedKey("sk-***").
+		SetName(key).SetModelGatewayID(uuid.New())
+}

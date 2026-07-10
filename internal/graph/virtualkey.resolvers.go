@@ -9,9 +9,13 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"github.com/VMware-AI/agent-platform-backend/ent"
+	"github.com/VMware-AI/agent-platform-backend/ent/agent"
+	"github.com/VMware-AI/agent-platform-backend/ent/providermodel"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
@@ -31,14 +35,14 @@ import (
 // invariant. Compensating gw.DeleteKey on DB persist failure prevents
 // orphans at the gateway side.
 func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.IssueVirtualKeyInput) (*model.IssuedVirtualKey, error) {
-	if input.OrganizationID == "" {
-		return nil, gqlerror.Errorf("organizationId is required")
-	}
 	if input.Name == "" {
 		return nil, gqlerror.Errorf("name is required")
 	}
 	if input.ModelGateway == "" {
 		return nil, gqlerror.Errorf("modelGateway is required")
+	}
+	if input.UserID == "" {
+		return nil, gqlerror.Errorf("userId is required")
 	}
 
 	// 1) Direct gateway lookup by id (replaces the prior
@@ -59,50 +63,46 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		return nil, gqlerror.Errorf("model gateway client unavailable for gateway %q", input.ModelGateway)
 	}
 
-	// 2) Optional agent pre-bind (1:1 invariant checked here; DB partial
-	//    unique index is the authoritative race gate).
-	var agentID *uuid.UUID
-	if input.AgentID != nil {
-		aID, err := uuid.Parse(*input.AgentID)
-		if err != nil {
-			return nil, gqlerror.Errorf("invalid agentId")
-		}
-		existing, qerr := r.Ent.VirtualKey.Query().
-			Where(virtualkey.AgentIDEQ(aID), virtualkey.StatusNEQ(virtualkey.StatusRevoked)).
-			First(ctx)
-		if qerr == nil && existing != nil {
-			return nil, gqlerror.Errorf("agent %s already has active key %s", aID, existing.ID)
-		}
-		if qerr != nil && !ent.IsNotFound(qerr) {
-			return nil, qerr
-		}
-		agentID = &aID
-	}
+	// Agent binding is intentionally NOT accepted here. Agents are assigned
+	// to a key later via associateVirtualKeyAgent(virtualKeyId, agentId);
+	// that mutation is the single place where the 1:1 active-key-per-agent
+	// invariant is enforced (DB partial unique index is the race gate).
 
-	// 3) Resolve expiry: duration > expiresAt (logged once).
-	var expiresAt *time.Time
-	if input.Duration != nil && *input.Duration != "" {
-		d, ok := parseDuration(*input.Duration)
-		if !ok {
-			return nil, gqlerror.Errorf("invalid duration format %q (expected <n>d|h|w|m)", *input.Duration)
-		}
-		t := time.Now().Add(d)
-		expiresAt = &t
-	} else if input.ExpiresAt != nil {
-		expiresAt = input.ExpiresAt
+	// 2) Resolve expiry: duration is required (callers cannot pass an
+	// absolute timestamp); server computes expiresAt = now + duration.
+	if input.Duration == nil || *input.Duration == "" {
+		return nil, gqlerror.Errorf("duration is required (expected <n>d|h|w|m)")
 	}
+	d, ok := parseDuration(*input.Duration)
+	if !ok {
+		return nil, gqlerror.Errorf("invalid duration format %q (expected <n>d|h|w|m)", *input.Duration)
+	}
+	t := time.Now().Add(d)
+	expiresAt := &t
 
-	// 4) Cross-check: every model in input.Models must be in the live
-	//    model list of the gateway (gatewayAvailableModels, real-time, no
-	//    cache). Backend-call 400s when the operator passed stale names.
+	// 3) Cross-check: every model in input.Models must exist on this
+	//    modelGateway AND have a healthy status (full_healthy or
+	//    partial_outage). We source the catalog from `provider_models`
+	//    — the same table GatewayAvailableModels reads from — rather
+	//    than calling the gateway, whose /model/list endpoint returns
+	//    404 on the current LiteLLM (correct path is /models). Reading
+	//    the local table also closes the TOCTOU window between
+	//    validation and mint. The health-check worker keeps `status`
+	//    current, so this is the operator-visible truth.
 	if len(input.Models) > 0 {
-		available, lerr := gw.ListAvailableModels(ctx)
-		if lerr != nil {
-			return nil, fmt.Errorf("list available models from gateway: %w", lerr)
+		rows, err := r.Ent.ProviderModel.Query().
+			Where(
+				providermodel.ModelGatewayIDEQ(mgID),
+				providermodel.NameIn(input.Models...),
+				providermodel.StatusIn(providermodel.StatusFullHealthy, providermodel.StatusPartialOutage),
+			).
+			All(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("query available models: %w", err)
 		}
-		known := make(map[string]struct{}, len(available))
-		for _, m := range available {
-			known[m] = struct{}{}
+		known := make(map[string]struct{}, len(rows))
+		for _, row := range rows {
+			known[row.Name] = struct{}{}
 		}
 		var stale []string
 		for _, m := range input.Models {
@@ -115,10 +115,18 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		}
 	}
 
-	// 5) Build gateway request. Field names match the regenerated
+	// 4) Build gateway request. Field names match the regenerated
 	// gateway.GenerateKeyRequest (see internal/gateway/client.go).
+	// Tags are no longer a top-level wire field — they ride under
+	// `metadata.tags` (matches the deploy flows' `metadata: map[...]`
+	// usage and lets us grow metadata without more top-level fields).
 	gReq := gateway.GenerateKeyRequest{
-		OrganizationID:      input.OrganizationID,
+		UserID: input.UserID,
+		// Mirror the platform-side name onto LiteLLM's `key_alias` so
+		// /key/list and spend reports show it (spend.go falls back to
+		// KeyAlias when present). ent.VirtualKey.Name remains the
+		// source of truth on our side.
+		KeyAlias:            input.Name,
 		Models:              input.Models,
 		MaxBudget:           input.MaxBudget,
 		BudgetDuration:      vkDerefStr(input.BudgetDuration, ""),
@@ -128,19 +136,15 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		RPMLimitType:        vkDerefStr(input.RpmLimitType, ""),
 		TPMLimitType:        vkDerefStr(input.TpmLimitType, ""),
 		AllowedRoutes:       input.AllowedRoutes,
-		Tags:                input.Tags,
-		Blocked:             input.Blocked,
+		Metadata:            input.Metadata,
 		KeyType:             vkDerefStr(input.KeyType, ""),
 		AutoRotate:          input.AutoRotate,
 		RotationInterval:    vkDerefStr(input.RotationInterval, ""),
 	}
-	// AgentID and ExpiresAt are not in the current gateway.GenerateKeyRequest
-	// struct (in-flight gateway/client.go rewrite). The platform persists them
-	// to its own row regardless, so this is wire-side inert. Follow-up:
-	// extend GenerateKeyRequest and re-enable these passes once the gateway
-	// client settles.
-	_ = agentID
-	_ = expiresAt
+	// Agent binding is platform-side only (lives on the ent.VirtualKey row
+	// via agent_id); the gateway doesn't know about agents, so no field on
+	// gateway.GenerateKeyRequest to set. Binding happens later via
+	// associateVirtualKeyAgent.
 
 	resp, err := gw.GenerateKey(ctx, gReq)
 	if err != nil {
@@ -148,13 +152,13 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		return nil, fmt.Errorf("gateway mint: %w", err)
 	}
 
-	// 6) Persist governance row.
+	// 5) Persist governance row.
 	create := r.Ent.VirtualKey.Create().
 		SetLitellmKey(resp.Key).
 		SetLitellmToken(resp.Token).
 		SetMaskedKey(redactKey(resp.Key)).
+		SetUserID(input.UserID).
 		SetName(input.Name).
-		SetOrganizationID(input.OrganizationID).
 		SetModelGatewayID(mgID).
 		SetModels(input.Models).
 		SetMaxBudget(vkDerefFloat64(input.MaxBudget, 0)).
@@ -164,21 +168,36 @@ func (r *mutationResolver) IssueVirtualKey(ctx context.Context, input model.Issu
 		SetTpmLimitType(vkDerefStr(input.TpmLimitType, "")).
 		SetRpmLimitType(vkDerefStr(input.RpmLimitType, "")).
 		SetBudgetDuration(vkDerefStr(input.BudgetDuration, "")).
-		SetTags(input.Tags).
+		SetTags(metadataTagsAsStrings(input.Metadata)).
 		SetAllowedRoutes(input.AllowedRoutes).
-		SetBlocked(vkDerefBool(input.Blocked, false)).
 		SetKeyType(vkDerefStr(input.KeyType, "default")).
 		SetAutoRotate(vkDerefBool(input.AutoRotate, false)).
 		SetRotationInterval(vkDerefStr(input.RotationInterval, ""))
 	if expiresAt != nil {
 		create = create.SetExpiresAt(*expiresAt)
 	}
-	if agentID != nil {
-		create = create.SetAgentID(*agentID)
-	}
+	// agent_id is intentionally NOT set here — bound later via
+	// associateVirtualKeyAgent.
 
 	vk, err := create.Save(ctx)
 	if err != nil {
+		// Distinguish the (model_gateway_id, name) partial-unique violation
+		// from other persist failures so the user gets a clean "名称
+		// 已存在" instead of the raw psql message. ConstraintError's
+		// underlying message includes the index name from migrate/schema.go;
+		// we match on that — there's no public field on ent.ConstraintError
+		// exposing it, and we want to avoid diving into pgconn.PgError
+		// internals from this layer.
+		if ent.IsConstraintError(err) && strings.Contains(err.Error(), "virtualkey_model_gateway_id_name") {
+			// Compensating gw.DeleteKey — the gateway already minted the
+			// secret; without rollback we'd orphan the litellm-side key.
+			cctx := context.WithoutCancel(ctx)
+			if derr := gw.DeleteKey(cctx, resp.Key); derr != nil {
+				log.Printf("compensating gw.DeleteKey failed: %v", derr)
+			}
+			r.audit(ctx, "key.issue", "virtual_key", "", false, actorID(auth.FromContext(ctx)))
+			return nil, gqlerror.Errorf("令牌名称已存在,请换一个名称")
+		}
 		// Compensating revoke on gateway (detached context: original may
 		// already be canceled/timed-out).
 		cctx := context.WithoutCancel(ctx)
@@ -251,7 +270,7 @@ func (r *mutationResolver) RegenerateVirtualKey(ctx context.Context, id string) 
 		r.audit(ctx, "key.regenerate", "virtual_key", vkID.String(), false, actorID(auth.FromContext(ctx)))
 		return nil, fmt.Errorf("gateway regenerate: %w", err)
 	}
-	updated, err := r.Ent.VirtualKey.UpdateOneID(vkID).
+	_, err = r.Ent.VirtualKey.UpdateOneID(vkID).
 		SetLitellmKey(resp.Key).
 		SetLitellmToken(resp.Token).
 		SetMaskedKey(redactKey(resp.Key)).
@@ -260,8 +279,18 @@ func (r *mutationResolver) RegenerateVirtualKey(ctx context.Context, id string) 
 		r.audit(ctx, "key.regenerate", "virtual_key", vkID.String(), false, actorID(auth.FromContext(ctx)))
 		return nil, fmt.Errorf("persist regenerated virtual_key: %w", err)
 	}
+	// Re-read with the agent edge eager-loaded — UpdateOne.Save returns a
+	// row without edges populated, but toModelVirtualKey now reads the
+	// nested agent object (see mappers.go).
+	withAgent, qerr := r.Ent.VirtualKey.Query().
+		Where(virtualkey.ID(vkID)).
+		WithAgent().
+		Only(context.WithoutCancel(ctx))
+	if qerr != nil {
+		return nil, fmt.Errorf("reload virtual_key with agent: %w", qerr)
+	}
 	r.audit(ctx, "key.regenerate", "virtual_key", vkID.String(), true, actorID(auth.FromContext(ctx)))
-	mapped, merr := toModelVirtualKey(ctx, r.Resolver, updated)
+	mapped, merr := toModelVirtualKey(ctx, r.Resolver, withAgent)
 	if merr != nil {
 		return nil, merr
 	}
@@ -297,12 +326,20 @@ func (r *mutationResolver) SetVirtualKeyEnabled(ctx context.Context, id string, 
 	if !enabled {
 		status = virtualkey.StatusDisabled
 	}
-	updated, err := r.Ent.VirtualKey.UpdateOne(vk).SetStatus(status).Save(ctx)
-	if err != nil {
+	if _, err := r.Ent.VirtualKey.UpdateOne(vk).SetStatus(status).Save(ctx); err != nil {
 		return nil, err
 	}
+	// Re-read with agent edge (toModelVirtualKey now renders the nested
+	// `agent` GraphQL field; UpdateOne.Save doesn't auto-load edges).
+	withAgent, qerr := r.Ent.VirtualKey.Query().
+		Where(virtualkey.ID(vkID)).
+		WithAgent().
+		Only(ctx)
+	if qerr != nil {
+		return nil, qerr
+	}
 	r.audit(ctx, "key.set_enabled", "virtual_key", vkID.String(), true, actorID(auth.FromContext(ctx)))
-	return toModelVirtualKey(ctx, r.Resolver, updated)
+	return toModelVirtualKey(ctx, r.Resolver, withAgent)
 }
 
 // AssociateVirtualKeyAgent binds (or rebinds) an existing key to an agent.
@@ -329,52 +366,127 @@ func (r *mutationResolver) AssociateVirtualKeyAgent(ctx context.Context, virtual
 	if qerr != nil && !ent.IsNotFound(qerr) {
 		return nil, qerr
 	}
-	updated, err := r.Ent.VirtualKey.UpdateOneID(vkID).SetAgentID(aID).Save(ctx)
+	_, err = r.Ent.VirtualKey.UpdateOneID(vkID).SetAgentID(aID).Save(ctx)
 	if err != nil {
 		return nil, err
 	}
+	// Re-read with agent edge eager-loaded.
+	withAgent, qerr := r.Ent.VirtualKey.Query().
+		Where(virtualkey.ID(vkID)).
+		WithAgent().
+		Only(ctx)
+	if qerr != nil {
+		return nil, qerr
+	}
 	r.audit(ctx, "key.associate_agent", "virtual_key", vkID.String(), true, actorID(auth.FromContext(ctx)))
-	return toModelVirtualKey(ctx, r.Resolver, updated)
+	return toModelVirtualKey(ctx, r.Resolver, withAgent)
 }
 
-// GatewayAvailableModels returns the live model list advertised by the
-// given modelGateway. Real-time: every call hits LiteLLM /model/list on
-// demand (no cache). Used by the operator-console issue form to populate
-// the "Models" multi-select after the operator picks a modelGateway.
+// PurgeRevokedVirtualKeys is the resolver for the purgeRevokedVirtualKeys field.
+func (r *mutationResolver) PurgeRevokedVirtualKeys(ctx context.Context, beforeTime time.Time) (*model.PurgeResult, error) {
+	// beforeTime must be in the past — otherwise a wall-clock skew or a
+	// "now + buffer" call would silently include rows updated in the
+	// next few hundred ms. Reject at the resolver layer so the error is
+	// visible to the operator before anything leaves the DB.
+	if !beforeTime.Before(time.Now()) {
+		return nil, gqlerror.Errorf("beforeTime must be in the past (got %s)", beforeTime.Format(time.RFC3339))
+	}
+
+	n, err := r.Ent.VirtualKey.Delete().
+		Where(
+			virtualkey.StatusEQ(virtualkey.StatusRevoked),
+			virtualkey.UpdatedAtLT(beforeTime),
+		).
+		Exec(ctx)
+	if err != nil {
+		r.audit(ctx, "key.purge", "virtual_key", fmt.Sprintf("before=%s", beforeTime.Format(time.RFC3339)), false, actorID(auth.FromContext(ctx)))
+		return nil, fmt.Errorf("purge virtual_keys: %w", err)
+	}
+
+	// Survey the surviving revoked rows so the operator can decide
+	// whether to schedule another pass. Best-effort — if this query
+	// fails (rare: post-delete race with a concurrent issue), we still
+	// return deletedCount; the operator just gets oldestRemaining=nil.
+	oldest, qerr := r.Ent.VirtualKey.Query().
+		Where(virtualkey.StatusEQ(virtualkey.StatusRevoked)).
+		Order(ent.Asc(virtualkey.FieldUpdatedAt)).
+		First(ctx)
+	var oldestPtr *time.Time
+	if qerr == nil && oldest != nil {
+		t := oldest.UpdatedAt
+		oldestPtr = &t
+	}
+
+	// Audit detail encoded into resID — the audit signature is fixed
+	// at audit.go:37 and we don't want to widen it for this single
+	// caller. Format: "before=<rfc3339> deleted=<n>" parses cleanly
+	// from the audit log viewer if needed later.
+	r.audit(ctx, "key.purge", "virtual_key",
+		fmt.Sprintf("before=%s deleted=%d", beforeTime.Format(time.RFC3339), n),
+		true, actorID(auth.FromContext(ctx)))
+
+	return &model.PurgeResult{
+		DeletedCount:             int(n),
+		OldestRemainingUpdatedAt: oldestPtr,
+	}, nil
+}
+
+// GatewayAvailableModels returns the distinct model names whose backed
+// physical model rows exist under the given modelGateway AND whose
+// health status is "at least one backend up" — i.e. status ∈
+// {full_healthy, partial_outage}. Sourced from the `provider_models`
+// table (the periodic health-check worker keeps `status` current), so
+// the list reflects what the operator can actually use right now rather
+// than whatever /model/list happens to return from the gateway. Used to
+// populate the issue form's "Models" multi-select after the operator
+// picks a modelGateway.
 func (r *queryResolver) GatewayAvailableModels(ctx context.Context, gatewayConnectionID string) ([]string, error) {
 	mgID, err := uuid.Parse(gatewayConnectionID)
 	if err != nil {
 		return nil, gqlerror.Errorf("invalid gatewayConnectionId")
 	}
-	conn, err := r.Ent.GatewayConnection.Get(ctx, mgID)
+	rows, err := r.Ent.ProviderModel.Query().
+		Where(
+			providermodel.ModelGatewayIDEQ(mgID),
+			providermodel.StatusIn(providermodel.StatusFullHealthy, providermodel.StatusPartialOutage),
+		).
+		All(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, gqlerror.Errorf("model gateway not found")
-		}
 		return nil, err
 	}
-	gw := r.buildGatewayKeyClient(ctx, conn)
-	if gw == nil {
-		return nil, gqlerror.Errorf("model gateway client unavailable")
+	seen := make(map[string]struct{}, len(rows))
+	out := make([]string, 0, len(rows))
+	for _, row := range rows {
+		if _, ok := seen[row.Name]; ok {
+			continue
+		}
+		seen[row.Name] = struct{}{}
+		out = append(out, row.Name)
 	}
-	return gw.ListAvailableModels(ctx)
+	return out, nil
 }
 
-// VirtualKeys lists keys with three optional filters: organizationId,
-// agentId, modelGateway. All null → all keys in current tenant. Multiple
-// set → intersection. Secrets are never returned (only maskedKey on each
-// row).
-func (r *queryResolver) VirtualKeys(ctx context.Context, organizationID *string, agentID *string, modelGateway *string) ([]model.VirtualKey, error) {
-	q := r.Ent.VirtualKey.Query()
-	if organizationID != nil {
-		q = q.Where(virtualkey.OrganizationIDEQ(*organizationID))
-	}
-	if agentID != nil {
-		aID, err := uuid.Parse(*agentID)
-		if err != nil {
-			return nil, gqlerror.Errorf("invalid agentId")
-		}
-		q = q.Where(virtualkey.AgentIDEQ(aID))
+// VirtualKeys lists keys with optional filters: agentName, modelGateway,
+// nameContains (case-insensitive substring match on the human-readable
+// name, ent.NameContainsFold), and modelContains (case-insensitive
+// substring match against ANY element of the `models` text[] array, via
+// raw SQL EXISTS/unnest — ent doesn't generate `contains` predicates on
+// array columns). All null → all keys in current tenant. Multiple set →
+// intersection. orderBy defaults to CREATED_DESC (newest first); NAME_ASC /
+// NAME_DESC sort by the human-readable name. Secrets are never returned
+// (only maskedKey on each row). Neither nameContains nor modelContains is
+// indexed; agentName is via HasAgentWith subquery. Acceptable while
+// per-tenant key counts stay small (operator-curated).
+func (r *queryResolver) VirtualKeys(ctx context.Context, agentName *string, modelGateway *string, nameContains *string, nameEquals *string, modelContains *string, orderBy *model.VirtualKeyOrderBy) ([]model.VirtualKey, error) {
+	// WithAgent() eagerly populates k.Edges.Agent in one batched query,
+	// so toModelVirtualKey can render the nested `agent` GraphQL field
+	// without N+1.
+	q := r.Ent.VirtualKey.Query().WithAgent()
+	if agentName != nil && *agentName != "" {
+		// ent.HasAgentWith emits a single SQL subquery — keys whose bound
+		// agent's name case-fold-matches the substring. Rows with a NULL
+		// agent_id are excluded (they have no agent to match).
+		q = q.Where(virtualkey.HasAgentWith(agent.NameContainsFold(*agentName)))
 	}
 	if modelGateway != nil {
 		mgID, err := uuid.Parse(*modelGateway)
@@ -383,12 +495,46 @@ func (r *queryResolver) VirtualKeys(ctx context.Context, organizationID *string,
 		}
 		q = q.Where(virtualkey.ModelGatewayIDEQ(mgID))
 	}
-	// TODO(follow-up): replace this denyAll fallback with a real
-	// organizationId → tenant resolution (see spec §3.4 + §7 follow-ups).
-	if d := tenantScopeFor(ctx); d.apply && d.denyAll {
-		q = q.Where(virtualkey.OrganizationIDEQ("")) // impossible match
+	if nameContains != nil && *nameContains != "" {
+		q = q.Where(virtualkey.NameContainsFold(*nameContains))
 	}
-	keys, err := q.Order(orderNewest).All(ctx)
+	if nameEquals != nil && *nameEquals != "" {
+		// Exact-match for the issue form's "name already exists" check.
+		// Case-sensitive — matches the (model_gateway_id, name) partial
+		// unique index's behaviour (Postgres text equality is case-
+		// sensitive by default). Using a fold match here would let the
+		// front-end say "no clash" while the back-end still 409s on
+		// "Foo" vs "foo". B-tree covered when scoped by model_gateway_id
+		// (the partial unique index covers equality on the leading
+		// prefix); sequential scan otherwise. Backend re-validates
+		// uniqueness on save; this is UX-grade, not security-grade.
+		q = q.Where(virtualkey.NameEQ(*nameEquals))
+	}
+	if modelContains != nil && *modelContains != "" {
+		// PG-only: unnest the text[] column to rows and case-fold-match
+		// each. ent has no generated predicate for array containment, so
+		// we emit raw SQL via sql.ExprP (parameterized — no injection).
+		// Postgres is the project's only supported backend (LLD-04); any
+		// future sqlite/test backend will see a clear SQL error rather
+		// than silently drop the filter.
+		q = q.Where(func(s *sql.Selector) {
+			s.Where(sql.ExprP(
+				"EXISTS (SELECT 1 FROM unnest("+virtualkey.Table+"."+virtualkey.FieldModels+") AS m WHERE LOWER(m) LIKE LOWER(?))",
+				*modelContains,
+			))
+		})
+	}
+	switch {
+	case orderBy != nil && *orderBy == model.VirtualKeyOrderByNameAsc:
+		q = q.Order(virtualkey.ByName(), orderByKey)
+	case orderBy != nil && *orderBy == model.VirtualKeyOrderByNameDesc:
+		q = q.Order(virtualkey.ByName(), ent.Desc(), orderByKey)
+	default:
+		// CREATED_DESC (the schema default) — match historical behaviour
+		// so existing callers see no change.
+		q = q.Order(orderNewest)
+	}
+	keys, err := q.All(ctx)
 	if err != nil {
 		return nil, err
 	}

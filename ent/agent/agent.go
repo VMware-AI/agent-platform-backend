@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -47,8 +48,17 @@ const (
 	FieldTenantID = "tenant_id"
 	// FieldEnvironmentID holds the string denoting the environment_id field in the database.
 	FieldEnvironmentID = "environment_id"
+	// EdgeVirtualKeys holds the string denoting the virtual_keys edge name in mutations.
+	EdgeVirtualKeys = "virtual_keys"
 	// Table holds the table name of the agent in the database.
 	Table = "agents"
+	// VirtualKeysTable is the table that holds the virtual_keys relation/edge.
+	VirtualKeysTable = "virtual_keys"
+	// VirtualKeysInverseTable is the table name for the VirtualKey entity.
+	// It exists in this package in order to avoid circular dependency with the "virtualkey" package.
+	VirtualKeysInverseTable = "virtual_keys"
+	// VirtualKeysColumn is the table column denoting the virtual_keys relation/edge.
+	VirtualKeysColumn = "agent_id"
 )
 
 // Columns holds all SQL columns for agent fields.
@@ -215,4 +225,25 @@ func ByTenantID(opts ...sql.OrderTermOption) OrderOption {
 // ByEnvironmentID orders the results by the environment_id field.
 func ByEnvironmentID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEnvironmentID, opts...).ToFunc()
+}
+
+// ByVirtualKeysCount orders the results by virtual_keys count.
+func ByVirtualKeysCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newVirtualKeysStep(), opts...)
+	}
+}
+
+// ByVirtualKeys orders the results by virtual_keys terms.
+func ByVirtualKeys(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newVirtualKeysStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newVirtualKeysStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(VirtualKeysInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, VirtualKeysTable, VirtualKeysColumn),
+	)
 }

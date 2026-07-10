@@ -151,7 +151,7 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 			TeamID:    req.TeamID,
 			Models:    models,
 			MaxBudget: req.MaxBudget,
-			Metadata:  map[string]string{"agent": req.AgentName},
+			Metadata:  map[string]any{"agent": req.AgentName},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("deploy: issue key: %w", err)

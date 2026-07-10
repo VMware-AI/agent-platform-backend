@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/google/uuid"
 )
@@ -31,8 +32,6 @@ type VirtualKey struct {
 	MaskedKey string `json:"-"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
-	// OrganizationID holds the value of the "organization_id" field.
-	OrganizationID string `json:"organization_id,omitempty"`
 	// AgentID holds the value of the "agent_id" field.
 	AgentID *uuid.UUID `json:"agent_id,omitempty"`
 	// ModelGatewayID holds the value of the "model_gateway_id" field.
@@ -69,11 +68,36 @@ type VirtualKey struct {
 	AutoRotate bool `json:"auto_rotate,omitempty"`
 	// RotationInterval holds the value of the "rotation_interval" field.
 	RotationInterval string `json:"rotation_interval,omitempty"`
+	// UserID holds the value of the "user_id" field.
+	UserID string `json:"user_id,omitempty"`
 	// LastActiveAt holds the value of the "last_active_at" field.
 	LastActiveAt *time.Time `json:"last_active_at,omitempty"`
 	// Spend holds the value of the "spend" field.
-	Spend        int `json:"spend,omitempty"`
+	Spend int `json:"spend,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the VirtualKeyQuery when eager-loading is set.
+	Edges        VirtualKeyEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// VirtualKeyEdges holds the relations/edges for other nodes in the graph.
+type VirtualKeyEdges struct {
+	// Agent holds the value of the agent edge.
+	Agent *Agent `json:"agent,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// AgentOrErr returns the Agent value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e VirtualKeyEdges) AgentOrErr() (*Agent, error) {
+	if e.Agent != nil {
+		return e.Agent, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: agent.Label}
+	}
+	return nil, &NotLoadedError{edge: "agent"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -91,7 +115,7 @@ func (*VirtualKey) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case virtualkey.FieldMaxParallelRequests, virtualkey.FieldTpmLimit, virtualkey.FieldRpmLimit, virtualkey.FieldSpend:
 			values[i] = new(sql.NullInt64)
-		case virtualkey.FieldLitellmKey, virtualkey.FieldLitellmToken, virtualkey.FieldMaskedKey, virtualkey.FieldName, virtualkey.FieldOrganizationID, virtualkey.FieldTpmLimitType, virtualkey.FieldRpmLimitType, virtualkey.FieldBudgetDuration, virtualkey.FieldStatus, virtualkey.FieldKeyType, virtualkey.FieldRotationInterval:
+		case virtualkey.FieldLitellmKey, virtualkey.FieldLitellmToken, virtualkey.FieldMaskedKey, virtualkey.FieldName, virtualkey.FieldTpmLimitType, virtualkey.FieldRpmLimitType, virtualkey.FieldBudgetDuration, virtualkey.FieldStatus, virtualkey.FieldKeyType, virtualkey.FieldRotationInterval, virtualkey.FieldUserID:
 			values[i] = new(sql.NullString)
 		case virtualkey.FieldCreatedAt, virtualkey.FieldUpdatedAt, virtualkey.FieldExpiresAt, virtualkey.FieldLastActiveAt:
 			values[i] = new(sql.NullTime)
@@ -153,12 +177,6 @@ func (_m *VirtualKey) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field name", values[i])
 			} else if value.Valid {
 				_m.Name = value.String
-			}
-		case virtualkey.FieldOrganizationID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field organization_id", values[i])
-			} else if value.Valid {
-				_m.OrganizationID = value.String
 			}
 		case virtualkey.FieldAgentID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -276,6 +294,12 @@ func (_m *VirtualKey) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.RotationInterval = value.String
 			}
+		case virtualkey.FieldUserID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field user_id", values[i])
+			} else if value.Valid {
+				_m.UserID = value.String
+			}
 		case virtualkey.FieldLastActiveAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field last_active_at", values[i])
@@ -300,6 +324,11 @@ func (_m *VirtualKey) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *VirtualKey) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryAgent queries the "agent" edge of the VirtualKey entity.
+func (_m *VirtualKey) QueryAgent() *AgentQuery {
+	return NewVirtualKeyClient(_m.config).QueryAgent(_m)
 }
 
 // Update returns a builder for updating this VirtualKey.
@@ -340,9 +369,6 @@ func (_m *VirtualKey) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("name=")
 	builder.WriteString(_m.Name)
-	builder.WriteString(", ")
-	builder.WriteString("organization_id=")
-	builder.WriteString(_m.OrganizationID)
 	builder.WriteString(", ")
 	if v := _m.AgentID; v != nil {
 		builder.WriteString("agent_id=")
@@ -401,6 +427,9 @@ func (_m *VirtualKey) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("rotation_interval=")
 	builder.WriteString(_m.RotationInterval)
+	builder.WriteString(", ")
+	builder.WriteString("user_id=")
+	builder.WriteString(_m.UserID)
 	builder.WriteString(", ")
 	if v := _m.LastActiveAt; v != nil {
 		builder.WriteString("last_active_at=")

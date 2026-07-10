@@ -2,6 +2,7 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -35,6 +36,19 @@ func (Agent) Fields() []ent.Field {
 	field.String("static_ip").Optional().Default(""),
 	field.UUID("tenant_id", uuid.UUID{}).Optional().Nillable(),
 		field.UUID("environment_id", uuid.UUID{}).Optional().Nillable(), // LLD-10 env_scope (default off)
+	}
+}
+
+func (Agent) Edges() []ent.Edge {
+	return []ent.Edge{
+		// Inverse of VirtualKey.agent (the FK lives on virtual_keys.agent_id;
+		// Agent has no FK column to virtual_keys). Required by ent: every
+		// edge.From must have a matching edge.To. We expose this edge as
+		// `virtual_keys` on the ent Agent client — it is NOT mapped to a
+		// GraphQL field on Agent (see schema/agent.graphql), so the public
+		// schema stays unchanged. The edge exists purely so ent can join
+		// from a VirtualKey to its Agent via VirtualKey.Edges.Agent.
+		edge.To("virtual_keys", VirtualKey.Type),
 	}
 }
 

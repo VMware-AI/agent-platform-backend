@@ -176,24 +176,22 @@ func toModelVirtualKey(ctx context.Context, r *Resolver, k *ent.VirtualKey) (*mo
 	if err != nil {
 		return nil, err
 	}
-	return &model.VirtualKey{
-		ID:             k.ID.String(),
-		Name:           k.Name,
-		MaskedKey:      k.MaskedKey,
-		OrganizationID: k.OrganizationID,
-		ModelGateway:   r.toModelGateway(mg),
-		AgentID:        uuidOrNil(k.AgentID),
-		Models:         modelsOrEmpty(k.Models),
-		Tags:           tagsOrEmpty(k.Tags),
-		AllowedRoutes:  routesOrEmpty(k.AllowedRoutes),
-		Blocked:        k.Blocked,
-		KeyType:        k.KeyType,
-		AutoRotate:     k.AutoRotate,
-		Spend:          float64(k.Spend),
-		Status:         model.VirtualKeyStatus(string(k.Status)),
-		CreatedAt:      k.CreatedAt,
-		UpdatedAt:      k.UpdatedAt,
-		Duration:       stringPtr(formatRemainingDuration(k.ExpiresAt)),
+	m := &model.VirtualKey{
+		ID:            k.ID.String(),
+		Name:          k.Name,
+		MaskedKey:     k.MaskedKey,
+		ModelGateway:  r.toModelGateway(mg),
+		Models:        modelsOrEmpty(k.Models),
+		Tags:          tagsOrEmpty(k.Tags),
+		AllowedRoutes: routesOrEmpty(k.AllowedRoutes),
+		Blocked:       k.Blocked,
+		KeyType:       k.KeyType,
+		AutoRotate:    k.AutoRotate,
+		Spend:         float64(k.Spend),
+		Status:        model.VirtualKeyStatus(string(k.Status)),
+		CreatedAt:     k.CreatedAt,
+		UpdatedAt:     k.UpdatedAt,
+		Duration:      stringPtr(formatRemainingDuration(k.ExpiresAt)),
 		// Optional/nullable pointers via existing ent helpers:
 		MaxParallelRequests: intPtr(k.MaxParallelRequests),
 		TpmLimit:            intPtr(k.TpmLimit),
@@ -205,7 +203,15 @@ func toModelVirtualKey(ctx context.Context, r *Resolver, k *ent.VirtualKey) (*mo
 		RotationInterval:    strPtr(k.RotationInterval),
 		LastActiveAt:        k.LastActiveAt,
 		MaxBudget:           float64Ptr(k.MaxBudget),
-	}, nil
+	}
+	// `agent` GraphQL field is loaded via VirtualKey.Edges.Agent — callers
+	// MUST WithAgent() on the query, otherwise k.Edges.Agent is nil and we
+	// leave Agent unpopulated on the model (not nil-error — it's the same
+	// shape as "row exists, agent NULL FK", which we map to nil).
+	if k.Edges.Agent != nil {
+		m.Agent = toModelAgent(k.Edges.Agent)
+	}
+	return m, nil
 }
 
 // lookupModelGateway fetches the GatewayConnection that issued this key.

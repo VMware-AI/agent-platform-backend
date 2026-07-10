@@ -8,7 +8,7 @@
 
 ### `gatewayAvailableModels`
 
-Real-time model list for a modelGateway (calls LiteLLM /model/list on demand — no cache). Frontend uses this to populate the issue form's "Models" multi-select after the operator picks a modelGateway. @hasRole: read_only or admin (matches virtualKeys permissioning).
+Distinct model names that are bound to the given modelGateway AND have at least one backend physical model in a healthy state (status ∈ {full_healthy, partial_outage}). Sourced from the `provider_models` table — the periodic health-check worker keeps `status` up to date, so this list reflects the operator-console's "what's currently usable" view. Used to populate the issue form's "Models" multi-select after the operator picks a modelGateway. @hasRole: read_only or admin (matches virtualKeys permissioning).
 
 ```graphql
 gatewayAvailableModels(gatewayConnectionId: ID!): [String!]!
@@ -20,23 +20,6 @@ gatewayAvailableModels(gatewayConnectionId: ID!): [String!]!
 | Argument | Type | Required | Default |
 |----------|------|----------|---------|
 | `gatewayConnectionId` | `ID!` | yes | — |
-
-### `virtualKeys`
-
-organizationId, agentId, and modelGateway are independent optional filters; all null → all keys in the current tenant. Multiple set → intersection.
-
-```graphql
-virtualKeys(organizationId: ID, agentId: ID, modelGateway: ID): [VirtualKey!]!
-```
-
-- **Returns:** `[VirtualKey!]!`
-- **Auth:** `@hasRole(any: [admin, read_only])`
-
-| Argument | Type | Required | Default |
-|----------|------|----------|---------|
-| `organizationId` | `ID` | no | — |
-| `agentId` | `ID` | no | — |
-| `modelGateway` | `ID` | no | — |
 
 ## Mutations
 
@@ -113,6 +96,21 @@ associateVirtualKeyAgent(virtualKeyId: ID!, agentId: ID!): VirtualKey!
 | `virtualKeyId` | `ID!` | yes | — |
 | `agentId` | `ID!` | yes | — |
 
+### `purgeRevokedVirtualKeys`
+
+Permanently delete every VirtualKey with status=revoked AND updated_at < beforeTime. This is the only sanctioned way to physically shrink the virtual_keys table; revocation alone flips status and leaves the row in place for audit + spend history. Audit log entries that referenced the purged rows will keep their resource_id strings (audit_log has no FK) — the key detail will just become "已清除" in the audit-log viewer. Admin-only because the action is irreversible. beforeTime MUST be in the past (resolver 422s otherwise) — a future timestamp would silently delete rows updated in the next few hundred ms, which is exactly the kind of footgun admin permissions shouldn't enable.
+
+```graphql
+purgeRevokedVirtualKeys(beforeTime: Time!): PurgeResult!
+```
+
+- **Returns:** `PurgeResult!`
+- **Auth:** `@hasRole(any: [admin])`
+
+| Argument | Type | Required | Default |
+|----------|------|----------|---------|
+| `beforeTime` | `Time!` | yes | — |
+
 ## Types
 
 ### IssuedVirtualKey
@@ -126,6 +124,17 @@ Returned only at issue / regenerate time — carries the secret, which is never 
 | `virtualKey` | `VirtualKey!` | — |
 | `secret` | `String!` | — |
 
+### PurgeResult
+
+*Object*
+
+Result of `purgeRevokedVirtualKeys`. `deletedCount` is the number of rows physically removed (NOT marked revoked — revoked was already terminal); `oldestRemainingUpdatedAt` lets an operator decide whether to schedule another purge pass — if it's still well in the past, they're not done yet.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `deletedCount` | `Int!` | — |
+| `oldestRemainingUpdatedAt` | `Time` | — |
+
 ### VirtualKey
 
 *Object*
@@ -135,9 +144,8 @@ Returned only at issue / regenerate time — carries the secret, which is never 
 | `id` | `ID!` | — |
 | `name` | `String!` | Human-readable label. Required since 2026-07 refactor. |
 | `maskedKey` | `String!` | Persistent, safe-to-display preview of the secret (e.g. "sk-aBcD...XyZ"). Always populated; updated alongside any secret change. |
-| `organizationId` | `String!` | Organization this key belongs to. Required. Drives both tenant isolation and LiteLLM team routing. |
 | `modelGateway` | `ModelGateway!` | Nested object: the modelGateway that issued this key. Maps to the ent `model_gateway_id` column (renamed from `gateway_connection_id`). Required since per-agent-per-org refactor — every VirtualKey is bound to exactly one modelGateway. The frontend renders this as the "gateway" pill on the operator console. |
-| `agentId` | `ID` | — |
+| `agent` | `Agent` | Nested agent object bound to this key (loaded via the ent `agent_id` → `agent` edge). Null when the key has not been bound yet (e.g. just-issued, before associateVirtualKeyAgent runs). The 1:1 active-key-per-agent invariant is enforced by a DB partial unique index; see IssueVirtualKey / associateVirtualKeyAgent. |
 | `models` | `[String!]!` | — |
 | `maxBudget` | `Float` | — |
 | `status` | `VirtualKeyStatus!` | — |
@@ -159,6 +167,7 @@ Returned only at issue / regenerate time — carries the secret, which is never 
 | `rotationInterval` | `String` | — |
 | `spend` | `Float!` | Live spend + last-active (refreshed by the periodic worker; the console's progress bar reads these directly). |
 | `lastActiveAt` | `Time` | — |
+| `userId` | `String!` | 前端传入的 user_id,LiteLLM gateway 也用这个值作为 user_id。 必填,IssueVirtualKeyInput 强制要求前端传值,后端不做默认。 |
 
 ### IssueVirtualKeyInput
 
@@ -166,12 +175,9 @@ Returned only at issue / regenerate time — carries the secret, which is never 
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `organizationId` | `String!` | Required. Drives tenant scope + LiteLLM team routing. |
 | `name` | `String!` | Required. Human-readable label. |
 | `modelGateway` | `ID!` | Required. References the GatewayConnection that issues this key and will receive every model+route check. Resolver verifies each entry in `models` against the gateway's live model list (gatewayAvailableModels) before mint. |
-| `agentId` | `ID` | Optional. Can be left unbound at issue and later set via associateVirtualKeyAgent(virtualKeyId, agentId). |
-| `duration` | `String` | Friendly duration input. Accepts "<n>d" / "<n>h" / "<n>w" / "<n>m". When set, server computes expiresAt = now + duration. If both duration and expiresAt are provided, duration takes precedence (expiresAt is silently overridden; logged once at server side). |
-| `expiresAt` | `Time` | — |
+| `duration` | `String` | Friendly duration input. Accepts "<n>d" / "<n>h" / "<n>w" / "<n>m". The server computes expiresAt = now + duration and persists it on the returned VirtualKey. This is the ONLY way to set an expiry at issue time; callers cannot pass an absolute timestamp. |
 | `models` | `[String!]` | Optional. Models named MUST be a subset of `modelGateway`'s live model list (verified server-side via gatewayAvailableModels). Resolver 400s on stale names. Empty = omit (litellm default = no restriction). |
 | `maxBudget` | `Float` | — |
 | `budgetDuration` | `String` | — |
@@ -181,11 +187,11 @@ Returned only at issue / regenerate time — carries the secret, which is never 
 | `rpmLimitType` | `String` | — |
 | `tpmLimitType` | `String` | — |
 | `allowedRoutes` | `[String!]` | allowedRoutes — when the form's "Allow All Routes" switch is ON, the frontend OMITS this field. When OFF, it sends the explicit list. |
-| `tags` | `[String!]` | — |
-| `blocked` | `Boolean` | — |
+| `metadata` | `Map` | Auxiliary key metadata forwarded to the gateway as-is (mirrors the `metadata` map on the /key/generate wire body; see also the deploy flows that already use this for `{"agent": ...}`). Tags now live under `metadata.tags` (e.g. `{"tags": ["project:demo","env:test"]}`) rather than as a top-level field. The resolver translates back to `tags` on the persisted VirtualKey so the read-side response and the ent column remain unchanged. |
 | `keyType` | `String` | Operational / catalog metadata (LiteLLM design doc §4.2). |
 | `autoRotate` | `Boolean` | — |
 | `rotationInterval` | `String` | — |
+| `userId` | `String!` | Required. LiteLLM /key/generate 现在校验 user_id 非空。 前端必须传一个非空字符串;后端透传到 ent.VirtualKey.user_id 和 gateway.GenerateKeyRequest.UserID,不做默认值兜底。 |
 
 ### LimitType
 
@@ -210,6 +216,16 @@ RoutePermission — frontend multi-select enum mapped to /v1/* paths (LiteLLM de
 | `EMBEDDINGS` | — |
 | `IMAGES` | — |
 | `AUDIO` | — |
+
+### VirtualKeyOrderBy
+
+*Enum*
+
+| Value | Description |
+|-------|-------------|
+| `CREATED_DESC` | — |
+| `NAME_ASC` | — |
+| `NAME_DESC` | — |
 
 ### VirtualKeyStatus
 

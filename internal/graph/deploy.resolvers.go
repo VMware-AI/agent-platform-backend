@@ -164,11 +164,11 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		SetMaskedKey(maskKey(res.VirtualKey)).
 		SetModelGatewayID(t.gwConn.ID).
 		SetModels(nil).
-		SetName(ag.Name).
-		SetOrganizationID(ag.TenantID.String())
+		SetName(ag.Name)
 	if t.deployTeamID != "" {
-		// No-op after per-agent-per-org refactor: organizationId is required,
-		// but the legacy teamID context is not needed in the deploy path.
+		// No-op leftover from the per-agent-per-org refactor: deploy
+		// paths don't need a teamID context (keys belong to an agent,
+		// not a team).
 		_ = t.deployTeamID
 	}
 	if res.VirtualKeyToken != "" {

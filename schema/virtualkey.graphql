@@ -27,16 +27,18 @@ type VirtualKey {
   # Persistent, safe-to-display preview of the secret (e.g. "sk-aBcD...XyZ").
   # Always populated; updated alongside any secret change.
   maskedKey: String!
-  # Organization this key belongs to. Required. Drives both tenant
-  # isolation and LiteLLM team routing.
-  organizationId: String!
   # Nested object: the modelGateway that issued this key. Maps to the ent
   # `model_gateway_id` column (renamed from `gateway_connection_id`).
   # Required since per-agent-per-org refactor — every VirtualKey is bound
   # to exactly one modelGateway. The frontend renders this as the
   # "gateway" pill on the operator console.
   modelGateway: ModelGateway!
-  agentId: ID
+  # Nested agent object bound to this key (loaded via the ent
+  # `agent_id` → `agent` edge). Null when the key has not been bound yet
+  # (e.g. just-issued, before associateVirtualKeyAgent runs). The 1:1
+  # active-key-per-agent invariant is enforced by a DB partial unique
+  # index; see IssueVirtualKey / associateVirtualKeyAgent.
+  agent: Agent
   models: [String!]!
   maxBudget: Float
   status: VirtualKeyStatus!
@@ -68,6 +70,9 @@ type VirtualKey {
   # console's progress bar reads these directly).
   spend: Float!
   lastActiveAt: Time
+  # 前端传入的 user_id,LiteLLM gateway 也用这个值作为 user_id。
+  # 必填,IssueVirtualKeyInput 强制要求前端传值,后端不做默认。
+  userId: String!
 }
 
 # Returned only at issue / regenerate time — carries the secret, which is
@@ -86,8 +91,6 @@ enum LimitType {
 }
 
 input IssueVirtualKeyInput {
-  # Required. Drives tenant scope + LiteLLM team routing.
-  organizationId: String!
   # Required. Human-readable label.
   name: String!
   # Required. References the GatewayConnection that issues this key and
@@ -95,15 +98,11 @@ input IssueVirtualKeyInput {
   # `models` against the gateway's live model list (gatewayAvailableModels)
   # before mint.
   modelGateway: ID!
-  # Optional. Can be left unbound at issue and later set via
-  # associateVirtualKeyAgent(virtualKeyId, agentId).
-  agentId: ID
   # Friendly duration input. Accepts "<n>d" / "<n>h" / "<n>w" / "<n>m".
-  # When set, server computes expiresAt = now + duration. If both duration
-  # and expiresAt are provided, duration takes precedence (expiresAt is
-  # silently overridden; logged once at server side).
+  # The server computes expiresAt = now + duration and persists it on the
+  # returned VirtualKey. This is the ONLY way to set an expiry at issue
+  # time; callers cannot pass an absolute timestamp.
   duration: String
-  expiresAt: Time
   # Optional. Models named MUST be a subset of `modelGateway`'s live model
   # list (verified server-side via gatewayAvailableModels). Resolver 400s
   # on stale names. Empty = omit (litellm default = no restriction).
@@ -118,27 +117,80 @@ input IssueVirtualKeyInput {
   # allowedRoutes — when the form's "Allow All Routes" switch is ON, the
   # frontend OMITS this field. When OFF, it sends the explicit list.
   allowedRoutes: [String!]
-  tags: [String!]
-  blocked: Boolean
+  # Auxiliary key metadata forwarded to the gateway as-is (mirrors the
+  # `metadata` map on the /key/generate wire body; see also the deploy
+  # flows that already use this for `{"agent": ...}`). Tags now live
+  # under `metadata.tags` (e.g. `{"tags": ["project:demo","env:test"]}`)
+  # rather than as a top-level field. The resolver translates back to
+  # `tags` on the persisted VirtualKey so the read-side response and
+  # the ent column remain unchanged.
+  metadata: Map
   # Operational / catalog metadata (LiteLLM design doc §4.2).
   keyType: String
   autoRotate: Boolean
   rotationInterval: String
+  # Required. LiteLLM /key/generate 现在校验 user_id 非空。
+  # 前端必须传一个非空字符串;后端透传到 ent.VirtualKey.user_id
+  # 和 gateway.GenerateKeyRequest.UserID,不做默认值兜底。
+  userId: String!
 }
 
 extend type Query {
-  # Real-time model list for a modelGateway (calls LiteLLM /model/list on
-  # demand — no cache). Frontend uses this to populate the issue form's
+  # Distinct model names that are bound to the given modelGateway AND
+  # have at least one backend physical model in a healthy state
+  # (status ∈ {full_healthy, partial_outage}). Sourced from the
+  # `provider_models` table — the periodic health-check worker keeps
+  # `status` up to date, so this list reflects the operator-console's
+  # "what's currently usable" view. Used to populate the issue form's
   # "Models" multi-select after the operator picks a modelGateway.
   # @hasRole: read_only or admin (matches virtualKeys permissioning).
   gatewayAvailableModels(gatewayConnectionId: ID!): [String!]!
     @hasRole(any: [admin, read_only])
 
-  # organizationId, agentId, and modelGateway are independent optional
-  # filters; all null → all keys in the current tenant. Multiple set →
-  # intersection.
-  virtualKeys(organizationId: ID, agentId: ID, modelGateway: ID): [VirtualKey!]!
+  # agentName, modelGateway, nameContains, and modelContains are independent
+  # optional filters; all null → all keys in the current tenant. Multiple
+  # set → intersection.
+  # - agentName: case-insensitive substring match against the bound
+  #   agent's `name` (via virtualkey.HasAgentWith — a single subquery,
+  #   not N+1). Empty/missing `agent` rows (just-issued keys) are
+  #   excluded.
+  # - nameContains: case-insensitive substring match on the human-readable
+  #   name (ent.NameContainsFold; unindexed).
+  # - modelContains: case-insensitive substring match against ANY element
+  #   of the `models` array (raw SQL EXISTS/unnest; unindexed). Accepts a
+  #   partial model id like "gpt-4" and matches e.g. "openai/gpt-4o".
+  # orderBy defaults to CREATED_DESC (newest first); NAME_ASC / NAME_DESC
+  # sort by the human-readable name.
+  virtualKeys(
+    agentName: String,
+    modelGateway: ID,
+    nameContains: String,
+    # Exact-match on VirtualKey.name (case-sensitive, B-tree indexed via
+    # the (model_gateway_id, name) partial unique index when scoped by
+    # modelGateway; falls back to a sequential scan otherwise). Powers
+    # the issue form's live "name already exists" check before the user
+    # submits — backend still re-validates on save, this is just UX.
+    nameEquals: String,
+    modelContains: String,
+    orderBy: VirtualKeyOrderBy
+  ): [VirtualKey!]!
     @hasRole(any: [admin, read_only])
+}
+
+enum VirtualKeyOrderBy {
+  CREATED_DESC
+  NAME_ASC
+  NAME_DESC
+}
+
+# Result of `purgeRevokedVirtualKeys`. `deletedCount` is the number of
+# rows physically removed (NOT marked revoked — revoked was already
+# terminal); `oldestRemainingUpdatedAt` lets an operator decide whether
+# to schedule another purge pass — if it's still well in the past,
+# they're not done yet.
+type PurgeResult {
+  deletedCount: Int!
+  oldestRemainingUpdatedAt: Time
 }
 
 extend type Mutation {
@@ -160,4 +212,18 @@ extend type Mutation {
   # authoritative gate; the resolver also pre-checks for a clean 409).
   associateVirtualKeyAgent(virtualKeyId: ID!, agentId: ID!): VirtualKey!
     @hasPermission(perm: "key:manage")
+  # Permanently delete every VirtualKey with status=revoked AND
+  # updated_at < beforeTime. This is the only sanctioned way to
+  # physically shrink the virtual_keys table; revocation alone flips
+  # status and leaves the row in place for audit + spend history. Audit
+  # log entries that referenced the purged rows will keep their
+  # resource_id strings (audit_log has no FK) — the key detail will
+  # just become "已清除" in the audit-log viewer. Admin-only because
+  # the action is irreversible.
+  # beforeTime MUST be in the past (resolver 422s otherwise) — a
+  # future timestamp would silently delete rows updated in the next
+  # few hundred ms, which is exactly the kind of footgun admin
+  # permissions shouldn't enable.
+  purgeRevokedVirtualKeys(beforeTime: Time!): PurgeResult!
+    @hasRole(any: [admin])
 }

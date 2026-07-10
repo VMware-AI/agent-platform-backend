@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
+	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/google/uuid"
 )
 
@@ -235,6 +236,21 @@ func (_c *AgentCreate) SetNillableID(v *uuid.UUID) *AgentCreate {
 	return _c
 }
 
+// AddVirtualKeyIDs adds the "virtual_keys" edge to the VirtualKey entity by IDs.
+func (_c *AgentCreate) AddVirtualKeyIDs(ids ...uuid.UUID) *AgentCreate {
+	_c.mutation.AddVirtualKeyIDs(ids...)
+	return _c
+}
+
+// AddVirtualKeys adds the "virtual_keys" edges to the VirtualKey entity.
+func (_c *AgentCreate) AddVirtualKeys(v ...*VirtualKey) *AgentCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddVirtualKeyIDs(ids...)
+}
+
 // Mutation returns the AgentMutation object of the builder.
 func (_c *AgentCreate) Mutation() *AgentMutation {
 	return _c.mutation
@@ -429,6 +445,22 @@ func (_c *AgentCreate) createSpec() (*Agent, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.EnvironmentID(); ok {
 		_spec.SetField(agent.FieldEnvironmentID, field.TypeUUID, value)
 		_node.EnvironmentID = &value
+	}
+	if nodes := _c.mutation.VirtualKeysIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agent.VirtualKeysTable,
+			Columns: []string{agent.VirtualKeysColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(virtualkey.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

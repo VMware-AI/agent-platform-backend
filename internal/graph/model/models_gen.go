@@ -491,26 +491,23 @@ type Image struct {
 }
 
 type IssueVirtualKeyInput struct {
-	OrganizationID      string     `json:"organizationId"`
-	Name                string     `json:"name"`
-	ModelGateway        string     `json:"modelGateway"`
-	AgentID             *string    `json:"agentId,omitempty"`
-	Duration            *string    `json:"duration,omitempty"`
-	ExpiresAt           *time.Time `json:"expiresAt,omitempty"`
-	Models              []string   `json:"models,omitempty"`
-	MaxBudget           *float64   `json:"maxBudget,omitempty"`
-	BudgetDuration      *string    `json:"budgetDuration,omitempty"`
-	MaxParallelRequests *int       `json:"maxParallelRequests,omitempty"`
-	RpmLimit            *int       `json:"rpmLimit,omitempty"`
-	TpmLimit            *int       `json:"tpmLimit,omitempty"`
-	RpmLimitType        *string    `json:"rpmLimitType,omitempty"`
-	TpmLimitType        *string    `json:"tpmLimitType,omitempty"`
-	AllowedRoutes       []string   `json:"allowedRoutes,omitempty"`
-	Tags                []string   `json:"tags,omitempty"`
-	Blocked             *bool      `json:"blocked,omitempty"`
-	KeyType             *string    `json:"keyType,omitempty"`
-	AutoRotate          *bool      `json:"autoRotate,omitempty"`
-	RotationInterval    *string    `json:"rotationInterval,omitempty"`
+	Name                string         `json:"name"`
+	ModelGateway        string         `json:"modelGateway"`
+	Duration            *string        `json:"duration,omitempty"`
+	Models              []string       `json:"models,omitempty"`
+	MaxBudget           *float64       `json:"maxBudget,omitempty"`
+	BudgetDuration      *string        `json:"budgetDuration,omitempty"`
+	MaxParallelRequests *int           `json:"maxParallelRequests,omitempty"`
+	RpmLimit            *int           `json:"rpmLimit,omitempty"`
+	TpmLimit            *int           `json:"tpmLimit,omitempty"`
+	RpmLimitType        *string        `json:"rpmLimitType,omitempty"`
+	TpmLimitType        *string        `json:"tpmLimitType,omitempty"`
+	AllowedRoutes       []string       `json:"allowedRoutes,omitempty"`
+	Metadata            map[string]any `json:"metadata,omitempty"`
+	KeyType             *string        `json:"keyType,omitempty"`
+	AutoRotate          *bool          `json:"autoRotate,omitempty"`
+	RotationInterval    *string        `json:"rotationInterval,omitempty"`
+	UserID              string         `json:"userId"`
 }
 
 type IssuedVirtualKey struct {
@@ -843,8 +840,9 @@ type ProviderModelInfoConnection struct {
 }
 
 type ProviderModelInfoFilterInput struct {
-	Search *string               `json:"search,omitempty"`
-	Status *providermodel.Status `json:"status,omitempty"`
+	Search         *string               `json:"search,omitempty"`
+	Status         *providermodel.Status `json:"status,omitempty"`
+	ModelGatewayID *string               `json:"modelGatewayId,omitempty"`
 }
 
 type ProviderModelInfoSort struct {
@@ -859,6 +857,11 @@ type ProviderModelSpecBlockInput struct {
 
 type ProviderModelSpecIDInput struct {
 	SpecID string `json:"specId"`
+}
+
+type PurgeResult struct {
+	DeletedCount             int        `json:"deletedCount"`
+	OldestRemainingUpdatedAt *time.Time `json:"oldestRemainingUpdatedAt,omitempty"`
 }
 
 type Query struct {
@@ -1260,9 +1263,8 @@ type VirtualKey struct {
 	ID                  string           `json:"id"`
 	Name                string           `json:"name"`
 	MaskedKey           string           `json:"maskedKey"`
-	OrganizationID      string           `json:"organizationId"`
 	ModelGateway        *ModelGateway    `json:"modelGateway"`
-	AgentID             *string          `json:"agentId,omitempty"`
+	Agent               *Agent           `json:"agent,omitempty"`
 	Models              []string         `json:"models"`
 	MaxBudget           *float64         `json:"maxBudget,omitempty"`
 	Status              VirtualKeyStatus `json:"status"`
@@ -1284,6 +1286,7 @@ type VirtualKey struct {
 	RotationInterval    *string          `json:"rotationInterval,omitempty"`
 	Spend               float64          `json:"spend"`
 	LastActiveAt        *time.Time       `json:"lastActiveAt,omitempty"`
+	UserID              string           `json:"userId"`
 }
 
 type VsphereNetwork struct {
@@ -2624,18 +2627,20 @@ func (e PasswordMode) MarshalJSON() ([]byte, error) {
 type ProviderModelInfoSortField string
 
 const (
-	ProviderModelInfoSortFieldName   ProviderModelInfoSortField = "NAME"
-	ProviderModelInfoSortFieldStatus ProviderModelInfoSortField = "STATUS"
+	ProviderModelInfoSortFieldName    ProviderModelInfoSortField = "NAME"
+	ProviderModelInfoSortFieldStatus  ProviderModelInfoSortField = "STATUS"
+	ProviderModelInfoSortFieldGateway ProviderModelInfoSortField = "GATEWAY"
 )
 
 var AllProviderModelInfoSortField = []ProviderModelInfoSortField{
 	ProviderModelInfoSortFieldName,
 	ProviderModelInfoSortFieldStatus,
+	ProviderModelInfoSortFieldGateway,
 }
 
 func (e ProviderModelInfoSortField) IsValid() bool {
 	switch e {
-	case ProviderModelInfoSortFieldName, ProviderModelInfoSortFieldStatus:
+	case ProviderModelInfoSortFieldName, ProviderModelInfoSortFieldStatus, ProviderModelInfoSortFieldGateway:
 		return true
 	}
 	return false
@@ -3322,6 +3327,63 @@ func (e *UserSortField) UnmarshalJSON(b []byte) error {
 }
 
 func (e UserSortField) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type VirtualKeyOrderBy string
+
+const (
+	VirtualKeyOrderByCreatedDesc VirtualKeyOrderBy = "CREATED_DESC"
+	VirtualKeyOrderByNameAsc     VirtualKeyOrderBy = "NAME_ASC"
+	VirtualKeyOrderByNameDesc    VirtualKeyOrderBy = "NAME_DESC"
+)
+
+var AllVirtualKeyOrderBy = []VirtualKeyOrderBy{
+	VirtualKeyOrderByCreatedDesc,
+	VirtualKeyOrderByNameAsc,
+	VirtualKeyOrderByNameDesc,
+}
+
+func (e VirtualKeyOrderBy) IsValid() bool {
+	switch e {
+	case VirtualKeyOrderByCreatedDesc, VirtualKeyOrderByNameAsc, VirtualKeyOrderByNameDesc:
+		return true
+	}
+	return false
+}
+
+func (e VirtualKeyOrderBy) String() string {
+	return string(e)
+}
+
+func (e *VirtualKeyOrderBy) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = VirtualKeyOrderBy(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid VirtualKeyOrderBy", str)
+	}
+	return nil
+}
+
+func (e VirtualKeyOrderBy) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *VirtualKeyOrderBy) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e VirtualKeyOrderBy) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

@@ -171,7 +171,7 @@ func (r *mutationResolver) devDeployAgent(ctx context.Context, ag *ent.Agent, t 
 		UserID:   ag.OwnerUserID.String(),
 		TeamID:   t.deployTeamID,
 		Models:   nil,
-		Metadata: map[string]string{"agent": ag.Name},
+		Metadata: map[string]any{"agent": ag.Name},
 	})
 	if err != nil {
 		r.deleteAgentRow(ctx, ag)
@@ -182,11 +182,11 @@ func (r *mutationResolver) devDeployAgent(ctx context.Context, ag *ent.Agent, t 
 		SetLitellmKey(key.Key).
 		SetModelGatewayID(t.gwConn.ID).
 		SetModels(nil).
-		SetName(ag.Name).
-		SetOrganizationID(ag.TenantID.String())
+		SetName(ag.Name)
 	if t.deployTeamID != "" {
-		// No-op after per-agent-per-org refactor: organizationId is required,
-		// but the legacy teamID context is not needed in the deploy path.
+		// No-op leftover from the per-agent-per-org refactor: deploy
+		// paths don't need a teamID context (keys belong to an agent,
+		// not a team).
 		_ = t.deployTeamID
 	}
 	if key.Token != "" {

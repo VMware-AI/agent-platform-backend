@@ -42,6 +42,8 @@ FOLDERS = [
 ]
 
 OP_RE = re.compile(r"(query|mutation)\s+(\w+)(?:\s*\(([^)]*)\))?\s*\{")
+FRAGMENT_RE = re.compile(r"fragment\s+(\w+)\s+on\s+\w+\s*\{", re.MULTILINE)
+SPREAD_RE = re.compile(r"\.\.\.(\w+)\b")
 
 # Variables the Login request must prefill to make the captured token useful.
 LOGIN_VARIABLES = {
@@ -67,11 +69,19 @@ def variables_for(op_name: str, var_block: str) -> dict:
         part = part.strip()
         if not part:
             continue
+        # Strip a default value (`name: Type = default`) — Postman only needs
+        # a stub for the typed variable; the default would be ignored anyway.
+        if "=" in part:
+            part = part.split("=", 1)[0].strip()
         name_type = part.split(":", 1)
         if len(name_type) != 2:
             continue
-        name, ty = name_type[0].strip(), name_type[1].strip()
-        out[name] = _stub_for(ty)
+        name = name_type[0].strip()
+        if name.startswith("$"):
+            name = name[1:]
+        if not name:
+            continue
+        out[name] = _stub_for(name_type[1].strip())
     return out
 
 
@@ -97,14 +107,144 @@ def _stub_for(ty: str):
 
 def parse_fixture(path: Path):
     text = path.read_text()
-    m = OP_RE.search(text)
+    # Extract any `fragment Name on T { ... }` blocks first so they can be
+    # inlined into the operation body below. The fixtures keep fragments
+    # outside the operation (a frontend-snapshot convention) but Postman
+    # sends the query verbatim, so a fragment defined after the closing
+    # `}` is out of scope and `...Name` spreads resolve to nothing.
+    fragments = _extract_fragments(text)
+    body_without_fragments = _strip_fragments(text)
+    m = OP_RE.search(body_without_fragments)
     if not m:
         return None
     kind, name, var_block = m.group(1), m.group(2), (m.group(3) or "").strip()
-    # Body is the whole text after the opening `{` until the matching `}`.
-    # For multi-line fixtures we use the raw text minus the op header.
-    body = text.strip()
-    return kind, name, var_block, body
+    op_body = _inline_spreads(body_without_fragments, fragments)
+    return kind, name, var_block, op_body
+
+
+def _extract_fragments(text: str) -> dict:
+    """Return {FragmentName: inner body string} for every `fragment X on T { ... }`
+    block in the text. Handles top-level balanced braces only — sufficient for
+    these snapshots (no fragment spreads inside fragments). The inner body is
+    NOT stripped, so its leading whitespace (which `_indent_fragment` needs to
+    align subsequent lines) is preserved verbatim."""
+    out = {}
+    for m in FRAGMENT_RE.finditer(text):
+        name = m.group(1)
+        start = m.end()  # position right after the opening `{`
+        depth = 1
+        i = start
+        while i < len(text) and depth:
+            c = text[i]
+            if c == "{":
+                depth += 1
+            elif c == "}":
+                depth -= 1
+            i += 1
+        if depth != 0:
+            continue  # malformed; ignore rather than crash
+        inner = text[start : i - 1]
+        out[name] = inner
+    return out
+
+
+def _strip_fragments(text: str) -> str:
+    """Remove top-level `fragment X on T { ... }` blocks from the text, leaving
+    the operation document otherwise untouched. The resulting string still
+    parses as a single operation if at least one op is present."""
+    out = []
+    i = 0
+    n = len(text)
+    last = 0
+    while i < n:
+        m = FRAGMENT_RE.search(text, i)
+        if not m:
+            out.append(text[last:])
+            break
+        out.append(text[last : m.start()])
+        # Skip the matched fragment and its balanced body.
+        depth = 1
+        j = m.end()
+        while j < n and depth:
+            c = text[j]
+            if c == "{":
+                depth += 1
+            elif c == "}":
+                depth -= 1
+            j += 1
+        last = j
+        i = j
+    return "".join(out).strip()
+
+
+def _inline_spreads(text, fragments, _seen=None):
+    """Replace each `...FragmentName` in the op body with that fragment's inner
+    field list, preserving the original indentation. Recurses so a fragment
+    whose body itself contains a `...Other` spread also gets inlined (the
+    current fixtures don't do this, but it's cheap to support)."""
+    if _seen is None:
+        _seen = set()
+
+    def replace(match: re.Match) -> str:
+        name = match.group(1)
+        if name not in fragments:
+            return match.group(0)  # leave it; the server will error and the dev will notice
+        if name in _seen:
+            return match.group(0)  # cycle guard
+        body = _indent_fragment(fragments[name], match.start(), text)
+        # Recurse into the inlined body to resolve nested spreads.
+        body = _inline_spreads(body, fragments, _seen | {name})
+        return body
+
+    return SPREAD_RE.sub(replace, text)
+
+
+def _indent_fragment(fragment_body: str, spread_start: int, source: str) -> str:
+    """Indent a fragment's field list to match the column where the `...Name`
+    spread began, so the inlined text aligns with the surrounding selection
+    set.
+
+    The fragment body is the text between the fragment's `{` and matching
+    `}` (no header, no closing brace). Inside the fragment, the first
+    non-empty line sits at some column (the fragment's "base indent") and
+    later lines keep their indentation relative to that base.
+
+    The returned text REPLACES the `...Name` spread in the source. The
+    source line already has leading whitespace of its own (e.g. 6 spaces
+    before `...VirtualKeyFields`), so the first inlined line should start
+    at the SPREAD's column with no extra leading indent — the surrounding
+    whitespace does that work. Subsequent lines then need to sit at the same
+    column the first line lands on, so multi-line fields stay aligned with
+    each other. We achieve that by prefixing each subsequent line with the
+    original spread leading-whitespace, then adding the fragment's own
+    relative indent (subsequent indent minus first-line indent)."""
+    line_start = source.rfind("\n", 0, spread_start) + 1
+    leading_ws = source[line_start:spread_start]  # the spread's leading whitespace
+    raw_lines = fragment_body.splitlines()
+    # Drop blank lines at the edges; the remaining lines all carry their own
+    # relative indent within the fragment.
+    while raw_lines and not raw_lines[0].strip():
+        raw_lines.pop(0)
+    while raw_lines and not raw_lines[-1].strip():
+        raw_lines.pop()
+    if not raw_lines:
+        return ""
+    # First line: emit the content with no leading indent. The source's
+    # `leading_ws` (already in place before the spread) provides the column.
+    out = [raw_lines[0].lstrip()]
+    # Subsequent lines: shift each by the difference between its current
+    # indent and the first line's, so a multi-level fragment keeps its shape
+    # relative to the first field, then prefix with the spread's leading_ws
+    # so the line lands at the same column the first line did.
+    first_indent_len = len(raw_lines[0]) - len(raw_lines[0].lstrip())
+    for ln in raw_lines[1:]:
+        if not ln.strip():
+            out.append("")
+            continue
+        cur_indent = len(ln) - len(ln.lstrip())
+        rel = max(cur_indent - first_indent_len, 0)
+        out.append(leading_ws + (" " * rel) + ln.lstrip())
+    return "\n".join(out)
 
 
 def make_request(name: str, kind: str, var_block: str, body: str) -> dict:

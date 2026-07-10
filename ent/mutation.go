@@ -106,6 +106,9 @@ type AgentMutation struct {
 	tenant_id           *uuid.UUID
 	environment_id      *uuid.UUID
 	clearedFields       map[string]struct{}
+	virtual_keys        map[uuid.UUID]struct{}
+	removedvirtual_keys map[uuid.UUID]struct{}
+	clearedvirtual_keys bool
 	done                bool
 	oldValue            func(context.Context) (*Agent, error)
 	predicates          []predicate.Agent
@@ -921,6 +924,60 @@ func (m *AgentMutation) ResetEnvironmentID() {
 	delete(m.clearedFields, agent.FieldEnvironmentID)
 }
 
+// AddVirtualKeyIDs adds the "virtual_keys" edge to the VirtualKey entity by ids.
+func (m *AgentMutation) AddVirtualKeyIDs(ids ...uuid.UUID) {
+	if m.virtual_keys == nil {
+		m.virtual_keys = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.virtual_keys[ids[i]] = struct{}{}
+	}
+}
+
+// ClearVirtualKeys clears the "virtual_keys" edge to the VirtualKey entity.
+func (m *AgentMutation) ClearVirtualKeys() {
+	m.clearedvirtual_keys = true
+}
+
+// VirtualKeysCleared reports if the "virtual_keys" edge to the VirtualKey entity was cleared.
+func (m *AgentMutation) VirtualKeysCleared() bool {
+	return m.clearedvirtual_keys
+}
+
+// RemoveVirtualKeyIDs removes the "virtual_keys" edge to the VirtualKey entity by IDs.
+func (m *AgentMutation) RemoveVirtualKeyIDs(ids ...uuid.UUID) {
+	if m.removedvirtual_keys == nil {
+		m.removedvirtual_keys = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.virtual_keys, ids[i])
+		m.removedvirtual_keys[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedVirtualKeys returns the removed IDs of the "virtual_keys" edge to the VirtualKey entity.
+func (m *AgentMutation) RemovedVirtualKeysIDs() (ids []uuid.UUID) {
+	for id := range m.removedvirtual_keys {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// VirtualKeysIDs returns the "virtual_keys" edge IDs in the mutation.
+func (m *AgentMutation) VirtualKeysIDs() (ids []uuid.UUID) {
+	for id := range m.virtual_keys {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetVirtualKeys resets all changes to the "virtual_keys" edge.
+func (m *AgentMutation) ResetVirtualKeys() {
+	m.virtual_keys = nil
+	m.clearedvirtual_keys = false
+	m.removedvirtual_keys = nil
+}
+
 // Where appends a list predicates to the AgentMutation builder.
 func (m *AgentMutation) Where(ps ...predicate.Agent) {
 	m.predicates = append(m.predicates, ps...)
@@ -1372,49 +1429,85 @@ func (m *AgentMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *AgentMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.virtual_keys != nil {
+		edges = append(edges, agent.EdgeVirtualKeys)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *AgentMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case agent.EdgeVirtualKeys:
+		ids := make([]ent.Value, 0, len(m.virtual_keys))
+		for id := range m.virtual_keys {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *AgentMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.removedvirtual_keys != nil {
+		edges = append(edges, agent.EdgeVirtualKeys)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *AgentMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case agent.EdgeVirtualKeys:
+		ids := make([]ent.Value, 0, len(m.removedvirtual_keys))
+		for id := range m.removedvirtual_keys {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *AgentMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedvirtual_keys {
+		edges = append(edges, agent.EdgeVirtualKeys)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *AgentMutation) EdgeCleared(name string) bool {
+	switch name {
+	case agent.EdgeVirtualKeys:
+		return m.clearedvirtual_keys
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *AgentMutation) ClearEdge(name string) error {
+	switch name {
+	}
 	return fmt.Errorf("unknown Agent unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *AgentMutation) ResetEdge(name string) error {
+	switch name {
+	case agent.EdgeVirtualKeys:
+		m.ResetVirtualKeys()
+		return nil
+	}
 	return fmt.Errorf("unknown Agent edge %s", name)
 }
 
@@ -22726,8 +22819,6 @@ type VirtualKeyMutation struct {
 	litellm_token            *string
 	masked_key               *string
 	name                     *string
-	organization_id          *string
-	agent_id                 *uuid.UUID
 	model_gateway_id         *uuid.UUID
 	models                   *[]string
 	appendmodels             []string
@@ -22752,10 +22843,13 @@ type VirtualKeyMutation struct {
 	key_type                 *string
 	auto_rotate              *bool
 	rotation_interval        *string
+	user_id                  *string
 	last_active_at           *time.Time
 	spend                    *int
 	addspend                 *int
 	clearedFields            map[string]struct{}
+	agent                    *uuid.UUID
+	clearedagent             bool
 	done                     bool
 	oldValue                 func(context.Context) (*VirtualKey, error)
 	predicates               []predicate.VirtualKey
@@ -23094,50 +23188,14 @@ func (m *VirtualKeyMutation) ResetName() {
 	m.name = nil
 }
 
-// SetOrganizationID sets the "organization_id" field.
-func (m *VirtualKeyMutation) SetOrganizationID(s string) {
-	m.organization_id = &s
-}
-
-// OrganizationID returns the value of the "organization_id" field in the mutation.
-func (m *VirtualKeyMutation) OrganizationID() (r string, exists bool) {
-	v := m.organization_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldOrganizationID returns the old "organization_id" field's value of the VirtualKey entity.
-// If the VirtualKey object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *VirtualKeyMutation) OldOrganizationID(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldOrganizationID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldOrganizationID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldOrganizationID: %w", err)
-	}
-	return oldValue.OrganizationID, nil
-}
-
-// ResetOrganizationID resets all changes to the "organization_id" field.
-func (m *VirtualKeyMutation) ResetOrganizationID() {
-	m.organization_id = nil
-}
-
 // SetAgentID sets the "agent_id" field.
 func (m *VirtualKeyMutation) SetAgentID(u uuid.UUID) {
-	m.agent_id = &u
+	m.agent = &u
 }
 
 // AgentID returns the value of the "agent_id" field in the mutation.
 func (m *VirtualKeyMutation) AgentID() (r uuid.UUID, exists bool) {
-	v := m.agent_id
+	v := m.agent
 	if v == nil {
 		return
 	}
@@ -23163,7 +23221,7 @@ func (m *VirtualKeyMutation) OldAgentID(ctx context.Context) (v *uuid.UUID, err 
 
 // ClearAgentID clears the value of the "agent_id" field.
 func (m *VirtualKeyMutation) ClearAgentID() {
-	m.agent_id = nil
+	m.agent = nil
 	m.clearedFields[virtualkey.FieldAgentID] = struct{}{}
 }
 
@@ -23175,7 +23233,7 @@ func (m *VirtualKeyMutation) AgentIDCleared() bool {
 
 // ResetAgentID resets all changes to the "agent_id" field.
 func (m *VirtualKeyMutation) ResetAgentID() {
-	m.agent_id = nil
+	m.agent = nil
 	delete(m.clearedFields, virtualkey.FieldAgentID)
 }
 
@@ -24079,6 +24137,42 @@ func (m *VirtualKeyMutation) ResetRotationInterval() {
 	delete(m.clearedFields, virtualkey.FieldRotationInterval)
 }
 
+// SetUserID sets the "user_id" field.
+func (m *VirtualKeyMutation) SetUserID(s string) {
+	m.user_id = &s
+}
+
+// UserID returns the value of the "user_id" field in the mutation.
+func (m *VirtualKeyMutation) UserID() (r string, exists bool) {
+	v := m.user_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUserID returns the old "user_id" field's value of the VirtualKey entity.
+// If the VirtualKey object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VirtualKeyMutation) OldUserID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUserID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUserID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUserID: %w", err)
+	}
+	return oldValue.UserID, nil
+}
+
+// ResetUserID resets all changes to the "user_id" field.
+func (m *VirtualKeyMutation) ResetUserID() {
+	m.user_id = nil
+}
+
 // SetLastActiveAt sets the "last_active_at" field.
 func (m *VirtualKeyMutation) SetLastActiveAt(t time.Time) {
 	m.last_active_at = &t
@@ -24198,6 +24292,33 @@ func (m *VirtualKeyMutation) ResetSpend() {
 	delete(m.clearedFields, virtualkey.FieldSpend)
 }
 
+// ClearAgent clears the "agent" edge to the Agent entity.
+func (m *VirtualKeyMutation) ClearAgent() {
+	m.clearedagent = true
+	m.clearedFields[virtualkey.FieldAgentID] = struct{}{}
+}
+
+// AgentCleared reports if the "agent" edge to the Agent entity was cleared.
+func (m *VirtualKeyMutation) AgentCleared() bool {
+	return m.AgentIDCleared() || m.clearedagent
+}
+
+// AgentIDs returns the "agent" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// AgentID instead. It exists only for internal usage by the builders.
+func (m *VirtualKeyMutation) AgentIDs() (ids []uuid.UUID) {
+	if id := m.agent; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetAgent resets all changes to the "agent" edge.
+func (m *VirtualKeyMutation) ResetAgent() {
+	m.agent = nil
+	m.clearedagent = false
+}
+
 // Where appends a list predicates to the VirtualKeyMutation builder.
 func (m *VirtualKeyMutation) Where(ps ...predicate.VirtualKey) {
 	m.predicates = append(m.predicates, ps...)
@@ -24251,10 +24372,7 @@ func (m *VirtualKeyMutation) Fields() []string {
 	if m.name != nil {
 		fields = append(fields, virtualkey.FieldName)
 	}
-	if m.organization_id != nil {
-		fields = append(fields, virtualkey.FieldOrganizationID)
-	}
-	if m.agent_id != nil {
+	if m.agent != nil {
 		fields = append(fields, virtualkey.FieldAgentID)
 	}
 	if m.model_gateway_id != nil {
@@ -24308,6 +24426,9 @@ func (m *VirtualKeyMutation) Fields() []string {
 	if m.rotation_interval != nil {
 		fields = append(fields, virtualkey.FieldRotationInterval)
 	}
+	if m.user_id != nil {
+		fields = append(fields, virtualkey.FieldUserID)
+	}
 	if m.last_active_at != nil {
 		fields = append(fields, virtualkey.FieldLastActiveAt)
 	}
@@ -24334,8 +24455,6 @@ func (m *VirtualKeyMutation) Field(name string) (ent.Value, bool) {
 		return m.MaskedKey()
 	case virtualkey.FieldName:
 		return m.Name()
-	case virtualkey.FieldOrganizationID:
-		return m.OrganizationID()
 	case virtualkey.FieldAgentID:
 		return m.AgentID()
 	case virtualkey.FieldModelGatewayID:
@@ -24372,6 +24491,8 @@ func (m *VirtualKeyMutation) Field(name string) (ent.Value, bool) {
 		return m.AutoRotate()
 	case virtualkey.FieldRotationInterval:
 		return m.RotationInterval()
+	case virtualkey.FieldUserID:
+		return m.UserID()
 	case virtualkey.FieldLastActiveAt:
 		return m.LastActiveAt()
 	case virtualkey.FieldSpend:
@@ -24397,8 +24518,6 @@ func (m *VirtualKeyMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldMaskedKey(ctx)
 	case virtualkey.FieldName:
 		return m.OldName(ctx)
-	case virtualkey.FieldOrganizationID:
-		return m.OldOrganizationID(ctx)
 	case virtualkey.FieldAgentID:
 		return m.OldAgentID(ctx)
 	case virtualkey.FieldModelGatewayID:
@@ -24435,6 +24554,8 @@ func (m *VirtualKeyMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldAutoRotate(ctx)
 	case virtualkey.FieldRotationInterval:
 		return m.OldRotationInterval(ctx)
+	case virtualkey.FieldUserID:
+		return m.OldUserID(ctx)
 	case virtualkey.FieldLastActiveAt:
 		return m.OldLastActiveAt(ctx)
 	case virtualkey.FieldSpend:
@@ -24489,13 +24610,6 @@ func (m *VirtualKeyMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetName(v)
-		return nil
-	case virtualkey.FieldOrganizationID:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetOrganizationID(v)
 		return nil
 	case virtualkey.FieldAgentID:
 		v, ok := value.(uuid.UUID)
@@ -24622,6 +24736,13 @@ func (m *VirtualKeyMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetRotationInterval(v)
+		return nil
+	case virtualkey.FieldUserID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUserID(v)
 		return nil
 	case virtualkey.FieldLastActiveAt:
 		v, ok := value.(time.Time)
@@ -24866,9 +24987,6 @@ func (m *VirtualKeyMutation) ResetField(name string) error {
 	case virtualkey.FieldName:
 		m.ResetName()
 		return nil
-	case virtualkey.FieldOrganizationID:
-		m.ResetOrganizationID()
-		return nil
 	case virtualkey.FieldAgentID:
 		m.ResetAgentID()
 		return nil
@@ -24923,6 +25041,9 @@ func (m *VirtualKeyMutation) ResetField(name string) error {
 	case virtualkey.FieldRotationInterval:
 		m.ResetRotationInterval()
 		return nil
+	case virtualkey.FieldUserID:
+		m.ResetUserID()
+		return nil
 	case virtualkey.FieldLastActiveAt:
 		m.ResetLastActiveAt()
 		return nil
@@ -24935,19 +25056,28 @@ func (m *VirtualKeyMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *VirtualKeyMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.agent != nil {
+		edges = append(edges, virtualkey.EdgeAgent)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *VirtualKeyMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case virtualkey.EdgeAgent:
+		if id := m.agent; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *VirtualKeyMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
 	return edges
 }
 
@@ -24959,24 +25089,41 @@ func (m *VirtualKeyMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *VirtualKeyMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedagent {
+		edges = append(edges, virtualkey.EdgeAgent)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *VirtualKeyMutation) EdgeCleared(name string) bool {
+	switch name {
+	case virtualkey.EdgeAgent:
+		return m.clearedagent
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *VirtualKeyMutation) ClearEdge(name string) error {
+	switch name {
+	case virtualkey.EdgeAgent:
+		m.ClearAgent()
+		return nil
+	}
 	return fmt.Errorf("unknown VirtualKey unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *VirtualKeyMutation) ResetEdge(name string) error {
+	switch name {
+	case virtualkey.EdgeAgent:
+		m.ResetAgent()
+		return nil
+	}
 	return fmt.Errorf("unknown VirtualKey edge %s", name)
 }
