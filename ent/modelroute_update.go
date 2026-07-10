@@ -111,20 +111,6 @@ func (_u *ModelRouteUpdate) SetNillableStrategy(v *modelroute.Strategy) *ModelRo
 	return _u
 }
 
-// SetUIStrategy sets the "ui_strategy" field.
-func (_u *ModelRouteUpdate) SetUIStrategy(v modelroute.UIStrategy) *ModelRouteUpdate {
-	_u.mutation.SetUIStrategy(v)
-	return _u
-}
-
-// SetNillableUIStrategy sets the "ui_strategy" field if the given value is not nil.
-func (_u *ModelRouteUpdate) SetNillableUIStrategy(v *modelroute.UIStrategy) *ModelRouteUpdate {
-	if v != nil {
-		_u.SetUIStrategy(*v)
-	}
-	return _u
-}
-
 // SetEnabled sets the "enabled" field.
 func (_u *ModelRouteUpdate) SetEnabled(v bool) *ModelRouteUpdate {
 	_u.mutation.SetEnabled(v)
@@ -251,11 +237,6 @@ func (_u *ModelRouteUpdate) check() error {
 			return &ValidationError{Name: "strategy", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.strategy": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.UIStrategy(); ok {
-		if err := modelroute.UIStrategyValidator(v); err != nil {
-			return &ValidationError{Name: "ui_strategy", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.ui_strategy": %w`, err)}
-		}
-	}
 	return nil
 }
 
@@ -302,9 +283,6 @@ func (_u *ModelRouteUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if value, ok := _u.mutation.Strategy(); ok {
 		_spec.SetField(modelroute.FieldStrategy, field.TypeEnum, value)
-	}
-	if value, ok := _u.mutation.UIStrategy(); ok {
-		_spec.SetField(modelroute.FieldUIStrategy, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(modelroute.FieldEnabled, field.TypeBool, value)
@@ -440,20 +418,6 @@ func (_u *ModelRouteUpdateOne) SetStrategy(v modelroute.Strategy) *ModelRouteUpd
 func (_u *ModelRouteUpdateOne) SetNillableStrategy(v *modelroute.Strategy) *ModelRouteUpdateOne {
 	if v != nil {
 		_u.SetStrategy(*v)
-	}
-	return _u
-}
-
-// SetUIStrategy sets the "ui_strategy" field.
-func (_u *ModelRouteUpdateOne) SetUIStrategy(v modelroute.UIStrategy) *ModelRouteUpdateOne {
-	_u.mutation.SetUIStrategy(v)
-	return _u
-}
-
-// SetNillableUIStrategy sets the "ui_strategy" field if the given value is not nil.
-func (_u *ModelRouteUpdateOne) SetNillableUIStrategy(v *modelroute.UIStrategy) *ModelRouteUpdateOne {
-	if v != nil {
-		_u.SetUIStrategy(*v)
 	}
 	return _u
 }
@@ -597,11 +561,6 @@ func (_u *ModelRouteUpdateOne) check() error {
 			return &ValidationError{Name: "strategy", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.strategy": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.UIStrategy(); ok {
-		if err := modelroute.UIStrategyValidator(v); err != nil {
-			return &ValidationError{Name: "ui_strategy", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.ui_strategy": %w`, err)}
-		}
-	}
 	return nil
 }
 
@@ -665,9 +624,6 @@ func (_u *ModelRouteUpdateOne) sqlSave(ctx context.Context) (_node *ModelRoute, 
 	}
 	if value, ok := _u.mutation.Strategy(); ok {
 		_spec.SetField(modelroute.FieldStrategy, field.TypeEnum, value)
-	}
-	if value, ok := _u.mutation.UIStrategy(); ok {
-		_spec.SetField(modelroute.FieldUIStrategy, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(modelroute.FieldEnabled, field.TypeBool, value)

@@ -48,9 +48,6 @@ func (r *mutationResolver) CreateModelRoute(ctx context.Context, input model.Cre
 	if input.Strategy != nil {
 		c.SetStrategy(modelroute.Strategy(string(*input.Strategy)))
 	}
-	if input.UIStrategy != nil {
-		c.SetUIStrategy(modelroute.UIStrategy(*input.UIStrategy))
-	}
 	if input.Enabled != nil {
 		c.SetEnabled(*input.Enabled)
 	}
@@ -103,8 +100,8 @@ func (r *mutationResolver) UpdateModelRoute(ctx context.Context, id string, inpu
 	if input.SupportedModels != nil {
 		u.SetUpstreams(input.SupportedModels)
 	}
-	if input.UIStrategy != nil {
-		u.SetUIStrategy(modelroute.UIStrategy(*input.UIStrategy))
+	if input.Strategy != nil {
+		u.SetStrategy(modelroute.Strategy(string(*input.Strategy)))
 	}
 	if input.Enabled != nil {
 		u.SetEnabled(*input.Enabled)

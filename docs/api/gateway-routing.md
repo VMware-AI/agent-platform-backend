@@ -100,8 +100,7 @@ syncRouterSettings: Boolean!
 | `modelGateway` | `ModelGateway!` | Required: the litellm gateway this route is hosted on. The router-settings push targets this gateway (no platform default fallback). |
 | `upstreams` | `[String!]!` | — |
 | `supportedModels` | `[String!]!` | Console alias for `upstreams` — the models this route can serve (模型路由 page). |
-| `strategy` | `LoadBalancingStrategy!` | — |
-| `uiStrategy` | `ModelRouteStrategy!` | Console-facing load-balancing strategy (模型路由 page). |
+| `strategy` | `LoadBalancingStrategy!` | The litellm LoadBalanceStrategy applied at push time. The console form exposes only the friendly values (round-robin / weighted / random); the backend translates these into the litellm enum below and persists here. |
 | `enabled` | `Boolean!` | — |
 | `createdAt` | `Time!` | — |
 | `updatedAt` | `Time!` | — |
@@ -121,7 +120,6 @@ Console 模型路由 create form (创建路由). modelAlias is set to name; supp
 | `modelGatewayId` | `ID!` | — |
 | `supportedModels` | `[String!]` | — |
 | `strategy` | `LoadBalancingStrategy` | — |
-| `uiStrategy` | `ModelRouteStrategy` | — |
 | `enabled` | `Boolean` | — |
 | `fallbacks` | `[String!]` | — |
 | `contextWindowFallbacks` | `[String!]` | — |
@@ -138,20 +136,8 @@ Console 模型路由 edit form (编辑路由). All fields optional — only set 
 | `name` | `String` | — |
 | `modelGatewayId` | `ID` | — |
 | `supportedModels` | `[String!]` | — |
-| `uiStrategy` | `ModelRouteStrategy` | — |
+| `strategy` | `LoadBalancingStrategy` | — |
 | `enabled` | `Boolean` | — |
 | `fallbacks` | `[String!]` | — |
 | `contextWindowFallbacks` | `[String!]` | — |
 | `contentPolicyFallbacks` | `[String!]` | — |
-
-### ModelRouteStrategy
-
-*Enum*
-
-Console-facing load-balancing strategy for a model route (模型路由 page). Distinct from the litellm LoadBalanceStrategy: a friendly, gateway-agnostic choice the operator picks in the UI and the backend round-trips verbatim.
-
-| Value | Description |
-|-------|-------------|
-| `ROUND_ROBIN` | — |
-| `WEIGHTED_ROUND_ROBIN` | — |
-| `RANDOM` | — |

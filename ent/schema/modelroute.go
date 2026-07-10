@@ -34,14 +34,6 @@ func (ModelRoute) Fields() []ent.Field {
 		field.Enum("strategy").
 			Values("SIMPLE_SHUFFLE", "LEAST_BUSY", "LATENCY_BASED_ROUTING", "USAGE_BASED_ROUTING_V2", "COST_BASED_ROUTING").
 			Default("SIMPLE_SHUFFLE"),
-		// Console-facing load-balancing strategy (模型路由 page): a friendly,
-		// gateway-agnostic enum distinct from `strategy` above (the console
-		// exposes it as a small choice list separate from the litellm routing
-		// strategies). Persisted so the console round-trips exactly what the
-		// operator picked.
-		field.Enum("ui_strategy").
-			Values("ROUND_ROBIN", "WEIGHTED_ROUND_ROBIN", "RANDOM").
-			Default("ROUND_ROBIN"),
 		field.Bool("enabled").Default(true),
 		// Fallback chains surfaced to litellm via POST /config/update. Three
 		// independent lists map 1:1 to the doc's three fallback kinds (general /

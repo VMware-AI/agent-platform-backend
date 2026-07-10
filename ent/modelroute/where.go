@@ -365,26 +365,6 @@ func StrategyNotIn(vs ...Strategy) predicate.ModelRoute {
 	return predicate.ModelRoute(sql.FieldNotIn(FieldStrategy, vs...))
 }
 
-// UIStrategyEQ applies the EQ predicate on the "ui_strategy" field.
-func UIStrategyEQ(v UIStrategy) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldEQ(FieldUIStrategy, v))
-}
-
-// UIStrategyNEQ applies the NEQ predicate on the "ui_strategy" field.
-func UIStrategyNEQ(v UIStrategy) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldNEQ(FieldUIStrategy, v))
-}
-
-// UIStrategyIn applies the In predicate on the "ui_strategy" field.
-func UIStrategyIn(vs ...UIStrategy) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldIn(FieldUIStrategy, vs...))
-}
-
-// UIStrategyNotIn applies the NotIn predicate on the "ui_strategy" field.
-func UIStrategyNotIn(vs ...UIStrategy) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldNotIn(FieldUIStrategy, vs...))
-}
-
 // EnabledEQ applies the EQ predicate on the "enabled" field.
 func EnabledEQ(v bool) predicate.ModelRoute {
 	return predicate.ModelRoute(sql.FieldEQ(FieldEnabled, v))

@@ -328,7 +328,6 @@ var (
 		{Name: "model_gateway_id", Type: field.TypeUUID},
 		{Name: "upstreams", Type: field.TypeJSON, Nullable: true},
 		{Name: "strategy", Type: field.TypeEnum, Enums: []string{"SIMPLE_SHUFFLE", "LEAST_BUSY", "LATENCY_BASED_ROUTING", "USAGE_BASED_ROUTING_V2", "COST_BASED_ROUTING"}, Default: "SIMPLE_SHUFFLE"},
-		{Name: "ui_strategy", Type: field.TypeEnum, Enums: []string{"ROUND_ROBIN", "WEIGHTED_ROUND_ROBIN", "RANDOM"}, Default: "ROUND_ROBIN"},
 		{Name: "enabled", Type: field.TypeBool, Default: true},
 		{Name: "fallbacks", Type: field.TypeJSON, Nullable: true},
 		{Name: "context_window_fallbacks", Type: field.TypeJSON, Nullable: true},

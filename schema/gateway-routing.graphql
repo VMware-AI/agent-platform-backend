@@ -6,15 +6,6 @@
 # ProviderModel CRUD + the GatewayConnection surface live in their own
 # modules; this file only contains routing topology.
 
-# Console-facing load-balancing strategy for a model route (模型路由 page). Distinct
-# from the litellm LoadBalanceStrategy: a friendly, gateway-agnostic choice the
-# operator picks in the UI and the backend round-trips verbatim.
-enum ModelRouteStrategy {
-  ROUND_ROBIN
-  WEIGHTED_ROUND_ROBIN
-  RANDOM
-}
-
 type ModelRoute {
   id: ID!
   name: String!
@@ -25,9 +16,10 @@ type ModelRoute {
   upstreams: [String!]!
   # Console alias for `upstreams` — the models this route can serve (模型路由 page).
   supportedModels: [String!]!
+  # The litellm LoadBalanceStrategy applied at push time. The console form
+  # exposes only the friendly values (round-robin / weighted / random); the
+  # backend translates these into the litellm enum below and persists here.
   strategy: LoadBalancingStrategy!
-  # Console-facing load-balancing strategy (模型路由 page).
-  uiStrategy: ModelRouteStrategy!
   enabled: Boolean!
   createdAt: Time!
   updatedAt: Time!
@@ -49,7 +41,6 @@ input CreateModelRouteInput {
   modelGatewayId: ID!
   supportedModels: [String!]
   strategy: LoadBalancingStrategy
-  uiStrategy: ModelRouteStrategy
   enabled: Boolean
   fallbacks: [String!]
   contextWindowFallbacks: [String!]
@@ -62,7 +53,7 @@ input UpdateModelRouteInput {
   name: String
   modelGatewayId: ID
   supportedModels: [String!]
-  uiStrategy: ModelRouteStrategy
+  strategy: LoadBalancingStrategy
   enabled: Boolean
   fallbacks: [String!]
   contextWindowFallbacks: [String!]

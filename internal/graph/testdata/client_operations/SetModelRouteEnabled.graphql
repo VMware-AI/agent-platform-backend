@@ -9,7 +9,6 @@ mutation SetModelRouteEnabled($id: ID!, $enabled: Boolean!) {
     name
     modelGateway { id }
     supportedModels
-    uiStrategy
     enabled
     createdAt
     updatedAt

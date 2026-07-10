@@ -87,20 +87,6 @@ func (_c *ModelRouteCreate) SetNillableStrategy(v *modelroute.Strategy) *ModelRo
 	return _c
 }
 
-// SetUIStrategy sets the "ui_strategy" field.
-func (_c *ModelRouteCreate) SetUIStrategy(v modelroute.UIStrategy) *ModelRouteCreate {
-	_c.mutation.SetUIStrategy(v)
-	return _c
-}
-
-// SetNillableUIStrategy sets the "ui_strategy" field if the given value is not nil.
-func (_c *ModelRouteCreate) SetNillableUIStrategy(v *modelroute.UIStrategy) *ModelRouteCreate {
-	if v != nil {
-		_c.SetUIStrategy(*v)
-	}
-	return _c
-}
-
 // SetEnabled sets the "enabled" field.
 func (_c *ModelRouteCreate) SetEnabled(v bool) *ModelRouteCreate {
 	_c.mutation.SetEnabled(v)
@@ -194,10 +180,6 @@ func (_c *ModelRouteCreate) defaults() {
 		v := modelroute.DefaultStrategy
 		_c.mutation.SetStrategy(v)
 	}
-	if _, ok := _c.mutation.UIStrategy(); !ok {
-		v := modelroute.DefaultUIStrategy
-		_c.mutation.SetUIStrategy(v)
-	}
 	if _, ok := _c.mutation.Enabled(); !ok {
 		v := modelroute.DefaultEnabled
 		_c.mutation.SetEnabled(v)
@@ -241,14 +223,6 @@ func (_c *ModelRouteCreate) check() error {
 	if v, ok := _c.mutation.Strategy(); ok {
 		if err := modelroute.StrategyValidator(v); err != nil {
 			return &ValidationError{Name: "strategy", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.strategy": %w`, err)}
-		}
-	}
-	if _, ok := _c.mutation.UIStrategy(); !ok {
-		return &ValidationError{Name: "ui_strategy", err: errors.New(`ent: missing required field "ModelRoute.ui_strategy"`)}
-	}
-	if v, ok := _c.mutation.UIStrategy(); ok {
-		if err := modelroute.UIStrategyValidator(v); err != nil {
-			return &ValidationError{Name: "ui_strategy", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.ui_strategy": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.Enabled(); !ok {
@@ -316,10 +290,6 @@ func (_c *ModelRouteCreate) createSpec() (*ModelRoute, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Strategy(); ok {
 		_spec.SetField(modelroute.FieldStrategy, field.TypeEnum, value)
 		_node.Strategy = value
-	}
-	if value, ok := _c.mutation.UIStrategy(); ok {
-		_spec.SetField(modelroute.FieldUIStrategy, field.TypeEnum, value)
-		_node.UIStrategy = value
 	}
 	if value, ok := _c.mutation.Enabled(); ok {
 		_spec.SetField(modelroute.FieldEnabled, field.TypeBool, value)

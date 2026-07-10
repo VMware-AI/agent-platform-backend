@@ -489,7 +489,6 @@ type ComplexityRoot struct {
 		Name                   func(childComplexity int) int
 		Strategy               func(childComplexity int) int
 		SupportedModels        func(childComplexity int) int
-		UIStrategy             func(childComplexity int) int
 		UpdatedAt              func(childComplexity int) int
 		Upstreams              func(childComplexity int) int
 	}
@@ -2914,12 +2913,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelRoute.SupportedModels(childComplexity), true
-	case "ModelRoute.uiStrategy":
-		if e.ComplexityRoot.ModelRoute.UIStrategy == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ModelRoute.UIStrategy(childComplexity), true
 	case "ModelRoute.updatedAt":
 		if e.ComplexityRoot.ModelRoute.UpdatedAt == nil {
 			break
@@ -6655,15 +6648,6 @@ enum RotationKind {
 # ProviderModel CRUD + the GatewayConnection surface live in their own
 # modules; this file only contains routing topology.
 
-# Console-facing load-balancing strategy for a model route (模型路由 page). Distinct
-# from the litellm LoadBalanceStrategy: a friendly, gateway-agnostic choice the
-# operator picks in the UI and the backend round-trips verbatim.
-enum ModelRouteStrategy {
-  ROUND_ROBIN
-  WEIGHTED_ROUND_ROBIN
-  RANDOM
-}
-
 type ModelRoute {
   id: ID!
   name: String!
@@ -6674,9 +6658,10 @@ type ModelRoute {
   upstreams: [String!]!
   # Console alias for ` + "`" + `upstreams` + "`" + ` — the models this route can serve (模型路由 page).
   supportedModels: [String!]!
+  # The litellm LoadBalanceStrategy applied at push time. The console form
+  # exposes only the friendly values (round-robin / weighted / random); the
+  # backend translates these into the litellm enum below and persists here.
   strategy: LoadBalancingStrategy!
-  # Console-facing load-balancing strategy (模型路由 page).
-  uiStrategy: ModelRouteStrategy!
   enabled: Boolean!
   createdAt: Time!
   updatedAt: Time!
@@ -6698,7 +6683,6 @@ input CreateModelRouteInput {
   modelGatewayId: ID!
   supportedModels: [String!]
   strategy: LoadBalancingStrategy
-  uiStrategy: ModelRouteStrategy
   enabled: Boolean
   fallbacks: [String!]
   contextWindowFallbacks: [String!]
@@ -6711,7 +6695,7 @@ input UpdateModelRouteInput {
   name: String
   modelGatewayId: ID
   supportedModels: [String!]
-  uiStrategy: ModelRouteStrategy
+  strategy: LoadBalancingStrategy
   enabled: Boolean
   fallbacks: [String!]
   contextWindowFallbacks: [String!]
@@ -9083,8 +9067,6 @@ func (ec *executionContext) childFields_ModelRoute(ctx context.Context, field gr
 		return ec.fieldContext_ModelRoute_supportedModels(ctx, field)
 	case "strategy":
 		return ec.fieldContext_ModelRoute_strategy(ctx, field)
-	case "uiStrategy":
-		return ec.fieldContext_ModelRoute_uiStrategy(ctx, field)
 	case "enabled":
 		return ec.fieldContext_ModelRoute_enabled(ctx, field)
 	case "createdAt":
@@ -18813,29 +18795,6 @@ func (ec *executionContext) _ModelRoute_strategy(ctx context.Context, field grap
 }
 func (ec *executionContext) fieldContext_ModelRoute_strategy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type LoadBalancingStrategy does not have child fields"))
-}
-
-func (ec *executionContext) _ModelRoute_uiStrategy(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ModelRoute_uiStrategy(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.UIStrategy, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v model.ModelRouteStrategy) graphql.Marshaler {
-			return ec.marshalNModelRouteStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_ModelRoute_uiStrategy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type ModelRouteStrategy does not have child fields"))
 }
 
 func (ec *executionContext) _ModelRoute_enabled(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
@@ -33572,7 +33531,7 @@ func (ec *executionContext) unmarshalInputCreateModelRouteInput(ctx context.Cont
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "modelGatewayId", "supportedModels", "strategy", "uiStrategy", "enabled", "fallbacks", "contextWindowFallbacks", "contentPolicyFallbacks"}
+	fieldsInOrder := [...]string{"name", "modelGatewayId", "supportedModels", "strategy", "enabled", "fallbacks", "contextWindowFallbacks", "contentPolicyFallbacks"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -33607,13 +33566,6 @@ func (ec *executionContext) unmarshalInputCreateModelRouteInput(ctx context.Cont
 				return it, err
 			}
 			it.Strategy = data
-		case "uiStrategy":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("uiStrategy"))
-			data, err := ec.unmarshalOModelRouteStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.UIStrategy = data
 		case "enabled":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("enabled"))
 			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
@@ -35707,7 +35659,7 @@ func (ec *executionContext) unmarshalInputUpdateModelRouteInput(ctx context.Cont
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "modelGatewayId", "supportedModels", "uiStrategy", "enabled", "fallbacks", "contextWindowFallbacks", "contentPolicyFallbacks"}
+	fieldsInOrder := [...]string{"name", "modelGatewayId", "supportedModels", "strategy", "enabled", "fallbacks", "contextWindowFallbacks", "contentPolicyFallbacks"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -35735,13 +35687,13 @@ func (ec *executionContext) unmarshalInputUpdateModelRouteInput(ctx context.Cont
 				return it, err
 			}
 			it.SupportedModels = data
-		case "uiStrategy":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("uiStrategy"))
-			data, err := ec.unmarshalOModelRouteStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx, v)
+		case "strategy":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("strategy"))
+			data, err := ec.unmarshalOLoadBalancingStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐLoadBalancingStrategy(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.UIStrategy = data
+			it.Strategy = data
 		case "enabled":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("enabled"))
 			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
@@ -39845,11 +39797,6 @@ func (ec *executionContext) _ModelRoute(ctx context.Context, sel ast.SelectionSe
 			}
 		case "strategy":
 			out.Values[i] = ec._ModelRoute_strategy(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "uiStrategy":
-			out.Values[i] = ec._ModelRoute_uiStrategy(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -46233,16 +46180,6 @@ func (ec *executionContext) marshalNModelRoute2ᚖgithubᚗcomᚋVMwareᚑAIᚋa
 	return ec._ModelRoute(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNModelRouteStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx context.Context, v any) (model.ModelRouteStrategy, error) {
-	var res model.ModelRouteStrategy
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNModelRouteStrategy2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx context.Context, sel ast.SelectionSet, v model.ModelRouteStrategy) graphql.Marshaler {
-	return v
-}
-
 func (ec *executionContext) marshalNModelSpec2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelSpec(ctx context.Context, sel ast.SelectionSet, v model.ModelSpec) graphql.Marshaler {
 	return ec._ModelSpec(ctx, sel, &v)
 }
@@ -47883,22 +47820,6 @@ func (ec *executionContext) unmarshalOModelInfoInput2ᚖgithubᚗcomᚋVMwareᚑ
 	}
 	res, err := ec.unmarshalInputModelInfoInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOModelRouteStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx context.Context, v any) (*model.ModelRouteStrategy, error) {
-	if v == nil {
-		return nil, nil
-	}
-	var res = new(model.ModelRouteStrategy)
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOModelRouteStrategy2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐModelRouteStrategy(ctx context.Context, sel ast.SelectionSet, v *model.ModelRouteStrategy) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return v
 }
 
 func (ec *executionContext) unmarshalOOVFPropertyInput2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐOVFPropertyInputᚄ(ctx context.Context, v any) ([]model.OVFPropertyInput, error) {

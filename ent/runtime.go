@@ -364,7 +364,7 @@ func init() {
 	// modelroute.ModelAliasValidator is a validator for the "model_alias" field. It is called by the builders before save.
 	modelroute.ModelAliasValidator = modelrouteDescModelAlias.Validators[0].(func(string) error)
 	// modelrouteDescEnabled is the schema descriptor for enabled field.
-	modelrouteDescEnabled := modelrouteFields[7].Descriptor()
+	modelrouteDescEnabled := modelrouteFields[6].Descriptor()
 	// modelroute.DefaultEnabled holds the default value on creation for the enabled field.
 	modelroute.DefaultEnabled = modelrouteDescEnabled.Default.(bool)
 	// modelrouteDescID is the schema descriptor for id field.

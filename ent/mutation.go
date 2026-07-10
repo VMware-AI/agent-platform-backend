@@ -10253,7 +10253,6 @@ type ModelRouteMutation struct {
 	upstreams                      *[]string
 	appendupstreams                []string
 	strategy                       *modelroute.Strategy
-	ui_strategy                    *modelroute.UIStrategy
 	enabled                        *bool
 	fallbacks                      *[]string
 	appendfallbacks                []string
@@ -10652,42 +10651,6 @@ func (m *ModelRouteMutation) ResetStrategy() {
 	m.strategy = nil
 }
 
-// SetUIStrategy sets the "ui_strategy" field.
-func (m *ModelRouteMutation) SetUIStrategy(ms modelroute.UIStrategy) {
-	m.ui_strategy = &ms
-}
-
-// UIStrategy returns the value of the "ui_strategy" field in the mutation.
-func (m *ModelRouteMutation) UIStrategy() (r modelroute.UIStrategy, exists bool) {
-	v := m.ui_strategy
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUIStrategy returns the old "ui_strategy" field's value of the ModelRoute entity.
-// If the ModelRoute object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ModelRouteMutation) OldUIStrategy(ctx context.Context) (v modelroute.UIStrategy, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUIStrategy is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUIStrategy requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUIStrategy: %w", err)
-	}
-	return oldValue.UIStrategy, nil
-}
-
-// ResetUIStrategy resets all changes to the "ui_strategy" field.
-func (m *ModelRouteMutation) ResetUIStrategy() {
-	m.ui_strategy = nil
-}
-
 // SetEnabled sets the "enabled" field.
 func (m *ModelRouteMutation) SetEnabled(b bool) {
 	m.enabled = &b
@@ -10953,7 +10916,7 @@ func (m *ModelRouteMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ModelRouteMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 11)
 	if m.created_at != nil {
 		fields = append(fields, modelroute.FieldCreatedAt)
 	}
@@ -10974,9 +10937,6 @@ func (m *ModelRouteMutation) Fields() []string {
 	}
 	if m.strategy != nil {
 		fields = append(fields, modelroute.FieldStrategy)
-	}
-	if m.ui_strategy != nil {
-		fields = append(fields, modelroute.FieldUIStrategy)
 	}
 	if m.enabled != nil {
 		fields = append(fields, modelroute.FieldEnabled)
@@ -11012,8 +10972,6 @@ func (m *ModelRouteMutation) Field(name string) (ent.Value, bool) {
 		return m.Upstreams()
 	case modelroute.FieldStrategy:
 		return m.Strategy()
-	case modelroute.FieldUIStrategy:
-		return m.UIStrategy()
 	case modelroute.FieldEnabled:
 		return m.Enabled()
 	case modelroute.FieldFallbacks:
@@ -11045,8 +11003,6 @@ func (m *ModelRouteMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldUpstreams(ctx)
 	case modelroute.FieldStrategy:
 		return m.OldStrategy(ctx)
-	case modelroute.FieldUIStrategy:
-		return m.OldUIStrategy(ctx)
 	case modelroute.FieldEnabled:
 		return m.OldEnabled(ctx)
 	case modelroute.FieldFallbacks:
@@ -11112,13 +11068,6 @@ func (m *ModelRouteMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetStrategy(v)
-		return nil
-	case modelroute.FieldUIStrategy:
-		v, ok := value.(modelroute.UIStrategy)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUIStrategy(v)
 		return nil
 	case modelroute.FieldEnabled:
 		v, ok := value.(bool)
@@ -11244,9 +11193,6 @@ func (m *ModelRouteMutation) ResetField(name string) error {
 		return nil
 	case modelroute.FieldStrategy:
 		m.ResetStrategy()
-		return nil
-	case modelroute.FieldUIStrategy:
-		m.ResetUIStrategy()
 		return nil
 	case modelroute.FieldEnabled:
 		m.ResetEnabled()

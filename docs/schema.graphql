@@ -272,7 +272,6 @@ input CreateModelRouteInput {
 	modelGatewayId: ID!
 	supportedModels: [String!]
 	strategy: LoadBalancingStrategy
-	uiStrategy: ModelRouteStrategy
 	enabled: Boolean
 	fallbacks: [String!]
 	contextWindowFallbacks: [String!]
@@ -685,18 +684,12 @@ type ModelRoute {
 	upstreams: [String!]!
 	supportedModels: [String!]!
 	strategy: LoadBalancingStrategy!
-	uiStrategy: ModelRouteStrategy!
 	enabled: Boolean!
 	createdAt: Time!
 	updatedAt: Time!
 	fallbacks: [String!]!
 	contextWindowFallbacks: [String!]!
 	contentPolicyFallbacks: [String!]!
-}
-enum ModelRouteStrategy {
-	ROUND_ROBIN
-	WEIGHTED_ROUND_ROBIN
-	RANDOM
 }
 type ModelSpec {
 	litellmParams: LitellmParams!
@@ -1294,7 +1287,7 @@ input UpdateModelRouteInput {
 	name: String
 	modelGatewayId: ID
 	supportedModels: [String!]
-	uiStrategy: ModelRouteStrategy
+	strategy: LoadBalancingStrategy
 	enabled: Boolean
 	fallbacks: [String!]
 	contextWindowFallbacks: [String!]

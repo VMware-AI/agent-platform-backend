@@ -9,7 +9,6 @@ mutation CreateModelRoute($input: CreateModelRouteInput!) {
     name
     modelGateway { id }
     supportedModels
-    uiStrategy
     enabled
     createdAt
     updatedAt
