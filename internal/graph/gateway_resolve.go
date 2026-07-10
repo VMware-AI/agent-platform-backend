@@ -60,7 +60,7 @@ func (r *Resolver) routeGateway(ctx context.Context, route *ent.ModelRoute) (*en
 	if route == nil {
 		return nil, nil
 	}
-	return r.Ent.GatewayConnection.Get(ctx, route.GatewayConnectionID)
+	return r.Ent.GatewayConnection.Get(ctx, route.ModelGatewayID)
 }
 
 // resolveDeptGateway picks the GatewayConnection that should serve a

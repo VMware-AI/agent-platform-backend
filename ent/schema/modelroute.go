@@ -24,10 +24,12 @@ func (ModelRoute) Fields() []ent.Field {
 		// §3.3). A route with no gateway would have no place to push, and the old
 		// "platform default" fallback has been retired. Default required/non-null;
 		// column will be NOT NULL in the DB.
-		field.UUID("gateway_connection_id", uuid.UUID{}),
-		// Display name of the serving gateway, denormalized for the console 模型路由
-		// list (the view shows gatewayName next to each route).
-		field.String("gateway_name").Optional().Default(""),
+		//
+		// 2026-07 rename: gateway_connection_id → model_gateway_id, mirroring
+		// VirtualKey's rename. The GraphQL field that reads this column is
+		// `modelGateway` (a nested ModelGateway object); see VirtualKey
+		// schema for the same wire shape.
+		field.UUID("model_gateway_id", uuid.UUID{}),
 		field.Strings("upstreams").Optional(), // upstream names in the group
 		field.Enum("strategy").
 			Values("SIMPLE_SHUFFLE", "LEAST_BUSY", "LATENCY_BASED_ROUTING", "USAGE_BASED_ROUTING_V2", "COST_BASED_ROUTING").

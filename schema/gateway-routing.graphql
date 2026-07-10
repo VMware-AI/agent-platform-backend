@@ -1,10 +1,10 @@
 # Compute gateway routing (算力网关): model routes.
 # See LLD-07. The development focus.
 #
-# Each ModelRoute is bound to exactly one GatewayConnection via
-# backendGatewayId, which is also the router-settings push target (no platform
-# default). ProviderModel CRUD + the GatewayConnection surface live in their
-# own modules; this file only contains routing topology.
+# Each ModelRoute is bound to exactly one ModelGateway via modelGatewayId,
+# which is also the router-settings push target (no platform default).
+# ProviderModel CRUD + the GatewayConnection surface live in their own
+# modules; this file only contains routing topology.
 
 # Console-facing load-balancing strategy for a model route (模型路由 page). Distinct
 # from the litellm LoadBalanceStrategy: a friendly, gateway-agnostic choice the
@@ -21,9 +21,7 @@ type ModelRoute {
   modelAlias: String!
   # Required: the litellm gateway this route is hosted on. The router-settings
   # push targets this gateway (no platform default fallback).
-  backendGatewayId: ID!
-  # Display name of the serving gateway (console 模型路由 list).
-  gatewayName: String!
+  modelGateway: ModelGateway!
   upstreams: [String!]!
   # Console alias for `upstreams` — the models this route can serve (模型路由 page).
   supportedModels: [String!]!
@@ -40,7 +38,7 @@ type ModelRoute {
 }
 
 # Console 模型路由 create form (创建路由). modelAlias is set to name;
-# supportedModels are stored as the route's model group. backendGatewayId is
+# supportedModels are stored as the route's model group. modelGatewayId is
 # REQUIRED — a route without a gateway has no router-settings push target.
 # strategy is the litellm LoadBalanceStrategy to set on this route; default
 # (omitted) leaves the ent column default in place (SIMPLE_SHUFFLE).
@@ -48,8 +46,7 @@ type ModelRoute {
 # through updateModelRoute.
 input CreateModelRouteInput {
   name: String!
-  backendGatewayId: ID!
-  gatewayName: String
+  modelGatewayId: ID!
   supportedModels: [String!]
   strategy: LoadBalancingStrategy
   uiStrategy: ModelRouteStrategy
@@ -60,11 +57,10 @@ input CreateModelRouteInput {
 }
 
 # Console 模型路由 edit form (编辑路由). All fields optional — only set ones
-# change. backendGatewayId, when present, must point at a live gateway.
+# change. modelGatewayId, when present, must point at a live gateway.
 input UpdateModelRouteInput {
   name: String
-  backendGatewayId: ID
-  gatewayName: String
+  modelGatewayId: ID
   supportedModels: [String!]
   uiStrategy: ModelRouteStrategy
   enabled: Boolean
@@ -87,7 +83,7 @@ extend type Mutation {
   deleteModelRoute(id: ID!): Boolean! @hasRole(any: [admin])
   # Atomic 全量聚合覆盖刷新 — re-aggregates every active ModelRoute and
   # POSTs the full router_settings payload to /config/update, grouped by
-  # backendGatewayId. Triggered automatically after a route save; exposed
+  # modelGatewayId. Triggered automatically after a route save; exposed
   # as a mutation so the console can call it explicitly. Each gateway
   # receives only the routes bound to it.
   syncRouterSettings: Boolean! @hasRole(any: [admin])

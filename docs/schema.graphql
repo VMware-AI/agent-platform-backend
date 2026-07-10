@@ -269,8 +269,7 @@ input CreateDepartmentInput {
 }
 input CreateModelRouteInput {
 	name: String!
-	backendGatewayId: ID!
-	gatewayName: String
+	modelGatewayId: ID!
 	supportedModels: [String!]
 	strategy: LoadBalancingStrategy
 	uiStrategy: ModelRouteStrategy
@@ -682,8 +681,7 @@ type ModelRoute {
 	id: ID!
 	name: String!
 	modelAlias: String!
-	backendGatewayId: ID!
-	gatewayName: String!
+	modelGateway: ModelGateway!
 	upstreams: [String!]!
 	supportedModels: [String!]!
 	strategy: LoadBalancingStrategy!
@@ -1294,8 +1292,7 @@ input UpdateAgentConfigInput {
 }
 input UpdateModelRouteInput {
 	name: String
-	backendGatewayId: ID
-	gatewayName: String
+	modelGatewayId: ID
 	supportedModels: [String!]
 	uiStrategy: ModelRouteStrategy
 	enabled: Boolean

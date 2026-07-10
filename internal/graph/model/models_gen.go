@@ -274,8 +274,7 @@ type CreateDepartmentInput struct {
 
 type CreateModelRouteInput struct {
 	Name                   string                 `json:"name"`
-	BackendGatewayID       string                 `json:"backendGatewayId"`
-	GatewayName            *string                `json:"gatewayName,omitempty"`
+	ModelGatewayID         string                 `json:"modelGatewayId"`
 	SupportedModels        []string               `json:"supportedModels,omitempty"`
 	Strategy               *LoadBalancingStrategy `json:"strategy,omitempty"`
 	UIStrategy             *ModelRouteStrategy    `json:"uiStrategy,omitempty"`
@@ -672,8 +671,7 @@ type ModelRoute struct {
 	ID                     string                `json:"id"`
 	Name                   string                `json:"name"`
 	ModelAlias             string                `json:"modelAlias"`
-	BackendGatewayID       string                `json:"backendGatewayId"`
-	GatewayName            string                `json:"gatewayName"`
+	ModelGateway           *ModelGateway         `json:"modelGateway"`
 	Upstreams              []string              `json:"upstreams"`
 	SupportedModels        []string              `json:"supportedModels"`
 	Strategy               LoadBalancingStrategy `json:"strategy"`
@@ -1126,8 +1124,7 @@ type UpdateAgentConfigInput struct {
 
 type UpdateModelRouteInput struct {
 	Name                   *string             `json:"name,omitempty"`
-	BackendGatewayID       *string             `json:"backendGatewayId,omitempty"`
-	GatewayName            *string             `json:"gatewayName,omitempty"`
+	ModelGatewayID         *string             `json:"modelGatewayId,omitempty"`
 	SupportedModels        []string            `json:"supportedModels,omitempty"`
 	UIStrategy             *ModelRouteStrategy `json:"uiStrategy,omitempty"`
 	Enabled                *bool               `json:"enabled,omitempty"`

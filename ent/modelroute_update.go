@@ -65,37 +65,17 @@ func (_u *ModelRouteUpdate) SetNillableModelAlias(v *string) *ModelRouteUpdate {
 	return _u
 }
 
-// SetGatewayConnectionID sets the "gateway_connection_id" field.
-func (_u *ModelRouteUpdate) SetGatewayConnectionID(v uuid.UUID) *ModelRouteUpdate {
-	_u.mutation.SetGatewayConnectionID(v)
+// SetModelGatewayID sets the "model_gateway_id" field.
+func (_u *ModelRouteUpdate) SetModelGatewayID(v uuid.UUID) *ModelRouteUpdate {
+	_u.mutation.SetModelGatewayID(v)
 	return _u
 }
 
-// SetNillableGatewayConnectionID sets the "gateway_connection_id" field if the given value is not nil.
-func (_u *ModelRouteUpdate) SetNillableGatewayConnectionID(v *uuid.UUID) *ModelRouteUpdate {
+// SetNillableModelGatewayID sets the "model_gateway_id" field if the given value is not nil.
+func (_u *ModelRouteUpdate) SetNillableModelGatewayID(v *uuid.UUID) *ModelRouteUpdate {
 	if v != nil {
-		_u.SetGatewayConnectionID(*v)
+		_u.SetModelGatewayID(*v)
 	}
-	return _u
-}
-
-// SetGatewayName sets the "gateway_name" field.
-func (_u *ModelRouteUpdate) SetGatewayName(v string) *ModelRouteUpdate {
-	_u.mutation.SetGatewayName(v)
-	return _u
-}
-
-// SetNillableGatewayName sets the "gateway_name" field if the given value is not nil.
-func (_u *ModelRouteUpdate) SetNillableGatewayName(v *string) *ModelRouteUpdate {
-	if v != nil {
-		_u.SetGatewayName(*v)
-	}
-	return _u
-}
-
-// ClearGatewayName clears the value of the "gateway_name" field.
-func (_u *ModelRouteUpdate) ClearGatewayName() *ModelRouteUpdate {
-	_u.mutation.ClearGatewayName()
 	return _u
 }
 
@@ -306,14 +286,8 @@ func (_u *ModelRouteUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.ModelAlias(); ok {
 		_spec.SetField(modelroute.FieldModelAlias, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.GatewayConnectionID(); ok {
-		_spec.SetField(modelroute.FieldGatewayConnectionID, field.TypeUUID, value)
-	}
-	if value, ok := _u.mutation.GatewayName(); ok {
-		_spec.SetField(modelroute.FieldGatewayName, field.TypeString, value)
-	}
-	if _u.mutation.GatewayNameCleared() {
-		_spec.ClearField(modelroute.FieldGatewayName, field.TypeString)
+	if value, ok := _u.mutation.ModelGatewayID(); ok {
+		_spec.SetField(modelroute.FieldModelGatewayID, field.TypeUUID, value)
 	}
 	if value, ok := _u.mutation.Upstreams(); ok {
 		_spec.SetField(modelroute.FieldUpstreams, field.TypeJSON, value)
@@ -424,37 +398,17 @@ func (_u *ModelRouteUpdateOne) SetNillableModelAlias(v *string) *ModelRouteUpdat
 	return _u
 }
 
-// SetGatewayConnectionID sets the "gateway_connection_id" field.
-func (_u *ModelRouteUpdateOne) SetGatewayConnectionID(v uuid.UUID) *ModelRouteUpdateOne {
-	_u.mutation.SetGatewayConnectionID(v)
+// SetModelGatewayID sets the "model_gateway_id" field.
+func (_u *ModelRouteUpdateOne) SetModelGatewayID(v uuid.UUID) *ModelRouteUpdateOne {
+	_u.mutation.SetModelGatewayID(v)
 	return _u
 }
 
-// SetNillableGatewayConnectionID sets the "gateway_connection_id" field if the given value is not nil.
-func (_u *ModelRouteUpdateOne) SetNillableGatewayConnectionID(v *uuid.UUID) *ModelRouteUpdateOne {
+// SetNillableModelGatewayID sets the "model_gateway_id" field if the given value is not nil.
+func (_u *ModelRouteUpdateOne) SetNillableModelGatewayID(v *uuid.UUID) *ModelRouteUpdateOne {
 	if v != nil {
-		_u.SetGatewayConnectionID(*v)
+		_u.SetModelGatewayID(*v)
 	}
-	return _u
-}
-
-// SetGatewayName sets the "gateway_name" field.
-func (_u *ModelRouteUpdateOne) SetGatewayName(v string) *ModelRouteUpdateOne {
-	_u.mutation.SetGatewayName(v)
-	return _u
-}
-
-// SetNillableGatewayName sets the "gateway_name" field if the given value is not nil.
-func (_u *ModelRouteUpdateOne) SetNillableGatewayName(v *string) *ModelRouteUpdateOne {
-	if v != nil {
-		_u.SetGatewayName(*v)
-	}
-	return _u
-}
-
-// ClearGatewayName clears the value of the "gateway_name" field.
-func (_u *ModelRouteUpdateOne) ClearGatewayName() *ModelRouteUpdateOne {
-	_u.mutation.ClearGatewayName()
 	return _u
 }
 
@@ -695,14 +649,8 @@ func (_u *ModelRouteUpdateOne) sqlSave(ctx context.Context) (_node *ModelRoute, 
 	if value, ok := _u.mutation.ModelAlias(); ok {
 		_spec.SetField(modelroute.FieldModelAlias, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.GatewayConnectionID(); ok {
-		_spec.SetField(modelroute.FieldGatewayConnectionID, field.TypeUUID, value)
-	}
-	if value, ok := _u.mutation.GatewayName(); ok {
-		_spec.SetField(modelroute.FieldGatewayName, field.TypeString, value)
-	}
-	if _u.mutation.GatewayNameCleared() {
-		_spec.ClearField(modelroute.FieldGatewayName, field.TypeString)
+	if value, ok := _u.mutation.ModelGatewayID(); ok {
+		_spec.SetField(modelroute.FieldModelGatewayID, field.TypeUUID, value)
 	}
 	if value, ok := _u.mutation.Upstreams(); ok {
 		_spec.SetField(modelroute.FieldUpstreams, field.TypeJSON, value)

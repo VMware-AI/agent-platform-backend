@@ -10,7 +10,8 @@ All operations are served from a single endpoint: **`POST /query`**.
 |------|--------|
 | [Agents, Templates & Snapshots](./agents.md) | Agent catalog/templates, agent instances, deploy from OVA, snapshots, lifecycle |
 | [Agent Config, Artifacts, Skills & Images](./agent-config.md) | Agent configs, content-library artifacts, skills, container images |
-| [Model Gateway & Routing](./model-gateway.md) | Model gateways, gateway connections, upstreams, model routes, difficulty router tiers |
+| [Model Gateways (Connections)](./model-gateway.md) | Model gateways, gateway connections, upstreams, difficulty router tiers |
+| [Gateway Routing (Model Routes)](./gateway-routing.md) | Model routes (gateway routing topology, route CRUD, sync to gateway) |
 | [Provider Model (Upstream LLM)](./provider-model.md) |  |
 | [Virtual Keys & Rate Limits](./virtual-keys.md) | Per-user LiteLLM virtual keys and rate-limit policies |
 | [Observability (Request Logs, Audit Logs, Metrics)](./observability.md) | Request logs, audit logs, request metrics, rate-limit policies |
