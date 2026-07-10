@@ -61,9 +61,9 @@ func (_c *ModelRouteCreate) SetModelAlias(v string) *ModelRouteCreate {
 	return _c
 }
 
-// SetGatewayConnectionID sets the "gateway_connection_id" field.
-func (_c *ModelRouteCreate) SetGatewayConnectionID(v uuid.UUID) *ModelRouteCreate {
-	_c.mutation.SetGatewayConnectionID(v)
+// SetModelGatewayID sets the "model_gateway_id" field.
+func (_c *ModelRouteCreate) SetModelGatewayID(v uuid.UUID) *ModelRouteCreate {
+	_c.mutation.SetModelGatewayID(v)
 	return _c
 }
 
@@ -232,8 +232,8 @@ func (_c *ModelRouteCreate) check() error {
 			return &ValidationError{Name: "model_alias", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.model_alias": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.GatewayConnectionID(); !ok {
-		return &ValidationError{Name: "gateway_connection_id", err: errors.New(`ent: missing required field "ModelRoute.gateway_connection_id"`)}
+	if _, ok := _c.mutation.ModelGatewayID(); !ok {
+		return &ValidationError{Name: "model_gateway_id", err: errors.New(`ent: missing required field "ModelRoute.model_gateway_id"`)}
 	}
 	if _, ok := _c.mutation.Strategy(); !ok {
 		return &ValidationError{Name: "strategy", err: errors.New(`ent: missing required field "ModelRoute.strategy"`)}
@@ -305,9 +305,9 @@ func (_c *ModelRouteCreate) createSpec() (*ModelRoute, *sqlgraph.CreateSpec) {
 		_spec.SetField(modelroute.FieldModelAlias, field.TypeString, value)
 		_node.ModelAlias = value
 	}
-	if value, ok := _c.mutation.GatewayConnectionID(); ok {
-		_spec.SetField(modelroute.FieldGatewayConnectionID, field.TypeUUID, value)
-		_node.GatewayConnectionID = value
+	if value, ok := _c.mutation.ModelGatewayID(); ok {
+		_spec.SetField(modelroute.FieldModelGatewayID, field.TypeUUID, value)
+		_node.ModelGatewayID = value
 	}
 	if value, ok := _c.mutation.Upstreams(); ok {
 		_spec.SetField(modelroute.FieldUpstreams, field.TypeJSON, value)

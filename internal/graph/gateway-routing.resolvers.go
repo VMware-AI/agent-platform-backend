@@ -21,11 +21,11 @@ import (
 // Always inserts (id-keyed); a duplicate name surfaces as a GraphQL error —
 // re-saving the same name goes through updateModelRoute. model_alias is set
 // to name (the console form has no separate alias); supportedModels are
-// stored as the upstream group. backendGatewayId is REQUIRED — a route
+// stored as the upstream group. modelGatewayId is REQUIRED — a route
 // without a gateway has no router-settings push target. strategy is the
 // litellm LoadBalanceStrategy (omitted → ent default SIMPLE_SHUFFLE).
 func (r *mutationResolver) CreateModelRoute(ctx context.Context, input model.CreateModelRouteInput) (*model.ModelRoute, error) {
-	gwID, err := parseRequiredUUID(input.BackendGatewayID, "backendGatewayId")
+	gwID, err := parseRequiredUUID(input.ModelGatewayID, "modelGatewayId")
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (r *mutationResolver) CreateModelRoute(ctx context.Context, input model.Cre
 	c := r.Ent.ModelRoute.Create().
 		SetName(input.Name).
 		SetModelAlias(input.Name).
-		SetGatewayConnectionID(gwID).
+		SetModelGatewayID(gwID).
 		SetUpstreams(orEmptyStrings(input.SupportedModels))
 	if input.Strategy != nil {
 		c.SetStrategy(modelroute.Strategy(string(*input.Strategy)))
@@ -68,13 +68,13 @@ func (r *mutationResolver) CreateModelRoute(ctx context.Context, input model.Cre
 		return nil, err
 	}
 	r.audit(ctx, "model_route.create", "model_route", mr.ID.String(), true, actorID(auth.FromContext(ctx)))
-	r.AggregateAndPushRouterSettingsFireAndForget(mr.GatewayConnectionID)
-	return toModelModelRoute(mr), nil
+	r.AggregateAndPushRouterSettingsFireAndForget(mr.ModelGatewayID)
+	return toModelModelRoute(ctx, r.Resolver, mr)
 }
 
 // UpdateModelRoute edits an existing model route by id (console 模型路由 edit form).
 // Only provided fields change; supportedModels (when given) replace the upstream
-// group. backendGatewayId, when present, must point at a live gateway.
+// group. modelGatewayId, when present, must point at a live gateway.
 func (r *mutationResolver) UpdateModelRoute(ctx context.Context, id string, input model.UpdateModelRouteInput) (*model.ModelRoute, error) {
 	rid, err := uuid.Parse(id)
 	if err != nil {
@@ -88,16 +88,16 @@ func (r *mutationResolver) UpdateModelRoute(ctx context.Context, id string, inpu
 	if input.Name != nil {
 		u.SetName(*input.Name)
 	}
-	var pushTarget = existing.GatewayConnectionID
-	if input.BackendGatewayID != nil {
-		gwID, err := parseRequiredUUID(*input.BackendGatewayID, "backendGatewayId")
+	var pushTarget = existing.ModelGatewayID
+	if input.ModelGatewayID != nil {
+		gwID, err := parseRequiredUUID(*input.ModelGatewayID, "modelGatewayId")
 		if err != nil {
 			return nil, err
 		}
 		if _, err := resolveLiveGateway(ctx, r.Ent, gwID); err != nil {
 			return nil, err
 		}
-		u.SetGatewayConnectionID(gwID)
+		u.SetModelGatewayID(gwID)
 		pushTarget = gwID
 	}
 	if input.SupportedModels != nil {
@@ -115,7 +115,7 @@ func (r *mutationResolver) UpdateModelRoute(ctx context.Context, id string, inpu
 	}
 	r.audit(ctx, "model_route.update", "model_route", id, true, actorID(auth.FromContext(ctx)))
 	r.AggregateAndPushRouterSettingsFireAndForget(pushTarget)
-	return toModelModelRoute(mr), nil
+	return toModelModelRoute(ctx, r.Resolver, mr)
 }
 
 // SetModelRouteEnabled is the resolver for the setModelRouteEnabled field.
@@ -129,8 +129,8 @@ func (r *mutationResolver) SetModelRouteEnabled(ctx context.Context, id string, 
 		return nil, err
 	}
 	r.audit(ctx, "model_route.set_enabled", "model_route", id, true, actorID(auth.FromContext(ctx)))
-	r.AggregateAndPushRouterSettingsFireAndForget(mr.GatewayConnectionID)
-	return toModelModelRoute(mr), nil
+	r.AggregateAndPushRouterSettingsFireAndForget(mr.ModelGatewayID)
+	return toModelModelRoute(ctx, r.Resolver, mr)
 }
 
 // DeleteModelRoute removes a model route. Mirrors DeleteProviderModel: parse + delete
@@ -151,7 +151,7 @@ func (r *mutationResolver) DeleteModelRoute(ctx context.Context, id string) (boo
 		return false, err
 	}
 	r.audit(ctx, "model_route.delete", "model_route", id, true, actorID(auth.FromContext(ctx)))
-	r.AggregateAndPushRouterSettingsFireAndForget(existing.GatewayConnectionID)
+	r.AggregateAndPushRouterSettingsFireAndForget(existing.ModelGatewayID)
 	return true, nil
 }
 
@@ -202,5 +202,13 @@ func (r *queryResolver) ModelRoutes(ctx context.Context) ([]model.ModelRoute, er
 	if err != nil {
 		return nil, err
 	}
-	return mapSlice(rs, toModelModelRoute), nil
+	out := make([]model.ModelRoute, 0, len(rs))
+	for _, mr := range rs {
+		m, err := toModelModelRoute(ctx, r.Resolver, mr)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *m)
+	}
+	return out, nil
 }

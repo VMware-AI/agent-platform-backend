@@ -7,7 +7,7 @@ mutation UpdateModelRoute($id: ID!, $input: UpdateModelRouteInput!) {
   fragment ModelRouteFields on ModelRoute {
     id
     name
-    backendGatewayId
+    modelGateway { id }
     supportedModels
     uiStrategy
     enabled

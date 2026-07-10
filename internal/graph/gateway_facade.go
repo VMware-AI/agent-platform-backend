@@ -314,7 +314,7 @@ func (r *Resolver) assertGatewayDeletable(ctx context.Context, g *ent.GatewayCon
 	} else if n > 0 {
 		return gqlerror.Errorf("gateway has %d active virtual key(s); revoke or recycle those agents before deleting", n)
 	}
-	if n, err := r.Ent.ModelRoute.Query().Where(modelroute.GatewayConnectionID(g.ID)).Count(ctx); err != nil {
+	if n, err := r.Ent.ModelRoute.Query().Where(modelroute.ModelGatewayID(g.ID)).Count(ctx); err != nil {
 		return err
 	} else if n > 0 {
 		return gqlerror.Errorf("gateway has %d model route(s); reassign them before deleting", n)

@@ -145,7 +145,7 @@ func (r *Resolver) loadRouterSettingsBuckets(ctx context.Context) (routesByGW ma
 		if r == nil {
 			continue
 		}
-		routesByGW[r.GatewayConnectionID] = append(routesByGW[r.GatewayConnectionID], r)
+		routesByGW[r.ModelGatewayID] = append(routesByGW[r.ModelGatewayID], r)
 	}
 	return routesByGW, nil
 }
@@ -243,7 +243,7 @@ func bucketRoutesByGateway(routes []*ent.ModelRoute) map[uuid.UUID][]*ent.ModelR
 		if r == nil {
 			continue
 		}
-		out[r.GatewayConnectionID] = append(out[r.GatewayConnectionID], r)
+		out[r.ModelGatewayID] = append(out[r.ModelGatewayID], r)
 	}
 	return out
 }

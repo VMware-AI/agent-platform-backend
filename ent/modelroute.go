@@ -27,8 +27,8 @@ type ModelRoute struct {
 	Name string `json:"name,omitempty"`
 	// ModelAlias holds the value of the "model_alias" field.
 	ModelAlias string `json:"model_alias,omitempty"`
-	// GatewayConnectionID holds the value of the "gateway_connection_id" field.
-	GatewayConnectionID uuid.UUID `json:"gateway_connection_id,omitempty"`
+	// ModelGatewayID holds the value of the "model_gateway_id" field.
+	ModelGatewayID uuid.UUID `json:"model_gateway_id,omitempty"`
 	// Upstreams holds the value of the "upstreams" field.
 	Upstreams []string `json:"upstreams,omitempty"`
 	// Strategy holds the value of the "strategy" field.
@@ -59,7 +59,7 @@ func (*ModelRoute) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case modelroute.FieldCreatedAt, modelroute.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case modelroute.FieldID, modelroute.FieldGatewayConnectionID:
+		case modelroute.FieldID, modelroute.FieldModelGatewayID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -106,11 +106,11 @@ func (_m *ModelRoute) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.ModelAlias = value.String
 			}
-		case modelroute.FieldGatewayConnectionID:
+		case modelroute.FieldModelGatewayID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
-				return fmt.Errorf("unexpected type %T for field gateway_connection_id", values[i])
+				return fmt.Errorf("unexpected type %T for field model_gateway_id", values[i])
 			} else if value != nil {
-				_m.GatewayConnectionID = *value
+				_m.ModelGatewayID = *value
 			}
 		case modelroute.FieldUpstreams:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -210,8 +210,8 @@ func (_m *ModelRoute) String() string {
 	builder.WriteString("model_alias=")
 	builder.WriteString(_m.ModelAlias)
 	builder.WriteString(", ")
-	builder.WriteString("gateway_connection_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.GatewayConnectionID))
+	builder.WriteString("model_gateway_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ModelGatewayID))
 	builder.WriteString(", ")
 	builder.WriteString("upstreams=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Upstreams))

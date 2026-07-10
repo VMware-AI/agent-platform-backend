@@ -441,28 +441,32 @@ func toModelRequestLog(l *ent.RequestLog) *model.RequestLog {
 	return m
 }
 
-func toModelModelRoute(r *ent.ModelRoute) *model.ModelRoute {
-	ups := r.Upstreams
+func toModelModelRoute(ctx context.Context, r *Resolver, mr *ent.ModelRoute) (*model.ModelRoute, error) {
+	ups := mr.Upstreams
 	if ups == nil {
 		ups = []string{}
 	}
 	m := &model.ModelRoute{
-		ID:         r.ID.String(),
-		Name:       r.Name,
-		ModelAlias: r.ModelAlias,
-		Upstreams:  ups,
+		ID:         mr.ID.String(),
+		Name:       mr.Name,
+		ModelAlias: mr.ModelAlias,
 		// Console alias for upstreams — same backing slice (the route's model group).
 		SupportedModels: ups,
-		Strategy:        model.LoadBalancingStrategy(string(r.Strategy)),
-		UIStrategy:      model.ModelRouteStrategy(string(r.UIStrategy)),
-		Enabled:         r.Enabled,
-		CreatedAt:       r.CreatedAt,
-		UpdatedAt:       r.UpdatedAt,
+		Strategy:        model.LoadBalancingStrategy(string(mr.Strategy)),
+		UIStrategy:      model.ModelRouteStrategy(string(mr.UIStrategy)),
+		Enabled:         mr.Enabled,
+		CreatedAt:       mr.CreatedAt,
+		UpdatedAt:       mr.UpdatedAt,
 	}
-	if r.GatewayConnectionID != uuid.Nil {
-		m.BackendGatewayID = r.GatewayConnectionID.String()
+	if mr.ModelGatewayID != uuid.Nil {
+		mg, err := r.toModelGatewayFor(ctx, mr.ModelGatewayID)
+		if err != nil {
+			return nil, err
+		}
+		m.ModelGateway = mg
 	}
-	return m
+	m.Upstreams = ups
+	return m, nil
 }
 
 func toModelArtifact(a *ent.Artifact) *model.Artifact {

@@ -77,7 +77,7 @@ deleteModelRoute(id: ID!): Boolean!
 
 ### `syncRouterSettings`
 
-Atomic 全量聚合覆盖刷新 — re-aggregates every active ModelRoute and POSTs the full router_settings payload to /config/update, grouped by backendGatewayId. Triggered automatically after a route save; exposed as a mutation so the console can call it explicitly. Each gateway receives only the routes bound to it.
+Atomic 全量聚合覆盖刷新 — re-aggregates every active ModelRoute and POSTs the full router_settings payload to /config/update, grouped by modelGatewayId. Triggered automatically after a route save; exposed as a mutation so the console can call it explicitly. Each gateway receives only the routes bound to it.
 
 ```graphql
 syncRouterSettings: Boolean!
@@ -97,7 +97,7 @@ syncRouterSettings: Boolean!
 | `id` | `ID!` | — |
 | `name` | `String!` | — |
 | `modelAlias` | `String!` | — |
-| `backendGatewayId` | `ID!` | Required: the litellm gateway this route is hosted on. The router-settings push targets this gateway (no platform default fallback). |
+| `modelGateway` | `ModelGateway!` | Required: the litellm gateway this route is hosted on. The router-settings push targets this gateway (no platform default fallback). |
 | `upstreams` | `[String!]!` | — |
 | `supportedModels` | `[String!]!` | Console alias for `upstreams` — the models this route can serve (模型路由 page). |
 | `strategy` | `LoadBalancingStrategy!` | — |
@@ -113,12 +113,12 @@ syncRouterSettings: Boolean!
 
 *Input*
 
-Console 模型路由 create form (创建路由). modelAlias is set to name; supportedModels are stored as the route's model group. backendGatewayId is REQUIRED — a route without a gateway has no router-settings push target. strategy is the litellm LoadBalanceStrategy to set on this route; default (omitted) leaves the ent column default in place (SIMPLE_SHUFFLE). A duplicate name surfaces as a GraphQL error — re-saving the same name goes through updateModelRoute.
+Console 模型路由 create form (创建路由). modelAlias is set to name; supportedModels are stored as the route's model group. modelGatewayId is REQUIRED — a route without a gateway has no router-settings push target. strategy is the litellm LoadBalanceStrategy to set on this route; default (omitted) leaves the ent column default in place (SIMPLE_SHUFFLE). A duplicate name surfaces as a GraphQL error — re-saving the same name goes through updateModelRoute.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `name` | `String!` | — |
-| `backendGatewayId` | `ID!` | — |
+| `modelGatewayId` | `ID!` | — |
 | `supportedModels` | `[String!]` | — |
 | `strategy` | `LoadBalancingStrategy` | — |
 | `uiStrategy` | `ModelRouteStrategy` | — |
@@ -131,12 +131,12 @@ Console 模型路由 create form (创建路由). modelAlias is set to name; supp
 
 *Input*
 
-Console 模型路由 edit form (编辑路由). All fields optional — only set ones change. backendGatewayId, when present, must point at a live gateway.
+Console 模型路由 edit form (编辑路由). All fields optional — only set ones change. modelGatewayId, when present, must point at a live gateway.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `name` | `String` | — |
-| `backendGatewayId` | `ID` | — |
+| `modelGatewayId` | `ID` | — |
 | `supportedModels` | `[String!]` | — |
 | `uiStrategy` | `ModelRouteStrategy` | — |
 | `enabled` | `Boolean` | — |

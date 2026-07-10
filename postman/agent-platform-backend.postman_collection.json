@@ -1319,7 +1319,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"query ModelRoutes {\\n    modelRoutes {\\n      id\\n      name\\n      backendGatewayId\\n      supportedModels\\n      uiStrategy\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {}\n}"
+              "raw": "{\n  \"query\": \"query ModelRoutes {\\n    modelRoutes {\\n      id\\n      name\\n      modelGateway { id }\\n      supportedModels\\n      uiStrategy\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {}\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1348,7 +1348,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation CreateModelRoute($input: CreateModelRouteInput!) {\\n    createModelRoute(input: $input) {\\n      id\\n      name\\n      backendGatewayId\\n      supportedModels\\n      uiStrategy\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation CreateModelRoute($input: CreateModelRouteInput!) {\\n    createModelRoute(input: $input) {\\n      id\\n      name\\n      modelGateway { id }\\n      supportedModels\\n      uiStrategy\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1377,7 +1377,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation UpdateModelRoute($id: ID!, $input: UpdateModelRouteInput!) {\\n    updateModelRoute(id: $id, input: $input) {\\n      id\\n      name\\n      backendGatewayId\\n      supportedModels\\n      uiStrategy\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\",\n    \"input\": {}\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation UpdateModelRoute($id: ID!, $input: UpdateModelRouteInput!) {\\n    updateModelRoute(id: $id, input: $input) {\\n      id\\n      name\\n      modelGateway { id }\\n      supportedModels\\n      uiStrategy\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\",\n    \"input\": {}\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
@@ -1406,7 +1406,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"mutation SetModelRouteEnabled($id: ID!, $enabled: Boolean!) {\\n    setModelRouteEnabled(id: $id, enabled: $enabled) {\\n      id\\n      name\\n      backendGatewayId\\n      supportedModels\\n      uiStrategy\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\",\n    \"enabled\": false\n  }\n}"
+              "raw": "{\n  \"query\": \"mutation SetModelRouteEnabled($id: ID!, $enabled: Boolean!) {\\n    setModelRouteEnabled(id: $id, enabled: $enabled) {\\n      id\\n      name\\n      modelGateway { id }\\n      supportedModels\\n      uiStrategy\\n      enabled\\n      createdAt\\n      updatedAt\\n    }\\n  }\",\n  \"variables\": {\n    \"id\": \"\",\n    \"enabled\": false\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}",
