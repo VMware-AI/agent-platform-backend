@@ -98,7 +98,6 @@ syncRouterSettings: Boolean!
 | `name` | `String!` | — |
 | `modelAlias` | `String!` | — |
 | `backendGatewayId` | `ID!` | Required: the litellm gateway this route is hosted on. The router-settings push targets this gateway (no platform default fallback). |
-| `gatewayName` | `String!` | Display name of the serving gateway (console 模型路由 list). |
 | `upstreams` | `[String!]!` | — |
 | `supportedModels` | `[String!]!` | Console alias for `upstreams` — the models this route can serve (模型路由 page). |
 | `strategy` | `LoadBalancingStrategy!` | — |
@@ -120,7 +119,6 @@ Console 模型路由 create form (创建路由). modelAlias is set to name; supp
 |-------|------|-------------|
 | `name` | `String!` | — |
 | `backendGatewayId` | `ID!` | — |
-| `gatewayName` | `String` | — |
 | `supportedModels` | `[String!]` | — |
 | `strategy` | `LoadBalancingStrategy` | — |
 | `uiStrategy` | `ModelRouteStrategy` | — |
@@ -139,7 +137,6 @@ Console 模型路由 edit form (编辑路由). All fields optional — only set 
 |-------|------|-------------|
 | `name` | `String` | — |
 | `backendGatewayId` | `ID` | — |
-| `gatewayName` | `String` | — |
 | `supportedModels` | `[String!]` | — |
 | `uiStrategy` | `ModelRouteStrategy` | — |
 | `enabled` | `Boolean` | — |

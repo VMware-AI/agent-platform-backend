@@ -25,8 +25,6 @@ const (
 	FieldModelAlias = "model_alias"
 	// FieldGatewayConnectionID holds the string denoting the gateway_connection_id field in the database.
 	FieldGatewayConnectionID = "gateway_connection_id"
-	// FieldGatewayName holds the string denoting the gateway_name field in the database.
-	FieldGatewayName = "gateway_name"
 	// FieldUpstreams holds the string denoting the upstreams field in the database.
 	FieldUpstreams = "upstreams"
 	// FieldStrategy holds the string denoting the strategy field in the database.
@@ -53,7 +51,6 @@ var Columns = []string{
 	FieldName,
 	FieldModelAlias,
 	FieldGatewayConnectionID,
-	FieldGatewayName,
 	FieldUpstreams,
 	FieldStrategy,
 	FieldUIStrategy,
@@ -84,8 +81,6 @@ var (
 	NameValidator func(string) error
 	// ModelAliasValidator is a validator for the "model_alias" field. It is called by the builders before save.
 	ModelAliasValidator func(string) error
-	// DefaultGatewayName holds the default value on creation for the "gateway_name" field.
-	DefaultGatewayName string
 	// DefaultEnabled holds the default value on creation for the "enabled" field.
 	DefaultEnabled bool
 	// DefaultID holds the default value on creation for the "id" field.
@@ -179,11 +174,6 @@ func ByModelAlias(opts ...sql.OrderTermOption) OrderOption {
 // ByGatewayConnectionID orders the results by the gateway_connection_id field.
 func ByGatewayConnectionID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldGatewayConnectionID, opts...).ToFunc()
-}
-
-// ByGatewayName orders the results by the gateway_name field.
-func ByGatewayName(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldGatewayName, opts...).ToFunc()
 }
 
 // ByStrategy orders the results by the strategy field.

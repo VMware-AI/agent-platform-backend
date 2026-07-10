@@ -22,8 +22,6 @@ type ModelRoute {
   # Required: the litellm gateway this route is hosted on. The router-settings
   # push targets this gateway (no platform default fallback).
   backendGatewayId: ID!
-  # Display name of the serving gateway (console 模型路由 list).
-  gatewayName: String!
   upstreams: [String!]!
   # Console alias for `upstreams` — the models this route can serve (模型路由 page).
   supportedModels: [String!]!
@@ -49,7 +47,6 @@ type ModelRoute {
 input CreateModelRouteInput {
   name: String!
   backendGatewayId: ID!
-  gatewayName: String
   supportedModels: [String!]
   strategy: LoadBalancingStrategy
   uiStrategy: ModelRouteStrategy
@@ -64,7 +61,6 @@ input CreateModelRouteInput {
 input UpdateModelRouteInput {
   name: String
   backendGatewayId: ID
-  gatewayName: String
   supportedModels: [String!]
   uiStrategy: ModelRouteStrategy
   enabled: Boolean

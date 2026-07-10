@@ -44,7 +44,6 @@ func (r *mutationResolver) CreateModelRoute(ctx context.Context, input model.Cre
 		SetName(input.Name).
 		SetModelAlias(input.Name).
 		SetGatewayConnectionID(gwID).
-		SetGatewayName(derefString(input.GatewayName)).
 		SetUpstreams(orEmptyStrings(input.SupportedModels))
 	if input.Strategy != nil {
 		c.SetStrategy(modelroute.Strategy(string(*input.Strategy)))
@@ -100,9 +99,6 @@ func (r *mutationResolver) UpdateModelRoute(ctx context.Context, id string, inpu
 		}
 		u.SetGatewayConnectionID(gwID)
 		pushTarget = gwID
-	}
-	if input.GatewayName != nil {
-		u.SetGatewayName(*input.GatewayName)
 	}
 	if input.SupportedModels != nil {
 		u.SetUpstreams(input.SupportedModels)

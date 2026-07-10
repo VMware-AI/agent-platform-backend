@@ -79,26 +79,6 @@ func (_u *ModelRouteUpdate) SetNillableGatewayConnectionID(v *uuid.UUID) *ModelR
 	return _u
 }
 
-// SetGatewayName sets the "gateway_name" field.
-func (_u *ModelRouteUpdate) SetGatewayName(v string) *ModelRouteUpdate {
-	_u.mutation.SetGatewayName(v)
-	return _u
-}
-
-// SetNillableGatewayName sets the "gateway_name" field if the given value is not nil.
-func (_u *ModelRouteUpdate) SetNillableGatewayName(v *string) *ModelRouteUpdate {
-	if v != nil {
-		_u.SetGatewayName(*v)
-	}
-	return _u
-}
-
-// ClearGatewayName clears the value of the "gateway_name" field.
-func (_u *ModelRouteUpdate) ClearGatewayName() *ModelRouteUpdate {
-	_u.mutation.ClearGatewayName()
-	return _u
-}
-
 // SetUpstreams sets the "upstreams" field.
 func (_u *ModelRouteUpdate) SetUpstreams(v []string) *ModelRouteUpdate {
 	_u.mutation.SetUpstreams(v)
@@ -309,12 +289,6 @@ func (_u *ModelRouteUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.GatewayConnectionID(); ok {
 		_spec.SetField(modelroute.FieldGatewayConnectionID, field.TypeUUID, value)
 	}
-	if value, ok := _u.mutation.GatewayName(); ok {
-		_spec.SetField(modelroute.FieldGatewayName, field.TypeString, value)
-	}
-	if _u.mutation.GatewayNameCleared() {
-		_spec.ClearField(modelroute.FieldGatewayName, field.TypeString)
-	}
 	if value, ok := _u.mutation.Upstreams(); ok {
 		_spec.SetField(modelroute.FieldUpstreams, field.TypeJSON, value)
 	}
@@ -435,26 +409,6 @@ func (_u *ModelRouteUpdateOne) SetNillableGatewayConnectionID(v *uuid.UUID) *Mod
 	if v != nil {
 		_u.SetGatewayConnectionID(*v)
 	}
-	return _u
-}
-
-// SetGatewayName sets the "gateway_name" field.
-func (_u *ModelRouteUpdateOne) SetGatewayName(v string) *ModelRouteUpdateOne {
-	_u.mutation.SetGatewayName(v)
-	return _u
-}
-
-// SetNillableGatewayName sets the "gateway_name" field if the given value is not nil.
-func (_u *ModelRouteUpdateOne) SetNillableGatewayName(v *string) *ModelRouteUpdateOne {
-	if v != nil {
-		_u.SetGatewayName(*v)
-	}
-	return _u
-}
-
-// ClearGatewayName clears the value of the "gateway_name" field.
-func (_u *ModelRouteUpdateOne) ClearGatewayName() *ModelRouteUpdateOne {
-	_u.mutation.ClearGatewayName()
 	return _u
 }
 
@@ -697,12 +651,6 @@ func (_u *ModelRouteUpdateOne) sqlSave(ctx context.Context) (_node *ModelRoute, 
 	}
 	if value, ok := _u.mutation.GatewayConnectionID(); ok {
 		_spec.SetField(modelroute.FieldGatewayConnectionID, field.TypeUUID, value)
-	}
-	if value, ok := _u.mutation.GatewayName(); ok {
-		_spec.SetField(modelroute.FieldGatewayName, field.TypeString, value)
-	}
-	if _u.mutation.GatewayNameCleared() {
-		_spec.ClearField(modelroute.FieldGatewayName, field.TypeString)
 	}
 	if value, ok := _u.mutation.Upstreams(); ok {
 		_spec.SetField(modelroute.FieldUpstreams, field.TypeJSON, value)

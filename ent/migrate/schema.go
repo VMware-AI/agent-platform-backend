@@ -326,7 +326,6 @@ var (
 		{Name: "name", Type: field.TypeString, Unique: true},
 		{Name: "model_alias", Type: field.TypeString},
 		{Name: "gateway_connection_id", Type: field.TypeUUID},
-		{Name: "gateway_name", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "upstreams", Type: field.TypeJSON, Nullable: true},
 		{Name: "strategy", Type: field.TypeEnum, Enums: []string{"SIMPLE_SHUFFLE", "LEAST_BUSY", "LATENCY_BASED_ROUTING", "USAGE_BASED_ROUTING_V2", "COST_BASED_ROUTING"}, Default: "SIMPLE_SHUFFLE"},
 		{Name: "ui_strategy", Type: field.TypeEnum, Enums: []string{"ROUND_ROBIN", "WEIGHTED_ROUND_ROBIN", "RANDOM"}, Default: "ROUND_ROBIN"},

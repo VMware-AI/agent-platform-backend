@@ -67,20 +67,6 @@ func (_c *ModelRouteCreate) SetGatewayConnectionID(v uuid.UUID) *ModelRouteCreat
 	return _c
 }
 
-// SetGatewayName sets the "gateway_name" field.
-func (_c *ModelRouteCreate) SetGatewayName(v string) *ModelRouteCreate {
-	_c.mutation.SetGatewayName(v)
-	return _c
-}
-
-// SetNillableGatewayName sets the "gateway_name" field if the given value is not nil.
-func (_c *ModelRouteCreate) SetNillableGatewayName(v *string) *ModelRouteCreate {
-	if v != nil {
-		_c.SetGatewayName(*v)
-	}
-	return _c
-}
-
 // SetUpstreams sets the "upstreams" field.
 func (_c *ModelRouteCreate) SetUpstreams(v []string) *ModelRouteCreate {
 	_c.mutation.SetUpstreams(v)
@@ -204,10 +190,6 @@ func (_c *ModelRouteCreate) defaults() {
 		v := modelroute.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := _c.mutation.GatewayName(); !ok {
-		v := modelroute.DefaultGatewayName
-		_c.mutation.SetGatewayName(v)
-	}
 	if _, ok := _c.mutation.Strategy(); !ok {
 		v := modelroute.DefaultStrategy
 		_c.mutation.SetStrategy(v)
@@ -326,10 +308,6 @@ func (_c *ModelRouteCreate) createSpec() (*ModelRoute, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.GatewayConnectionID(); ok {
 		_spec.SetField(modelroute.FieldGatewayConnectionID, field.TypeUUID, value)
 		_node.GatewayConnectionID = value
-	}
-	if value, ok := _c.mutation.GatewayName(); ok {
-		_spec.SetField(modelroute.FieldGatewayName, field.TypeString, value)
-		_node.GatewayName = value
 	}
 	if value, ok := _c.mutation.Upstreams(); ok {
 		_spec.SetField(modelroute.FieldUpstreams, field.TypeJSON, value)

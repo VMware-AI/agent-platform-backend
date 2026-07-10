@@ -484,7 +484,6 @@ type ComplexityRoot struct {
 		CreatedAt              func(childComplexity int) int
 		Enabled                func(childComplexity int) int
 		Fallbacks              func(childComplexity int) int
-		GatewayName            func(childComplexity int) int
 		ID                     func(childComplexity int) int
 		ModelAlias             func(childComplexity int) int
 		Name                   func(childComplexity int) int
@@ -2885,12 +2884,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelRoute.Fallbacks(childComplexity), true
-	case "ModelRoute.gatewayName":
-		if e.ComplexityRoot.ModelRoute.GatewayName == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ModelRoute.GatewayName(childComplexity), true
 	case "ModelRoute.id":
 		if e.ComplexityRoot.ModelRoute.ID == nil {
 			break
@@ -6678,8 +6671,6 @@ type ModelRoute {
   # Required: the litellm gateway this route is hosted on. The router-settings
   # push targets this gateway (no platform default fallback).
   backendGatewayId: ID!
-  # Display name of the serving gateway (console 模型路由 list).
-  gatewayName: String!
   upstreams: [String!]!
   # Console alias for ` + "`" + `upstreams` + "`" + ` — the models this route can serve (模型路由 page).
   supportedModels: [String!]!
@@ -6705,7 +6696,6 @@ type ModelRoute {
 input CreateModelRouteInput {
   name: String!
   backendGatewayId: ID!
-  gatewayName: String
   supportedModels: [String!]
   strategy: LoadBalancingStrategy
   uiStrategy: ModelRouteStrategy
@@ -6720,7 +6710,6 @@ input CreateModelRouteInput {
 input UpdateModelRouteInput {
   name: String
   backendGatewayId: ID
-  gatewayName: String
   supportedModels: [String!]
   uiStrategy: ModelRouteStrategy
   enabled: Boolean
@@ -9088,8 +9077,6 @@ func (ec *executionContext) childFields_ModelRoute(ctx context.Context, field gr
 		return ec.fieldContext_ModelRoute_modelAlias(ctx, field)
 	case "backendGatewayId":
 		return ec.fieldContext_ModelRoute_backendGatewayId(ctx, field)
-	case "gatewayName":
-		return ec.fieldContext_ModelRoute_gatewayName(ctx, field)
 	case "upstreams":
 		return ec.fieldContext_ModelRoute_upstreams(ctx, field)
 	case "supportedModels":
@@ -18748,29 +18735,6 @@ func (ec *executionContext) _ModelRoute_backendGatewayId(ctx context.Context, fi
 }
 func (ec *executionContext) fieldContext_ModelRoute_backendGatewayId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type ID does not have child fields"))
-}
-
-func (ec *executionContext) _ModelRoute_gatewayName(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ModelRoute_gatewayName(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.GatewayName, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_ModelRoute_gatewayName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _ModelRoute_upstreams(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
@@ -33599,7 +33563,7 @@ func (ec *executionContext) unmarshalInputCreateModelRouteInput(ctx context.Cont
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "backendGatewayId", "gatewayName", "supportedModels", "strategy", "uiStrategy", "enabled", "fallbacks", "contextWindowFallbacks", "contentPolicyFallbacks"}
+	fieldsInOrder := [...]string{"name", "backendGatewayId", "supportedModels", "strategy", "uiStrategy", "enabled", "fallbacks", "contextWindowFallbacks", "contentPolicyFallbacks"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -33620,13 +33584,6 @@ func (ec *executionContext) unmarshalInputCreateModelRouteInput(ctx context.Cont
 				return it, err
 			}
 			it.BackendGatewayID = data
-		case "gatewayName":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gatewayName"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.GatewayName = data
 		case "supportedModels":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("supportedModels"))
 			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
@@ -35741,7 +35698,7 @@ func (ec *executionContext) unmarshalInputUpdateModelRouteInput(ctx context.Cont
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "backendGatewayId", "gatewayName", "supportedModels", "uiStrategy", "enabled", "fallbacks", "contextWindowFallbacks", "contentPolicyFallbacks"}
+	fieldsInOrder := [...]string{"name", "backendGatewayId", "supportedModels", "uiStrategy", "enabled", "fallbacks", "contextWindowFallbacks", "contentPolicyFallbacks"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -35762,13 +35719,6 @@ func (ec *executionContext) unmarshalInputUpdateModelRouteInput(ctx context.Cont
 				return it, err
 			}
 			it.BackendGatewayID = data
-		case "gatewayName":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gatewayName"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.GatewayName = data
 		case "supportedModels":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("supportedModels"))
 			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
@@ -39871,11 +39821,6 @@ func (ec *executionContext) _ModelRoute(ctx context.Context, sel ast.SelectionSe
 			}
 		case "backendGatewayId":
 			out.Values[i] = ec._ModelRoute_backendGatewayId(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "gatewayName":
-			out.Values[i] = ec._ModelRoute_gatewayName(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

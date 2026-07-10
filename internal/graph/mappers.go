@@ -447,11 +447,10 @@ func toModelModelRoute(r *ent.ModelRoute) *model.ModelRoute {
 		ups = []string{}
 	}
 	m := &model.ModelRoute{
-		ID:          r.ID.String(),
-		Name:        r.Name,
-		ModelAlias:  r.ModelAlias,
-		GatewayName: r.GatewayName,
-		Upstreams:   ups,
+		ID:         r.ID.String(),
+		Name:       r.Name,
+		ModelAlias: r.ModelAlias,
+		Upstreams:  ups,
 		// Console alias for upstreams — same backing slice (the route's model group).
 		SupportedModels: ups,
 		Strategy:        model.LoadBalancingStrategy(string(r.Strategy)),

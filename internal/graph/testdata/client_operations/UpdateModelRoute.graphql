@@ -8,7 +8,6 @@ mutation UpdateModelRoute($id: ID!, $input: UpdateModelRouteInput!) {
     id
     name
     backendGatewayId
-    gatewayName
     supportedModels
     uiStrategy
     enabled
