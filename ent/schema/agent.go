@@ -33,8 +33,8 @@ func (Agent) Fields() []ent.Field {
 		field.UUID("template_family_id", uuid.UUID{}).Optional().Nillable(),
 		field.UUID("template_version_id", uuid.UUID{}).Optional().Nillable(),
 		field.String("run_as_user").Optional().Default(""),
-	field.String("static_ip").Optional().Default(""),
-	field.UUID("tenant_id", uuid.UUID{}).Optional().Nillable(),
+		field.String("static_ip").Optional().Default(""),
+		field.UUID("tenant_id", uuid.UUID{}).Optional().Nillable(),
 		field.UUID("environment_id", uuid.UUID{}).Optional().Nillable(), // LLD-10 env_scope (default off)
 	}
 }

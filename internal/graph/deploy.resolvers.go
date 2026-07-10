@@ -73,7 +73,6 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		return nil, fmt.Errorf("create agent: %w", err)
 	}
 
-
 	devNoVC := os.Getenv("DEV_NO_VCENTER") == "1" || os.Getenv("DEV_NO_VCENTER") == "true"
 
 	if devNoVC {
@@ -736,7 +735,6 @@ func maskKey(key string) string {
 	return key[:4] + "****" + key[len(key)-4:]
 }
 
-
 // RequestAgentUpgrade is a stub for the generated schema contract. Full
 // implementation will be wired when the upgrade subsystem is integrated.
 func (r *mutationResolver) RequestAgentUpgrade(ctx context.Context, agentID string, targetVersion string) (bool, error) {
@@ -746,4 +744,3 @@ func (r *mutationResolver) RequestAgentUpgrade(ctx context.Context, agentID stri
 func (r *mutationResolver) UpgradeAgents(ctx context.Context, agentIds []string, targetVersion string) (int, error) {
 	return 0, fmt.Errorf("batch upgrade not yet implemented")
 }
-
