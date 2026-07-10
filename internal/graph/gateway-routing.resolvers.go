@@ -19,11 +19,12 @@ import (
 
 // CreateModelRoute mints a new model route from the console 模型路由 create form.
 // Always inserts (id-keyed); a duplicate name surfaces as a GraphQL error —
-// re-saving the same name goes through updateModelRoute. model_alias is set
-// to name (the console form has no separate alias); supportedModels are
-// stored as the upstream group. modelGatewayId is REQUIRED — a route
-// without a gateway has no router-settings push target. strategy is the
-// litellm LoadBalanceStrategy (omitted → ent default SIMPLE_SHUFFLE).
+// re-saving the same name goes through updateModelRoute. supportedModels
+// are stored as the litellm model group (also the key under which the
+// three fallback slices are surfaced on the wire). modelGatewayId is
+// REQUIRED — a route without a gateway has no router-settings push target.
+// strategy is the litellm LoadBalanceStrategy (omitted → ent default
+// SIMPLE_SHUFFLE).
 func (r *mutationResolver) CreateModelRoute(ctx context.Context, input model.CreateModelRouteInput) (*model.ModelRoute, error) {
 	gwID, err := parseRequiredUUID(input.ModelGatewayID, "modelGatewayId")
 	if err != nil {
@@ -42,9 +43,8 @@ func (r *mutationResolver) CreateModelRoute(ctx context.Context, input model.Cre
 	}
 	c := r.Ent.ModelRoute.Create().
 		SetName(input.Name).
-		SetModelAlias(input.Name).
 		SetModelGatewayID(gwID).
-		SetUpstreams(orEmptyStrings(input.SupportedModels))
+		SetSupportedModels(input.SupportedModels)
 	if input.Strategy != nil {
 		c.SetStrategy(modelroute.Strategy(string(*input.Strategy)))
 	}
@@ -67,8 +67,9 @@ func (r *mutationResolver) CreateModelRoute(ctx context.Context, input model.Cre
 }
 
 // UpdateModelRoute edits an existing model route by id (console 模型路由 edit form).
-// Only provided fields change; supportedModels (when given) replace the upstream
-// group. modelGatewayId, when present, must point at a live gateway.
+// Only provided fields change; supportedModels (when given) replace the
+// litellm model group. modelGatewayId, when present, must point at a live
+// gateway.
 func (r *mutationResolver) UpdateModelRoute(ctx context.Context, id string, input model.UpdateModelRouteInput) (*model.ModelRoute, error) {
 	rid, err := uuid.Parse(id)
 	if err != nil {
@@ -95,7 +96,7 @@ func (r *mutationResolver) UpdateModelRoute(ctx context.Context, id string, inpu
 		pushTarget = gwID
 	}
 	if input.SupportedModels != nil {
-		u.SetUpstreams(input.SupportedModels)
+		u.SetSupportedModels(input.SupportedModels)
 	}
 	if input.Strategy != nil {
 		u.SetStrategy(modelroute.Strategy(string(*input.Strategy)))
@@ -132,25 +133,24 @@ func (r *mutationResolver) DeleteModelRoute(ctx context.Context, id string) (boo
 }
 
 // SyncRouterSettings is the resolver for the syncRouterSettings field.
-// On-demand version of the periodic router sync: re-aggregates every active
-// ModelRoute, partitions the routes by backendGatewayId, and POSTs the
-// per-gateway router_settings payload to /config/update. Each gateway
-// receives only the routes bound to it. Returns true only when every
-// gateway accepted the push; partial failures surface as GraphQL errors.
+// On-demand version of the periodic router sync: re-aggregates every
+// ModelRoute and POSTs the per-gateway router_settings payload to
+// /config/update. Each gateway receives only the routes bound to it.
+// Returns true only when every gateway accepted the push (or skipped via
+// the hash short-circuit). Partial failures or transport errors surface
+// as GraphQL errors; the periodic worker is the safety net.
 func (r *mutationResolver) SyncRouterSettings(ctx context.Context) (bool, error) {
 	routes, err := r.Ent.ModelRoute.Query().All(ctx)
 	if err != nil {
 		return false, err
 	}
-	settings := gateway.AggregateRouterSettings(routes, nil)
-
-	buckets := bucketRoutesByGateway(routes)
-	if len(buckets) == 0 {
+	if len(routes) == 0 {
 		// No active routes — nothing to push. Return true so the console's
 		// "sync now" button doesn't surface an error on an empty fleet.
 		r.audit(ctx, "router.sync", "router_settings", "", true, actorID(auth.FromContext(ctx)))
 		return true, nil
 	}
+	buckets := bucketRoutesByGateway(routes)
 	for gwID := range buckets {
 		g, err := r.Ent.GatewayConnection.Get(ctx, gwID)
 		if err != nil {
@@ -160,6 +160,7 @@ func (r *mutationResolver) SyncRouterSettings(ctx context.Context) (bool, error)
 		if mk == "" {
 			return false, gqlerror.Errorf("gateway %s has no resolvable master key", g.Name)
 		}
+		settings := gateway.AggregateRouterSettings(buckets[gwID], nil)
 		http, err := gateway.NewHTTPClient(g.Endpoint, mk)
 		if err != nil {
 			return false, err
@@ -167,6 +168,12 @@ func (r *mutationResolver) SyncRouterSettings(ctx context.Context) (bool, error)
 		if err := gateway.NewAdminClient(http).PushRouterSettings(ctx, settings); err != nil {
 			return false, err
 		}
+		// Mirror the resolver-side hook's baseline so the next
+		// periodic tick (or an immediate fire-and-forget push) sees
+		// the same payload and short-circuits. We hash here rather
+		// than re-using AggregateAndPushRouterSettings so the result
+		// of this user-initiated sync is observable to the operator.
+		r.writeLastRouterSettingsHash(gwID, hashRouterSettings(settings))
 	}
 	r.audit(ctx, "router.sync", "router_settings", "", true, actorID(auth.FromContext(ctx)))
 	return true, nil

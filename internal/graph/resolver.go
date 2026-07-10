@@ -149,6 +149,14 @@ type Resolver struct {
 	// by pool id; a per-pool mutex is created lazily under poolSyncLocksMu.
 	poolSyncLocks   map[uuid.UUID]*sync.Mutex
 	poolSyncLocksMu sync.Mutex
+	// lastRouterSettingsHash memoizes the SHA-256 hex of each gateway's last
+	// successfully POSTed /config/update payload. Shared across the periodic
+	// worker (StartRouterSettingsSync) and the resolver-side fire-and-forget
+	// hook (AggregateAndPushRouterSettings) so a stable payload short-circuits
+	// every push path. Process-local — multi-replica deployments accept the
+	// redundant-but-correct first-tick push from each replica.
+	lastRouterSettingsHash   map[uuid.UUID]string
+	lastRouterSettingsHashMu sync.Mutex
 }
 
 // EnablePermissionCache turns on memoization of custom-role permission sets for

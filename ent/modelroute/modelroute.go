@@ -21,12 +21,10 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
-	// FieldModelAlias holds the string denoting the model_alias field in the database.
-	FieldModelAlias = "model_alias"
 	// FieldModelGatewayID holds the string denoting the model_gateway_id field in the database.
 	FieldModelGatewayID = "model_gateway_id"
-	// FieldUpstreams holds the string denoting the upstreams field in the database.
-	FieldUpstreams = "upstreams"
+	// FieldSupportedModels holds the string denoting the supported_models field in the database.
+	FieldSupportedModels = "supported_models"
 	// FieldStrategy holds the string denoting the strategy field in the database.
 	FieldStrategy = "strategy"
 	// FieldFallbacks holds the string denoting the fallbacks field in the database.
@@ -45,9 +43,8 @@ var Columns = []string{
 	FieldCreatedAt,
 	FieldUpdatedAt,
 	FieldName,
-	FieldModelAlias,
 	FieldModelGatewayID,
-	FieldUpstreams,
+	FieldSupportedModels,
 	FieldStrategy,
 	FieldFallbacks,
 	FieldContextWindowFallbacks,
@@ -73,8 +70,6 @@ var (
 	UpdateDefaultUpdatedAt func() time.Time
 	// NameValidator is a validator for the "name" field. It is called by the builders before save.
 	NameValidator func(string) error
-	// ModelAliasValidator is a validator for the "model_alias" field. It is called by the builders before save.
-	ModelAliasValidator func(string) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -129,11 +124,6 @@ func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByName orders the results by the name field.
 func ByName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldName, opts...).ToFunc()
-}
-
-// ByModelAlias orders the results by the model_alias field.
-func ByModelAlias(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldModelAlias, opts...).ToFunc()
 }
 
 // ByModelGatewayID orders the results by the model_gateway_id field.

@@ -10248,10 +10248,9 @@ type ModelRouteMutation struct {
 	created_at                     *time.Time
 	updated_at                     *time.Time
 	name                           *string
-	model_alias                    *string
 	model_gateway_id               *uuid.UUID
-	upstreams                      *[]string
-	appendupstreams                []string
+	supported_models               *[]string
+	appendsupported_models         []string
 	strategy                       *modelroute.Strategy
 	fallbacks                      *[]string
 	appendfallbacks                []string
@@ -10477,42 +10476,6 @@ func (m *ModelRouteMutation) ResetName() {
 	m.name = nil
 }
 
-// SetModelAlias sets the "model_alias" field.
-func (m *ModelRouteMutation) SetModelAlias(s string) {
-	m.model_alias = &s
-}
-
-// ModelAlias returns the value of the "model_alias" field in the mutation.
-func (m *ModelRouteMutation) ModelAlias() (r string, exists bool) {
-	v := m.model_alias
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldModelAlias returns the old "model_alias" field's value of the ModelRoute entity.
-// If the ModelRoute object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ModelRouteMutation) OldModelAlias(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldModelAlias is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldModelAlias requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldModelAlias: %w", err)
-	}
-	return oldValue.ModelAlias, nil
-}
-
-// ResetModelAlias resets all changes to the "model_alias" field.
-func (m *ModelRouteMutation) ResetModelAlias() {
-	m.model_alias = nil
-}
-
 // SetModelGatewayID sets the "model_gateway_id" field.
 func (m *ModelRouteMutation) SetModelGatewayID(u uuid.UUID) {
 	m.model_gateway_id = &u
@@ -10549,69 +10512,69 @@ func (m *ModelRouteMutation) ResetModelGatewayID() {
 	m.model_gateway_id = nil
 }
 
-// SetUpstreams sets the "upstreams" field.
-func (m *ModelRouteMutation) SetUpstreams(s []string) {
-	m.upstreams = &s
-	m.appendupstreams = nil
+// SetSupportedModels sets the "supported_models" field.
+func (m *ModelRouteMutation) SetSupportedModels(s []string) {
+	m.supported_models = &s
+	m.appendsupported_models = nil
 }
 
-// Upstreams returns the value of the "upstreams" field in the mutation.
-func (m *ModelRouteMutation) Upstreams() (r []string, exists bool) {
-	v := m.upstreams
+// SupportedModels returns the value of the "supported_models" field in the mutation.
+func (m *ModelRouteMutation) SupportedModels() (r []string, exists bool) {
+	v := m.supported_models
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldUpstreams returns the old "upstreams" field's value of the ModelRoute entity.
+// OldSupportedModels returns the old "supported_models" field's value of the ModelRoute entity.
 // If the ModelRoute object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ModelRouteMutation) OldUpstreams(ctx context.Context) (v []string, err error) {
+func (m *ModelRouteMutation) OldSupportedModels(ctx context.Context) (v []string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUpstreams is only allowed on UpdateOne operations")
+		return v, errors.New("OldSupportedModels is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUpstreams requires an ID field in the mutation")
+		return v, errors.New("OldSupportedModels requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUpstreams: %w", err)
+		return v, fmt.Errorf("querying old value for OldSupportedModels: %w", err)
 	}
-	return oldValue.Upstreams, nil
+	return oldValue.SupportedModels, nil
 }
 
-// AppendUpstreams adds s to the "upstreams" field.
-func (m *ModelRouteMutation) AppendUpstreams(s []string) {
-	m.appendupstreams = append(m.appendupstreams, s...)
+// AppendSupportedModels adds s to the "supported_models" field.
+func (m *ModelRouteMutation) AppendSupportedModels(s []string) {
+	m.appendsupported_models = append(m.appendsupported_models, s...)
 }
 
-// AppendedUpstreams returns the list of values that were appended to the "upstreams" field in this mutation.
-func (m *ModelRouteMutation) AppendedUpstreams() ([]string, bool) {
-	if len(m.appendupstreams) == 0 {
+// AppendedSupportedModels returns the list of values that were appended to the "supported_models" field in this mutation.
+func (m *ModelRouteMutation) AppendedSupportedModels() ([]string, bool) {
+	if len(m.appendsupported_models) == 0 {
 		return nil, false
 	}
-	return m.appendupstreams, true
+	return m.appendsupported_models, true
 }
 
-// ClearUpstreams clears the value of the "upstreams" field.
-func (m *ModelRouteMutation) ClearUpstreams() {
-	m.upstreams = nil
-	m.appendupstreams = nil
-	m.clearedFields[modelroute.FieldUpstreams] = struct{}{}
+// ClearSupportedModels clears the value of the "supported_models" field.
+func (m *ModelRouteMutation) ClearSupportedModels() {
+	m.supported_models = nil
+	m.appendsupported_models = nil
+	m.clearedFields[modelroute.FieldSupportedModels] = struct{}{}
 }
 
-// UpstreamsCleared returns if the "upstreams" field was cleared in this mutation.
-func (m *ModelRouteMutation) UpstreamsCleared() bool {
-	_, ok := m.clearedFields[modelroute.FieldUpstreams]
+// SupportedModelsCleared returns if the "supported_models" field was cleared in this mutation.
+func (m *ModelRouteMutation) SupportedModelsCleared() bool {
+	_, ok := m.clearedFields[modelroute.FieldSupportedModels]
 	return ok
 }
 
-// ResetUpstreams resets all changes to the "upstreams" field.
-func (m *ModelRouteMutation) ResetUpstreams() {
-	m.upstreams = nil
-	m.appendupstreams = nil
-	delete(m.clearedFields, modelroute.FieldUpstreams)
+// ResetSupportedModels resets all changes to the "supported_models" field.
+func (m *ModelRouteMutation) ResetSupportedModels() {
+	m.supported_models = nil
+	m.appendsupported_models = nil
+	delete(m.clearedFields, modelroute.FieldSupportedModels)
 }
 
 // SetStrategy sets the "strategy" field.
@@ -10879,7 +10842,7 @@ func (m *ModelRouteMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ModelRouteMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 9)
 	if m.created_at != nil {
 		fields = append(fields, modelroute.FieldCreatedAt)
 	}
@@ -10889,14 +10852,11 @@ func (m *ModelRouteMutation) Fields() []string {
 	if m.name != nil {
 		fields = append(fields, modelroute.FieldName)
 	}
-	if m.model_alias != nil {
-		fields = append(fields, modelroute.FieldModelAlias)
-	}
 	if m.model_gateway_id != nil {
 		fields = append(fields, modelroute.FieldModelGatewayID)
 	}
-	if m.upstreams != nil {
-		fields = append(fields, modelroute.FieldUpstreams)
+	if m.supported_models != nil {
+		fields = append(fields, modelroute.FieldSupportedModels)
 	}
 	if m.strategy != nil {
 		fields = append(fields, modelroute.FieldStrategy)
@@ -10924,12 +10884,10 @@ func (m *ModelRouteMutation) Field(name string) (ent.Value, bool) {
 		return m.UpdatedAt()
 	case modelroute.FieldName:
 		return m.Name()
-	case modelroute.FieldModelAlias:
-		return m.ModelAlias()
 	case modelroute.FieldModelGatewayID:
 		return m.ModelGatewayID()
-	case modelroute.FieldUpstreams:
-		return m.Upstreams()
+	case modelroute.FieldSupportedModels:
+		return m.SupportedModels()
 	case modelroute.FieldStrategy:
 		return m.Strategy()
 	case modelroute.FieldFallbacks:
@@ -10953,12 +10911,10 @@ func (m *ModelRouteMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldUpdatedAt(ctx)
 	case modelroute.FieldName:
 		return m.OldName(ctx)
-	case modelroute.FieldModelAlias:
-		return m.OldModelAlias(ctx)
 	case modelroute.FieldModelGatewayID:
 		return m.OldModelGatewayID(ctx)
-	case modelroute.FieldUpstreams:
-		return m.OldUpstreams(ctx)
+	case modelroute.FieldSupportedModels:
+		return m.OldSupportedModels(ctx)
 	case modelroute.FieldStrategy:
 		return m.OldStrategy(ctx)
 	case modelroute.FieldFallbacks:
@@ -10997,13 +10953,6 @@ func (m *ModelRouteMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetName(v)
 		return nil
-	case modelroute.FieldModelAlias:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetModelAlias(v)
-		return nil
 	case modelroute.FieldModelGatewayID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
@@ -11011,12 +10960,12 @@ func (m *ModelRouteMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetModelGatewayID(v)
 		return nil
-	case modelroute.FieldUpstreams:
+	case modelroute.FieldSupportedModels:
 		v, ok := value.([]string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetUpstreams(v)
+		m.SetSupportedModels(v)
 		return nil
 	case modelroute.FieldStrategy:
 		v, ok := value.(modelroute.Strategy)
@@ -11076,8 +11025,8 @@ func (m *ModelRouteMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *ModelRouteMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(modelroute.FieldUpstreams) {
-		fields = append(fields, modelroute.FieldUpstreams)
+	if m.FieldCleared(modelroute.FieldSupportedModels) {
+		fields = append(fields, modelroute.FieldSupportedModels)
 	}
 	if m.FieldCleared(modelroute.FieldFallbacks) {
 		fields = append(fields, modelroute.FieldFallbacks)
@@ -11102,8 +11051,8 @@ func (m *ModelRouteMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ModelRouteMutation) ClearField(name string) error {
 	switch name {
-	case modelroute.FieldUpstreams:
-		m.ClearUpstreams()
+	case modelroute.FieldSupportedModels:
+		m.ClearSupportedModels()
 		return nil
 	case modelroute.FieldFallbacks:
 		m.ClearFallbacks()
@@ -11131,14 +11080,11 @@ func (m *ModelRouteMutation) ResetField(name string) error {
 	case modelroute.FieldName:
 		m.ResetName()
 		return nil
-	case modelroute.FieldModelAlias:
-		m.ResetModelAlias()
-		return nil
 	case modelroute.FieldModelGatewayID:
 		m.ResetModelGatewayID()
 		return nil
-	case modelroute.FieldUpstreams:
-		m.ResetUpstreams()
+	case modelroute.FieldSupportedModels:
+		m.ResetSupportedModels()
 		return nil
 	case modelroute.FieldStrategy:
 		m.ResetStrategy()

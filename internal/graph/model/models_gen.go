@@ -275,7 +275,7 @@ type CreateDepartmentInput struct {
 type CreateModelRouteInput struct {
 	Name                   string                 `json:"name"`
 	ModelGatewayID         string                 `json:"modelGatewayId"`
-	SupportedModels        []string               `json:"supportedModels,omitempty"`
+	SupportedModels        []string               `json:"supportedModels"`
 	Strategy               *LoadBalancingStrategy `json:"strategy,omitempty"`
 	Fallbacks              []string               `json:"fallbacks,omitempty"`
 	ContextWindowFallbacks []string               `json:"contextWindowFallbacks,omitempty"`
@@ -668,9 +668,7 @@ type ModelInfoInput struct {
 type ModelRoute struct {
 	ID                     string                `json:"id"`
 	Name                   string                `json:"name"`
-	ModelAlias             string                `json:"modelAlias"`
 	ModelGateway           *ModelGateway         `json:"modelGateway"`
-	Upstreams              []string              `json:"upstreams"`
 	SupportedModels        []string              `json:"supportedModels"`
 	Strategy               LoadBalancingStrategy `json:"strategy"`
 	CreatedAt              time.Time             `json:"createdAt"`

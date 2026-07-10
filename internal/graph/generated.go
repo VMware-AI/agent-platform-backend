@@ -483,13 +483,11 @@ type ComplexityRoot struct {
 		CreatedAt              func(childComplexity int) int
 		Fallbacks              func(childComplexity int) int
 		ID                     func(childComplexity int) int
-		ModelAlias             func(childComplexity int) int
 		ModelGateway           func(childComplexity int) int
 		Name                   func(childComplexity int) int
 		Strategy               func(childComplexity int) int
 		SupportedModels        func(childComplexity int) int
 		UpdatedAt              func(childComplexity int) int
-		Upstreams              func(childComplexity int) int
 	}
 
 	ModelSpec struct {
@@ -2874,12 +2872,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelRoute.ID(childComplexity), true
-	case "ModelRoute.modelAlias":
-		if e.ComplexityRoot.ModelRoute.ModelAlias == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ModelRoute.ModelAlias(childComplexity), true
 	case "ModelRoute.modelGateway":
 		if e.ComplexityRoot.ModelRoute.ModelGateway == nil {
 			break
@@ -2910,12 +2902,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelRoute.UpdatedAt(childComplexity), true
-	case "ModelRoute.upstreams":
-		if e.ComplexityRoot.ModelRoute.Upstreams == nil {
-			break
-		}
-
-		return e.ComplexityRoot.ModelRoute.Upstreams(childComplexity), true
 
 	case "ModelSpec.litellmParams":
 		if e.ComplexityRoot.ModelSpec.LitellmParams == nil {
@@ -6627,16 +6613,32 @@ enum RotationKind {
 # which is also the router-settings push target (no platform default).
 # ProviderModel CRUD + the GatewayConnection surface live in their own
 # modules; this file only contains routing topology.
+#
+# Wire shape (POST /config/update) per ModelRoute:
+#   routing_groups[i]:
+#     group_name: <name>           # route.name
+#     models: [<supportedModels>]   # route.supportedModels
+#     routing_strategy: <strategy>  # route.strategy, kebab-case for litellm
+#   fallbacks[i]:
+#     <supportedModels[0]>: <route.fallbacks>
+#   context_window_fallbacks[i]:
+#     <supportedModels[0]>: <route.contextWindowFallbacks>
+#   content_policy_fallbacks[i]:
+#     <supportedModels[0]>: <route.contentPolicyFallbacks>
+#
+# The fallback key MUST equal the first element of supportedModels (a
+# litellm requirement — the key is a model name on the wire, not a route
+# id). Console form validation is the caller's responsibility.
 
 type ModelRoute {
   id: ID!
   name: String!
-  modelAlias: String!
   # Required: the litellm gateway this route is hosted on. The router-settings
   # push targets this gateway (no platform default fallback).
   modelGateway: ModelGateway!
-  upstreams: [String!]!
-  # Console alias for ` + "`" + `upstreams` + "`" + ` — the models this route can serve (模型路由 page).
+  # The litellm model group served by this route. Mapped 1:1 to the
+  # ` + "`" + `models` + "`" + ` array on the wire (single-element in the common case;
+  # multi-element is allowed but rare).
   supportedModels: [String!]!
   # The litellm LoadBalanceStrategy applied at push time. The console form
   # exposes only the friendly values (round-robin / weighted / random); the
@@ -6644,14 +6646,17 @@ type ModelRoute {
   strategy: LoadBalancingStrategy!
   createdAt: Time!
   updatedAt: Time!
-  # Fallback chains (LiteLLM design doc §3.2)
+  # Fallback chains surfaced to litellm via POST /config/update. Three
+  # independent lists map 1:1 to the doc's three fallback kinds (general /
+  # context-window / content-policy). Each entry is a litellm model name
+  # referenced by the corresponding route's supportedModels[0] on the wire.
   fallbacks: [String!]!
   contextWindowFallbacks: [String!]!
   contentPolicyFallbacks: [String!]!
 }
 
-# Console 模型路由 create form (创建路由). modelAlias is set to name;
-# supportedModels are stored as the route's model group. modelGatewayId is
+# Console 模型路由 create form (创建路由). name is the route's identifier and
+# becomes the routing_group.group_name on the wire. modelGatewayId is
 # REQUIRED — a route without a gateway has no router-settings push target.
 # strategy is the litellm LoadBalanceStrategy to set on this route; default
 # (omitted) leaves the ent column default in place (SIMPLE_SHUFFLE).
@@ -6660,7 +6665,7 @@ type ModelRoute {
 input CreateModelRouteInput {
   name: String!
   modelGatewayId: ID!
-  supportedModels: [String!]
+  supportedModels: [String!]!
   strategy: LoadBalancingStrategy
   fallbacks: [String!]
   contextWindowFallbacks: [String!]
@@ -9033,12 +9038,8 @@ func (ec *executionContext) childFields_ModelRoute(ctx context.Context, field gr
 		return ec.fieldContext_ModelRoute_id(ctx, field)
 	case "name":
 		return ec.fieldContext_ModelRoute_name(ctx, field)
-	case "modelAlias":
-		return ec.fieldContext_ModelRoute_modelAlias(ctx, field)
 	case "modelGateway":
 		return ec.fieldContext_ModelRoute_modelGateway(ctx, field)
-	case "upstreams":
-		return ec.fieldContext_ModelRoute_upstreams(ctx, field)
 	case "supportedModels":
 		return ec.fieldContext_ModelRoute_supportedModels(ctx, field)
 	case "strategy":
@@ -18625,29 +18626,6 @@ func (ec *executionContext) fieldContext_ModelRoute_name(_ context.Context, fiel
 	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
-func (ec *executionContext) _ModelRoute_modelAlias(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ModelRoute_modelAlias(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.ModelAlias, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_ModelRoute_modelAlias(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
 func (ec *executionContext) _ModelRoute_modelGateway(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -18678,29 +18656,6 @@ func (ec *executionContext) fieldContext_ModelRoute_modelGateway(_ context.Conte
 		},
 	}
 	return fc, nil
-}
-
-func (ec *executionContext) _ModelRoute_upstreams(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_ModelRoute_upstreams(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Upstreams, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v []string) graphql.Marshaler {
-			return ec.marshalNString2ᚕstringᚄ(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_ModelRoute_upstreams(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("ModelRoute", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _ModelRoute_supportedModels(ctx context.Context, field graphql.CollectedField, obj *model.ModelRoute) (ret graphql.Marshaler) {
@@ -33421,7 +33376,7 @@ func (ec *executionContext) unmarshalInputCreateModelRouteInput(ctx context.Cont
 			it.ModelGatewayID = data
 		case "supportedModels":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("supportedModels"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			data, err := ec.unmarshalNString2ᚕstringᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -39628,18 +39583,8 @@ func (ec *executionContext) _ModelRoute(ctx context.Context, sel ast.SelectionSe
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "modelAlias":
-			out.Values[i] = ec._ModelRoute_modelAlias(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "modelGateway":
 			out.Values[i] = ec._ModelRoute_modelGateway(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "upstreams":
-			out.Values[i] = ec._ModelRoute_upstreams(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

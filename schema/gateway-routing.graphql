@@ -5,16 +5,32 @@
 # which is also the router-settings push target (no platform default).
 # ProviderModel CRUD + the GatewayConnection surface live in their own
 # modules; this file only contains routing topology.
+#
+# Wire shape (POST /config/update) per ModelRoute:
+#   routing_groups[i]:
+#     group_name: <name>           # route.name
+#     models: [<supportedModels>]   # route.supportedModels
+#     routing_strategy: <strategy>  # route.strategy, kebab-case for litellm
+#   fallbacks[i]:
+#     <supportedModels[0]>: <route.fallbacks>
+#   context_window_fallbacks[i]:
+#     <supportedModels[0]>: <route.contextWindowFallbacks>
+#   content_policy_fallbacks[i]:
+#     <supportedModels[0]>: <route.contentPolicyFallbacks>
+#
+# The fallback key MUST equal the first element of supportedModels (a
+# litellm requirement — the key is a model name on the wire, not a route
+# id). Console form validation is the caller's responsibility.
 
 type ModelRoute {
   id: ID!
   name: String!
-  modelAlias: String!
   # Required: the litellm gateway this route is hosted on. The router-settings
   # push targets this gateway (no platform default fallback).
   modelGateway: ModelGateway!
-  upstreams: [String!]!
-  # Console alias for `upstreams` — the models this route can serve (模型路由 page).
+  # The litellm model group served by this route. Mapped 1:1 to the
+  # `models` array on the wire (single-element in the common case;
+  # multi-element is allowed but rare).
   supportedModels: [String!]!
   # The litellm LoadBalanceStrategy applied at push time. The console form
   # exposes only the friendly values (round-robin / weighted / random); the
@@ -22,14 +38,17 @@ type ModelRoute {
   strategy: LoadBalancingStrategy!
   createdAt: Time!
   updatedAt: Time!
-  # Fallback chains (LiteLLM design doc §3.2)
+  # Fallback chains surfaced to litellm via POST /config/update. Three
+  # independent lists map 1:1 to the doc's three fallback kinds (general /
+  # context-window / content-policy). Each entry is a litellm model name
+  # referenced by the corresponding route's supportedModels[0] on the wire.
   fallbacks: [String!]!
   contextWindowFallbacks: [String!]!
   contentPolicyFallbacks: [String!]!
 }
 
-# Console 模型路由 create form (创建路由). modelAlias is set to name;
-# supportedModels are stored as the route's model group. modelGatewayId is
+# Console 模型路由 create form (创建路由). name is the route's identifier and
+# becomes the routing_group.group_name on the wire. modelGatewayId is
 # REQUIRED — a route without a gateway has no router-settings push target.
 # strategy is the litellm LoadBalanceStrategy to set on this route; default
 # (omitted) leaves the ent column default in place (SIMPLE_SHUFFLE).
@@ -38,7 +57,7 @@ type ModelRoute {
 input CreateModelRouteInput {
   name: String!
   modelGatewayId: ID!
-  supportedModels: [String!]
+  supportedModels: [String!]!
   strategy: LoadBalancingStrategy
   fallbacks: [String!]
   contextWindowFallbacks: [String!]

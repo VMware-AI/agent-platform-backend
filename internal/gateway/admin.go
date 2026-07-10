@@ -130,35 +130,42 @@ func (a *AdminClient) PushModelUpdate(ctx context.Context, providerName string, 
 	return a.post(ctx, "/model/update", body, nil)
 }
 
-// AggregateRouterSettings builds a router_settings payload from the active DB
-// rows. Idempotent: re-running on the same data yields the same JSON. Each
-// active route becomes one routing_group (named "<route>-group" per the
-// design doc), and each non-empty fallback slice becomes one FallbackEntry.
+// AggregateRouterSettings builds a router_settings payload from the DB rows.
+// Idempotent: re-running on the same data yields the same JSON. Each route
+// becomes one routing_group — the wire shape is:
+//
+//	routing_groups:
+//	  group_name:        <route.name>
+//	  models:            <route.supportedModels>
+//	  routing_strategy:  <ToLitellmRoutingStrategy(route.strategy)>
+//	fallbacks:
+//	  <route.supportedModels[0]>: <route.fallbacks>
+//	context_window_fallbacks:
+//	  <route.supportedModels[0]>: <route.contextWindowFallbacks>
+//	content_policy_fallbacks:
+//	  <route.supportedModels[0]>: <route.contentPolicyFallbacks>
+//
+// Routes with an empty SupportedModels are skipped — they would otherwise
+// produce a routing_group with no models (litellm would reject the payload
+// or produce a no-op group). The console form requires supportedModels on
+// create, so empty is a defensive guard only.
 //
 // tiersByAlias is reserved for a future per-tier routing strategy override;
 // LiteLLM's routing_groups don't currently surface tier metadata, so the
 // field stays nil on the wire and callers pass nil. The seam is kept so a
 // future enhancement can slot in without changing call sites.
 func AggregateRouterSettings(activeRoutes []*ent.ModelRoute, tiersByAlias map[string]string) RouterSettings {
-	out := RouterSettings{
-		RoutingStrategy: "simple-shuffle",
-	}
+	out := RouterSettings{}
 	groups := make([]RoutingGroup, 0, len(activeRoutes))
 	for _, r := range activeRoutes {
-		if r == nil {
+		if r == nil || len(r.SupportedModels) == 0 {
 			continue
 		}
-		strategy := ToLitellmRoutingStrategy(string(r.Strategy))
-		group := RoutingGroup{
-			GroupName:       r.ModelAlias + "-group",
-			Models:          []string{r.ModelAlias},
-			RoutingStrategy: strategy,
-		}
-		if len(r.Upstreams) > 0 {
-			group.Models = append([]string(nil), r.Upstreams...)
-			group.Models = append(group.Models, r.ModelAlias)
-		}
-		groups = append(groups, group)
+		groups = append(groups, RoutingGroup{
+			GroupName:       r.Name,
+			Models:          append([]string(nil), r.SupportedModels...),
+			RoutingStrategy: ToLitellmRoutingStrategy(string(r.Strategy)),
+		})
 	}
 	out.RoutingGroups = groups
 
@@ -169,27 +176,32 @@ func AggregateRouterSettings(activeRoutes []*ent.ModelRoute, tiersByAlias map[st
 		}
 	}
 
-	if fb := firstFallbackEntries(activeRoutes, "fallbacks"); len(fb) > 0 {
+	if fb := fallbackEntries(activeRoutes, "fallbacks"); len(fb) > 0 {
 		out.Fallbacks = fb
 	}
-	if fb := firstFallbackEntries(activeRoutes, "context_window_fallbacks"); len(fb) > 0 {
+	if fb := fallbackEntries(activeRoutes, "context_window_fallbacks"); len(fb) > 0 {
 		out.ContextWindowFallbacks = fb
 	}
-	if fb := firstFallbackEntries(activeRoutes, "content_policy_fallbacks"); len(fb) > 0 {
+	if fb := fallbackEntries(activeRoutes, "content_policy_fallbacks"); len(fb) > 0 {
 		out.ContentPolicyFallbacks = fb
 	}
 
 	return out
 }
 
-// firstFallbackEntries collects the named fallback slice off every active
-// route into one FallbackEntry keyed by the route's model_alias. Routes with
-// an empty slice are skipped. The kind discriminator is the column name so
-// callers don't repeat themselves.
-func firstFallbackEntries(routes []*ent.ModelRoute, kind string) []FallbackEntry {
+// fallbackEntries collects the named fallback slice off every route into one
+// FallbackEntry keyed by the route's supportedModels[0]. Routes with no
+// supportedModels or an empty fallback slice are skipped. The kind
+// discriminator is the column name so callers don't repeat themselves.
+//
+// Key choice: litellm's /config/update wire format keys each fallback entry
+// by a model name (not a route id). The route's supportedModels[0] is the
+// canonical model name to use — console form validation guarantees it
+// matches the target model group.
+func fallbackEntries(routes []*ent.ModelRoute, kind string) []FallbackEntry {
 	out := make([]FallbackEntry, 0)
 	for _, r := range routes {
-		if r == nil {
+		if r == nil || len(r.SupportedModels) == 0 {
 			continue
 		}
 		var entries []string
@@ -206,7 +218,8 @@ func firstFallbackEntries(routes []*ent.ModelRoute, kind string) []FallbackEntry
 		if len(entries) == 0 {
 			continue
 		}
-		out = append(out, FallbackEntry{r.ModelAlias: append([]string(nil), entries...)})
+		key := r.SupportedModels[0]
+		out = append(out, FallbackEntry{key: append([]string(nil), entries...)})
 	}
 	if len(out) == 0 {
 		return nil

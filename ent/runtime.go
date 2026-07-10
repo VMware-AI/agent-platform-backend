@@ -359,10 +359,6 @@ func init() {
 	modelrouteDescName := modelrouteFields[1].Descriptor()
 	// modelroute.NameValidator is a validator for the "name" field. It is called by the builders before save.
 	modelroute.NameValidator = modelrouteDescName.Validators[0].(func(string) error)
-	// modelrouteDescModelAlias is the schema descriptor for model_alias field.
-	modelrouteDescModelAlias := modelrouteFields[2].Descriptor()
-	// modelroute.ModelAliasValidator is a validator for the "model_alias" field. It is called by the builders before save.
-	modelroute.ModelAliasValidator = modelrouteDescModelAlias.Validators[0].(func(string) error)
 	// modelrouteDescID is the schema descriptor for id field.
 	modelrouteDescID := modelrouteFields[0].Descriptor()
 	// modelroute.DefaultID holds the default value on creation for the id field.

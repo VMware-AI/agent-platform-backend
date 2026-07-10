@@ -70,11 +70,6 @@ func Name(v string) predicate.ModelRoute {
 	return predicate.ModelRoute(sql.FieldEQ(FieldName, v))
 }
 
-// ModelAlias applies equality check predicate on the "model_alias" field. It's identical to ModelAliasEQ.
-func ModelAlias(v string) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldEQ(FieldModelAlias, v))
-}
-
 // ModelGatewayID applies equality check predicate on the "model_gateway_id" field. It's identical to ModelGatewayIDEQ.
 func ModelGatewayID(v uuid.UUID) predicate.ModelRoute {
 	return predicate.ModelRoute(sql.FieldEQ(FieldModelGatewayID, v))
@@ -225,71 +220,6 @@ func NameContainsFold(v string) predicate.ModelRoute {
 	return predicate.ModelRoute(sql.FieldContainsFold(FieldName, v))
 }
 
-// ModelAliasEQ applies the EQ predicate on the "model_alias" field.
-func ModelAliasEQ(v string) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldEQ(FieldModelAlias, v))
-}
-
-// ModelAliasNEQ applies the NEQ predicate on the "model_alias" field.
-func ModelAliasNEQ(v string) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldNEQ(FieldModelAlias, v))
-}
-
-// ModelAliasIn applies the In predicate on the "model_alias" field.
-func ModelAliasIn(vs ...string) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldIn(FieldModelAlias, vs...))
-}
-
-// ModelAliasNotIn applies the NotIn predicate on the "model_alias" field.
-func ModelAliasNotIn(vs ...string) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldNotIn(FieldModelAlias, vs...))
-}
-
-// ModelAliasGT applies the GT predicate on the "model_alias" field.
-func ModelAliasGT(v string) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldGT(FieldModelAlias, v))
-}
-
-// ModelAliasGTE applies the GTE predicate on the "model_alias" field.
-func ModelAliasGTE(v string) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldGTE(FieldModelAlias, v))
-}
-
-// ModelAliasLT applies the LT predicate on the "model_alias" field.
-func ModelAliasLT(v string) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldLT(FieldModelAlias, v))
-}
-
-// ModelAliasLTE applies the LTE predicate on the "model_alias" field.
-func ModelAliasLTE(v string) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldLTE(FieldModelAlias, v))
-}
-
-// ModelAliasContains applies the Contains predicate on the "model_alias" field.
-func ModelAliasContains(v string) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldContains(FieldModelAlias, v))
-}
-
-// ModelAliasHasPrefix applies the HasPrefix predicate on the "model_alias" field.
-func ModelAliasHasPrefix(v string) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldHasPrefix(FieldModelAlias, v))
-}
-
-// ModelAliasHasSuffix applies the HasSuffix predicate on the "model_alias" field.
-func ModelAliasHasSuffix(v string) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldHasSuffix(FieldModelAlias, v))
-}
-
-// ModelAliasEqualFold applies the EqualFold predicate on the "model_alias" field.
-func ModelAliasEqualFold(v string) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldEqualFold(FieldModelAlias, v))
-}
-
-// ModelAliasContainsFold applies the ContainsFold predicate on the "model_alias" field.
-func ModelAliasContainsFold(v string) predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldContainsFold(FieldModelAlias, v))
-}
-
 // ModelGatewayIDEQ applies the EQ predicate on the "model_gateway_id" field.
 func ModelGatewayIDEQ(v uuid.UUID) predicate.ModelRoute {
 	return predicate.ModelRoute(sql.FieldEQ(FieldModelGatewayID, v))
@@ -330,14 +260,14 @@ func ModelGatewayIDLTE(v uuid.UUID) predicate.ModelRoute {
 	return predicate.ModelRoute(sql.FieldLTE(FieldModelGatewayID, v))
 }
 
-// UpstreamsIsNil applies the IsNil predicate on the "upstreams" field.
-func UpstreamsIsNil() predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldIsNull(FieldUpstreams))
+// SupportedModelsIsNil applies the IsNil predicate on the "supported_models" field.
+func SupportedModelsIsNil() predicate.ModelRoute {
+	return predicate.ModelRoute(sql.FieldIsNull(FieldSupportedModels))
 }
 
-// UpstreamsNotNil applies the NotNil predicate on the "upstreams" field.
-func UpstreamsNotNil() predicate.ModelRoute {
-	return predicate.ModelRoute(sql.FieldNotNull(FieldUpstreams))
+// SupportedModelsNotNil applies the NotNil predicate on the "supported_models" field.
+func SupportedModelsNotNil() predicate.ModelRoute {
+	return predicate.ModelRoute(sql.FieldNotNull(FieldSupportedModels))
 }
 
 // StrategyEQ applies the EQ predicate on the "strategy" field.

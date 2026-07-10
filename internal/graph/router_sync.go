@@ -30,14 +30,13 @@ import (
 // console needs; there is no platform default.
 //
 // Short-circuit: each (gateway, payload) pair is hashed (SHA-256 of the
-// canonical JSON). If it matches the last *successfully pushed* payload
-// for that gateway from this process, the tick skips the POST — nothing
-// changed for that gateway since the last push. On any mismatch — the
-// first-ever tick, or a previous fire-and-forget push that failed — the
-// tick falls through to the real POST. The per-gateway hash lives in a
-// closure so each start gets a fresh baseline; the worker pays exactly
-// one push per gateway on the first tick, then skips as long as the
-// payload for that gateway stays stable.
+// canonical JSON). If the hash matches Resolver.lastRouterSettingsHash
+// (a process-local map shared with the resolver-side fire-and-forget
+// push), the tick skips the POST — nothing changed for that gateway
+// since the last push. On any mismatch — the first-ever tick, or a
+// previous push that failed — the tick falls through to the real POST.
+// Multi-replica deployments accept the redundant-but-correct first-tick
+// push from each replica.
 //
 // Disabled when interval <= 0.
 func (r *Resolver) StartRouterSettingsSync(ctx context.Context, interval time.Duration) {
@@ -46,11 +45,6 @@ func (r *Resolver) StartRouterSettingsSync(ctx context.Context, interval time.Du
 		return
 	}
 	log.Printf("router settings sync: every %s", interval)
-	// lastPushedHash is the per-gateway SHA-256 hex of the last payload
-	// POSTed successfully from this process. Keyed by gateway id; missing
-	// entry means "no baseline yet for that gateway → push on first tick".
-	// Read/written only on this goroutine, so no lock needed.
-	lastPushedHash := map[uuid.UUID]string{}
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
@@ -58,57 +52,54 @@ func (r *Resolver) StartRouterSettingsSync(ctx context.Context, interval time.Du
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			lastPushedHash = r.syncRouterSettingsOnceShortCircuit(ctx, lastPushedHash)
+			r.syncRouterSettingsOnceShortCircuit(ctx)
 		}
 	}
 }
 
-// syncRouterSettingsOnce runs a single sync pass: load active routes, group
-// routes by backendGatewayId, build one RouterSettings per gateway, and POST
-// to /config/update. Errors are logged but not surfaced — this is a safety
-// net, not a request-driven operation.
-func (r *Resolver) syncRouterSettingsOnce(ctx context.Context) {
-	routesByGW, err := r.loadRouterSettingsBuckets(ctx)
-	if err != nil {
-		log.Printf("router settings sync: %v", err)
-		return
-	}
-	if len(routesByGW) == 0 {
-		return
-	}
-	for gwID, routes := range routesByGW {
-		settings := gateway.AggregateRouterSettings(routes, nil)
-		if err := r.pushRouterSettingsTo(ctx, gwID, settings); err != nil {
-			log.Printf("router settings sync: push to %s: %v", gwID, err)
-		}
-	}
-}
-
-// syncRouterSettingsOnceShortCircuit is the periodic-worker's tick body.
-// It hashes the per-gateway payload and skips the POST when the hash
-// matches the previously-successful push from this process for that
-// gateway. Returns the new hash map.
+// syncRouterSettingsOnceShortCircuit is the periodic-worker's tick body
+// and the resolver-side push hook share. It loads active routes, groups
+// them by gateway, builds one RouterSettings per gateway, and short-
+// circuits on hash match.
 //
 // Order of operations per gateway:
 //  1. Build the payload. On any build-time failure (DB read, etc.) log
-//     and keep the existing baseline — don't poison the hash slot.
+//     and skip — don't poison the hash slot.
 //  2. Compute the SHA-256 of its canonical JSON.
-//  3. If hash matches lastPushedHash AND lastPushedHash is non-empty, log
-//     a short-circuit line and skip. The first-ever tick pushes (empty
-//     baseline) so every gateway establishes a baseline.
+//  3. If hash matches the recorded baseline, log a short-circuit line
+//     and skip. The first-ever call pushes (empty baseline) so every
+//     gateway establishes a baseline.
 //  4. Resolve the gateway + push. On success, record the new hash. On
 //     failure, keep the old baseline → next tick retries.
-func (r *Resolver) syncRouterSettingsOnceShortCircuit(ctx context.Context, lastPushedHash map[uuid.UUID]string) map[uuid.UUID]string {
+//
+// targetGateway, when non-zero, scopes the entire run to one gateway
+// (the resolver-side hook uses this — the route being saved only needs
+// its own gateway re-pushed). uuid.Nil means "every gateway".
+func (r *Resolver) syncRouterSettingsOnceShortCircuit(ctx context.Context, targetGateway ...uuid.UUID) {
 	routesByGW, err := r.loadRouterSettingsBuckets(ctx)
 	if err != nil {
 		log.Printf("router settings sync: %v", err)
-		return lastPushedHash
+		return
 	}
-	for gwID, routes := range routesByGW {
+
+	// If a target gateway is given, only consider its bucket.
+	scoped := routesByGW
+	if len(targetGateway) == 1 && targetGateway[0] != uuid.Nil {
+		bucket, ok := routesByGW[targetGateway[0]]
+		if !ok || len(bucket) == 0 {
+			return
+		}
+		scoped = map[uuid.UUID][]*ent.ModelRoute{targetGateway[0]: bucket}
+	} else if len(targetGateway) > 1 {
+		log.Printf("router settings sync: unexpected variadic targetGateway count %d", len(targetGateway))
+		return
+	}
+
+	for gwID, routes := range scoped {
 		settings := gateway.AggregateRouterSettings(routes, nil)
 		hash := hashRouterSettings(settings)
-		prev, has := lastPushedHash[gwID]
-		if has && hash == prev {
+		prev := r.readLastRouterSettingsHash(gwID)
+		if prev != "" && hash == prev {
 			log.Printf("router settings sync: short-circuit, gateway=%s payload unchanged (%s)", gwID, hash[:12])
 			continue
 		}
@@ -117,16 +108,49 @@ func (r *Resolver) syncRouterSettingsOnceShortCircuit(ctx context.Context, lastP
 			continue // keep stale baseline → next tick retries
 		}
 		log.Printf("router settings sync: pushed %s to gateway %s", hash[:12], gwID)
-		lastPushedHash[gwID] = hash
+		r.writeLastRouterSettingsHash(gwID, hash)
 	}
-	// Drop hash entries for gateways with no active routes (they were
-	// deleted) so a future re-creation starts with an empty baseline.
-	for gwID := range lastPushedHash {
-		if _, ok := routesByGW[gwID]; !ok {
-			delete(lastPushedHash, gwID)
+
+	// If a targeted run dropped a gateway from the buckets, prune the
+	// baseline so we don't accumulate dead entries. (For the periodic
+	// full-fleet run this is the gateway-was-deleted case.)
+	if len(targetGateway) == 0 {
+		r.pruneStaleRouterSettingsHashes(routesByGW)
+	}
+}
+
+// readLastRouterSettingsHash returns the recorded baseline for gwID, or
+// "" if none has been recorded yet. The first-ever call pushes (empty
+// baseline) so every gateway establishes itself before any short-circuit
+// can apply.
+func (r *Resolver) readLastRouterSettingsHash(gwID uuid.UUID) string {
+	r.lastRouterSettingsHashMu.Lock()
+	defer r.lastRouterSettingsHashMu.Unlock()
+	return r.lastRouterSettingsHash[gwID]
+}
+
+// writeLastRouterSettingsHash records a successful push baseline.
+func (r *Resolver) writeLastRouterSettingsHash(gwID uuid.UUID, hash string) {
+	r.lastRouterSettingsHashMu.Lock()
+	defer r.lastRouterSettingsHashMu.Unlock()
+	if r.lastRouterSettingsHash == nil {
+		r.lastRouterSettingsHash = map[uuid.UUID]string{}
+	}
+	r.lastRouterSettingsHash[gwID] = hash
+}
+
+// pruneStaleRouterSettingsHashes removes entries for gateways that no
+// longer own any routes so a future re-creation starts with an empty
+// baseline (the comparison "hash == prev" can't true-match a stale value
+// against a fresh payload).
+func (r *Resolver) pruneStaleRouterSettingsHashes(active map[uuid.UUID][]*ent.ModelRoute) {
+	r.lastRouterSettingsHashMu.Lock()
+	defer r.lastRouterSettingsHashMu.Unlock()
+	for gwID := range r.lastRouterSettingsHash {
+		if _, ok := active[gwID]; !ok {
+			delete(r.lastRouterSettingsHash, gwID)
 		}
 	}
-	return lastPushedHash
 }
 
 // loadRouterSettingsBuckets loads active routes, partitioning them by
@@ -174,44 +198,22 @@ func (r *Resolver) pushRouterSettingsTo(ctx context.Context, gwID uuid.UUID, set
 	return gateway.NewAdminClient(http).PushRouterSettings(ctx, settings)
 }
 
-// AggregateAndPushRouterSettings triggers a full sync across every gateway
-// that owns at least one active model route. Pulled out for testability
-// and to share between the periodic worker and the resolver-side hook
-// that runs after a route mutation.
+// AggregateAndPushRouterSettings triggers a full or scoped push. Reuses the
+// same per-gateway hash baseline as the periodic worker so a stable payload
+// short-circuits even on the resolver-side hook (which would otherwise fire
+// on every save).
 //
 // targetGateway, when non-zero, scopes the push to a single gateway
 // (the resolver-side hook uses this — the route being saved only needs
-// its own gateway re-pushed). uuid.Nil means "push every gateway that
-// owns at least one active route", which is what the periodic worker
-// calls.
+// its own gateway re-pushed). uuid.Nil means "every gateway that owns
+// at least one route", which is what the periodic worker and
+// syncRouterSettings use.
 func (r *Resolver) AggregateAndPushRouterSettings(ctx context.Context, targetGateway uuid.UUID) {
-	routesByGW, err := r.loadRouterSettingsBuckets(ctx)
-	if err != nil {
-		log.Printf("router settings sync: %v", err)
+	if targetGateway == uuid.Nil {
+		r.syncRouterSettingsOnceShortCircuit(ctx)
 		return
 	}
-	if len(routesByGW) == 0 {
-		return
-	}
-	if targetGateway != uuid.Nil {
-		routes := routesByGW[targetGateway]
-		if len(routes) == 0 {
-			// The route's gateway was deleted, or all of its routes
-			// were disabled, between save and push. Nothing to do.
-			return
-		}
-		settings := gateway.AggregateRouterSettings(routes, nil)
-		if err := r.pushRouterSettingsTo(ctx, targetGateway, settings); err != nil {
-			log.Printf("router settings sync: push to %s: %v", targetGateway, err)
-		}
-		return
-	}
-	for gwID, routes := range routesByGW {
-		settings := gateway.AggregateRouterSettings(routes, nil)
-		if err := r.pushRouterSettingsTo(ctx, gwID, settings); err != nil {
-			log.Printf("router settings sync: push to %s: %v", gwID, err)
-		}
-	}
+	r.syncRouterSettingsOnceShortCircuit(ctx, targetGateway)
 }
 
 // AggregateAndPushRouterSettingsFireAndForget schedules a router-settings

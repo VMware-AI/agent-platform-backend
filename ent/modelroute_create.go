@@ -55,21 +55,15 @@ func (_c *ModelRouteCreate) SetName(v string) *ModelRouteCreate {
 	return _c
 }
 
-// SetModelAlias sets the "model_alias" field.
-func (_c *ModelRouteCreate) SetModelAlias(v string) *ModelRouteCreate {
-	_c.mutation.SetModelAlias(v)
-	return _c
-}
-
 // SetModelGatewayID sets the "model_gateway_id" field.
 func (_c *ModelRouteCreate) SetModelGatewayID(v uuid.UUID) *ModelRouteCreate {
 	_c.mutation.SetModelGatewayID(v)
 	return _c
 }
 
-// SetUpstreams sets the "upstreams" field.
-func (_c *ModelRouteCreate) SetUpstreams(v []string) *ModelRouteCreate {
-	_c.mutation.SetUpstreams(v)
+// SetSupportedModels sets the "supported_models" field.
+func (_c *ModelRouteCreate) SetSupportedModels(v []string) *ModelRouteCreate {
+	_c.mutation.SetSupportedModels(v)
 	return _c
 }
 
@@ -188,14 +182,6 @@ func (_c *ModelRouteCreate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.name": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.ModelAlias(); !ok {
-		return &ValidationError{Name: "model_alias", err: errors.New(`ent: missing required field "ModelRoute.model_alias"`)}
-	}
-	if v, ok := _c.mutation.ModelAlias(); ok {
-		if err := modelroute.ModelAliasValidator(v); err != nil {
-			return &ValidationError{Name: "model_alias", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.model_alias": %w`, err)}
-		}
-	}
 	if _, ok := _c.mutation.ModelGatewayID(); !ok {
 		return &ValidationError{Name: "model_gateway_id", err: errors.New(`ent: missing required field "ModelRoute.model_gateway_id"`)}
 	}
@@ -254,17 +240,13 @@ func (_c *ModelRouteCreate) createSpec() (*ModelRoute, *sqlgraph.CreateSpec) {
 		_spec.SetField(modelroute.FieldName, field.TypeString, value)
 		_node.Name = value
 	}
-	if value, ok := _c.mutation.ModelAlias(); ok {
-		_spec.SetField(modelroute.FieldModelAlias, field.TypeString, value)
-		_node.ModelAlias = value
-	}
 	if value, ok := _c.mutation.ModelGatewayID(); ok {
 		_spec.SetField(modelroute.FieldModelGatewayID, field.TypeUUID, value)
 		_node.ModelGatewayID = value
 	}
-	if value, ok := _c.mutation.Upstreams(); ok {
-		_spec.SetField(modelroute.FieldUpstreams, field.TypeJSON, value)
-		_node.Upstreams = value
+	if value, ok := _c.mutation.SupportedModels(); ok {
+		_spec.SetField(modelroute.FieldSupportedModels, field.TypeJSON, value)
+		_node.SupportedModels = value
 	}
 	if value, ok := _c.mutation.Strategy(); ok {
 		_spec.SetField(modelroute.FieldStrategy, field.TypeEnum, value)

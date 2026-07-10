@@ -82,14 +82,12 @@ syncRouterSettings: Boolean!
 |-------|------|-------------|
 | `id` | `ID!` | — |
 | `name` | `String!` | — |
-| `modelAlias` | `String!` | — |
 | `modelGateway` | `ModelGateway!` | Required: the litellm gateway this route is hosted on. The router-settings push targets this gateway (no platform default fallback). |
-| `upstreams` | `[String!]!` | — |
-| `supportedModels` | `[String!]!` | Console alias for `upstreams` — the models this route can serve (模型路由 page). |
+| `supportedModels` | `[String!]!` | The litellm model group served by this route. Mapped 1:1 to the `models` array on the wire (single-element in the common case; multi-element is allowed but rare). |
 | `strategy` | `LoadBalancingStrategy!` | The litellm LoadBalanceStrategy applied at push time. The console form exposes only the friendly values (round-robin / weighted / random); the backend translates these into the litellm enum below and persists here. |
 | `createdAt` | `Time!` | — |
 | `updatedAt` | `Time!` | — |
-| `fallbacks` | `[String!]!` | Fallback chains (LiteLLM design doc §3.2) |
+| `fallbacks` | `[String!]!` | Fallback chains surfaced to litellm via POST /config/update. Three independent lists map 1:1 to the doc's three fallback kinds (general / context-window / content-policy). Each entry is a litellm model name referenced by the corresponding route's supportedModels[0] on the wire. |
 | `contextWindowFallbacks` | `[String!]!` | — |
 | `contentPolicyFallbacks` | `[String!]!` | — |
 
@@ -97,13 +95,13 @@ syncRouterSettings: Boolean!
 
 *Input*
 
-Console 模型路由 create form (创建路由). modelAlias is set to name; supportedModels are stored as the route's model group. modelGatewayId is REQUIRED — a route without a gateway has no router-settings push target. strategy is the litellm LoadBalanceStrategy to set on this route; default (omitted) leaves the ent column default in place (SIMPLE_SHUFFLE). A duplicate name surfaces as a GraphQL error — re-saving the same name goes through updateModelRoute.
+Console 模型路由 create form (创建路由). name is the route's identifier and becomes the routing_group.group_name on the wire. modelGatewayId is REQUIRED — a route without a gateway has no router-settings push target. strategy is the litellm LoadBalanceStrategy to set on this route; default (omitted) leaves the ent column default in place (SIMPLE_SHUFFLE). A duplicate name surfaces as a GraphQL error — re-saving the same name goes through updateModelRoute.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `name` | `String!` | — |
 | `modelGatewayId` | `ID!` | — |
-| `supportedModels` | `[String!]` | — |
+| `supportedModels` | `[String!]!` | — |
 | `strategy` | `LoadBalancingStrategy` | — |
 | `fallbacks` | `[String!]` | — |
 | `contextWindowFallbacks` | `[String!]` | — |

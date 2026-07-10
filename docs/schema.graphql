@@ -270,7 +270,7 @@ input CreateDepartmentInput {
 input CreateModelRouteInput {
 	name: String!
 	modelGatewayId: ID!
-	supportedModels: [String!]
+	supportedModels: [String!]!
 	strategy: LoadBalancingStrategy
 	fallbacks: [String!]
 	contextWindowFallbacks: [String!]
@@ -678,9 +678,7 @@ input ModelInfoInput {
 type ModelRoute {
 	id: ID!
 	name: String!
-	modelAlias: String!
 	modelGateway: ModelGateway!
-	upstreams: [String!]!
 	supportedModels: [String!]!
 	strategy: LoadBalancingStrategy!
 	createdAt: Time!
