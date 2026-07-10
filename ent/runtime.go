@@ -65,6 +65,14 @@ func init() {
 	agentDescAgentType := agentFields[2].Descriptor()
 	// agent.AgentTypeValidator is a validator for the "agent_type" field. It is called by the builders before save.
 	agent.AgentTypeValidator = agentDescAgentType.Validators[0].(func(string) error)
+	// agentDescRunAsUser is the schema descriptor for run_as_user field.
+	agentDescRunAsUser := agentFields[11].Descriptor()
+	// agent.DefaultRunAsUser holds the default value on creation for the run_as_user field.
+	agent.DefaultRunAsUser = agentDescRunAsUser.Default.(string)
+	// agentDescStaticIP is the schema descriptor for static_ip field.
+	agentDescStaticIP := agentFields[12].Descriptor()
+	// agent.DefaultStaticIP holds the default value on creation for the static_ip field.
+	agent.DefaultStaticIP = agentDescStaticIP.Default.(string)
 	// agentDescID is the schema descriptor for id field.
 	agentDescID := agentFields[0].Descriptor()
 	// agent.DefaultID holds the default value on creation for the id field.

@@ -42,6 +42,10 @@ type Agent struct {
 	TemplateFamilyID *uuid.UUID `json:"template_family_id,omitempty"`
 	// TemplateVersionID holds the value of the "template_version_id" field.
 	TemplateVersionID *uuid.UUID `json:"template_version_id,omitempty"`
+	// RunAsUser holds the value of the "run_as_user" field.
+	RunAsUser string `json:"run_as_user,omitempty"`
+	// StaticIP holds the value of the "static_ip" field.
+	StaticIP string `json:"static_ip,omitempty"`
 	// TenantID holds the value of the "tenant_id" field.
 	TenantID *uuid.UUID `json:"tenant_id,omitempty"`
 	// EnvironmentID holds the value of the "environment_id" field.
@@ -77,7 +81,7 @@ func (*Agent) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case agent.FieldConfigID, agent.FieldVirtualKeyID, agent.FieldResourcePoolID, agent.FieldTemplateFamilyID, agent.FieldTemplateVersionID, agent.FieldTenantID, agent.FieldEnvironmentID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case agent.FieldName, agent.FieldAgentType, agent.FieldStatus, agent.FieldVMRef:
+		case agent.FieldName, agent.FieldAgentType, agent.FieldStatus, agent.FieldVMRef, agent.FieldRunAsUser, agent.FieldStaticIP:
 			values[i] = new(sql.NullString)
 		case agent.FieldCreatedAt, agent.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -181,6 +185,18 @@ func (_m *Agent) assignValues(columns []string, values []any) error {
 				_m.TemplateVersionID = new(uuid.UUID)
 				*_m.TemplateVersionID = *value.S.(*uuid.UUID)
 			}
+		case agent.FieldRunAsUser:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field run_as_user", values[i])
+			} else if value.Valid {
+				_m.RunAsUser = value.String
+			}
+		case agent.FieldStaticIP:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field static_ip", values[i])
+			} else if value.Valid {
+				_m.StaticIP = value.String
+			}
 		case agent.FieldTenantID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field tenant_id", values[i])
@@ -281,6 +297,12 @@ func (_m *Agent) String() string {
 		builder.WriteString("template_version_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
+	builder.WriteString(", ")
+	builder.WriteString("run_as_user=")
+	builder.WriteString(_m.RunAsUser)
+	builder.WriteString(", ")
+	builder.WriteString("static_ip=")
+	builder.WriteString(_m.StaticIP)
 	builder.WriteString(", ")
 	if v := _m.TenantID; v != nil {
 		builder.WriteString("tenant_id=")

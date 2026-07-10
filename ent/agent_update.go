@@ -213,6 +213,46 @@ func (_u *AgentUpdate) ClearTemplateVersionID() *AgentUpdate {
 	return _u
 }
 
+// SetRunAsUser sets the "run_as_user" field.
+func (_u *AgentUpdate) SetRunAsUser(v string) *AgentUpdate {
+	_u.mutation.SetRunAsUser(v)
+	return _u
+}
+
+// SetNillableRunAsUser sets the "run_as_user" field if the given value is not nil.
+func (_u *AgentUpdate) SetNillableRunAsUser(v *string) *AgentUpdate {
+	if v != nil {
+		_u.SetRunAsUser(*v)
+	}
+	return _u
+}
+
+// ClearRunAsUser clears the value of the "run_as_user" field.
+func (_u *AgentUpdate) ClearRunAsUser() *AgentUpdate {
+	_u.mutation.ClearRunAsUser()
+	return _u
+}
+
+// SetStaticIP sets the "static_ip" field.
+func (_u *AgentUpdate) SetStaticIP(v string) *AgentUpdate {
+	_u.mutation.SetStaticIP(v)
+	return _u
+}
+
+// SetNillableStaticIP sets the "static_ip" field if the given value is not nil.
+func (_u *AgentUpdate) SetNillableStaticIP(v *string) *AgentUpdate {
+	if v != nil {
+		_u.SetStaticIP(*v)
+	}
+	return _u
+}
+
+// ClearStaticIP clears the value of the "static_ip" field.
+func (_u *AgentUpdate) ClearStaticIP() *AgentUpdate {
+	_u.mutation.ClearStaticIP()
+	return _u
+}
+
 // SetTenantID sets the "tenant_id" field.
 func (_u *AgentUpdate) SetTenantID(v uuid.UUID) *AgentUpdate {
 	_u.mutation.SetTenantID(v)
@@ -418,6 +458,18 @@ func (_u *AgentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.TemplateVersionIDCleared() {
 		_spec.ClearField(agent.FieldTemplateVersionID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.RunAsUser(); ok {
+		_spec.SetField(agent.FieldRunAsUser, field.TypeString, value)
+	}
+	if _u.mutation.RunAsUserCleared() {
+		_spec.ClearField(agent.FieldRunAsUser, field.TypeString)
+	}
+	if value, ok := _u.mutation.StaticIP(); ok {
+		_spec.SetField(agent.FieldStaticIP, field.TypeString, value)
+	}
+	if _u.mutation.StaticIPCleared() {
+		_spec.ClearField(agent.FieldStaticIP, field.TypeString)
 	}
 	if value, ok := _u.mutation.TenantID(); ok {
 		_spec.SetField(agent.FieldTenantID, field.TypeUUID, value)
@@ -680,6 +732,46 @@ func (_u *AgentUpdateOne) ClearTemplateVersionID() *AgentUpdateOne {
 	return _u
 }
 
+// SetRunAsUser sets the "run_as_user" field.
+func (_u *AgentUpdateOne) SetRunAsUser(v string) *AgentUpdateOne {
+	_u.mutation.SetRunAsUser(v)
+	return _u
+}
+
+// SetNillableRunAsUser sets the "run_as_user" field if the given value is not nil.
+func (_u *AgentUpdateOne) SetNillableRunAsUser(v *string) *AgentUpdateOne {
+	if v != nil {
+		_u.SetRunAsUser(*v)
+	}
+	return _u
+}
+
+// ClearRunAsUser clears the value of the "run_as_user" field.
+func (_u *AgentUpdateOne) ClearRunAsUser() *AgentUpdateOne {
+	_u.mutation.ClearRunAsUser()
+	return _u
+}
+
+// SetStaticIP sets the "static_ip" field.
+func (_u *AgentUpdateOne) SetStaticIP(v string) *AgentUpdateOne {
+	_u.mutation.SetStaticIP(v)
+	return _u
+}
+
+// SetNillableStaticIP sets the "static_ip" field if the given value is not nil.
+func (_u *AgentUpdateOne) SetNillableStaticIP(v *string) *AgentUpdateOne {
+	if v != nil {
+		_u.SetStaticIP(*v)
+	}
+	return _u
+}
+
+// ClearStaticIP clears the value of the "static_ip" field.
+func (_u *AgentUpdateOne) ClearStaticIP() *AgentUpdateOne {
+	_u.mutation.ClearStaticIP()
+	return _u
+}
+
 // SetTenantID sets the "tenant_id" field.
 func (_u *AgentUpdateOne) SetTenantID(v uuid.UUID) *AgentUpdateOne {
 	_u.mutation.SetTenantID(v)
@@ -915,6 +1007,18 @@ func (_u *AgentUpdateOne) sqlSave(ctx context.Context) (_node *Agent, err error)
 	}
 	if _u.mutation.TemplateVersionIDCleared() {
 		_spec.ClearField(agent.FieldTemplateVersionID, field.TypeUUID)
+	}
+	if value, ok := _u.mutation.RunAsUser(); ok {
+		_spec.SetField(agent.FieldRunAsUser, field.TypeString, value)
+	}
+	if _u.mutation.RunAsUserCleared() {
+		_spec.ClearField(agent.FieldRunAsUser, field.TypeString)
+	}
+	if value, ok := _u.mutation.StaticIP(); ok {
+		_spec.SetField(agent.FieldStaticIP, field.TypeString, value)
+	}
+	if _u.mutation.StaticIPCleared() {
+		_spec.ClearField(agent.FieldStaticIP, field.TypeString)
 	}
 	if value, ok := _u.mutation.TenantID(); ok {
 		_spec.SetField(agent.FieldTenantID, field.TypeUUID, value)

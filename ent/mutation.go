@@ -101,6 +101,8 @@ type AgentMutation struct {
 	resource_pool_id    *uuid.UUID
 	template_family_id  *uuid.UUID
 	template_version_id *uuid.UUID
+	run_as_user         *string
+	static_ip           *string
 	tenant_id           *uuid.UUID
 	environment_id      *uuid.UUID
 	clearedFields       map[string]struct{}
@@ -726,6 +728,104 @@ func (m *AgentMutation) ResetTemplateVersionID() {
 	delete(m.clearedFields, agent.FieldTemplateVersionID)
 }
 
+// SetRunAsUser sets the "run_as_user" field.
+func (m *AgentMutation) SetRunAsUser(s string) {
+	m.run_as_user = &s
+}
+
+// RunAsUser returns the value of the "run_as_user" field in the mutation.
+func (m *AgentMutation) RunAsUser() (r string, exists bool) {
+	v := m.run_as_user
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRunAsUser returns the old "run_as_user" field's value of the Agent entity.
+// If the Agent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentMutation) OldRunAsUser(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRunAsUser is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRunAsUser requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRunAsUser: %w", err)
+	}
+	return oldValue.RunAsUser, nil
+}
+
+// ClearRunAsUser clears the value of the "run_as_user" field.
+func (m *AgentMutation) ClearRunAsUser() {
+	m.run_as_user = nil
+	m.clearedFields[agent.FieldRunAsUser] = struct{}{}
+}
+
+// RunAsUserCleared returns if the "run_as_user" field was cleared in this mutation.
+func (m *AgentMutation) RunAsUserCleared() bool {
+	_, ok := m.clearedFields[agent.FieldRunAsUser]
+	return ok
+}
+
+// ResetRunAsUser resets all changes to the "run_as_user" field.
+func (m *AgentMutation) ResetRunAsUser() {
+	m.run_as_user = nil
+	delete(m.clearedFields, agent.FieldRunAsUser)
+}
+
+// SetStaticIP sets the "static_ip" field.
+func (m *AgentMutation) SetStaticIP(s string) {
+	m.static_ip = &s
+}
+
+// StaticIP returns the value of the "static_ip" field in the mutation.
+func (m *AgentMutation) StaticIP() (r string, exists bool) {
+	v := m.static_ip
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStaticIP returns the old "static_ip" field's value of the Agent entity.
+// If the Agent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentMutation) OldStaticIP(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStaticIP is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStaticIP requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStaticIP: %w", err)
+	}
+	return oldValue.StaticIP, nil
+}
+
+// ClearStaticIP clears the value of the "static_ip" field.
+func (m *AgentMutation) ClearStaticIP() {
+	m.static_ip = nil
+	m.clearedFields[agent.FieldStaticIP] = struct{}{}
+}
+
+// StaticIPCleared returns if the "static_ip" field was cleared in this mutation.
+func (m *AgentMutation) StaticIPCleared() bool {
+	_, ok := m.clearedFields[agent.FieldStaticIP]
+	return ok
+}
+
+// ResetStaticIP resets all changes to the "static_ip" field.
+func (m *AgentMutation) ResetStaticIP() {
+	m.static_ip = nil
+	delete(m.clearedFields, agent.FieldStaticIP)
+}
+
 // SetTenantID sets the "tenant_id" field.
 func (m *AgentMutation) SetTenantID(u uuid.UUID) {
 	m.tenant_id = &u
@@ -912,7 +1012,7 @@ func (m *AgentMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AgentMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 16)
 	if m.created_at != nil {
 		fields = append(fields, agent.FieldCreatedAt)
 	}
@@ -948,6 +1048,12 @@ func (m *AgentMutation) Fields() []string {
 	}
 	if m.template_version_id != nil {
 		fields = append(fields, agent.FieldTemplateVersionID)
+	}
+	if m.run_as_user != nil {
+		fields = append(fields, agent.FieldRunAsUser)
+	}
+	if m.static_ip != nil {
+		fields = append(fields, agent.FieldStaticIP)
 	}
 	if m.tenant_id != nil {
 		fields = append(fields, agent.FieldTenantID)
@@ -987,6 +1093,10 @@ func (m *AgentMutation) Field(name string) (ent.Value, bool) {
 		return m.TemplateFamilyID()
 	case agent.FieldTemplateVersionID:
 		return m.TemplateVersionID()
+	case agent.FieldRunAsUser:
+		return m.RunAsUser()
+	case agent.FieldStaticIP:
+		return m.StaticIP()
 	case agent.FieldTenantID:
 		return m.TenantID()
 	case agent.FieldEnvironmentID:
@@ -1024,6 +1134,10 @@ func (m *AgentMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldTemplateFamilyID(ctx)
 	case agent.FieldTemplateVersionID:
 		return m.OldTemplateVersionID(ctx)
+	case agent.FieldRunAsUser:
+		return m.OldRunAsUser(ctx)
+	case agent.FieldStaticIP:
+		return m.OldStaticIP(ctx)
 	case agent.FieldTenantID:
 		return m.OldTenantID(ctx)
 	case agent.FieldEnvironmentID:
@@ -1121,6 +1235,20 @@ func (m *AgentMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetTemplateVersionID(v)
 		return nil
+	case agent.FieldRunAsUser:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRunAsUser(v)
+		return nil
+	case agent.FieldStaticIP:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStaticIP(v)
+		return nil
 	case agent.FieldTenantID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
@@ -1183,6 +1311,12 @@ func (m *AgentMutation) ClearedFields() []string {
 	if m.FieldCleared(agent.FieldTemplateVersionID) {
 		fields = append(fields, agent.FieldTemplateVersionID)
 	}
+	if m.FieldCleared(agent.FieldRunAsUser) {
+		fields = append(fields, agent.FieldRunAsUser)
+	}
+	if m.FieldCleared(agent.FieldStaticIP) {
+		fields = append(fields, agent.FieldStaticIP)
+	}
 	if m.FieldCleared(agent.FieldTenantID) {
 		fields = append(fields, agent.FieldTenantID)
 	}
@@ -1220,6 +1354,12 @@ func (m *AgentMutation) ClearField(name string) error {
 		return nil
 	case agent.FieldTemplateVersionID:
 		m.ClearTemplateVersionID()
+		return nil
+	case agent.FieldRunAsUser:
+		m.ClearRunAsUser()
+		return nil
+	case agent.FieldStaticIP:
+		m.ClearStaticIP()
 		return nil
 	case agent.FieldTenantID:
 		m.ClearTenantID()
@@ -1270,6 +1410,12 @@ func (m *AgentMutation) ResetField(name string) error {
 		return nil
 	case agent.FieldTemplateVersionID:
 		m.ResetTemplateVersionID()
+		return nil
+	case agent.FieldRunAsUser:
+		m.ResetRunAsUser()
+		return nil
+	case agent.FieldStaticIP:
+		m.ResetStaticIP()
 		return nil
 	case agent.FieldTenantID:
 		m.ResetTenantID()

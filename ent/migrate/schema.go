@@ -24,6 +24,8 @@ var (
 		{Name: "resource_pool_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "template_family_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "template_version_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "run_as_user", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "static_ip", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "tenant_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "environment_id", Type: field.TypeUUID, Nullable: true},
 	}

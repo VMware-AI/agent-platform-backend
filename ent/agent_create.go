@@ -166,6 +166,34 @@ func (_c *AgentCreate) SetNillableTemplateVersionID(v *uuid.UUID) *AgentCreate {
 	return _c
 }
 
+// SetRunAsUser sets the "run_as_user" field.
+func (_c *AgentCreate) SetRunAsUser(v string) *AgentCreate {
+	_c.mutation.SetRunAsUser(v)
+	return _c
+}
+
+// SetNillableRunAsUser sets the "run_as_user" field if the given value is not nil.
+func (_c *AgentCreate) SetNillableRunAsUser(v *string) *AgentCreate {
+	if v != nil {
+		_c.SetRunAsUser(*v)
+	}
+	return _c
+}
+
+// SetStaticIP sets the "static_ip" field.
+func (_c *AgentCreate) SetStaticIP(v string) *AgentCreate {
+	_c.mutation.SetStaticIP(v)
+	return _c
+}
+
+// SetNillableStaticIP sets the "static_ip" field if the given value is not nil.
+func (_c *AgentCreate) SetNillableStaticIP(v *string) *AgentCreate {
+	if v != nil {
+		_c.SetStaticIP(*v)
+	}
+	return _c
+}
+
 // SetTenantID sets the "tenant_id" field.
 func (_c *AgentCreate) SetTenantID(v uuid.UUID) *AgentCreate {
 	_c.mutation.SetTenantID(v)
@@ -269,6 +297,14 @@ func (_c *AgentCreate) defaults() {
 	if _, ok := _c.mutation.Status(); !ok {
 		v := agent.DefaultStatus
 		_c.mutation.SetStatus(v)
+	}
+	if _, ok := _c.mutation.RunAsUser(); !ok {
+		v := agent.DefaultRunAsUser
+		_c.mutation.SetRunAsUser(v)
+	}
+	if _, ok := _c.mutation.StaticIP(); !ok {
+		v := agent.DefaultStaticIP
+		_c.mutation.SetStaticIP(v)
 	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := agent.DefaultID()
@@ -393,6 +429,14 @@ func (_c *AgentCreate) createSpec() (*Agent, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.TemplateVersionID(); ok {
 		_spec.SetField(agent.FieldTemplateVersionID, field.TypeUUID, value)
 		_node.TemplateVersionID = &value
+	}
+	if value, ok := _c.mutation.RunAsUser(); ok {
+		_spec.SetField(agent.FieldRunAsUser, field.TypeString, value)
+		_node.RunAsUser = value
+	}
+	if value, ok := _c.mutation.StaticIP(); ok {
+		_spec.SetField(agent.FieldStaticIP, field.TypeString, value)
+		_node.StaticIP = value
 	}
 	if value, ok := _c.mutation.TenantID(); ok {
 		_spec.SetField(agent.FieldTenantID, field.TypeUUID, value)
