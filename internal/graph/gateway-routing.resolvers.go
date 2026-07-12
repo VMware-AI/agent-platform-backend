@@ -11,7 +11,6 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/modelroute"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
-	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
@@ -129,53 +128,6 @@ func (r *mutationResolver) DeleteModelRoute(ctx context.Context, id string) (boo
 	}
 	r.audit(ctx, "model_route.delete", "model_route", id, true, actorID(auth.FromContext(ctx)))
 	r.AggregateAndPushRouterSettingsFireAndForget(existing.ModelGatewayID)
-	return true, nil
-}
-
-// SyncRouterSettings is the resolver for the syncRouterSettings field.
-// On-demand version of the periodic router sync: re-aggregates every
-// ModelRoute and POSTs the per-gateway router_settings payload to
-// /config/update. Each gateway receives only the routes bound to it.
-// Returns true only when every gateway accepted the push (or skipped via
-// the hash short-circuit). Partial failures or transport errors surface
-// as GraphQL errors; the periodic worker is the safety net.
-func (r *mutationResolver) SyncRouterSettings(ctx context.Context) (bool, error) {
-	routes, err := r.Ent.ModelRoute.Query().All(ctx)
-	if err != nil {
-		return false, err
-	}
-	if len(routes) == 0 {
-		// No active routes — nothing to push. Return true so the console's
-		// "sync now" button doesn't surface an error on an empty fleet.
-		r.audit(ctx, "router.sync", "router_settings", "", true, actorID(auth.FromContext(ctx)))
-		return true, nil
-	}
-	buckets := bucketRoutesByGateway(routes)
-	for gwID := range buckets {
-		g, err := r.Ent.GatewayConnection.Get(ctx, gwID)
-		if err != nil {
-			return false, err
-		}
-		mk := r.gatewayMasterKey(ctx, g)
-		if mk == "" {
-			return false, gqlerror.Errorf("gateway %s has no resolvable master key", g.Name)
-		}
-		settings := gateway.AggregateRouterSettings(buckets[gwID], nil)
-		http, err := gateway.NewHTTPClient(g.Endpoint, mk)
-		if err != nil {
-			return false, err
-		}
-		if err := gateway.NewAdminClient(http).PushRouterSettings(ctx, settings); err != nil {
-			return false, err
-		}
-		// Mirror the resolver-side hook's baseline so the next
-		// periodic tick (or an immediate fire-and-forget push) sees
-		// the same payload and short-circuits. We hash here rather
-		// than re-using AggregateAndPushRouterSettings so the result
-		// of this user-initiated sync is observable to the operator.
-		r.writeLastRouterSettingsHash(gwID, hashRouterSettings(settings))
-	}
-	r.audit(ctx, "router.sync", "router_settings", "", true, actorID(auth.FromContext(ctx)))
 	return true, nil
 }
 

@@ -235,9 +235,9 @@ func (r *Resolver) AggregateAndPushRouterSettingsFireAndForget(targetGateway uui
 	}()
 }
 
-// bucketRoutesByGateway groups routes by their gateway_connection_id —
-// the same partition used by the router sync worker. Exposed so the
-// SyncRouterSettings mutation can target each gateway individually.
+// bucketRoutesByGateway groups routes by their model_gateway_id —
+// the same partition used by the router sync worker. Exposed so future
+// caller paths (e.g. an on-demand push hook) can iterate per gateway.
 func bucketRoutesByGateway(routes []*ent.ModelRoute) map[uuid.UUID][]*ent.ModelRoute {
 	out := make(map[uuid.UUID][]*ent.ModelRoute, len(routes))
 	for _, r := range routes {

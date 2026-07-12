@@ -570,7 +570,6 @@ type ComplexityRoot struct {
 		SnapshotAgent                  func(childComplexity int, input model.SnapshotAgentInput) int
 		SyncModelGatewayConnection     func(childComplexity int, id string) int
 		SyncResourcePool               func(childComplexity int, id string) int
-		SyncRouterSettings             func(childComplexity int) int
 		TestNewModelGatewayConnection  func(childComplexity int, input model.TestModelGatewayConnectionInput) int
 		TestPrivateModelSpecConnection func(childComplexity int, input model.TestPrivateModelSpecConnectionInput) int
 		TestProviderConnection         func(childComplexity int, name string) int
@@ -1043,7 +1042,6 @@ type MutationResolver interface {
 	CreateModelRoute(ctx context.Context, input model.CreateModelRouteInput) (*model.ModelRoute, error)
 	UpdateModelRoute(ctx context.Context, id string, input model.UpdateModelRouteInput) (*model.ModelRoute, error)
 	DeleteModelRoute(ctx context.Context, id string) (bool, error)
-	SyncRouterSettings(ctx context.Context) (bool, error)
 	RecordTokenUsage(ctx context.Context, input model.RecordTokenUsageInput) (*model.TokenUsage, error)
 	CreateModelGateway(ctx context.Context, input model.ModelGatewayInput) (*model.ModelGateway, error)
 	UpdateModelGateway(ctx context.Context, id string, input model.ModelGatewayInput) (*model.ModelGateway, error)
@@ -3611,12 +3609,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.SyncResourcePool(childComplexity, args["id"].(string)), true
-	case "Mutation.syncRouterSettings":
-		if e.ComplexityRoot.Mutation.SyncRouterSettings == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Mutation.SyncRouterSettings(childComplexity), true
 	case "Mutation.testNewModelGatewayConnection":
 		if e.ComplexityRoot.Mutation.TestNewModelGatewayConnection == nil {
 			break
@@ -6695,12 +6687,13 @@ extend type Mutation {
   createModelRoute(input: CreateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
   updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
   deleteModelRoute(id: ID!): Boolean! @hasRole(any: [admin])
-  # Atomic 全量聚合覆盖刷新 — re-aggregates every ModelRoute and
-  # POSTs the full router_settings payload to /config/update, grouped by
-  # modelGatewayId. Triggered automatically after a route save; exposed
-  # as a mutation so the console can call it explicitly. Each gateway
-  # receives only the routes bound to it.
-  syncRouterSettings: Boolean! @hasRole(any: [admin])
+  # Note: there is intentionally no syncRouterSettings mutation. The
+  # periodic worker (StartRouterSettingsSync) and the resolver-side
+  # fire-and-forget hook (AggregateAndPushRouterSettingsFireAndForget)
+  # share the same per-gateway hash baseline, so a stable payload is
+  # never re-pushed. A user-initiated push button has nothing useful to
+  # do beyond what the worker guarantees. The hash baseline lives on
+  # Resolver.lastRouterSettingsHash (router_sync.go).
 }`, BuiltIn: false},
 	{Name: "../../schema/metering.graphql", Input: `# Metering center (计量中心, 0619 可观测性). Token usage + aggregation.
 
@@ -21256,47 +21249,6 @@ func (ec *executionContext) fieldContext_Mutation_deleteModelRoute(ctx context.C
 		return fc, err
 	}
 	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_syncRouterSettings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Mutation_syncRouterSettings(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Mutation().SyncRouterSettings(ctx)
-		},
-		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
-			directive0 := next
-
-			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
-				if err != nil {
-					var zeroVal bool
-					return zeroVal, err
-				}
-				if ec.Directives.HasRole == nil {
-					var zeroVal bool
-					return zeroVal, errors.New("directive hasRole is not implemented")
-				}
-				return ec.Directives.HasRole(ctx, nil, directive0, any)
-			}
-
-			next = directive1
-			return next
-		},
-		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
-			return ec.marshalNBoolean2bool(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Mutation_syncRouterSettings(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Mutation", field, true, true, errors.New("field of type Boolean does not have child fields"))
 }
 
 func (ec *executionContext) _Mutation_recordTokenUsage(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -40096,13 +40048,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "deleteModelRoute":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_deleteModelRoute(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "syncRouterSettings":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_syncRouterSettings(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

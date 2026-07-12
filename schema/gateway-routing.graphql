@@ -87,10 +87,11 @@ extend type Mutation {
   createModelRoute(input: CreateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
   updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
   deleteModelRoute(id: ID!): Boolean! @hasRole(any: [admin])
-  # Atomic 全量聚合覆盖刷新 — re-aggregates every ModelRoute and
-  # POSTs the full router_settings payload to /config/update, grouped by
-  # modelGatewayId. Triggered automatically after a route save; exposed
-  # as a mutation so the console can call it explicitly. Each gateway
-  # receives only the routes bound to it.
-  syncRouterSettings: Boolean! @hasRole(any: [admin])
+  # Note: there is intentionally no syncRouterSettings mutation. The
+  # periodic worker (StartRouterSettingsSync) and the resolver-side
+  # fire-and-forget hook (AggregateAndPushRouterSettingsFireAndForget)
+  # share the same per-gateway hash baseline, so a stable payload is
+  # never re-pushed. A user-initiated push button has nothing useful to
+  # do beyond what the worker guarantees. The hash baseline lives on
+  # Resolver.lastRouterSettingsHash (router_sync.go).
 }

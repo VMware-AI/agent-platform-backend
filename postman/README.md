@@ -46,7 +46,7 @@ Either one works; the collection uses the Bearer path.
 | Resource Pools | 8 | vCenter pools, sync, pre-save probe, vsphere placement |
 | Model Gateways (LITELLM) | 7 | Page + sync summary + test connection (id-based + dry-run pre-create) |
 | Provider Models | 10 | providerModelInfo (paged/filter/sort) + create/update/delete + per-spec CRUD (add/update/delete/block) + on-demand probe/refresh (status = full_healthy/partial_outage/full_outage/unknown) |
-| Model Routes | 6 | Create / Update / Delete / SetEnabled / SyncRouterSettings (gatewayConnections + upsertModelRoute + RouterTier surface retired) |
+| Model Routes | 4 | Create / Update / Delete (SetEnabled/SyncRouterSettings removed — worker + fire-and-forget hash baseline covers all pushes) |
 | Virtual Keys | 7 | Issue/Revoke/Regenerate/SetEnabled/AssociateAgent — `secret` returned ONCE; `GatewayAvailableModels` for issue-form cross-check. All selection sets use a `VirtualKeyFields` fragment (id, alias, userId, agentId, status, expiresAt, createdAt) that the generator inlines at build time so the request is a single self-contained GraphQL document. |
 | Rate Limit Policies | 4 | rpm/tpm, enabled, delete (refused while keys reference it) |
 | Agents (Deployed) | 17 | List, lifecycle, snapshots, agent configs, rotation, enrollment revoke |

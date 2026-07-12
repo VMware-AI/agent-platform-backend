@@ -61,17 +61,6 @@ deleteModelRoute(id: ID!): Boolean!
 |----------|------|----------|---------|
 | `id` | `ID!` | yes | — |
 
-### `syncRouterSettings`
-
-Atomic 全量聚合覆盖刷新 — re-aggregates every ModelRoute and POSTs the full router_settings payload to /config/update, grouped by modelGatewayId. Triggered automatically after a route save; exposed as a mutation so the console can call it explicitly. Each gateway receives only the routes bound to it.
-
-```graphql
-syncRouterSettings: Boolean!
-```
-
-- **Returns:** `Boolean!`
-- **Auth:** `@hasRole(any: [admin])`
-
 ## Types
 
 ### ModelRoute

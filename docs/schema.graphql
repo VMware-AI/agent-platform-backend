@@ -749,7 +749,6 @@ type Mutation {
 	createModelRoute(input: CreateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
 	updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
 	deleteModelRoute(id: ID!): Boolean! @hasRole(any: [admin])
-	syncRouterSettings: Boolean! @hasRole(any: [admin])
 	recordTokenUsage(input: RecordTokenUsageInput!): TokenUsage! @hasRole(any: [admin])
 	createModelGateway(input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
 	updateModelGateway(id: ID!, input: ModelGatewayInput!): ModelGateway! @hasRole(any: [admin])
