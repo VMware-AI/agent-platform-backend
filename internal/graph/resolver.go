@@ -27,6 +27,8 @@ type VCenterClient interface {
 	SetGuestinfo(ctx context.Context, vmName string, kv map[string]string) error
 	PowerOn(ctx context.Context, vmName string) error
 	PowerOff(ctx context.Context, vmName string) error
+	Shutdown(ctx context.Context, vmName string) error
+	RebootGuest(ctx context.Context, vmName string) error
 	Destroy(ctx context.Context, vmName string) error
 	Inventory(ctx context.Context) (vcenter.Inventory, error)
 	// FullInventory walks the vCenter inventory tree (per-DC errgroup +

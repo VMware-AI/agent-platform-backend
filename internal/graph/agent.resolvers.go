@@ -8,6 +8,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
@@ -215,7 +216,10 @@ func (r *mutationResolver) CreateAgent(ctx context.Context, input model.CreateAg
 	return toModelAgent(a), nil
 }
 
-// SetAgentStatus updates an agent's status (owner or admin only).
+// SetAgentStatus updates an agent's status AND powers the VM on/off on vCenter
+// (owner or admin only). A bare DB write is no longer sufficient — the user-intent
+// is "start/stop this agent's VM" and the DB status reflects the vCenter power
+// state (LLD-03 §4 开关机).
 func (r *mutationResolver) SetAgentStatus(ctx context.Context, id string, status model.AgentStatus) (*model.Agent, error) {
 	cu := auth.FromContext(ctx)
 	if cu == nil {
@@ -229,12 +233,147 @@ func (r *mutationResolver) SetAgentStatus(ctx context.Context, id string, status
 	if err != nil {
 		return nil, err
 	}
+
+	// vCenter VM power operation — only when the agent has a deployed VM with a
+	// known resource pool. Without a VM the status update is a db-only no-op
+	// (e.g. an agent that was created but never deployed, or was recycled).
+	if a.VMRef != "" && a.ResourcePoolID != nil {
+		pool, perr := r.Ent.ResourcePool.Get(ctx, *a.ResourcePoolID)
+		if perr != nil {
+			return nil, fmt.Errorf("load resource pool: %w", perr)
+		}
+		conn, cerr := r.connectPool(ctx, pool)
+		if cerr != nil {
+			return nil, fmt.Errorf("connect vcenter: %w", cerr)
+		}
+		defer func() { _ = conn.Logout(ctx) }()
+
+		switch status {
+		case model.AgentStatusRunning:
+			if err := conn.PowerOn(ctx, a.VMRef); err != nil {
+				r.audit(ctx, "agent.set_status", "agent", a.ID.String(), false, cu.ID)
+				return nil, fmt.Errorf("power on vm: %w", err)
+			}
+		case model.AgentStatusStopped:
+			// PowerOff is the direct hard power-off that waits for the task.
+			// Shutdown (graceful via VMware Tools) runs asynchronously — if
+			// the guest hasn't finished powering down before the PowerOff
+			// task fires, vSphere rejects the PowerOff with InvalidPowerState
+			// while the VM is in transition.
+			if err := conn.PowerOff(ctx, a.VMRef); err != nil {
+				r.audit(ctx, "agent.set_status", "agent", a.ID.String(), false, cu.ID)
+				return nil, fmt.Errorf("power off vm: %w", err)
+			}
+		}
+	}
+
 	a, err = r.Ent.Agent.UpdateOne(a).SetStatus(agent.Status(status)).Save(ctx)
 	if err != nil {
 		return nil, err
 	}
 	r.audit(ctx, "agent.set_status", "agent", a.ID.String(), true, cu.ID)
 	return toModelAgent(a), nil
+}
+
+// HardDeleteAgent PHYSICALLY deletes the agent row. Admin-only (also enforced by
+// the @hasRole directive in schema/agent.graphql, defense-in-depth here). Distinct
+// from RecycleAgent: recycle soft-stops and clears vmRef; hard delete tears down
+// the vSphere VM, revokes the litellm key, drops the agent-manager enrollment,
+// and DELETEs the row. The audit log row written below is the ONLY post-hoc
+// trace — there is no soft recovery.
+//
+// Order is intentional:
+//  1. Auth + confirm guard.
+//  2. Detached ctx for all side effects (won't be canceled by client disconnect).
+//  3. vCenter VM destroy (best-effort, log-only on failure).
+//  4. litellm key revoke + mark revoked (best-effort).
+//  5. CLEAR virtual_keys.agent_id BEFORE row delete to avoid FK conflict.
+//  6. DELETE the agent row itself — the only step that fails the operation.
+//  7. agent-manager enrollment delete (best-effort, idempotent).
+//  8. Audit success.
+func (r *mutationResolver) HardDeleteAgent(ctx context.Context, input model.HardDeleteAgentInput) (bool, error) {
+	cu := auth.FromContext(ctx)
+	if cu == nil {
+		return false, gqlerror.Errorf("unauthenticated")
+	}
+	if cu.Role != auth.RoleAdmin {
+		r.audit(ctx, "agent.hard_delete", "agent", input.AgentID, false, cu.ID)
+		return false, gqlerror.Errorf("admin role required")
+	}
+	if !input.Confirm {
+		return false, gqlerror.Errorf("hard delete is destructive: confirm must be true")
+	}
+	agentID, err := uuid.Parse(input.AgentID)
+	if err != nil {
+		return false, gqlerror.Errorf("invalid agentId")
+	}
+	ag, err := r.Ent.Agent.Get(ctx, agentID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			r.audit(ctx, "agent.hard_delete", "agent", input.AgentID, false, cu.ID)
+			return false, notFoundErr("agent")
+		}
+		r.audit(ctx, "agent.hard_delete", "agent", input.AgentID, false, cu.ID)
+		return false, err
+	}
+
+	cctx := context.WithoutCancel(ctx)
+
+	// Step 3: vSphere VM destroy (best-effort; orphan failures logged but do NOT
+	// block the row DELETE — the operator can clean up the orphan VM later).
+	if ag.VMRef != "" && ag.ResourcePoolID != nil {
+		if pool, perr := r.Ent.ResourcePool.Get(cctx, *ag.ResourcePoolID); perr == nil {
+			if conn, cerr := r.connectPool(cctx, pool); cerr == nil {
+				if err := conn.Destroy(cctx, ag.VMRef); err != nil {
+					log.Printf("hard delete agent %s: destroy VM %q failed: %v", ag.ID, ag.VMRef, err)
+				}
+				_ = conn.Logout(cctx)
+			} else {
+				log.Printf("hard delete agent %s: connect pool failed: %v", ag.ID, cerr)
+			}
+		} else {
+			log.Printf("hard delete agent %s: load resource pool %v failed: %v", ag.ID, ag.ResourcePoolID, perr)
+		}
+	}
+
+	// Step 4: revoke the litellm gateway key + mark it revoked (best-effort).
+	if ag.VirtualKeyID != nil {
+		if vk, vErr := r.Ent.VirtualKey.Get(cctx, *ag.VirtualKeyID); vErr == nil {
+			if gw := r.modelGatewayClientForVK(cctx, vk); gw != nil {
+				if err := gw.DeleteKey(cctx, vk.LitellmKey); err != nil {
+					log.Printf("hard delete agent %s: orphan gateway key %s, revoke failed: %v", ag.ID, vk.ID, err)
+				}
+			}
+			if _, err := r.Ent.VirtualKey.UpdateOne(vk).SetStatus(virtualkey.StatusRevoked).Save(cctx); err != nil {
+				log.Printf("hard delete agent %s: mark vk %s revoked failed: %v", ag.ID, vk.ID, err)
+			}
+		}
+	}
+
+	// Step 5: clear virtual_keys.agent_id BEFORE delete (the FK has no cascade —
+	// ent will block the Agent.DeleteOne if there's still a row referencing it).
+	if ag.VirtualKeyID != nil {
+		if _, err := r.Ent.VirtualKey.UpdateOneID(*ag.VirtualKeyID).ClearAgent().Save(cctx); err != nil {
+			log.Printf("hard delete agent %s: clear vk.agent_id failed: %v", ag.ID, err)
+		}
+	}
+
+	// Step 6: drop the agent row. Only step that fails the whole operation.
+	if err := r.Ent.Agent.DeleteOne(ag).Exec(cctx); err != nil {
+		r.audit(cctx, "agent.hard_delete", "agent", ag.ID.String(), false, cu.ID)
+		return false, fmt.Errorf("hard delete agent: %w", err)
+	}
+
+	// Step 7: drop the agent-manager enrollment row (same harness deleteAgentRow
+	// uses on deploy-rollback paths; idempotent so retries are safe).
+	if r.AgentMgr != nil {
+		if err := r.AgentMgr.DeleteEnrollment(cctx, ag.ID); err != nil {
+			log.Printf("hard delete agent %s: delete enrollment failed: %v", ag.ID, err)
+		}
+	}
+
+	r.audit(cctx, "agent.hard_delete", "agent", ag.ID.String(), true, cu.ID)
+	return true, nil
 }
 
 // CreateAgentConfig creates a named config for an agent type.
@@ -394,6 +533,43 @@ func (r *mutationResolver) SetAgentConfigKnowledge(ctx context.Context, configID
 	}
 	r.audit(ctx, "agent_config.set_knowledge", "agent_config", configID, true, actorID(auth.FromContext(ctx)))
 	return toModelAgentConfig(cfg), nil
+}
+
+// RestartAgent requests a graceful guest reboot via VMware Tools for a deployed
+// agent's VM (LLD-03 §4 开关机). Owner or admin only; the VM must exist (deployed).
+// The guest reboots asynchronously — the DB status is set to running immediately.
+func (r *mutationResolver) RestartAgent(ctx context.Context, id string) (*model.Agent, error) {
+	cu := auth.FromContext(ctx)
+	if cu == nil {
+		return nil, gqlerror.Errorf("unauthenticated")
+	}
+	aid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, gqlerror.Errorf("invalid id")
+	}
+	conn, vmRef, err := r.connectAgentVM(ctx, cu, aid)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = conn.Logout(ctx) }()
+	if err := conn.RebootGuest(ctx, vmRef); err != nil {
+		r.audit(ctx, "agent.restart", "agent", id, false, cu.ID)
+		return nil, fmt.Errorf("reboot vm: %w", err)
+	}
+	// Re-read the agent row after the reboot — the ent object from connectAgentVM
+	// may be stale.
+	ag, err := r.Ent.Agent.Get(ctx, aid)
+	if err != nil {
+		return nil, err
+	}
+	if ag.Status != "running" {
+		ag, err = r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusRunning).Save(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	r.audit(ctx, "agent.restart", "agent", ag.ID.String(), true, cu.ID)
+	return toModelAgent(ag), nil
 }
 
 // ReconfigAgentVM applies a partial resource/network/vApp reconfig to a deployed agent's VM.
