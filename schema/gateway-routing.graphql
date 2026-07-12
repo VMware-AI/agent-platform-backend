@@ -5,40 +5,50 @@
 # which is also the router-settings push target (no platform default).
 # ProviderModel CRUD + the GatewayConnection surface live in their own
 # modules; this file only contains routing topology.
-
-# Console-facing load-balancing strategy for a model route (模型路由 page). Distinct
-# from the litellm LoadBalanceStrategy: a friendly, gateway-agnostic choice the
-# operator picks in the UI and the backend round-trips verbatim.
-enum ModelRouteStrategy {
-  ROUND_ROBIN
-  WEIGHTED_ROUND_ROBIN
-  RANDOM
-}
+#
+# Wire shape (POST /config/update) per ModelRoute:
+#   routing_groups[i]:
+#     group_name: <name>           # route.name
+#     models: [<supportedModels>]   # route.supportedModels
+#     routing_strategy: <strategy>  # route.strategy, kebab-case for litellm
+#   fallbacks[i]:
+#     <supportedModels[0]>: <route.fallbacks>
+#   context_window_fallbacks[i]:
+#     <supportedModels[0]>: <route.contextWindowFallbacks>
+#   content_policy_fallbacks[i]:
+#     <supportedModels[0]>: <route.contentPolicyFallbacks>
+#
+# The fallback key MUST equal the first element of supportedModels (a
+# litellm requirement — the key is a model name on the wire, not a route
+# id). Console form validation is the caller's responsibility.
 
 type ModelRoute {
   id: ID!
   name: String!
-  modelAlias: String!
   # Required: the litellm gateway this route is hosted on. The router-settings
   # push targets this gateway (no platform default fallback).
   modelGateway: ModelGateway!
-  upstreams: [String!]!
-  # Console alias for `upstreams` — the models this route can serve (模型路由 page).
+  # The litellm model group served by this route. Mapped 1:1 to the
+  # `models` array on the wire (single-element in the common case;
+  # multi-element is allowed but rare).
   supportedModels: [String!]!
+  # The litellm LoadBalanceStrategy applied at push time. The console form
+  # exposes only the friendly values (round-robin / weighted / random); the
+  # backend translates these into the litellm enum below and persists here.
   strategy: LoadBalancingStrategy!
-  # Console-facing load-balancing strategy (模型路由 page).
-  uiStrategy: ModelRouteStrategy!
-  enabled: Boolean!
   createdAt: Time!
   updatedAt: Time!
-  # Fallback chains (LiteLLM design doc §3.2)
+  # Fallback chains surfaced to litellm via POST /config/update. Three
+  # independent lists map 1:1 to the doc's three fallback kinds (general /
+  # context-window / content-policy). Each entry is a litellm model name
+  # referenced by the corresponding route's supportedModels[0] on the wire.
   fallbacks: [String!]!
   contextWindowFallbacks: [String!]!
   contentPolicyFallbacks: [String!]!
 }
 
-# Console 模型路由 create form (创建路由). modelAlias is set to name;
-# supportedModels are stored as the route's model group. modelGatewayId is
+# Console 模型路由 create form (创建路由). name is the route's identifier and
+# becomes the routing_group.group_name on the wire. modelGatewayId is
 # REQUIRED — a route without a gateway has no router-settings push target.
 # strategy is the litellm LoadBalanceStrategy to set on this route; default
 # (omitted) leaves the ent column default in place (SIMPLE_SHUFFLE).
@@ -47,10 +57,8 @@ type ModelRoute {
 input CreateModelRouteInput {
   name: String!
   modelGatewayId: ID!
-  supportedModels: [String!]
+  supportedModels: [String!]!
   strategy: LoadBalancingStrategy
-  uiStrategy: ModelRouteStrategy
-  enabled: Boolean
   fallbacks: [String!]
   contextWindowFallbacks: [String!]
   contentPolicyFallbacks: [String!]
@@ -62,8 +70,7 @@ input UpdateModelRouteInput {
   name: String
   modelGatewayId: ID
   supportedModels: [String!]
-  uiStrategy: ModelRouteStrategy
-  enabled: Boolean
+  strategy: LoadBalancingStrategy
   fallbacks: [String!]
   contextWindowFallbacks: [String!]
   contentPolicyFallbacks: [String!]
@@ -79,12 +86,12 @@ extend type Mutation {
   # Model routes CRUD — design doc §3.2
   createModelRoute(input: CreateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
   updateModelRoute(id: ID!, input: UpdateModelRouteInput!): ModelRoute! @hasRole(any: [admin])
-  setModelRouteEnabled(id: ID!, enabled: Boolean!): ModelRoute! @hasRole(any: [admin])
   deleteModelRoute(id: ID!): Boolean! @hasRole(any: [admin])
-  # Atomic 全量聚合覆盖刷新 — re-aggregates every active ModelRoute and
-  # POSTs the full router_settings payload to /config/update, grouped by
-  # modelGatewayId. Triggered automatically after a route save; exposed
-  # as a mutation so the console can call it explicitly. Each gateway
-  # receives only the routes bound to it.
-  syncRouterSettings: Boolean! @hasRole(any: [admin])
+  # Note: there is intentionally no syncRouterSettings mutation. The
+  # periodic worker (StartRouterSettingsSync) and the resolver-side
+  # fire-and-forget hook (AggregateAndPushRouterSettingsFireAndForget)
+  # share the same per-gateway hash baseline, so a stable payload is
+  # never re-pushed. A user-initiated push button has nothing useful to
+  # do beyond what the worker guarantees. The hash baseline lives on
+  # Resolver.lastRouterSettingsHash (router_sync.go).
 }
