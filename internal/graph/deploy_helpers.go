@@ -147,6 +147,7 @@ func (r *mutationResolver) deployAgentInstant(
 		SetLitellmKey(key.Key).
 		SetModelGatewayID(t.gwConn.ID).
 		SetModels(nil).
+		SetUserID(t.ownerID.String()).
 		SetName(ag.Name)
 	if key.Token != "" {
 		vkCreate.SetLitellmToken(key.Token)

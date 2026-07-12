@@ -5,7 +5,6 @@ go 1.25.0
 require (
 	entgo.io/ent v0.14.6
 	github.com/99designs/gqlgen v0.17.91
-	github.com/alicebob/miniredis/v2 v2.38.0
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/redis/go-redis/v9 v9.20.1
@@ -56,7 +55,6 @@ require (
 	github.com/spf13/cobra v1.7.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/urfave/cli/v3 v3.9.0 // indirect
-	github.com/yuin/gopher-lua v1.1.1 // indirect
 	github.com/zclconf/go-cty v1.14.4 // indirect
 	github.com/zclconf/go-cty-yaml v1.1.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect

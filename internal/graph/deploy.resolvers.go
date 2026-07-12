@@ -158,6 +158,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		SetMaskedKey(maskKey(res.VirtualKey)).
 		SetModelGatewayID(t.gwConn.ID).
 		SetModels(nil).
+		SetUserID(t.ownerID.String()).
 		SetName(ag.Name)
 	if t.deployTeamID != "" {
 		// No-op leftover from the per-agent-per-org refactor: deploy

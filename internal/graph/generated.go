@@ -544,6 +544,7 @@ type ComplexityRoot struct {
 		DeleteSkill                    func(childComplexity int, id string) int
 		DeleteUser                     func(childComplexity int, id string) int
 		DeployAgent                    func(childComplexity int, input model.DeployAgentInput) int
+		HardDeleteAgent                func(childComplexity int, input model.HardDeleteAgentInput) int
 		IssueVirtualKey                func(childComplexity int, input model.IssueVirtualKeyInput) int
 		Login                          func(childComplexity int, input model.LoginInput) int
 		Logout                         func(childComplexity int) int
@@ -559,6 +560,7 @@ type ComplexityRoot struct {
 		RequestAgentUpgrade            func(childComplexity int, agentID string, targetVersion string) int
 		RequestRotation                func(childComplexity int, agentID string, kind model.RotationKind) int
 		ResetUserPassword              func(childComplexity int, id string) int
+		RestartAgent                   func(childComplexity int, id string) int
 		RevertAgentSnapshot            func(childComplexity int, input model.RevertAgentSnapshotInput) int
 		RevokeAgentEnrollment          func(childComplexity int, agentID string) int
 		RevokeVirtualKey               func(childComplexity int, id string) int
@@ -1015,11 +1017,13 @@ type MutationResolver interface {
 	UpsertAgentTemplate(ctx context.Context, input model.UpsertAgentTemplateInput) (*model.AgentTemplate, error)
 	CreateAgent(ctx context.Context, input model.CreateAgentInput) (*model.Agent, error)
 	SetAgentStatus(ctx context.Context, id string, status model.AgentStatus) (*model.Agent, error)
+	HardDeleteAgent(ctx context.Context, input model.HardDeleteAgentInput) (bool, error)
 	CreateAgentConfig(ctx context.Context, input model.CreateAgentConfigInput) (*model.AgentConfig, error)
 	UpdateAgentConfig(ctx context.Context, id string, input model.UpdateAgentConfigInput) (*model.AgentConfig, error)
 	DeleteAgentConfig(ctx context.Context, id string) (bool, error)
 	SetDefaultAgentConfig(ctx context.Context, id string) (*model.AgentConfig, error)
 	SetAgentConfigKnowledge(ctx context.Context, configID string, knowledgeArtifactIds []string) (*model.AgentConfig, error)
+	RestartAgent(ctx context.Context, id string) (*model.Agent, error)
 	ReconfigAgentVM(ctx context.Context, agentID string, resource *model.AgentResourceInput, network *model.AgentNetworkInput, vAppProperties []model.VAppPropertyInput) (*model.Agent, error)
 	UpsertArtifact(ctx context.Context, input model.UpsertArtifactInput) (*model.Artifact, error)
 	DeleteArtifact(ctx context.Context, id string) (bool, error)
@@ -3328,6 +3332,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.DeployAgent(childComplexity, args["input"].(model.DeployAgentInput)), true
+	case "Mutation.hardDeleteAgent":
+		if e.ComplexityRoot.Mutation.HardDeleteAgent == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_hardDeleteAgent_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.HardDeleteAgent(childComplexity, args["input"].(model.HardDeleteAgentInput)), true
 	case "Mutation.issueVirtualKey":
 		if e.ComplexityRoot.Mutation.IssueVirtualKey == nil {
 			break
@@ -3488,6 +3503,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.ResetUserPassword(childComplexity, args["id"].(string)), true
+	case "Mutation.restartAgent":
+		if e.ComplexityRoot.Mutation.RestartAgent == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_restartAgent_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.RestartAgent(childComplexity, args["id"].(string)), true
 	case "Mutation.revertAgentSnapshot":
 		if e.ComplexityRoot.Mutation.RevertAgentSnapshot == nil {
 			break
@@ -5682,6 +5708,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCreateResourcePoolInput,
 		ec.unmarshalInputCreateUserInput,
 		ec.unmarshalInputDeployAgentInput,
+		ec.unmarshalInputHardDeleteAgentInput,
 		ec.unmarshalInputIssueVirtualKeyInput,
 		ec.unmarshalInputLitellmParamsInput,
 		ec.unmarshalInputLoginInput,
@@ -6119,6 +6146,12 @@ input CreateAgentInput {
   resourcePoolId: ID
 }
 
+# Admin-only destructive input: confirm must be true or the mutation is rejected.
+input HardDeleteAgentInput {
+  agentId: ID!
+  confirm: Boolean! = false
+}
+
 input CreateAgentConfigInput {
   name: String!
   agentType: String!
@@ -6150,6 +6183,12 @@ extend type Mutation {
   # Self-service: any authenticated user creates their own agent (owner = caller).
   createAgent(input: CreateAgentInput!): Agent!
   setAgentStatus(id: ID!, status: AgentStatus!): Agent!
+  # ADMIN-ONLY destructive action: physically removes the agent row. Distinct from
+  # recycleAgent (which sets status=stopped + clears vmRef). hardDeleteAgent tears
+  # down the vSphere VM, revokes the litellm key, deletes the agent-manager
+  # enrollment, and DELETEs the row. The companion agent_enrollment row is dropped
+  # via the AgentMgr. No soft recovery — the audit log row is the only trace.
+  hardDeleteAgent(input: HardDeleteAgentInput!): Boolean! @hasRole(any: [admin])
 
   # Agent config management (智能体配置).
   createAgentConfig(input: CreateAgentConfigInput!): AgentConfig! @hasRole(any: [admin, tenant_admin])
@@ -6161,6 +6200,8 @@ extend type Mutation {
   # kind=knowledge artifact visible to the caller's tenant; the set is replaced wholesale.
   setAgentConfigKnowledge(configId: ID!, knowledgeArtifactIds: [ID!]!): AgentConfig!
     @hasRole(any: [admin, tenant_admin])
+  # Graceful guest reboot via VMware Tools (LLD-03 §4 开关机). Owner/admin.
+  restartAgent(id: ID!): Agent!
   reconfigAgentVM(
     agentId: ID!
     resource: AgentResourceInput
@@ -10409,6 +10450,20 @@ func (ec *executionContext) field_Mutation_deployAgent_args(ctx context.Context,
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_hardDeleteAgent_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.HardDeleteAgentInput, error) {
+			return ec.unmarshalNHardDeleteAgentInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐHardDeleteAgentInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_issueVirtualKey_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -10648,6 +10703,20 @@ func (ec *executionContext) field_Mutation_requestRotation_args(ctx context.Cont
 }
 
 func (ec *executionContext) field_Mutation_resetUserPassword_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_restartAgent_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
@@ -19739,6 +19808,68 @@ func (ec *executionContext) fieldContext_Mutation_setAgentStatus(ctx context.Con
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_hardDeleteAgent(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_hardDeleteAgent(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().HardDeleteAgent(ctx, fc.Args["input"].(model.HardDeleteAgentInput))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
+				if err != nil {
+					var zeroVal bool
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal bool
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, any)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_hardDeleteAgent(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_hardDeleteAgent_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_createAgentConfig(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -20043,6 +20174,50 @@ func (ec *executionContext) fieldContext_Mutation_setAgentConfigKnowledge(ctx co
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_setAgentConfigKnowledge_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_restartAgent(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_restartAgent(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().RestartAgent(ctx, fc.Args["id"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Agent) graphql.Marshaler {
+			return ec.marshalNAgent2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐAgent(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_restartAgent(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Agent(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_restartAgent_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -33823,6 +33998,47 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputHardDeleteAgentInput(ctx context.Context, obj any) (model.HardDeleteAgentInput, error) {
+	var it model.HardDeleteAgentInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	if _, present := asMap["confirm"]; !present {
+		asMap["confirm"] = false
+	}
+
+	fieldsInOrder := [...]string{"agentId", "confirm"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "agentId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("agentId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.AgentID = data
+		case "confirm":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("confirm"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Confirm = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputIssueVirtualKeyInput(ctx context.Context, obj any) (model.IssueVirtualKeyInput, error) {
 	var it model.IssueVirtualKeyInput
 	if obj == nil {
@@ -39863,6 +40079,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "hardDeleteAgent":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_hardDeleteAgent(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "createAgentConfig":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createAgentConfig(ctx, field)
@@ -39894,6 +40117,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "setAgentConfigKnowledge":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_setAgentConfigKnowledge(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "restartAgent":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_restartAgent(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -45484,6 +45714,11 @@ func (ec *executionContext) marshalNGatewaySpendStatus2ᚕgithubᚗcomᚋVMware�
 	}
 
 	return ret
+}
+
+func (ec *executionContext) unmarshalNHardDeleteAgentInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐHardDeleteAgentInput(ctx context.Context, v any) (model.HardDeleteAgentInput, error) {
+	res, err := ec.unmarshalInputHardDeleteAgentInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v any) (string, error) {

@@ -478,6 +478,11 @@ type GatewaySpendStatus struct {
 	Error       *string `json:"error,omitempty"`
 }
 
+type HardDeleteAgentInput struct {
+	AgentID string `json:"agentId"`
+	Confirm bool   `json:"confirm"`
+}
+
 type Image struct {
 	ID         string    `json:"id"`
 	Repository string    `json:"repository"`

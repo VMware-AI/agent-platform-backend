@@ -384,6 +384,19 @@ func (c *Client) Shutdown(ctx context.Context, vmName string) error {
 	return nil
 }
 
+// RebootGuest requests a graceful guest reboot via VMware Tools. Like Shutdown
+// it is not a task — the guest reboots asynchronously (LLD-03 §4 开关机).
+func (c *Client) RebootGuest(ctx context.Context, vmName string) error {
+	vm, err := c.findVM(ctx, vmName)
+	if err != nil {
+		return err
+	}
+	if err := vm.RebootGuest(ctx); err != nil {
+		return fmt.Errorf("vcenter: reboot guest %s: %w", vmName, err)
+	}
+	return nil
+}
+
 // ListTemplates returns VMs marked as templates (config.template=true) — the
 // OVA-built images available to clone agent VMs from (LLD-03 §4, 部署表单选模板).
 
