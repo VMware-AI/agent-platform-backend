@@ -207,6 +207,21 @@ setAgentStatus(id: ID!, status: AgentStatus!): Agent!
 | `id` | `ID!` | yes | — |
 | `status` | `AgentStatus!` | yes | — |
 
+### `hardDeleteAgent`
+
+ADMIN-ONLY destructive action: physically removes the agent row. Distinct from recycleAgent (which sets status=stopped + clears vmRef). hardDeleteAgent tears down the vSphere VM, revokes the litellm key, deletes the agent-manager enrollment, and DELETEs the row. The companion agent_enrollment row is dropped via the AgentMgr. No soft recovery — the audit log row is the only trace.
+
+```graphql
+hardDeleteAgent(input: HardDeleteAgentInput!): Boolean!
+```
+
+- **Returns:** `Boolean!`
+- **Auth:** `@hasRole(any: [admin])`
+
+| Argument | Type | Required | Default |
+|----------|------|----------|---------|
+| `input` | `HardDeleteAgentInput!` | yes | — |
+
 ### `createAgentConfig`
 
 Agent config management (智能体配置).
@@ -279,6 +294,21 @@ setAgentConfigKnowledge(configId: ID!, knowledgeArtifactIds: [ID!]!): AgentConfi
 |----------|------|----------|---------|
 | `configId` | `ID!` | yes | — |
 | `knowledgeArtifactIds` | `[ID!]!` | yes | — |
+
+### `restartAgent`
+
+Graceful guest reboot via VMware Tools (LLD-03 §4 开关机). Owner/admin.
+
+```graphql
+restartAgent(id: ID!): Agent!
+```
+
+- **Returns:** `Agent!`
+- **Auth:** authenticated (no directive)
+
+| Argument | Type | Required | Default |
+|----------|------|----------|---------|
+| `id` | `ID!` | yes | — |
 
 ### `reconfigAgentVM`
 
@@ -682,6 +712,17 @@ A vCenter resource pool offered as a placement target for the cloned VM. A true 
 | `notes` | `String` | — | Optional free-text deploy notes. |
 | `cloneMode` | `CloneMode!` | `full` | — |
 | `instantCloneParent` | `String` | — | — |
+
+### HardDeleteAgentInput
+
+*Input*
+
+Admin-only destructive input: confirm must be true or the mutation is rejected.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `agentId` | `ID!` | — | — |
+| `confirm` | `Boolean!` | `false` | — |
 
 ### OVFPropertyInput
 

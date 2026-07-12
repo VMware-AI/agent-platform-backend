@@ -457,6 +457,10 @@ type GatewaySpendStatus {
 	ok: Boolean!
 	error: String
 }
+input HardDeleteAgentInput {
+	agentId: ID!
+	confirm: Boolean! = false
+}
 type Image {
 	id: ID!
 	repository: String!
@@ -722,11 +726,13 @@ type Mutation {
 	upsertAgentTemplate(input: UpsertAgentTemplateInput!): AgentTemplate! @hasRole(any: [admin])
 	createAgent(input: CreateAgentInput!): Agent!
 	setAgentStatus(id: ID!, status: AgentStatus!): Agent!
+	hardDeleteAgent(input: HardDeleteAgentInput!): Boolean! @hasRole(any: [admin])
 	createAgentConfig(input: CreateAgentConfigInput!): AgentConfig! @hasRole(any: [admin,tenant_admin])
 	updateAgentConfig(id: ID!, input: UpdateAgentConfigInput!): AgentConfig! @hasRole(any: [admin,tenant_admin])
 	deleteAgentConfig(id: ID!): Boolean! @hasRole(any: [admin,tenant_admin])
 	setDefaultAgentConfig(id: ID!): AgentConfig! @hasRole(any: [admin,tenant_admin])
 	setAgentConfigKnowledge(configId: ID!, knowledgeArtifactIds: [ID!]!): AgentConfig! @hasRole(any: [admin,tenant_admin])
+	restartAgent(id: ID!): Agent!
 	reconfigAgentVM(agentId: ID!, resource: AgentResourceInput, network: AgentNetworkInput, vAppProperties: [VAppPropertyInput!]): Agent! @hasRole(any: [admin,user])
 	upsertArtifact(input: UpsertArtifactInput!): Artifact! @hasRole(any: [admin])
 	deleteArtifact(id: ID!): Boolean! @hasRole(any: [admin])
