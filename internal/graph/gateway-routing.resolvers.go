@@ -11,7 +11,6 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/modelroute"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
-	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
@@ -19,11 +18,12 @@ import (
 
 // CreateModelRoute mints a new model route from the console 模型路由 create form.
 // Always inserts (id-keyed); a duplicate name surfaces as a GraphQL error —
-// re-saving the same name goes through updateModelRoute. model_alias is set
-// to name (the console form has no separate alias); supportedModels are
-// stored as the upstream group. modelGatewayId is REQUIRED — a route
-// without a gateway has no router-settings push target. strategy is the
-// litellm LoadBalanceStrategy (omitted → ent default SIMPLE_SHUFFLE).
+// re-saving the same name goes through updateModelRoute. supportedModels
+// are stored as the litellm model group (also the key under which the
+// three fallback slices are surfaced on the wire). modelGatewayId is
+// REQUIRED — a route without a gateway has no router-settings push target.
+// strategy is the litellm LoadBalanceStrategy (omitted → ent default
+// SIMPLE_SHUFFLE).
 func (r *mutationResolver) CreateModelRoute(ctx context.Context, input model.CreateModelRouteInput) (*model.ModelRoute, error) {
 	gwID, err := parseRequiredUUID(input.ModelGatewayID, "modelGatewayId")
 	if err != nil {
@@ -42,17 +42,10 @@ func (r *mutationResolver) CreateModelRoute(ctx context.Context, input model.Cre
 	}
 	c := r.Ent.ModelRoute.Create().
 		SetName(input.Name).
-		SetModelAlias(input.Name).
 		SetModelGatewayID(gwID).
-		SetUpstreams(orEmptyStrings(input.SupportedModels))
+		SetSupportedModels(input.SupportedModels)
 	if input.Strategy != nil {
 		c.SetStrategy(modelroute.Strategy(string(*input.Strategy)))
-	}
-	if input.UIStrategy != nil {
-		c.SetUIStrategy(modelroute.UIStrategy(*input.UIStrategy))
-	}
-	if input.Enabled != nil {
-		c.SetEnabled(*input.Enabled)
 	}
 	if input.Fallbacks != nil {
 		c.SetFallbacks(input.Fallbacks)
@@ -73,8 +66,9 @@ func (r *mutationResolver) CreateModelRoute(ctx context.Context, input model.Cre
 }
 
 // UpdateModelRoute edits an existing model route by id (console 模型路由 edit form).
-// Only provided fields change; supportedModels (when given) replace the upstream
-// group. modelGatewayId, when present, must point at a live gateway.
+// Only provided fields change; supportedModels (when given) replace the
+// litellm model group. modelGatewayId, when present, must point at a live
+// gateway.
 func (r *mutationResolver) UpdateModelRoute(ctx context.Context, id string, input model.UpdateModelRouteInput) (*model.ModelRoute, error) {
 	rid, err := uuid.Parse(id)
 	if err != nil {
@@ -101,13 +95,10 @@ func (r *mutationResolver) UpdateModelRoute(ctx context.Context, id string, inpu
 		pushTarget = gwID
 	}
 	if input.SupportedModels != nil {
-		u.SetUpstreams(input.SupportedModels)
+		u.SetSupportedModels(input.SupportedModels)
 	}
-	if input.UIStrategy != nil {
-		u.SetUIStrategy(modelroute.UIStrategy(*input.UIStrategy))
-	}
-	if input.Enabled != nil {
-		u.SetEnabled(*input.Enabled)
+	if input.Strategy != nil {
+		u.SetStrategy(modelroute.Strategy(string(*input.Strategy)))
 	}
 	mr, err := u.Save(ctx)
 	if err != nil {
@@ -115,21 +106,6 @@ func (r *mutationResolver) UpdateModelRoute(ctx context.Context, id string, inpu
 	}
 	r.audit(ctx, "model_route.update", "model_route", id, true, actorID(auth.FromContext(ctx)))
 	r.AggregateAndPushRouterSettingsFireAndForget(pushTarget)
-	return toModelModelRoute(ctx, r.Resolver, mr)
-}
-
-// SetModelRouteEnabled is the resolver for the setModelRouteEnabled field.
-func (r *mutationResolver) SetModelRouteEnabled(ctx context.Context, id string, enabled bool) (*model.ModelRoute, error) {
-	rid, err := uuid.Parse(id)
-	if err != nil {
-		return nil, gqlerror.Errorf("invalid id")
-	}
-	mr, err := r.Ent.ModelRoute.UpdateOneID(rid).SetEnabled(enabled).Save(ctx)
-	if err != nil {
-		return nil, err
-	}
-	r.audit(ctx, "model_route.set_enabled", "model_route", id, true, actorID(auth.FromContext(ctx)))
-	r.AggregateAndPushRouterSettingsFireAndForget(mr.ModelGatewayID)
 	return toModelModelRoute(ctx, r.Resolver, mr)
 }
 
@@ -152,47 +128,6 @@ func (r *mutationResolver) DeleteModelRoute(ctx context.Context, id string) (boo
 	}
 	r.audit(ctx, "model_route.delete", "model_route", id, true, actorID(auth.FromContext(ctx)))
 	r.AggregateAndPushRouterSettingsFireAndForget(existing.ModelGatewayID)
-	return true, nil
-}
-
-// SyncRouterSettings is the resolver for the syncRouterSettings field.
-// On-demand version of the periodic router sync: re-aggregates every active
-// ModelRoute, partitions the routes by backendGatewayId, and POSTs the
-// per-gateway router_settings payload to /config/update. Each gateway
-// receives only the routes bound to it. Returns true only when every
-// gateway accepted the push; partial failures surface as GraphQL errors.
-func (r *mutationResolver) SyncRouterSettings(ctx context.Context) (bool, error) {
-	routes, err := r.Ent.ModelRoute.Query().Where(modelroute.Enabled(true)).All(ctx)
-	if err != nil {
-		return false, err
-	}
-	settings := gateway.AggregateRouterSettings(routes, nil)
-
-	buckets := bucketRoutesByGateway(routes)
-	if len(buckets) == 0 {
-		// No active routes — nothing to push. Return true so the console's
-		// "sync now" button doesn't surface an error on an empty fleet.
-		r.audit(ctx, "router.sync", "router_settings", "", true, actorID(auth.FromContext(ctx)))
-		return true, nil
-	}
-	for gwID := range buckets {
-		g, err := r.Ent.GatewayConnection.Get(ctx, gwID)
-		if err != nil {
-			return false, err
-		}
-		mk := r.gatewayMasterKey(ctx, g)
-		if mk == "" {
-			return false, gqlerror.Errorf("gateway %s has no resolvable master key", g.Name)
-		}
-		http, err := gateway.NewHTTPClient(g.Endpoint, mk)
-		if err != nil {
-			return false, err
-		}
-		if err := gateway.NewAdminClient(http).PushRouterSettings(ctx, settings); err != nil {
-			return false, err
-		}
-	}
-	r.audit(ctx, "router.sync", "router_settings", "", true, actorID(auth.FromContext(ctx)))
 	return true, nil
 }
 

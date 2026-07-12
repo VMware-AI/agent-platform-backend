@@ -442,19 +442,15 @@ func toModelRequestLog(l *ent.RequestLog) *model.RequestLog {
 }
 
 func toModelModelRoute(ctx context.Context, r *Resolver, mr *ent.ModelRoute) (*model.ModelRoute, error) {
-	ups := mr.Upstreams
-	if ups == nil {
-		ups = []string{}
+	sm := mr.SupportedModels
+	if sm == nil {
+		sm = []string{}
 	}
 	m := &model.ModelRoute{
-		ID:         mr.ID.String(),
-		Name:       mr.Name,
-		ModelAlias: mr.ModelAlias,
-		// Console alias for upstreams — same backing slice (the route's model group).
-		SupportedModels: ups,
+		ID:              mr.ID.String(),
+		Name:            mr.Name,
+		SupportedModels: sm,
 		Strategy:        model.LoadBalancingStrategy(string(mr.Strategy)),
-		UIStrategy:      model.ModelRouteStrategy(string(mr.UIStrategy)),
-		Enabled:         mr.Enabled,
 		CreatedAt:       mr.CreatedAt,
 		UpdatedAt:       mr.UpdatedAt,
 	}
@@ -465,7 +461,6 @@ func toModelModelRoute(ctx context.Context, r *Resolver, mr *ent.ModelRoute) (*m
 		}
 		m.ModelGateway = mg
 	}
-	m.Upstreams = ups
 	return m, nil
 }
 

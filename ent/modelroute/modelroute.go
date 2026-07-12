@@ -21,18 +21,12 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
-	// FieldModelAlias holds the string denoting the model_alias field in the database.
-	FieldModelAlias = "model_alias"
 	// FieldModelGatewayID holds the string denoting the model_gateway_id field in the database.
 	FieldModelGatewayID = "model_gateway_id"
-	// FieldUpstreams holds the string denoting the upstreams field in the database.
-	FieldUpstreams = "upstreams"
+	// FieldSupportedModels holds the string denoting the supported_models field in the database.
+	FieldSupportedModels = "supported_models"
 	// FieldStrategy holds the string denoting the strategy field in the database.
 	FieldStrategy = "strategy"
-	// FieldUIStrategy holds the string denoting the ui_strategy field in the database.
-	FieldUIStrategy = "ui_strategy"
-	// FieldEnabled holds the string denoting the enabled field in the database.
-	FieldEnabled = "enabled"
 	// FieldFallbacks holds the string denoting the fallbacks field in the database.
 	FieldFallbacks = "fallbacks"
 	// FieldContextWindowFallbacks holds the string denoting the context_window_fallbacks field in the database.
@@ -49,12 +43,9 @@ var Columns = []string{
 	FieldCreatedAt,
 	FieldUpdatedAt,
 	FieldName,
-	FieldModelAlias,
 	FieldModelGatewayID,
-	FieldUpstreams,
+	FieldSupportedModels,
 	FieldStrategy,
-	FieldUIStrategy,
-	FieldEnabled,
 	FieldFallbacks,
 	FieldContextWindowFallbacks,
 	FieldContentPolicyFallbacks,
@@ -79,10 +70,6 @@ var (
 	UpdateDefaultUpdatedAt func() time.Time
 	// NameValidator is a validator for the "name" field. It is called by the builders before save.
 	NameValidator func(string) error
-	// ModelAliasValidator is a validator for the "model_alias" field. It is called by the builders before save.
-	ModelAliasValidator func(string) error
-	// DefaultEnabled holds the default value on creation for the "enabled" field.
-	DefaultEnabled bool
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -116,33 +103,6 @@ func StrategyValidator(s Strategy) error {
 	}
 }
 
-// UIStrategy defines the type for the "ui_strategy" enum field.
-type UIStrategy string
-
-// UIStrategyROUND_ROBIN is the default value of the UIStrategy enum.
-const DefaultUIStrategy = UIStrategyROUND_ROBIN
-
-// UIStrategy values.
-const (
-	UIStrategyROUND_ROBIN          UIStrategy = "ROUND_ROBIN"
-	UIStrategyWEIGHTED_ROUND_ROBIN UIStrategy = "WEIGHTED_ROUND_ROBIN"
-	UIStrategyRANDOM               UIStrategy = "RANDOM"
-)
-
-func (us UIStrategy) String() string {
-	return string(us)
-}
-
-// UIStrategyValidator is a validator for the "ui_strategy" field enum values. It is called by the builders before save.
-func UIStrategyValidator(us UIStrategy) error {
-	switch us {
-	case UIStrategyROUND_ROBIN, UIStrategyWEIGHTED_ROUND_ROBIN, UIStrategyRANDOM:
-		return nil
-	default:
-		return fmt.Errorf("modelroute: invalid enum value for ui_strategy field: %q", us)
-	}
-}
-
 // OrderOption defines the ordering options for the ModelRoute queries.
 type OrderOption func(*sql.Selector)
 
@@ -166,11 +126,6 @@ func ByName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldName, opts...).ToFunc()
 }
 
-// ByModelAlias orders the results by the model_alias field.
-func ByModelAlias(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldModelAlias, opts...).ToFunc()
-}
-
 // ByModelGatewayID orders the results by the model_gateway_id field.
 func ByModelGatewayID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldModelGatewayID, opts...).ToFunc()
@@ -179,14 +134,4 @@ func ByModelGatewayID(opts ...sql.OrderTermOption) OrderOption {
 // ByStrategy orders the results by the strategy field.
 func ByStrategy(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStrategy, opts...).ToFunc()
-}
-
-// ByUIStrategy orders the results by the ui_strategy field.
-func ByUIStrategy(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldUIStrategy, opts...).ToFunc()
-}
-
-// ByEnabled orders the results by the enabled field.
-func ByEnabled(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldEnabled, opts...).ToFunc()
 }

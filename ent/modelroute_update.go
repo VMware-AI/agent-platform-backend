@@ -51,20 +51,6 @@ func (_u *ModelRouteUpdate) SetNillableName(v *string) *ModelRouteUpdate {
 	return _u
 }
 
-// SetModelAlias sets the "model_alias" field.
-func (_u *ModelRouteUpdate) SetModelAlias(v string) *ModelRouteUpdate {
-	_u.mutation.SetModelAlias(v)
-	return _u
-}
-
-// SetNillableModelAlias sets the "model_alias" field if the given value is not nil.
-func (_u *ModelRouteUpdate) SetNillableModelAlias(v *string) *ModelRouteUpdate {
-	if v != nil {
-		_u.SetModelAlias(*v)
-	}
-	return _u
-}
-
 // SetModelGatewayID sets the "model_gateway_id" field.
 func (_u *ModelRouteUpdate) SetModelGatewayID(v uuid.UUID) *ModelRouteUpdate {
 	_u.mutation.SetModelGatewayID(v)
@@ -79,21 +65,21 @@ func (_u *ModelRouteUpdate) SetNillableModelGatewayID(v *uuid.UUID) *ModelRouteU
 	return _u
 }
 
-// SetUpstreams sets the "upstreams" field.
-func (_u *ModelRouteUpdate) SetUpstreams(v []string) *ModelRouteUpdate {
-	_u.mutation.SetUpstreams(v)
+// SetSupportedModels sets the "supported_models" field.
+func (_u *ModelRouteUpdate) SetSupportedModels(v []string) *ModelRouteUpdate {
+	_u.mutation.SetSupportedModels(v)
 	return _u
 }
 
-// AppendUpstreams appends value to the "upstreams" field.
-func (_u *ModelRouteUpdate) AppendUpstreams(v []string) *ModelRouteUpdate {
-	_u.mutation.AppendUpstreams(v)
+// AppendSupportedModels appends value to the "supported_models" field.
+func (_u *ModelRouteUpdate) AppendSupportedModels(v []string) *ModelRouteUpdate {
+	_u.mutation.AppendSupportedModels(v)
 	return _u
 }
 
-// ClearUpstreams clears the value of the "upstreams" field.
-func (_u *ModelRouteUpdate) ClearUpstreams() *ModelRouteUpdate {
-	_u.mutation.ClearUpstreams()
+// ClearSupportedModels clears the value of the "supported_models" field.
+func (_u *ModelRouteUpdate) ClearSupportedModels() *ModelRouteUpdate {
+	_u.mutation.ClearSupportedModels()
 	return _u
 }
 
@@ -107,34 +93,6 @@ func (_u *ModelRouteUpdate) SetStrategy(v modelroute.Strategy) *ModelRouteUpdate
 func (_u *ModelRouteUpdate) SetNillableStrategy(v *modelroute.Strategy) *ModelRouteUpdate {
 	if v != nil {
 		_u.SetStrategy(*v)
-	}
-	return _u
-}
-
-// SetUIStrategy sets the "ui_strategy" field.
-func (_u *ModelRouteUpdate) SetUIStrategy(v modelroute.UIStrategy) *ModelRouteUpdate {
-	_u.mutation.SetUIStrategy(v)
-	return _u
-}
-
-// SetNillableUIStrategy sets the "ui_strategy" field if the given value is not nil.
-func (_u *ModelRouteUpdate) SetNillableUIStrategy(v *modelroute.UIStrategy) *ModelRouteUpdate {
-	if v != nil {
-		_u.SetUIStrategy(*v)
-	}
-	return _u
-}
-
-// SetEnabled sets the "enabled" field.
-func (_u *ModelRouteUpdate) SetEnabled(v bool) *ModelRouteUpdate {
-	_u.mutation.SetEnabled(v)
-	return _u
-}
-
-// SetNillableEnabled sets the "enabled" field if the given value is not nil.
-func (_u *ModelRouteUpdate) SetNillableEnabled(v *bool) *ModelRouteUpdate {
-	if v != nil {
-		_u.SetEnabled(*v)
 	}
 	return _u
 }
@@ -241,19 +199,9 @@ func (_u *ModelRouteUpdate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.name": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.ModelAlias(); ok {
-		if err := modelroute.ModelAliasValidator(v); err != nil {
-			return &ValidationError{Name: "model_alias", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.model_alias": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.Strategy(); ok {
 		if err := modelroute.StrategyValidator(v); err != nil {
 			return &ValidationError{Name: "strategy", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.strategy": %w`, err)}
-		}
-	}
-	if v, ok := _u.mutation.UIStrategy(); ok {
-		if err := modelroute.UIStrategyValidator(v); err != nil {
-			return &ValidationError{Name: "ui_strategy", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.ui_strategy": %w`, err)}
 		}
 	}
 	return nil
@@ -283,31 +231,22 @@ func (_u *ModelRouteUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(modelroute.FieldName, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.ModelAlias(); ok {
-		_spec.SetField(modelroute.FieldModelAlias, field.TypeString, value)
-	}
 	if value, ok := _u.mutation.ModelGatewayID(); ok {
 		_spec.SetField(modelroute.FieldModelGatewayID, field.TypeUUID, value)
 	}
-	if value, ok := _u.mutation.Upstreams(); ok {
-		_spec.SetField(modelroute.FieldUpstreams, field.TypeJSON, value)
+	if value, ok := _u.mutation.SupportedModels(); ok {
+		_spec.SetField(modelroute.FieldSupportedModels, field.TypeJSON, value)
 	}
-	if value, ok := _u.mutation.AppendedUpstreams(); ok {
+	if value, ok := _u.mutation.AppendedSupportedModels(); ok {
 		_spec.AddModifier(func(u *sql.UpdateBuilder) {
-			sqljson.Append(u, modelroute.FieldUpstreams, value)
+			sqljson.Append(u, modelroute.FieldSupportedModels, value)
 		})
 	}
-	if _u.mutation.UpstreamsCleared() {
-		_spec.ClearField(modelroute.FieldUpstreams, field.TypeJSON)
+	if _u.mutation.SupportedModelsCleared() {
+		_spec.ClearField(modelroute.FieldSupportedModels, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Strategy(); ok {
 		_spec.SetField(modelroute.FieldStrategy, field.TypeEnum, value)
-	}
-	if value, ok := _u.mutation.UIStrategy(); ok {
-		_spec.SetField(modelroute.FieldUIStrategy, field.TypeEnum, value)
-	}
-	if value, ok := _u.mutation.Enabled(); ok {
-		_spec.SetField(modelroute.FieldEnabled, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.Fallbacks(); ok {
 		_spec.SetField(modelroute.FieldFallbacks, field.TypeJSON, value)
@@ -384,20 +323,6 @@ func (_u *ModelRouteUpdateOne) SetNillableName(v *string) *ModelRouteUpdateOne {
 	return _u
 }
 
-// SetModelAlias sets the "model_alias" field.
-func (_u *ModelRouteUpdateOne) SetModelAlias(v string) *ModelRouteUpdateOne {
-	_u.mutation.SetModelAlias(v)
-	return _u
-}
-
-// SetNillableModelAlias sets the "model_alias" field if the given value is not nil.
-func (_u *ModelRouteUpdateOne) SetNillableModelAlias(v *string) *ModelRouteUpdateOne {
-	if v != nil {
-		_u.SetModelAlias(*v)
-	}
-	return _u
-}
-
 // SetModelGatewayID sets the "model_gateway_id" field.
 func (_u *ModelRouteUpdateOne) SetModelGatewayID(v uuid.UUID) *ModelRouteUpdateOne {
 	_u.mutation.SetModelGatewayID(v)
@@ -412,21 +337,21 @@ func (_u *ModelRouteUpdateOne) SetNillableModelGatewayID(v *uuid.UUID) *ModelRou
 	return _u
 }
 
-// SetUpstreams sets the "upstreams" field.
-func (_u *ModelRouteUpdateOne) SetUpstreams(v []string) *ModelRouteUpdateOne {
-	_u.mutation.SetUpstreams(v)
+// SetSupportedModels sets the "supported_models" field.
+func (_u *ModelRouteUpdateOne) SetSupportedModels(v []string) *ModelRouteUpdateOne {
+	_u.mutation.SetSupportedModels(v)
 	return _u
 }
 
-// AppendUpstreams appends value to the "upstreams" field.
-func (_u *ModelRouteUpdateOne) AppendUpstreams(v []string) *ModelRouteUpdateOne {
-	_u.mutation.AppendUpstreams(v)
+// AppendSupportedModels appends value to the "supported_models" field.
+func (_u *ModelRouteUpdateOne) AppendSupportedModels(v []string) *ModelRouteUpdateOne {
+	_u.mutation.AppendSupportedModels(v)
 	return _u
 }
 
-// ClearUpstreams clears the value of the "upstreams" field.
-func (_u *ModelRouteUpdateOne) ClearUpstreams() *ModelRouteUpdateOne {
-	_u.mutation.ClearUpstreams()
+// ClearSupportedModels clears the value of the "supported_models" field.
+func (_u *ModelRouteUpdateOne) ClearSupportedModels() *ModelRouteUpdateOne {
+	_u.mutation.ClearSupportedModels()
 	return _u
 }
 
@@ -440,34 +365,6 @@ func (_u *ModelRouteUpdateOne) SetStrategy(v modelroute.Strategy) *ModelRouteUpd
 func (_u *ModelRouteUpdateOne) SetNillableStrategy(v *modelroute.Strategy) *ModelRouteUpdateOne {
 	if v != nil {
 		_u.SetStrategy(*v)
-	}
-	return _u
-}
-
-// SetUIStrategy sets the "ui_strategy" field.
-func (_u *ModelRouteUpdateOne) SetUIStrategy(v modelroute.UIStrategy) *ModelRouteUpdateOne {
-	_u.mutation.SetUIStrategy(v)
-	return _u
-}
-
-// SetNillableUIStrategy sets the "ui_strategy" field if the given value is not nil.
-func (_u *ModelRouteUpdateOne) SetNillableUIStrategy(v *modelroute.UIStrategy) *ModelRouteUpdateOne {
-	if v != nil {
-		_u.SetUIStrategy(*v)
-	}
-	return _u
-}
-
-// SetEnabled sets the "enabled" field.
-func (_u *ModelRouteUpdateOne) SetEnabled(v bool) *ModelRouteUpdateOne {
-	_u.mutation.SetEnabled(v)
-	return _u
-}
-
-// SetNillableEnabled sets the "enabled" field if the given value is not nil.
-func (_u *ModelRouteUpdateOne) SetNillableEnabled(v *bool) *ModelRouteUpdateOne {
-	if v != nil {
-		_u.SetEnabled(*v)
 	}
 	return _u
 }
@@ -587,19 +484,9 @@ func (_u *ModelRouteUpdateOne) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.name": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.ModelAlias(); ok {
-		if err := modelroute.ModelAliasValidator(v); err != nil {
-			return &ValidationError{Name: "model_alias", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.model_alias": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.Strategy(); ok {
 		if err := modelroute.StrategyValidator(v); err != nil {
 			return &ValidationError{Name: "strategy", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.strategy": %w`, err)}
-		}
-	}
-	if v, ok := _u.mutation.UIStrategy(); ok {
-		if err := modelroute.UIStrategyValidator(v); err != nil {
-			return &ValidationError{Name: "ui_strategy", err: fmt.Errorf(`ent: validator failed for field "ModelRoute.ui_strategy": %w`, err)}
 		}
 	}
 	return nil
@@ -646,31 +533,22 @@ func (_u *ModelRouteUpdateOne) sqlSave(ctx context.Context) (_node *ModelRoute, 
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(modelroute.FieldName, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.ModelAlias(); ok {
-		_spec.SetField(modelroute.FieldModelAlias, field.TypeString, value)
-	}
 	if value, ok := _u.mutation.ModelGatewayID(); ok {
 		_spec.SetField(modelroute.FieldModelGatewayID, field.TypeUUID, value)
 	}
-	if value, ok := _u.mutation.Upstreams(); ok {
-		_spec.SetField(modelroute.FieldUpstreams, field.TypeJSON, value)
+	if value, ok := _u.mutation.SupportedModels(); ok {
+		_spec.SetField(modelroute.FieldSupportedModels, field.TypeJSON, value)
 	}
-	if value, ok := _u.mutation.AppendedUpstreams(); ok {
+	if value, ok := _u.mutation.AppendedSupportedModels(); ok {
 		_spec.AddModifier(func(u *sql.UpdateBuilder) {
-			sqljson.Append(u, modelroute.FieldUpstreams, value)
+			sqljson.Append(u, modelroute.FieldSupportedModels, value)
 		})
 	}
-	if _u.mutation.UpstreamsCleared() {
-		_spec.ClearField(modelroute.FieldUpstreams, field.TypeJSON)
+	if _u.mutation.SupportedModelsCleared() {
+		_spec.ClearField(modelroute.FieldSupportedModels, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Strategy(); ok {
 		_spec.SetField(modelroute.FieldStrategy, field.TypeEnum, value)
-	}
-	if value, ok := _u.mutation.UIStrategy(); ok {
-		_spec.SetField(modelroute.FieldUIStrategy, field.TypeEnum, value)
-	}
-	if value, ok := _u.mutation.Enabled(); ok {
-		_spec.SetField(modelroute.FieldEnabled, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.Fallbacks(); ok {
 		_spec.SetField(modelroute.FieldFallbacks, field.TypeJSON, value)

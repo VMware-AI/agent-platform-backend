@@ -275,10 +275,8 @@ type CreateDepartmentInput struct {
 type CreateModelRouteInput struct {
 	Name                   string                 `json:"name"`
 	ModelGatewayID         string                 `json:"modelGatewayId"`
-	SupportedModels        []string               `json:"supportedModels,omitempty"`
+	SupportedModels        []string               `json:"supportedModels"`
 	Strategy               *LoadBalancingStrategy `json:"strategy,omitempty"`
-	UIStrategy             *ModelRouteStrategy    `json:"uiStrategy,omitempty"`
-	Enabled                *bool                  `json:"enabled,omitempty"`
 	Fallbacks              []string               `json:"fallbacks,omitempty"`
 	ContextWindowFallbacks []string               `json:"contextWindowFallbacks,omitempty"`
 	ContentPolicyFallbacks []string               `json:"contentPolicyFallbacks,omitempty"`
@@ -670,13 +668,9 @@ type ModelInfoInput struct {
 type ModelRoute struct {
 	ID                     string                `json:"id"`
 	Name                   string                `json:"name"`
-	ModelAlias             string                `json:"modelAlias"`
 	ModelGateway           *ModelGateway         `json:"modelGateway"`
-	Upstreams              []string              `json:"upstreams"`
 	SupportedModels        []string              `json:"supportedModels"`
 	Strategy               LoadBalancingStrategy `json:"strategy"`
-	UIStrategy             ModelRouteStrategy    `json:"uiStrategy"`
-	Enabled                bool                  `json:"enabled"`
 	CreatedAt              time.Time             `json:"createdAt"`
 	UpdatedAt              time.Time             `json:"updatedAt"`
 	Fallbacks              []string              `json:"fallbacks"`
@@ -1123,14 +1117,13 @@ type UpdateAgentConfigInput struct {
 }
 
 type UpdateModelRouteInput struct {
-	Name                   *string             `json:"name,omitempty"`
-	ModelGatewayID         *string             `json:"modelGatewayId,omitempty"`
-	SupportedModels        []string            `json:"supportedModels,omitempty"`
-	UIStrategy             *ModelRouteStrategy `json:"uiStrategy,omitempty"`
-	Enabled                *bool               `json:"enabled,omitempty"`
-	Fallbacks              []string            `json:"fallbacks,omitempty"`
-	ContextWindowFallbacks []string            `json:"contextWindowFallbacks,omitempty"`
-	ContentPolicyFallbacks []string            `json:"contentPolicyFallbacks,omitempty"`
+	Name                   *string                `json:"name,omitempty"`
+	ModelGatewayID         *string                `json:"modelGatewayId,omitempty"`
+	SupportedModels        []string               `json:"supportedModels,omitempty"`
+	Strategy               *LoadBalancingStrategy `json:"strategy,omitempty"`
+	Fallbacks              []string               `json:"fallbacks,omitempty"`
+	ContextWindowFallbacks []string               `json:"contextWindowFallbacks,omitempty"`
+	ContentPolicyFallbacks []string               `json:"contentPolicyFallbacks,omitempty"`
 }
 
 type UpdatePlatformSettingsInput struct {
@@ -2382,63 +2375,6 @@ func (e *ModelHealth) UnmarshalJSON(b []byte) error {
 }
 
 func (e ModelHealth) MarshalJSON() ([]byte, error) {
-	var buf bytes.Buffer
-	e.MarshalGQL(&buf)
-	return buf.Bytes(), nil
-}
-
-type ModelRouteStrategy string
-
-const (
-	ModelRouteStrategyRoundRobin         ModelRouteStrategy = "ROUND_ROBIN"
-	ModelRouteStrategyWeightedRoundRobin ModelRouteStrategy = "WEIGHTED_ROUND_ROBIN"
-	ModelRouteStrategyRandom             ModelRouteStrategy = "RANDOM"
-)
-
-var AllModelRouteStrategy = []ModelRouteStrategy{
-	ModelRouteStrategyRoundRobin,
-	ModelRouteStrategyWeightedRoundRobin,
-	ModelRouteStrategyRandom,
-}
-
-func (e ModelRouteStrategy) IsValid() bool {
-	switch e {
-	case ModelRouteStrategyRoundRobin, ModelRouteStrategyWeightedRoundRobin, ModelRouteStrategyRandom:
-		return true
-	}
-	return false
-}
-
-func (e ModelRouteStrategy) String() string {
-	return string(e)
-}
-
-func (e *ModelRouteStrategy) UnmarshalGQL(v any) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = ModelRouteStrategy(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid ModelRouteStrategy", str)
-	}
-	return nil
-}
-
-func (e ModelRouteStrategy) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-func (e *ModelRouteStrategy) UnmarshalJSON(b []byte) error {
-	s, err := strconv.Unquote(string(b))
-	if err != nil {
-		return err
-	}
-	return e.UnmarshalGQL(s)
-}
-
-func (e ModelRouteStrategy) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil
