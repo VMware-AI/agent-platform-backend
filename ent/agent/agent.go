@@ -119,10 +119,16 @@ const DefaultStatus = StatusProvisioning
 
 // Status values.
 const (
-	StatusProvisioning Status = "provisioning"
-	StatusRunning      Status = "running"
-	StatusStopped      Status = "stopped"
-	StatusException    Status = "exception"
+	StatusProvisioning      Status = "provisioning"
+	StatusCloning           Status = "cloning"
+	StatusGuestConfiguring  Status = "guest_configuring"
+	StatusNetworkConnecting Status = "network_connecting"
+	StatusServiceStarting   Status = "service_starting"
+	StatusHealthChecking    Status = "health_checking"
+	StatusRunning           Status = "running"
+	StatusStopped           Status = "stopped"
+	StatusException         Status = "exception"
+	StatusFailed            Status = "failed"
 )
 
 func (s Status) String() string {
@@ -132,7 +138,7 @@ func (s Status) String() string {
 // StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
 func StatusValidator(s Status) error {
 	switch s {
-	case StatusProvisioning, StatusRunning, StatusStopped, StatusException:
+	case StatusProvisioning, StatusCloning, StatusGuestConfiguring, StatusNetworkConnecting, StatusServiceStarting, StatusHealthChecking, StatusRunning, StatusStopped, StatusException, StatusFailed:
 		return nil
 	default:
 		return fmt.Errorf("agent: invalid enum value for status field: %q", s)

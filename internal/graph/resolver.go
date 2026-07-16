@@ -59,6 +59,11 @@ type VCenterClient interface {
 	ListRunningVMs(ctx context.Context) ([]vcenter.VMInfo, error)
 	RemoveSerialPorts(ctx context.Context, vmName string) error
 	CheckInstantCloneCompatible(ctx context.Context, vmName string) error
+	ConnectNIC(ctx context.Context, vmName string) error
+	CustomizeInstantCloneGuest(ctx context.Context, vmName string, req vcenter.CustomizeGuestRequest) error
+	StartGuestNetwork(ctx context.Context, vmName, user, pass string) error
+	WaitForGuestIP(ctx context.Context, vmName, expectedIP string, timeout time.Duration) error
+	ReadGuestInfo(ctx context.Context, vmName string) (map[string]string, error)
 	GetVMInfo(ctx context.Context, vmName string) (*vcenter.VMInfo, error)
 	// About returns the vCenter version/build identity (test-connection detail).
 	About() vcenter.AboutInfo

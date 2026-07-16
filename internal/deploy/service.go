@@ -6,11 +6,14 @@ package deploy
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
@@ -157,6 +160,14 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 			return nil, fmt.Errorf("deploy: issue key: %w", err)
 		}
 		key = *k
+	}
+
+	// Auto-detect static IP mode: if a static_ip is provided but ip_mode is not
+	// explicitly set, default to "static". This ensures both the vCenter
+	// CustomizationSpec (buildLinuxCustomization) and the cloud-init network-config
+	// (buildNetplanConfig) pick up the static IP configuration.
+	if req.OVFProperties != nil && req.OVFProperties["guestinfo.static_ip"] != "" && req.OVFProperties["guestinfo.ip_mode"] == "" {
+		req.OVFProperties["guestinfo.ip_mode"] = "static"
 	}
 
 	// Dev mode: skip VM provisioning, return the key immediately.
@@ -354,8 +365,8 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 
 	// OS user/password/SSH from OVF vApp properties — must come before write_files.
 	if ovfProps != nil {
-		pw := ovfProps["password"]
-		user := ovfProps["guestinfo.runas_user"]
+		pw := ovfProps["guestinfo.password"]
+		user := ovfProps["guestinfo.run_as_user"]
 		sshKey := ovfProps["public-keys"]
 
 		if pw != "" {
@@ -387,6 +398,16 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 
 	// All write_files entries must come after the write_files: header.
 	b.WriteString("write_files:\n")
+
+	// OpenClaw config with API key injected
+	if key != "" {
+		ocGatewayToken := GenerateGatewayToken()
+		b.WriteString("  - path: /home/vmware/.openclaw/openclaw.json\n")
+		b.WriteString("    owner: vmware:vmware\n")
+		b.WriteString("    permissions: \"0600\"\n")
+		b.WriteString("    content: |\n")
+				fmt.Fprintf(&b, "      {\"gateway\":{\"auth\":{\"mode\":\"token\",\"token\":\"%s\"},\"bind\":\"lan\",\"mode\":\"local\",\"port\":18789},\"models\":{\"mode\":\"merge\",\"providers\":{\"litellm\":{\"api\":\"openai-completions\",\"apiKey\":\"%s\",\"baseUrl\":\"%s/v1\",\"models\":[{\"id\":\"minmax\",\"name\":\"minmax\"},{\"id\":\"ds\",\"name\":\"ds\"}]}}}}\n", ocGatewayToken, key, base)
+	}
 
 	// No netplan needed — CustomizationSpec handles IP natively (vCenter/VMware Tools).
 	// Cloud-init netplan would conflict with vCenter guest customization.
@@ -470,4 +491,44 @@ func toCIDR(ip, mask string) string {
 
 func buildMetadata(hostname string) string {
 	return fmt.Sprintf("local-hostname: %s\n", hostname)
+}
+
+// AgentMgrGuestInfo carries protocol fields for instant clone guest config.
+type AgentMgrGuestInfo struct {
+	Role, DeploymentID, Generation, Command string
+	Hostname, InterfaceMAC, IPAddress, PrefixLength, Gateway, DNS, SearchDomain string
+	OpenClawUser, OpenClawHome, OpenClawPort, OpenClawBaseURL, OpenClawModel string
+	OpenClawAPIKey, OpenClawGatewayToken string // sensitive
+}
+
+// ToGuestInfo maps fields to bare keys for SetGuestinfo (prefix added by caller).
+func (g *AgentMgrGuestInfo) ToGuestInfo() map[string]string {
+	m := map[string]string{
+		"agentmgr.role": g.Role, "agentmgr.deployment-id": g.DeploymentID,
+		"agentmgr.generation": g.Generation, "agentmgr.command": g.Command,
+		"agentmgr.hostname": g.Hostname, "agentmgr.interface-mac": g.InterfaceMAC,
+		"agentmgr.ip-address": g.IPAddress, "agentmgr.prefix-length": g.PrefixLength,
+		"agentmgr.gateway": g.Gateway, "agentmgr.dns": g.DNS,
+		"agentmgr.search-domain": g.SearchDomain,
+		"agentmgr.openclaw-user": g.OpenClawUser, "agentmgr.openclaw-home": g.OpenClawHome,
+		"agentmgr.openclaw-port": g.OpenClawPort, "agentmgr.openclaw-base-url": g.OpenClawBaseURL,
+		"agentmgr.openclaw-model": g.OpenClawModel,
+		"agentmgr.openclaw-api-key": g.OpenClawAPIKey,
+		"agentmgr.openclaw-gateway-token": g.OpenClawGatewayToken,
+	}
+	for k, v := range m {
+		if v == "" {
+			delete(m, k)
+		}
+	}
+	return m
+}
+
+// GenerateGatewayToken creates a unique per-instance OpenClaw gateway auth token.
+func GenerateGatewayToken() string {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return fmt.Sprintf("oc-gw-%x", time.Now().UnixNano())
+	}
+	return "oc-gw-" + hex.EncodeToString(b)
 }
