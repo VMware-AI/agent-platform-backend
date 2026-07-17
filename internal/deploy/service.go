@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -396,6 +397,11 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 		}
 	}
 
+	// Ensure OpenCode config directory exists (cloud-init write_files does not create parents).
+	b.WriteString("bootcmd:\n")
+	b.WriteString("  - mkdir -p /home/vmware/.config/opencode\n")
+	b.WriteString("  - chown -R vmware:vmware /home/vmware/.config\n")
+
 	// All write_files entries must come after the write_files: header.
 	b.WriteString("write_files:\n")
 
@@ -403,13 +409,19 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 	ocModelsJSON := ""
 	ocCodeModelsJSON := ""
 	if len(models) > 0 {
-		ocParts := make([]string, 0, len(models))
-		for _, m := range models {
-			ocParts = append(ocParts, fmt.Sprintf(`{"id":"%s","name":"%s"}`, m, m))
-			ocCodeModelsJSON += fmt.Sprintf(`"%s":{"name":"%s"},`, m, m)
+		type ocModel struct{ ID, Name string }
+		ocList := make([]ocModel, len(models))
+		ocCodeMap := make(map[string]map[string]string, len(models))
+		for i, m := range models {
+			ocList[i] = ocModel{ID: m, Name: m}
+			ocCodeMap[m] = map[string]string{"name": m}
 		}
-		ocModelsJSON = strings.Join(ocParts, ",")
-		ocCodeModelsJSON = strings.TrimRight(ocCodeModelsJSON, ",")
+		if b, err := json.Marshal(ocList); err == nil {
+			ocModelsJSON = string(b)
+		}
+		if b, err := json.Marshal(ocCodeMap); err == nil {
+			ocCodeModelsJSON = strings.TrimPrefix(strings.TrimSuffix(string(b), "}"), "{")
+		}
 	}
 
 	// OpenClaw config with API key injected
@@ -426,9 +438,10 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 	if key != "" && len(models) > 0 {
 		b.WriteString("  - path: /home/vmware/.config/opencode/opencode.json\n")
 		b.WriteString("    owner: vmware:vmware\n")
-		b.WriteString("    permissions: \"0644\"\n")
+		b.WriteString("    permissions: \"0600\"\n")
 		b.WriteString("    content: |\n")
-		fmt.Fprintf(&b, "      {\"provider\":{\"openai\":{\"options\":{\"baseURL\":\"%s/v1\",\"apiKey\":\"%s\"},\"models\":{%s}}}}\n", base, key, ocCodeModelsJSON)
+		fmt.Fprintf(&b, "      {\"model\":\"openai/%s\",\"provider\":{\"openai\":{\"options\":{\"baseURL\":\"%s/v1\",\"apiKey\":\"%s\"},\"models\":{%s}}}}\n",
+			models[0], base, key, ocCodeModelsJSON)
 	}
 
 	// No netplan needed — CustomizationSpec handles IP natively (vCenter/VMware Tools).
