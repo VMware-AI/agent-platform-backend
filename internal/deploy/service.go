@@ -407,20 +407,16 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 
 	// Build model list fragments from key models (operator-curated per agent).
 	ocModelsJSON := ""
-	ocCodeModelsJSON := ""
+	ocCodeMap := make(map[string]map[string]string)
 	if len(models) > 0 {
 		type ocModel struct{ ID, Name string }
 		ocList := make([]ocModel, len(models))
-		ocCodeMap := make(map[string]map[string]string, len(models))
 		for i, m := range models {
 			ocList[i] = ocModel{ID: m, Name: m}
 			ocCodeMap[m] = map[string]string{"name": m}
 		}
 		if b, err := json.Marshal(ocList); err == nil {
 			ocModelsJSON = string(b)
-		}
-		if b, err := json.Marshal(ocCodeMap); err == nil {
-			ocCodeModelsJSON = strings.TrimPrefix(strings.TrimSuffix(string(b), "}"), "{")
 		}
 	}
 
@@ -436,12 +432,30 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 
 	// OpenCode config — always written alongside OpenClaw for dual-mode templates.
 	if key != "" && len(models) > 0 {
+		defaultModel := models[0]
+		ocCfg := map[string]interface{}{
+			"model": "openai/" + defaultModel,
+			"provider": map[string]interface{}{
+				"openai": map[string]interface{}{
+					"options": map[string]interface{}{
+						"baseURL": base + "/v1",
+						"apiKey":  key,
+					},
+					"models": ocCodeMap,
+				},
+			},
+		}
+		var ocCfgBytes []byte
+		if b, err := json.Marshal(ocCfg); err == nil {
+			ocCfgBytes = b
+		} else {
+			ocCfgBytes = []byte("{}")
+		}
 		b.WriteString("  - path: /home/vmware/.config/opencode/opencode.json\n")
 		b.WriteString("    owner: vmware:vmware\n")
 		b.WriteString("    permissions: \"0600\"\n")
 		b.WriteString("    content: |\n")
-		fmt.Fprintf(&b, "      {\"model\":\"openai/%s\",\"provider\":{\"openai\":{\"options\":{\"baseURL\":\"%s/v1\",\"apiKey\":\"%s\"},\"models\":{%s}}}}\n",
-			models[0], base, key, ocCodeModelsJSON)
+		fmt.Fprintf(&b, "      %s\n", string(ocCfgBytes))
 	}
 
 	// No netplan needed — CustomizationSpec handles IP natively (vCenter/VMware Tools).
