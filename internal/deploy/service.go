@@ -458,6 +458,27 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 		fmt.Fprintf(&b, "      %s\n", string(ocCfgBytes))
 	}
 
+	// Hermes config — OpenAI-compatible provider via LiteLLM.
+	if key != "" && len(models) > 0 {
+		b.WriteString("  - path: /home/vmware/.hermes/.env\n")
+		b.WriteString("    owner: vmware:vmware\n")
+		b.WriteString("    permissions: \"0600\"\n")
+		b.WriteString("    content: |\n")
+		fmt.Fprintf(&b, "      OPENAI_API_KEY=%s\n", key)
+		fmt.Fprintf(&b, "      OPENAI_BASE_URL=%s/v1\n", base)
+		b.WriteString("  - path: /home/vmware/.hermes/config.yaml\n")
+		b.WriteString("    owner: vmware:vmware\n")
+		b.WriteString("    permissions: \"0600\"\n")
+		b.WriteString("    content: |\n")
+		fmt.Fprintf(&b, "      model:\n")
+		fmt.Fprintf(&b, "        provider: custom\n")
+		fmt.Fprintf(&b, "        default: %s\n", models[0])
+		fmt.Fprintf(&b, "      custom_providers:\n")
+		fmt.Fprintf(&b, "        - name: litellm\n")
+		fmt.Fprintf(&b, "          base_url: %s/v1\n", base)
+		fmt.Fprintf(&b, "          api_key: %s\n", key)
+	}
+
 	// No netplan needed — CustomizationSpec handles IP natively (vCenter/VMware Tools).
 	// Cloud-init netplan would conflict with vCenter guest customization.
 	if false {
