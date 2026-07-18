@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 
@@ -63,6 +64,16 @@ func (r *Resolver) RefreshOneVirtualKeySpend(ctx context.Context, k *ent.Virtual
 	defer cancel()
 	info, err := http.BudgetInfo(probeCtx, gateway.BudgetScopeKey, k.LitellmKey)
 	if err != nil {
+		// 404 from /key/info means the LiteLLM-side key is gone — typically
+		// because the reconciler's Drift C branch (DB row revoked + gw
+		// still had it) DELETEd it on a prior cycle, or an operator
+		// removed it out-of-band. Either way the spend read has nothing
+		// to update against; skip silently so we don't spam WARN every
+		// 15min. The keys phase's diff already detects Drift B / Drift C
+		// and reacts there — spend refresh is purely telemetry.
+		if errors.Is(err, gateway.ErrNotFound) {
+			return
+		}
 		log.Printf("virtual-key spend refresh: probe %s: %v", k.ID, err)
 		return
 	}
