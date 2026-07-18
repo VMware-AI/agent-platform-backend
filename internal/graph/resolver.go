@@ -105,7 +105,9 @@ type Resolver struct {
 	InstallVars map[string]string
 	// AgentUser is the OS account installed agents run as, substituted into
 	// {{AGENT_USER}} in catalog install commands. Set once at startup from
-	// the AGENT_USER env (cmd/server); empty means "use defaultAgentUser".
+	// the AGENT_USER env (cmd/server); empty string renders the placeholder
+	// literally, which surfaces as a visible {{AGENT_USER}} in any install
+	// command that references it.
 	AgentUser string
 	// VCenterConnect dials vCenter; nil disables deploy. TLS-skip is per-pool
 	// (ResourcePool.insecure, LLD-13), passed into each connect call.
@@ -164,6 +166,20 @@ type Resolver struct {
 	// redundant-but-correct first-tick push from each replica.
 	lastRouterSettingsHash   map[uuid.UUID]string
 	lastRouterSettingsHashMu sync.Mutex
+}
+
+// renderInstallVars builds the {{PLACEHOLDER}} substitutions for catalog install
+// commands. Source is purely the resolver's startup-env fields (InstallVars +
+// AgentUser); no DB lookup, no console-editable runtime config. Anything
+// operators want to override at runtime belongs in cmd/server's startup config
+// (AGENT_PKG_BASE_URL / AGENT_USER envs).
+func (r *Resolver) renderInstallVars() map[string]string {
+	vars := make(map[string]string, len(r.InstallVars)+1)
+	for k, v := range r.InstallVars {
+		vars[k] = v
+	}
+	vars["AGENT_USER"] = r.AgentUser
+	return vars
 }
 
 // EnablePermissionCache turns on memoization of custom-role permission sets for

@@ -792,7 +792,6 @@ type Mutation {
 	deleteResourcePool(id: ID!): DeleteResourcePoolPayload! @hasRole(any: [admin])
 	testResourcePoolConnection(input: TestResourcePoolConnectionInput!): ResourcePoolConnectionTest! @hasRole(any: [admin])
 	syncResourcePool(id: ID!): SyncResourcePoolPayload! @hasRole(any: [admin])
-	updatePlatformSettings(input: UpdatePlatformSettingsInput!): PlatformSettings! @hasRole(any: [admin])
 	issueVirtualKey(input: IssueVirtualKeyInput!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
 	revokeVirtualKey(id: ID!): Boolean! @hasPermission(perm: "key:manage")
 	regenerateVirtualKey(id: ID!): IssuedVirtualKey! @hasPermission(perm: "key:manage")
@@ -896,11 +895,6 @@ type Permission {
 type PlacementRef {
 	name: String!
 	path: String
-}
-type PlatformSettings {
-	agentUser: String!
-	packageSourceUrl: String!
-	packageSourceUser: String!
 }
 type PrivateModelSpecTestResult {
 	success: Boolean!
@@ -1012,7 +1006,6 @@ type Query {
 	resourcePool(id: ID!): ResourcePool @hasRole(any: [admin])
 	contentLibraries(resourcePoolId: ID!): [String!]! @hasRole(any: [admin])
 	contentLibraryItems(resourcePoolId: ID!, libraryName: String!): [ContentLibraryItem!]! @hasRole(any: [admin])
-	platformSettings: PlatformSettings! @hasRole(any: [admin])
 	gatewayAvailableModels(gatewayConnectionId: ID!): [String!]! @hasRole(any: [admin,read_only])
 	virtualKeys(agentName: String, modelGateway: ID, nameContains: String, nameEquals: String, modelContains: String, orderBy: VirtualKeyOrderBy): [VirtualKey!]! @hasRole(any: [admin,read_only])
 }
@@ -1297,12 +1290,6 @@ input UpdateModelRouteInput {
 	fallbacks: [String!]
 	contextWindowFallbacks: [String!]
 	contentPolicyFallbacks: [String!]
-}
-input UpdatePlatformSettingsInput {
-	agentUser: String
-	packageSourceUrl: String
-	packageSourceUser: String
-	packageSourcePassword: String
 }
 input UpdateProviderModelInput {
 	providerModelId: ID!

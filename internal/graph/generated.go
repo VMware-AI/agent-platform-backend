@@ -580,7 +580,6 @@ type ComplexityRoot struct {
 		UpdateAgentConfig              func(childComplexity int, id string, input model.UpdateAgentConfigInput) int
 		UpdateModelGateway             func(childComplexity int, id string, input model.ModelGatewayInput) int
 		UpdateModelRoute               func(childComplexity int, id string, input model.UpdateModelRouteInput) int
-		UpdatePlatformSettings         func(childComplexity int, input model.UpdatePlatformSettingsInput) int
 		UpdateProviderModel            func(childComplexity int, input model.UpdateProviderModelInput) int
 		UpdateProviderModelSpec        func(childComplexity int, input model.UpdateProviderModelSpecInput) int
 		UpdateResourcePool             func(childComplexity int, id string, input model.UpdateResourcePoolInput) int
@@ -660,12 +659,6 @@ type ComplexityRoot struct {
 		Path func(childComplexity int) int
 	}
 
-	PlatformSettings struct {
-		AgentUser         func(childComplexity int) int
-		PackageSourceURL  func(childComplexity int) int
-		PackageSourceUser func(childComplexity int) int
-	}
-
 	PrivateModelSpecTestResult struct {
 		Message   func(childComplexity int) int
 		ModelList func(childComplexity int) int
@@ -728,7 +721,6 @@ type ComplexityRoot struct {
 		OvaTemplateFamilies     func(childComplexity int, filter *model.OvaTemplateFamilyFilter, pagination *model.Pagination, sort *model.OvaTemplateFamilySort) int
 		OvaTemplateVersions     func(childComplexity int, familyID *string, pagination *model.Pagination) int
 		Permissions             func(childComplexity int) int
-		PlatformSettings        func(childComplexity int) int
 		ProviderModelInfo       func(childComplexity int, filter *model.ProviderModelInfoFilterInput, page model.PageInput, sort *model.ProviderModelInfoSort) int
 		RequestLogs             func(childComplexity int, filter *model.RequestLogFilter, page *model.PageInput) int
 		RequestMetrics          func(childComplexity int, from time.Time, to time.Time, granularity model.RequestMetricsBucketGranularity, filter *model.RequestMetricsFilter) int
@@ -1077,7 +1069,6 @@ type MutationResolver interface {
 	DeleteResourcePool(ctx context.Context, id string) (*model.DeleteResourcePoolPayload, error)
 	TestResourcePoolConnection(ctx context.Context, input model.TestResourcePoolConnectionInput) (*model.ResourcePoolConnectionTest, error)
 	SyncResourcePool(ctx context.Context, id string) (*model.SyncResourcePoolPayload, error)
-	UpdatePlatformSettings(ctx context.Context, input model.UpdatePlatformSettingsInput) (*model.PlatformSettings, error)
 	IssueVirtualKey(ctx context.Context, input model.IssueVirtualKeyInput) (*model.IssuedVirtualKey, error)
 	RevokeVirtualKey(ctx context.Context, id string) (bool, error)
 	RegenerateVirtualKey(ctx context.Context, id string) (*model.IssuedVirtualKey, error)
@@ -1142,7 +1133,6 @@ type QueryResolver interface {
 	ResourcePool(ctx context.Context, id string) (*model.ResourcePool, error)
 	ContentLibraries(ctx context.Context, resourcePoolID string) ([]string, error)
 	ContentLibraryItems(ctx context.Context, resourcePoolID string, libraryName string) ([]model.ContentLibraryItem, error)
-	PlatformSettings(ctx context.Context) (*model.PlatformSettings, error)
 	GatewayAvailableModels(ctx context.Context, gatewayConnectionID string) ([]string, error)
 	VirtualKeys(ctx context.Context, agentName *string, modelGateway *string, nameContains *string, nameEquals *string, modelContains *string, orderBy *model.VirtualKeyOrderBy) ([]model.VirtualKey, error)
 }
@@ -3723,17 +3713,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.UpdateModelRoute(childComplexity, args["id"].(string), args["input"].(model.UpdateModelRouteInput)), true
-	case "Mutation.updatePlatformSettings":
-		if e.ComplexityRoot.Mutation.UpdatePlatformSettings == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_updatePlatformSettings_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.Mutation.UpdatePlatformSettings(childComplexity, args["input"].(model.UpdatePlatformSettingsInput)), true
 	case "Mutation.updateProviderModel":
 		if e.ComplexityRoot.Mutation.UpdateProviderModel == nil {
 			break
@@ -4110,25 +4089,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.PlacementRef.Path(childComplexity), true
-
-	case "PlatformSettings.agentUser":
-		if e.ComplexityRoot.PlatformSettings.AgentUser == nil {
-			break
-		}
-
-		return e.ComplexityRoot.PlatformSettings.AgentUser(childComplexity), true
-	case "PlatformSettings.packageSourceUrl":
-		if e.ComplexityRoot.PlatformSettings.PackageSourceURL == nil {
-			break
-		}
-
-		return e.ComplexityRoot.PlatformSettings.PackageSourceURL(childComplexity), true
-	case "PlatformSettings.packageSourceUser":
-		if e.ComplexityRoot.PlatformSettings.PackageSourceUser == nil {
-			break
-		}
-
-		return e.ComplexityRoot.PlatformSettings.PackageSourceUser(childComplexity), true
 
 	case "PrivateModelSpecTestResult.message":
 		if e.ComplexityRoot.PrivateModelSpecTestResult.Message == nil {
@@ -4534,12 +4494,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Permissions(childComplexity), true
-	case "Query.platformSettings":
-		if e.ComplexityRoot.Query.PlatformSettings == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Query.PlatformSettings(childComplexity), true
 	case "Query.providerModelInfo":
 		if e.ComplexityRoot.Query.ProviderModelInfo == nil {
 			break
@@ -5741,7 +5695,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputTestResourcePoolConnectionInput,
 		ec.unmarshalInputUpdateAgentConfigInput,
 		ec.unmarshalInputUpdateModelRouteInput,
-		ec.unmarshalInputUpdatePlatformSettingsInput,
 		ec.unmarshalInputUpdateProviderModelInput,
 		ec.unmarshalInputUpdateProviderModelSpecInput,
 		ec.unmarshalInputUpdateResourcePoolInput,
@@ -7940,37 +7893,6 @@ directive @goField(
   omittable: Boolean
 ) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
 `, BuiltIn: false},
-	{Name: "../../schema/settings.graphql", Input: `# Platform-wide settings (LLD-13): operator-editable config that used to be a
-# backend startup env. Currently just agent_user — the OS account installed
-# agents run as (装机命令 su {{AGENT_USER}}).
-
-type PlatformSettings {
-  # OS user that runs installed agents on the VM. Defaults to "agent" when unset.
-  agentUser: String!
-  # Internal agent-package mirror base URL (e.g. ftp://mirror.internal/agents) and its
-  # read-only username. The password is write-only (stored encrypted, never returned).
-  packageSourceUrl: String!
-  packageSourceUser: String!
-}
-
-input UpdatePlatformSettingsInput {
-  # When provided, sets the agent OS user; omitted = unchanged. Must be non-empty.
-  agentUser: String
-  # Package mirror (LLD-16 OQ-2). Each field: omitted = unchanged; empty string clears
-  # it. packageSourcePassword is write-only and stored encrypted (secrets).
-  packageSourceUrl: String
-  packageSourceUser: String
-  packageSourcePassword: String
-}
-
-extend type Query {
-  platformSettings: PlatformSettings! @hasRole(any: [admin])
-}
-
-extend type Mutation {
-  updatePlatformSettings(input: UpdatePlatformSettingsInput!): PlatformSettings! @hasRole(any: [admin])
-}
-`, BuiltIn: false},
 	{Name: "../../schema/virtualkey.graphql", Input: `# Per-agent-per-org LiteLLM virtual keys (refactored 2026-07, was per-user).
 # See LLD-04 / LLD-07 §8. Secret returned ONCE on issue/regenerate via the
 # IssuedVirtualKey wrapper; the persistent maskedKey preview is exposed on
@@ -9272,18 +9194,6 @@ func (ec *executionContext) childFields_PlacementRef(ctx context.Context, field 
 		return ec.fieldContext_PlacementRef_path(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type PlacementRef", field.Name)
-}
-
-func (ec *executionContext) childFields_PlatformSettings(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-	switch field.Name {
-	case "agentUser":
-		return ec.fieldContext_PlatformSettings_agentUser(ctx, field)
-	case "packageSourceUrl":
-		return ec.fieldContext_PlatformSettings_packageSourceUrl(ctx, field)
-	case "packageSourceUser":
-		return ec.fieldContext_PlatformSettings_packageSourceUser(ctx, field)
-	}
-	return nil, fmt.Errorf("no field named %q was found under type PlatformSettings", field.Name)
 }
 
 func (ec *executionContext) childFields_PrivateModelSpecTestResult(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -11055,20 +10965,6 @@ func (ec *executionContext) field_Mutation_updateModelRoute_args(ctx context.Con
 		return nil, err
 	}
 	args["input"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_updatePlatformSettings_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
-		func(ctx context.Context, v any) (model.UpdatePlatformSettingsInput, error) {
-			return ec.unmarshalNUpdatePlatformSettingsInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUpdatePlatformSettingsInput(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["input"] = arg0
 	return args, nil
 }
 
@@ -23354,68 +23250,6 @@ func (ec *executionContext) fieldContext_Mutation_syncResourcePool(ctx context.C
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_updatePlatformSettings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Mutation_updatePlatformSettings(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().UpdatePlatformSettings(ctx, fc.Args["input"].(model.UpdatePlatformSettingsInput))
-		},
-		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
-			directive0 := next
-
-			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
-				if err != nil {
-					var zeroVal *model.PlatformSettings
-					return zeroVal, err
-				}
-				if ec.Directives.HasRole == nil {
-					var zeroVal *model.PlatformSettings
-					return zeroVal, errors.New("directive hasRole is not implemented")
-				}
-				return ec.Directives.HasRole(ctx, nil, directive0, any)
-			}
-
-			next = directive1
-			return next
-		},
-		func(ctx context.Context, selections ast.SelectionSet, v *model.PlatformSettings) graphql.Marshaler {
-			return ec.marshalNPlatformSettings2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlatformSettings(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Mutation_updatePlatformSettings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_PlatformSettings(ctx, field)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_updatePlatformSettings_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Mutation_issueVirtualKey(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -24829,75 +24663,6 @@ func (ec *executionContext) _PlacementRef_path(ctx context.Context, field graphq
 }
 func (ec *executionContext) fieldContext_PlacementRef_path(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("PlacementRef", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _PlatformSettings_agentUser(ctx context.Context, field graphql.CollectedField, obj *model.PlatformSettings) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_PlatformSettings_agentUser(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.AgentUser, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_PlatformSettings_agentUser(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("PlatformSettings", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _PlatformSettings_packageSourceUrl(ctx context.Context, field graphql.CollectedField, obj *model.PlatformSettings) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_PlatformSettings_packageSourceUrl(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.PackageSourceURL, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_PlatformSettings_packageSourceUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("PlatformSettings", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _PlatformSettings_packageSourceUser(ctx context.Context, field graphql.CollectedField, obj *model.PlatformSettings) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_PlatformSettings_packageSourceUser(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.PackageSourceUser, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_PlatformSettings_packageSourceUser(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("PlatformSettings", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _PrivateModelSpecTestResult_success(ctx context.Context, field graphql.CollectedField, obj *model.PrivateModelSpecTestResult) (ret graphql.Marshaler) {
@@ -27882,56 +27647,6 @@ func (ec *executionContext) fieldContext_Query_contentLibraryItems(ctx context.C
 	if fc.Args, err = ec.field_Query_contentLibraryItems_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_platformSettings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Query_platformSettings(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Query().PlatformSettings(ctx)
-		},
-		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
-			directive0 := next
-
-			directive1 := func(ctx context.Context) (any, error) {
-				any, err := ec.unmarshalNRoleName2ᚕgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐRoleNameᚄ(ctx, []any{"admin"})
-				if err != nil {
-					var zeroVal *model.PlatformSettings
-					return zeroVal, err
-				}
-				if ec.Directives.HasRole == nil {
-					var zeroVal *model.PlatformSettings
-					return zeroVal, errors.New("directive hasRole is not implemented")
-				}
-				return ec.Directives.HasRole(ctx, nil, directive0, any)
-			}
-
-			next = directive1
-			return next
-		},
-		func(ctx context.Context, selections ast.SelectionSet, v *model.PlatformSettings) graphql.Marshaler {
-			return ec.marshalNPlatformSettings2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlatformSettings(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Query_platformSettings(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_PlatformSettings(ctx, field)
-		},
 	}
 	return fc, nil
 }
@@ -35709,57 +35424,6 @@ func (ec *executionContext) unmarshalInputUpdateModelRouteInput(ctx context.Cont
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputUpdatePlatformSettingsInput(ctx context.Context, obj any) (model.UpdatePlatformSettingsInput, error) {
-	var it model.UpdatePlatformSettingsInput
-	if obj == nil {
-		return it, nil
-	}
-
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"agentUser", "packageSourceUrl", "packageSourceUser", "packageSourcePassword"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "agentUser":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("agentUser"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.AgentUser = data
-		case "packageSourceUrl":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("packageSourceUrl"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.PackageSourceURL = data
-		case "packageSourceUser":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("packageSourceUser"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.PackageSourceUser = data
-		case "packageSourcePassword":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("packageSourcePassword"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.PackageSourcePassword = data
-		}
-	}
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputUpdateProviderModelInput(ctx context.Context, obj any) (model.UpdateProviderModelInput, error) {
 	var it model.UpdateProviderModelInput
 	if obj == nil {
@@ -40505,13 +40169,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "updatePlatformSettings":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_updatePlatformSettings(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "issueVirtualKey":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_issueVirtualKey(ctx, field)
@@ -41163,55 +40820,6 @@ func (ec *executionContext) _PlacementRef(ctx context.Context, sel ast.Selection
 		case "path":
 			out.Values[i] = ec._PlacementRef_path(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
-				out.Invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.Deferred, int32(min(len(deferred), math.MaxInt32)))
-
-	for label, dfs := range deferred {
-		ec.ProcessDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
-var platformSettingsImplementors = []string{"PlatformSettings"}
-
-func (ec *executionContext) _PlatformSettings(ctx context.Context, sel ast.SelectionSet, obj *model.PlatformSettings) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, platformSettingsImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("PlatformSettings")
-		case "agentUser":
-			out.Values[i] = ec._PlatformSettings_agentUser(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "packageSourceUrl":
-			out.Values[i] = ec._PlatformSettings_packageSourceUrl(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "packageSourceUser":
-			out.Values[i] = ec._PlatformSettings_packageSourceUser(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		default:
@@ -42487,28 +42095,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_contentLibraryItems(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "platformSettings":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_platformSettings(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -46445,20 +46031,6 @@ func (ec *executionContext) marshalNPlacementRef2ᚕgithubᚗcomᚋVMwareᚑAI�
 	return ret
 }
 
-func (ec *executionContext) marshalNPlatformSettings2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlatformSettings(ctx context.Context, sel ast.SelectionSet, v model.PlatformSettings) graphql.Marshaler {
-	return ec._PlatformSettings(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNPlatformSettings2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPlatformSettings(ctx context.Context, sel ast.SelectionSet, v *model.PlatformSettings) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._PlatformSettings(ctx, sel, v)
-}
-
 func (ec *executionContext) marshalNPrivateModelSpecTestResult2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐPrivateModelSpecTestResult(ctx context.Context, sel ast.SelectionSet, v model.PrivateModelSpecTestResult) graphql.Marshaler {
 	return ec._PrivateModelSpecTestResult(ctx, sel, &v)
 }
@@ -47139,11 +46711,6 @@ func (ec *executionContext) unmarshalNUpdateAgentConfigInput2githubᚗcomᚋVMwa
 
 func (ec *executionContext) unmarshalNUpdateModelRouteInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUpdateModelRouteInput(ctx context.Context, v any) (model.UpdateModelRouteInput, error) {
 	res, err := ec.unmarshalInputUpdateModelRouteInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNUpdatePlatformSettingsInput2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐUpdatePlatformSettingsInput(ctx context.Context, v any) (model.UpdatePlatformSettingsInput, error) {
-	res, err := ec.unmarshalInputUpdatePlatformSettingsInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 

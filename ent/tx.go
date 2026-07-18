@@ -56,8 +56,6 @@ type Tx struct {
 	Role *RoleClient
 	// RotationCommand is the client for interacting with the RotationCommand builders.
 	RotationCommand *RotationCommandClient
-	// Setting is the client for interacting with the Setting builders.
-	Setting *SettingClient
 	// Skill is the client for interacting with the Skill builders.
 	Skill *SkillClient
 	// Tenant is the client for interacting with the Tenant builders.
@@ -221,7 +219,6 @@ func (tx *Tx) init() {
 	tx.ResourcePool = NewResourcePoolClient(tx.config)
 	tx.Role = NewRoleClient(tx.config)
 	tx.RotationCommand = NewRotationCommandClient(tx.config)
-	tx.Setting = NewSettingClient(tx.config)
 	tx.Skill = NewSkillClient(tx.config)
 	tx.Tenant = NewTenantClient(tx.config)
 	tx.TokenUsage = NewTokenUsageClient(tx.config)

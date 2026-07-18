@@ -804,12 +804,6 @@ type PlacementRef struct {
 	Path *string `json:"path,omitempty"`
 }
 
-type PlatformSettings struct {
-	AgentUser         string `json:"agentUser"`
-	PackageSourceURL  string `json:"packageSourceUrl"`
-	PackageSourceUser string `json:"packageSourceUser"`
-}
-
 type PrivateModelSpecTestResult struct {
 	Success   bool      `json:"success"`
 	Message   string    `json:"message"`
@@ -1129,13 +1123,6 @@ type UpdateModelRouteInput struct {
 	Fallbacks              []string               `json:"fallbacks,omitempty"`
 	ContextWindowFallbacks []string               `json:"contextWindowFallbacks,omitempty"`
 	ContentPolicyFallbacks []string               `json:"contentPolicyFallbacks,omitempty"`
-}
-
-type UpdatePlatformSettingsInput struct {
-	AgentUser             *string `json:"agentUser,omitempty"`
-	PackageSourceURL      *string `json:"packageSourceUrl,omitempty"`
-	PackageSourceUser     *string `json:"packageSourceUser,omitempty"`
-	PackageSourcePassword *string `json:"packageSourcePassword,omitempty"`
 }
 
 type UpdateProviderModelInput struct {
