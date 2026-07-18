@@ -29,6 +29,14 @@ type Config struct {
 	// ReconcilePrune lets the reconciler heal drift (delete gateway orphans +
 	// revoke stale rows). Default false = report-only ("对账"), the safe default.
 	ReconcilePrune bool
+	// LitellmReconcileUnified toggles the unified DB→LiteLLM 5-phase
+	// reconciler (ModelGateway status / ProviderModel spec drift / VirtualKey
+	// keys+teams / VirtualKey spend / router_settings). Default false = legacy
+	// keys+teams cycle only. When true, the Reconciler.Resolver field is set
+	// and the unified cycle runs IN PARALLEL with the legacy 3 background
+	// tickers (model-gateway auto-sync, router settings sync, virtual-key
+	// spend refresh) so operators can compare logs before PR #3 cuts over.
+	LitellmReconcileUnified bool
 	// AgentPkgBaseURL is the offline mirror base for agent install packages:
 	// substituted for {{AGENT_PKG_BASE_URL}} in catalog install commands, and
 	// stamped into agent VMs as guestinfo.agentmgr.agent_pkg_base_url so the
@@ -193,6 +201,7 @@ func Load() (*Config, error) {
 	}
 	c.ReconcileInterval = ri
 	c.ReconcilePrune = getenv("RECONCILE_PRUNE", "false") == "true"
+	c.LitellmReconcileUnified = getenv("LITELLM_RECONCILE_UNIFIED", "false") == "true"
 	c.AgentPkgBaseURL = strings.TrimRight(os.Getenv("AGENT_PKG_BASE_URL"), "/")
 	if c.AgentKeepVersions, err = getenvInt("AGENT_KEEP_VERSIONS", 0); err != nil {
 		return nil, err

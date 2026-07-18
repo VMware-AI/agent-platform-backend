@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"log/slog"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
@@ -244,9 +245,136 @@ func (r *Resolver) ReconcileProviderModelDrift(ctx context.Context, conn *ent.Ga
 	if conn == nil {
 		return 0, 0, fmt.Errorf("nil gateway connection")
 	}
-	// Implementation note: PR #1 ships this as a stub that performs no diff.
-	// PR #2 fills in the actual compare-and-repush logic. With Resolver != nil
-	// but the real diff not yet wired, the unified cycle's provider_models
-	// phase simply reports zero drift every cycle.
-	return 0, 0, nil
+
+	ac := r.buildGatewayAdminClient(ctx, conn)
+	if ac == nil {
+		return 0, 0, fmt.Errorf("admin client build failed for gateway %s", conn.ID)
+	}
+
+	// Every ProviderModel owned by this gateway. model_gateway_id on
+	// ProviderModel is the canonical owner link.
+	pms, qerr := r.Ent.ProviderModel.Query().All(ctx)
+	if qerr != nil {
+		return 0, 0, fmt.Errorf("query provider models: %w", qerr)
+	}
+
+	for _, pm := range pms {
+		if pm == nil {
+			continue
+		}
+		if pm.ModelGatewayID != conn.ID {
+			continue
+		}
+
+		specs, parseErr := parseModelSpecsJSON(pm.ModelSpecs)
+		if parseErr != nil {
+			log.Printf("reconcile: provider_models pm_id=%s parse specs: %v", pm.ID, parseErr)
+			continue
+		}
+
+		// Guard: refuse to push if every spec has empty model_info.id — that's
+		// the "specs were never pushed" signature (mutator failed before
+		// litellm returned ids), not "specs were dropped".
+		anyID := false
+		for _, s := range specs {
+			if s.ModelInfo.ID != "" {
+				anyID = true
+				break
+			}
+		}
+		if !anyID {
+			log.Printf("reconcile: provider_models pm_id=%s all specs have empty model_info.id; refusing to push", pm.ID)
+			continue
+		}
+
+		// Pull LiteLLM's view of this group. /v2/model/info?model_group=<name>
+		// returns deployments (model_info[].id) under that group.
+		info, gerr := ac.GetGroupedModelInfo(ctx, pm.Name)
+		if gerr != nil {
+			log.Printf("reconcile: provider_models pm_id=%s name=%s GetGroupedModelInfo: %v", pm.ID, pm.Name, gerr)
+			continue
+		}
+		gwIDs, perr := parseGroupedModelInfoIDs(info.Raw)
+		if perr != nil {
+			log.Printf("reconcile: provider_models pm_id=%s parse grouped info: %v", pm.ID, perr)
+			continue
+		}
+		gwSet := make(map[string]struct{}, len(gwIDs))
+		for _, id := range gwIDs {
+			gwSet[id] = struct{}{}
+		}
+
+		// Drift A (LiteLLM-only): any id present at the gateway but not in DB.
+		for id := range gwSet {
+			found := false
+			for _, s := range specs {
+				if s.ModelInfo.ID == id {
+					found = true
+					break
+				}
+			}
+			if !found {
+				driftA++
+				log.Printf("reconcile: provider_models pm_id=%s drift_a liteLLM_only_id=%s", pm.ID, id)
+			}
+		}
+
+		// Drift B (DB-only) and Drift C (whole group empty at LiteLLM): any
+		// spec in DB whose id is not present at the gateway. If we see ≥1
+		// missing spec, re-push the whole group via PushModelUpdate (atomic
+		// replacement on the litellm side).
+		needsRepush := false
+		for _, s := range specs {
+			if s.ModelInfo.ID == "" {
+				continue
+			}
+			if _, ok := gwSet[s.ModelInfo.ID]; !ok {
+				needsRepush = true
+				break
+			}
+		}
+		if !needsRepush {
+			continue
+		}
+
+		if rerr := r.pushModelUpdateToLitellm(ctx, pm, conn, specs); rerr != nil {
+			log.Printf("reconcile: provider_models pm_id=%s repush: %v", pm.ID, rerr)
+			continue
+		}
+		repushed++
+		log.Printf("reconcile: provider_models pm_id=%s repushed spec_count=%d", pm.ID, len(specs))
+	}
+
+	return repushed, driftA, nil
+}
+
+// parseGroupedModelInfoIDs extracts model_info[].id strings from the LiteLLM
+// /v2/model/info response. The wire shape (LiteLLM 1.40+) is:
+//
+//	{ "data": [ { "model_info": { "id": "..." }, ... }, ... ] }
+//
+// Defensive: missing fields, empty data, non-array responses all return an
+// empty slice (NOT an error) — "no deployments" is a valid state that simply
+// means Drift C re-push should run.
+func parseGroupedModelInfoIDs(raw json.RawMessage) ([]string, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	var resp struct {
+		Data []struct {
+			ModelInfo struct {
+				ID string `json:"id"`
+			} `json:"model_info"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, fmt.Errorf("unmarshal grouped model info: %w", err)
+	}
+	ids := make([]string, 0, len(resp.Data))
+	for _, d := range resp.Data {
+		if d.ModelInfo.ID != "" {
+			ids = append(ids, d.ModelInfo.ID)
+		}
+	}
+	return ids, nil
 }

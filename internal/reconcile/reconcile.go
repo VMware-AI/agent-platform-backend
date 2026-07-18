@@ -416,41 +416,69 @@ func (r *Reconciler) runUnifiedCycle(ctx context.Context) {
 //     (cannot safely — recreating loses the original raw key).
 //   - Drift C (DB revoked, LiteLLM still has): directly DELETE at LiteLLM
 //     per key. Failures are logged per-key and skipped.
+//
+// The diff is computed once via diffKeys; the Drift C action iterates
+// t.Keys filtered by status=revoked and DELETEs each whose LitellmKey still
+// appears in the gateway listing. allUnmatched + empty-list guards prevent
+// mass deletion when the gateway listing looks broken.
 func (r *Reconciler) reconcileKeysUnified(ctx context.Context, t GatewayTarget) {
 	start := time.Now()
-	rep, err := r.diffKeys(ctx, t.Gateway, t.Keys)
+	rep, gwKeySet, err := r.diffKeys(ctx, t.Gateway, t.Keys)
 	if err != nil {
 		log.Printf("reconcile: phase=keys gateway=%s diff error: %v", t.Conn.ID, err)
 		r.recordErr(fmt.Sprintf("phase=keys gateway=%s diff=%v", t.Conn.ID, err))
 		return
 	}
+
+	// Mass-delete guard: same signature as the legacy heal() — refuse if the
+	// gateway listing looks broken (every key is orphan OR listing is empty).
+	canDelete := !(allUnmatched(len(rep.GatewayOrphans), rep.GatewayKeys, rep.DBKeys) ||
+		(rep.GatewayKeys == 0 && len(rep.StaleRows) > 0))
+
 	deleted := 0
-	for _, key := range rep.GatewayOrphans {
-		// Drift A: LiteLLM-only keys are NOT touched under the new stance.
-		_ = key
+	if canDelete {
+		// Drift C: revoked DB rows whose LitellmKey is still at the gateway.
+		for _, vk := range t.Keys {
+			if vk.Status != virtualkey.StatusRevoked {
+				continue
+			}
+			if vk.LitellmKey == "" {
+				continue
+			}
+			if _, present := gwKeySet[vk.LitellmKey]; !present {
+				continue
+			}
+			if err := t.Gateway.DeleteKey(ctx, vk.LitellmKey); err != nil {
+				log.Printf("reconcile: phase=keys gateway=%s drift_c delete failed key_id=%s: %v",
+					t.Conn.ID, vk.ID, err)
+				r.recordErr(fmt.Sprintf("phase=keys gateway=%s drift_c delete key=%s err=%v",
+					t.Conn.ID, vk.ID, err))
+				continue
+			}
+			deleted++
+		}
 	}
-	for _, idStr := range rep.StaleRows {
-		// Drift B: DB row missing at LiteLLM — never recreate. Log only.
-		log.Printf("reconcile: phase=keys gateway=%s drift_b stale_db_id=%s", t.Conn.ID, idStr)
-	}
-	if len(rep.StaleRows) == 0 && len(rep.GatewayOrphans) == 0 {
-		log.Printf("reconcile: phase=keys gateway=%s db=%d gw=%d drift_a=0 drift_b=0 drift_c=0 deleted=0 elapsed=%dms",
-			t.Conn.ID, rep.DBKeys, rep.GatewayKeys, time.Since(start).Milliseconds())
-		return
-	}
-	log.Printf("reconcile: phase=keys gateway=%s db=%d gw=%d drift_a=%d drift_b=%d drift_c=%d deleted=%d elapsed=%dms",
+
+	// Drift A orphans are NEVER deleted under the new stance (would destroy
+	// operator-created LiteLLM keys). Drift B (DB-active but LiteLLM-missing)
+	// is also never recreated — we lack the original raw key material.
+	log.Printf("reconcile: phase=keys gateway=%s db=%d gw=%d drift_a=%d drift_b=%d deleted=%d elapsed=%dms",
 		t.Conn.ID, rep.DBKeys, rep.GatewayKeys,
-		len(rep.GatewayOrphans), len(rep.StaleRows), 0, deleted,
+		len(rep.GatewayOrphans), len(rep.StaleRows), deleted,
 		time.Since(start).Milliseconds())
 }
 
 // diffKeys runs the gateway keys listing against the given DB subset and
-// returns the report. Shared by both legacy and unified paths — the legacy
-// path uses it via heal(), the unified path uses it to drive its own actions.
-func (r *Reconciler) diffKeys(ctx context.Context, gw Gateway, rows []*ent.VirtualKey) (*Report, error) {
+// returns the report plus the raw gateway key set. The legacy path uses the
+// report via heal(); the unified path uses both the report (for counts) and
+// the gwKeySet (for Drift C DELETE without re-listing).
+//
+// Shared between legacy and unified — we only ever call /key/list ONCE per
+// phase.
+func (r *Reconciler) diffKeys(ctx context.Context, gw Gateway, rows []*ent.VirtualKey) (*Report, map[string]struct{}, error) {
 	gwKeys, err := gw.ListKeys(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("list gateway keys: %w", err)
+		return nil, nil, fmt.Errorf("list gateway keys: %w", err)
 	}
 	dbKeys := make(map[string]struct{}, len(rows)*2)
 	for _, vk := range rows {
@@ -477,7 +505,7 @@ func (r *Reconciler) diffKeys(ctx context.Context, gw Gateway, rows []*ent.Virtu
 			rep.StaleRows = append(rep.StaleRows, vk.ID.String())
 		}
 	}
-	return rep, nil
+	return rep, gwKeySet, nil
 }
 
 // reconcileProviderModelsFor runs the ProviderModel drift loop for one gateway.

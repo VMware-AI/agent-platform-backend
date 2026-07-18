@@ -216,9 +216,21 @@ func main() {
 			// Single-flight across replicas so the prune runs on exactly one replica
 			// (nil on the dev sqlite path → always leader).
 			IsLeader: isLeader,
+			// When LITELLM_RECONCILE_UNIFIED=true, switch the reconciler to the
+			// unified 5-phase cycle (DB→LiteLLM push for keys / gateway_status /
+			// provider_models / spend_refresh / router_settings). Drift A
+			// (LiteLLM-only) is detected + logged + IGNORED. Drift B (DB-only)
+			// and Drift C (DB-revoked but LiteLLM still has) execute directly.
+			// Runs in parallel with the 3 legacy tickers below; PR #3 cuts over
+			// by removing those tickers.
+			Resolver: nil,
+		}
+		if cfg.LitellmReconcileUnified {
+			rec.Resolver = resolver
 		}
 		interval := time.Duration(cfg.ReconcileInterval) * time.Second
-		log.Printf("gateway-key reconciler: every %s (prune=%v), all gateways", interval, cfg.ReconcilePrune)
+		log.Printf("gateway-key reconciler: every %s (prune=%v, unified=%v), all gateways",
+			interval, cfg.ReconcilePrune, cfg.LitellmReconcileUnified)
 		go rec.Run(reconcileCtx, interval)
 	}
 
