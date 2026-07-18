@@ -72,11 +72,13 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	// can hand its litellm_key + token to Provision (which skips
 	// GenerateKey and reuses the existing gateway key).
 	var existingKey, existingKeyToken string
+	var keyModels []string
 	if input.ExistingKeyID != nil && *input.ExistingKeyID != "" {
 		if vkID, perr := uuid.Parse(*input.ExistingKeyID); perr == nil {
 			if vk, verr := r.Ent.VirtualKey.Get(ctx, vkID); verr == nil {
 				existingKey = vk.LitellmKey
 				existingKeyToken = vk.LitellmToken
+				keyModels = vk.Models
 			}
 		}
 	}
@@ -154,6 +156,7 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		KnowledgePackIDs: r.resolveAgentKnowledge(ctx, ag), // LLD-11 K2: 下发知识包引用
 		KnowledgeRoot:    r.resolveKnowledgeRoot(ctx, ag),  // LLD-11 K4
 		OVFProperties:    mapOVFProperties(input.OvfProperties),
+		Models:           keyModels,
 		ExistingKey:      existingKey,
 		ExistingKeyToken: existingKeyToken,
 	})
