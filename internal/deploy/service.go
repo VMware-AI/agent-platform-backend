@@ -427,7 +427,18 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 		b.WriteString("    owner: vmware:vmware\n")
 		b.WriteString("    permissions: \"0600\"\n")
 		b.WriteString("    content: |\n")
-		fmt.Fprintf(&b, "      {\"gateway\":{\"auth\":{\"mode\":\"token\",\"token\":\"%s\"},\"bind\":\"lan\",\"mode\":\"local\",\"port\":18789},\"models\":{\"mode\":\"merge\",\"providers\":{\"litellm\":{\"api\":\"openai-completions\",\"apiKey\":\"%s\",\"baseUrl\":\"%s/v1\",\"models\":[%s]}}}}\n", ocGatewayToken, key, base, ocModelsJSON)
+		// Provider name is "openai" (not "litellm") — OpenClaw agent sessions default
+		// to the "openai" provider, so the gateway must expose models under that name.
+		fmt.Fprintf(&b, "      {\"gateway\":{\"auth\":{\"mode\":\"token\",\"token\":\"%s\"},\"bind\":\"lan\",\"mode\":\"local\",\"port\":18789},\"models\":{\"mode\":\"merge\",\"providers\":{\"openai\":{\"api\":\"openai-completions\",\"apiKey\":\"%s\",\"baseUrl\":\"%s/v1\",\"models\":[%s]}}}}\n", ocGatewayToken, key, base, ocModelsJSON)
+		// Agent default model — uses first key-bound model so it survives model name
+		// changes (startup picks the default unless overridden by session).
+		if len(models) > 0 {
+			b.WriteString("  - path: /home/vmware/.openclaw/agents/main/config.json\n")
+			b.WriteString("    owner: vmware:vmware\n")
+			b.WriteString("    permissions: \"0644\"\n")
+			b.WriteString("    content: |\n")
+			fmt.Fprintf(&b, "      {\"model\":\"openai/%s\"}\n", models[0])
+		}
 	}
 
 	// OpenCode config — always written alongside OpenClaw for dual-mode templates.
