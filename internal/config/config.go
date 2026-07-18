@@ -23,19 +23,23 @@ type Config struct {
 	// AllowedOrigins is the CSRF Origin/Referer allowlist for state-changing
 	// requests (ALLOWED_ORIGINS, comma-separated). Same-origin is always allowed.
 	AllowedOrigins []string
-	// ReconcileInterval is how often (seconds) the gateway-key reconciler runs.
-	// 0 (default) disables it. Requires a configured gateway to have any effect.
-	ReconcileInterval int
+	// LitellmReconcileInterval is how often (seconds) the unified
+	// DB↔LiteLLM reconciler runs. Default 900 (15m). Set 0 to disable.
+	// Driven by the LiteLLM design doc §3.2 "DB→LiteLLM 周期对账".
+	LitellmReconcileInterval int
 	// ReconcilePrune lets the reconciler heal drift (delete gateway orphans +
 	// revoke stale rows). Default false = report-only ("对账"), the safe default.
+	// (Legacy field — kept for the LITELLM_RECONCILE_UNIFIED=false opt-out path.
+	// The unified cycle does NOT take direction from this field; under the
+	// unified stance, Drift B (re-push) and Drift C (delete) execute
+	// unconditionally because DB is source of truth.)
 	ReconcilePrune bool
 	// LitellmReconcileUnified toggles the unified DB→LiteLLM 5-phase
 	// reconciler (ModelGateway status / ProviderModel spec drift / VirtualKey
-	// keys+teams / VirtualKey spend / router_settings). Default false = legacy
-	// keys+teams cycle only. When true, the Reconciler.Resolver field is set
-	// and the unified cycle runs IN PARALLEL with the legacy 3 background
-	// tickers (model-gateway auto-sync, router settings sync, virtual-key
-	// spend refresh) so operators can compare logs before PR #3 cuts over.
+	// keys+teams / VirtualKey spend / router_settings). Default true =
+	// unified cycle. Set to false to opt out and run the legacy keys+teams
+	// cycle instead (not recommended — legacy doesn't cover provider_models /
+	// router_settings / spend_refresh).
 	LitellmReconcileUnified bool
 	// AgentPkgBaseURL is the offline mirror base for agent install packages:
 	// substituted for {{AGENT_PKG_BASE_URL}} in catalog install commands, and
@@ -116,20 +120,6 @@ type Config struct {
 	// Driven by the LiteLLM design doc §2.2 "状态异步探测解耦机制" — the
 	// frontend only reads the cached status, never blocks on a live probe.
 	ProviderProbeIntervalSeconds int
-	// RouterSyncIntervalSeconds is how often (seconds) the background goroutine
-	// re-aggregates all enabled ModelRoute rows and POSTs the full
-	// router_settings payload to /config/update, grouped by backendGatewayId.
-	// Default 300 (5m); 0 disables the periodic safety-net sync (per-route
-	// save already pushes immediately, so disabling this only loses the
-	// safety net).
-	RouterSyncIntervalSeconds int
-	// VirtualKeySpendRefreshIntervalSeconds is how often (seconds) the
-	// background goroutine reads litellm /key/info for every active
-	// VirtualKey and writes the resulting spend + last_active_at back to the
-	// platform row. Drives the 消费进度 column on the 令牌管理 page (design
-	// doc §4.1). Default 300 (5m); 0 disables the periodic refresh (the
-	// values will then freeze at whatever the worker last observed).
-	VirtualKeySpendRefreshIntervalSeconds int
 	// SecretsEncryptionKey is the single symmetric key (any high-entropy string;
 	// SHA-256-derived to 32 bytes) used to encrypt credential fields at rest in the
 	// platform_secrets table. The same key is used in every environment — there is
@@ -192,14 +182,14 @@ func Load() (*Config, error) {
 			c.AllowedOrigins = append(c.AllowedOrigins, o)
 		}
 	}
-	ri, err := strconv.Atoi(getenv("RECONCILE_INTERVAL_SECONDS", "0"))
+	ri, err := strconv.Atoi(getenv("LITELLM_RECONCILE_INTERVAL_SECONDS", "900"))
 	if err != nil {
-		return nil, fmt.Errorf("RECONCILE_INTERVAL_SECONDS must be an integer: %w", err)
+		return nil, fmt.Errorf("LITELLM_RECONCILE_INTERVAL_SECONDS must be an integer: %w", err)
 	}
 	if ri < 0 {
-		return nil, fmt.Errorf("RECONCILE_INTERVAL_SECONDS must be >= 0, got %d", ri)
+		return nil, fmt.Errorf("LITELLM_RECONCILE_INTERVAL_SECONDS must be >= 0, got %d", ri)
 	}
-	c.ReconcileInterval = ri
+	c.LitellmReconcileInterval = ri
 	c.ReconcilePrune = getenv("RECONCILE_PRUNE", "false") == "true"
 	c.LitellmReconcileUnified = getenv("LITELLM_RECONCILE_UNIFIED", "true") == "true"
 	c.AgentPkgBaseURL = strings.TrimRight(os.Getenv("AGENT_PKG_BASE_URL"), "/")
@@ -242,16 +232,7 @@ func Load() (*Config, error) {
 	if c.PoolSyncBreakerOpenSeconds, err = getenvInt("POOL_SYNC_BREAKER_OPEN_SECONDS", 60); err != nil {
 		return nil, err
 	}
-	if c.ModelGatewaySyncIntervalSeconds, err = getenvInt("MODEL_GATEWAY_SYNC_INTERVAL_SECONDS", 0); err != nil {
-		return nil, err
-	}
 	if c.ProviderProbeIntervalSeconds, err = getenvInt("PROVIDER_PROBE_INTERVAL_SECONDS", 600); err != nil {
-		return nil, err
-	}
-	if c.RouterSyncIntervalSeconds, err = getenvInt("ROUTER_SYNC_INTERVAL_SECONDS", 300); err != nil {
-		return nil, err
-	}
-	if c.VirtualKeySpendRefreshIntervalSeconds, err = getenvInt("VK_SPEND_REFRESH_INTERVAL_SECONDS", 300); err != nil {
 		return nil, err
 	}
 	c.SecretsEncryptionKey = os.Getenv("SECRETS_ENCRYPTION_KEY")

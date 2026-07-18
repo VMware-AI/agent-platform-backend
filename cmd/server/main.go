@@ -205,7 +205,7 @@ func main() {
 	// gateway is configured. Report-only unless RECONCILE_PRUNE=true.
 	reconcileCtx, stopReconcile := context.WithCancel(context.Background())
 	defer stopReconcile()
-	if cfg.ReconcileInterval > 0 {
+	if cfg.LitellmReconcileInterval > 0 {
 		rec := &reconcile.Reconciler{
 			Ent: client,
 			// Reconcile EVERY configured gateway against only its own keys/teams,
@@ -229,7 +229,7 @@ func main() {
 		if !cfg.LitellmReconcileUnified {
 			rec.Resolver = nil // opt-out: run legacy keys+teams cycle
 		}
-		interval := time.Duration(cfg.ReconcileInterval) * time.Second
+		interval := time.Duration(cfg.LitellmReconcileInterval) * time.Second
 		log.Printf("gateway-key reconciler: every %s (prune=%v, unified=%v), all gateways",
 			interval, cfg.ReconcilePrune, cfg.LitellmReconcileUnified)
 		go rec.Run(reconcileCtx, interval)
@@ -261,10 +261,10 @@ func main() {
 	// StartVirtualKeySpendRefresh. Their work is now covered by the unified
 	// reconciler cycle above — gateway_status phase replaces model-gateway
 	// auto-sync, router_settings phase replaces router settings sync, and
-	// spend_refresh phase replaces virtual-key spend refresh. The env vars
-	// MODEL_GATEWAY_SYNC_INTERVAL_SECONDS, ROUTER_SYNC_INTERVAL_SECONDS, and
-	// VK_SPEND_REFRESH_INTERVAL_SECONDS are now read but ignored — they will
-	// be removed in PR #4.)
+	// spend_refresh phase replaces virtual-key spend refresh. PR #4 retired
+	// the corresponding env vars MODEL_GATEWAY_SYNC_INTERVAL_SECONDS,
+	// ROUTER_SYNC_INTERVAL_SECONDS, VK_SPEND_REFRESH_INTERVAL_SECONDS — they
+	// are no longer parsed and will be ignored by the loader if set.)
 
 	es := graph.NewExecutableSchema(graph.Config{
 		Resolvers: resolver,
