@@ -409,7 +409,10 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 	ocModelsJSON := ""
 	ocCodeMap := make(map[string]map[string]string)
 	if len(models) > 0 {
-		type ocModel struct{ ID, Name string }
+		type ocModel struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		}
 		ocList := make([]ocModel, len(models))
 		for i, m := range models {
 			ocList[i] = ocModel{ID: m, Name: m}
@@ -429,7 +432,7 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 		b.WriteString("    content: |\n")
 		// Provider name is "openai" (not "litellm") — OpenClaw agent sessions default
 		// to the "openai" provider, so the gateway must expose models under that name.
-		fmt.Fprintf(&b, "      {\"gateway\":{\"auth\":{\"mode\":\"token\",\"token\":\"%s\"},\"bind\":\"lan\",\"mode\":\"local\",\"port\":18789},\"models\":{\"mode\":\"merge\",\"providers\":{\"openai\":{\"api\":\"openai-completions\",\"apiKey\":\"%s\",\"baseUrl\":\"%s/v1\",\"models\":[%s]}}}}\n", ocGatewayToken, key, base, ocModelsJSON)
+		fmt.Fprintf(&b, "      {\"gateway\":{\"auth\":{\"mode\":\"token\",\"token\":\"%s\"},\"bind\":\"lan\",\"mode\":\"local\",\"port\":18789},\"models\":{\"mode\":\"merge\",\"providers\":{\"openai\":{\"api\":\"openai-completions\",\"apiKey\":\"%s\",\"baseUrl\":\"%s/v1\",\"models\":%s}}}}\n", ocGatewayToken, key, base, ocModelsJSON)
 		// Agent default model — uses first key-bound model so it survives model name
 		// changes (startup picks the default unless overridden by session).
 		if len(models) > 0 {
