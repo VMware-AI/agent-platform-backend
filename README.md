@@ -97,30 +97,39 @@ dev/prod 行为不同的用 ✅ / ⚠️ 标注。
 | `DB_AUTO_MIGRATE` | `true` \| `false` | 否（dev 默认 `true`，prod 默认 `false`） | dev 启动自动改表；prod 必须关，改用 Atlas 版本化迁移 |
 | `ADMIN_BOOTSTRAP_PASSWORD` | `AdminLocal123!` | prod 是（dev 否） | 空库时种子 admin 密码；dev 不设会用 `ChangeMe123!` 并强制首登改密 |
 | `CONTROL_PLANE_URL` | `https://api.example.com` | 否 | 控制面自身对外 URL；resolver 透传 |
-| `SECRETS_ENCRYPTION_KEY` | `openssl rand -hex 32` | **是**（任何环境） | AES-256-GCM 加密 `platform_secrets` 的密钥；SHA-256 派生到 32 字节；空 → 启动 fail-fast。**不支持轮换**：存储格式无 key-version 前缀，换密钥会让所有密文 GCM 校验失败。dev 用 `deploy/start_backend_*.sh` 首次运行自动生成并写到 `deploy/.secrets_encryption_key`（mode `0600`），prod 必须手动注入并离线备份。详见下方"凭据加密密钥"一节 |
-| `RECONCILE_INTERVAL_SECONDS` | `300` | 否（默认 `0`=关） | 网关 key 与治理表的对账周期；>0 且存在默认网关连接才生效 |
-| `RECONCILE_PRUNE` | `false` | 否 | `true` → 对账时删除孤儿/吊销陈旧行（默认只报告，drift-safe）。多副本下对账经 Postgres advisory lock 选主，仅单副本执行 prune（不会重复删） |
+| `LITELLM_RECONCILE_INTERVAL_SECONDS` | `900`（15m） | 否 | 网关 key / 治理表 / provider_model / router_settings / spend 的统一对账周期。`0`=关闭后台 ticker（手动触发仍可用）；多副本经 Postgres advisory lock 选主 |
+| `RECONCILE_PRUNE` | `false` | 否 | 旧路径的 prune 开关（unified=false 走 legacy keys+teams 才用）。**unified 默认开启时该字段不控对账行为**（Drift B/C 无条件执行，DB 是单一事实源） |
+| `LITELLM_RECONCILE_UNIFIED` | `true` | 否 | DB→LiteLLM 5 阶段统一对账（gateway_status / provider_models / virtual_keys / spend_refresh / router_settings）。Drift A（LiteLLM 单方面）只记录不处理；Drift B/C 直接执行。`false`=回退到旧 keys+teams 周期（不推荐：不覆盖 provider_models / router_settings / spend_refresh） |
 | `POOL_SYNC_INTERVAL_SECONDS` | `3600`（60m） | 否 | 资源池后台同步周期；扫描所有有 `secret_ref` 的池子并过 timeout→retry→breaker 链。`0`=关闭后台 ticker（手动 `syncResourcePool` 或创建即同步仍可用）。详见 [ResourcePool 同步机制](#resourcepool-同步机制) |
 | `POOL_SYNC_TIMEOUT_SECONDS` | `30` | 否 | 单池同步全链（connect + inventory + full inventory + DB 写回）总超时；终端 vCenter 慢响应不会拖住整个 ticker。`0` 走 30s 兜底（防 `ctx(0)` 即过期） |
 | `POOL_SYNC_MAX_RETRIES` | `3` | 否 | 失败重试次数（不含首次尝试）；指数退避 1s/2s/4s + 25% jitter。仅 `*vcenter.RetryableError`（网络/超时/5xx 等）触发；鉴权失败、对象不存在等业务错误不重试。`0`=只试一次 |
 | `POOL_SYNC_BREAKER_THRESHOLD` | `5` | 否 | 同一 endpoint（vCenter）连续失败该次数后熔断器跳闸（per-endpoint，`sony/gobreaker`）。`0` 或负数 → 关闭熔断器层（仍走 timeout + retry）。任一 endpoint 跳闸只影响该 endpoint 的池子，不会污染其他 endpoint |
 | `POOL_SYNC_BREAKER_OPEN_SECONDS` | `60` | 否 | 熔断器 Open 态持续秒数；到期进 HalfOpen，放 1 个探测请求（`MaxRequests=1`）。Open 期请求立即返回 `ErrOpenState`，**不写 `status`**（避免被误标 error；其他健康端不受影响） |
+| `PROVIDER_PROBE_INTERVAL_SECONDS` | `600`（10m） | 否 | 后台探活每个 enabled `ProviderModel` 的上游 API，并把 Active/Degraded/Melted/Unknown 写回行；前端只读缓存态，不阻塞在线探。`0`=关闭周期（upsert 时仍会 fire-and-forget 一次）。正交于 DB↔LiteLLM 对账（探的是上游 provider，不是 gateway） |
+| `OBS_SPEND_CACHE_TTL_SECONDS` | `30` | 否 | LLD-15 observability spend 报表在多 gateway 间的进程内缓存秒数；`0`=关闭（每次请求 fan-out 到 litellm） |
+| `PERM_CACHE_TTL_SECONDS` | `0` | 否 | `@hasPermission` 进程内缓存 TTL；`0`=关闭。**进程级缓存，多副本下吊销不会跨副本生效**，仅适合单副本。`>0` 才启用（建议后续 Redis pub/sub 失效通道落地后再开） |
 | `DB_MAX_OPEN_CONNS` | `20` | 否 | postgres 连接池上限；`0`=Go 默认无上限（多副本下可打爆 `max_connections`），按 `max_connections / 副本数` 调；仅 postgres |
 | `DB_MAX_IDLE_CONNS` | `10` | 否 | 连接池空闲连接上限（Go 默认 2，高并发下连接抖动）；仅 postgres |
 | `DB_CONN_MAX_LIFETIME_MINUTES` | `30` | 否 | 连接最大存活分钟数，`0`=不回收；配合故障转移 / PgBouncer；仅 postgres |
 | `AGENT_PKG_BASE_URL` | `https://mirror.example.com/agent-pkgs` | 否 | 离线镜像基址：替换 catalog 安装命令里的 `{{AGENT_PKG_BASE_URL}}`，并在部署时以 `guestinfo.agentmgr.agent_pkg_base_url` 下发给 VM 供 webadmin 升级拉包（daemon 侧拼 `{base}/{name}-{version}.tar.gz`；可含只读 FTP 凭据，勿入日志）；空 → 占位符保留、不下发 |
 | `AGENT_KEEP_VERSIONS` | `3` | 否 | 部署时以 `guestinfo.agentmgr.agent_keep_versions` 下发：VM 升级后保留的历史版本数。`0`（默认）= 不下发（与未设置等价），走 daemon 默认 `3`；daemon 侧拒绝 `<1`，最小有效值为 `1` |
+| `AGENT_USER` | `agent` | 否 | 仅作 `os.Getenv` 直读（**不经 `config.Load`**）：装机命令里 `{{AGENT_USER}}` 替换的 OS 用户。生产值走 LLD-13 数据库「平台设置」表，不推荐用此 env 覆盖 |
 | `ENV_SCOPE_ENABLED` | `false` | 否 | LLD-10 环境隔离；前端 `X-Environment` 契约未就绪前保持关 |
+| `DEV_NO_VCENTER` | `1` \| `true` | **dev only** | 让 `deployAgent` 跳过 vCenter 直接 issue gateway key + 落库（方便无 vcsim 环境 e2e）；**任何带 vCenter 的部署都别设** |
+| `SECRETS_ENCRYPTION_KEY` | `openssl rand -hex 32` | **是**（任何环境，除非用 `SECRETS_ENCRYPTION_KEYS`） | AES-256-GCM 加密 `platform_secrets` 的密钥；SHA-256 派生到 32 字节；空 → 启动 fail-fast。dev 用 `deploy/start_backend_*.sh` 首次运行自动生成并写到 `deploy/.secrets_encryption_key`（mode `0600`），prod 必须手动注入并离线备份。详见下方「凭据加密密钥」一节 |
+| `SECRETS_ENCRYPTION_KEYS` | `k1:passphrase1,k2:passphrase2` | 轮换期 **是**（否则空） | 轮换友好的多密钥形式：`id:passphrase` 逗号分隔。**第一项是 active key**（新写入用它）；其余参与解密以兼容旧密文。**优先级高于 `SECRETS_ENCRYPTION_KEY`**；设置它就忽略单密钥版本。详见下方「密钥轮换」 |
+| `SECRETS_ROTATION_INTERVAL_SECONDS` | `0` | 否 | 后台 worker 扫描 `platform_secrets` 中用退役 key 加密的行并 re-encrypt 到 active key 的周期；`0`=关闭（轮换是运维主动行为，不自动迁）。`>0` 才启用 |
+| `SECRETS_AUDIT_ENABLED` | `false` | 否 | 每次 `Secrets.Resolve` 成功都写一条 `audit_log`（action=`secret.read`）；5min router 同步 + 60s probe × N 上游能轻易堆出每小时数百条，调查期间再开 |
 | `ATLAS_DEV_URL` | `postgres://localhost:5432/atlas_dev` | 仅 `make migrate-diff` 时 | Atlas diff 的 dev DB；运行 backend 不读 |
-| `*` (任意) | — | — | 凭据引用：模型网关 / vCenter 等凭据在 console 配置后由 `internal/secrets` 解析到 `platform_secrets` 表里的密文（不需要 `vaultwarden://` 这类特殊 scheme——旧方案已删除） |
+| `*` (任意) | — | — | 凭据引用：模型网关 / vCenter 等凭据在 console 配置后由 `internal/secrets` 解析到 `platform_secrets` 表里的密文（不需要 `vaultwarden://` 这类特殊 scheme——旧方案已删除）。小众 air-gap 场景可用 `env://USER_VAR,PASS_VAR[,APIKEY_VAR]` 从进程 env 直读（不落库），但主路径是 DBStore |
 
-> `AGENT_USER`（装机命令里 `{{AGENT_USER}}` 的 OS 用户）不再是启动 env——它是数据库平台设置（LLD-13），在 console「平台设置」页里改，默认 `agent`。
->
-> 模型网关（`LITELLM_BASE_URL` / `LITELLM_MASTER_KEY` / `GATEWAY_PUBLIC_URL`）也不再是启动 env——在 console「模型网关接入」页添加网关连接，后端按部门/默认网关从 DB 解析（LLD-13 §3.3）。
+> 模型网关（`LITELLM_BASE_URL` / `LITELLM_MASTER_KEY` / `GATEWAY_PUBLIC_URL`）不再是启动 env——在 console「模型网关接入」页添加网关连接，后端按部门/默认网关从 DB 解析（LLD-13 §3.3）。`AGENT_USER` 仍然只在启动时从 env 读，未来再迁移到平台设置表。
 
-## 凭据加密密钥（`SECRETS_ENCRYPTION_KEY`）
+## 凭据加密密钥（`SECRETS_ENCRYPTION_KEY` / `SECRETS_ENCRYPTION_KEYS`）
 
-vCenter 密码、模型网关凭据等都加密存在 `platform_secrets` 表里，加密用 AES-256-GCM，密钥从 `SECRETS_ENCRYPTION_KEY` 经 SHA-256 派生到 32 字节。**同一把密钥在所有环境里复用**——没有 dev/prod 之分。
+vCenter 密码、模型网关凭据等都加密存在 `platform_secrets` 表里，加密用 AES-256-GCM，密钥经 SHA-256 派生到 32 字节。**同一把密钥在所有环境里复用**——没有 dev/prod 之分。
+
+两种形式互斥：**`SECRETS_ENCRYPTION_KEY`**（单密钥，简单）或 **`SECRETS_ENCRYPTION_KEYS`**（多密钥，支持轮换）。设了 `SECRETS_ENCRYPTION_KEYS` 就忽略单密钥版本。
 
 ### 生成密钥
 
@@ -146,7 +155,7 @@ head -c 32 /dev/urandom | xxd -p -c 64
 
 校验长度：hex 串 64 字符、base64 串 44 字符（`=` 结尾），分别对应 32 字节。
 
-### 设置密钥
+### 设置密钥（单密钥）
 
 ```bash
 # 1. 临时（当前 shell）
@@ -162,12 +171,26 @@ kubectl create secret generic agent-platform \
 # 4. systemd / 裸机：写到 /etc/agent-platform.env，service 里用 EnvironmentFile=
 ```
 
-### ⚠️ 备份 & 不要轮换
+### 密钥轮换（`SECRETS_ENCRYPTION_KEYS`）
 
-存储格式**不带 key-version 前缀**（`internal/secrets/crypto.go`），轮换密钥会让旧密文 GCM 校验失败 —— **当前不支持密钥轮换**。所以：
+存储格式**带 key-version 前缀**（`internal/secrets/crypto.go`），支持原地轮换：
+
+1. **生成新密钥**：`openssl rand -hex 32`（同上）。
+2. **改成多密钥形式**——**第一个 id 是 active key**（新写入用它），其余参与解密以兼容旧密文：
+
+   ```bash
+   export SECRETS_ENCRYPTION_KEYS='k1:<新密码>,k0:<旧密码>'
+   ```
+
+3. **后台 worker 自动迁移**（`SECRETS_ROTATION_INTERVAL_SECONDS > 0`）：扫描 `platform_secrets` 中仍用 `k0` 加密的行，re-encrypt 到 `k1`。设为 `0` 时 worker 不启动，需要运维手动触发或自己跑迁移。
+4. **轮换完**：从 `SECRETS_ENCRYPTION_KEYS` 去掉 `k0`，最终恢复成单密钥：`SECRETS_ENCRYPTION_KEY=<k1 串>`。
+
+格式约束：`id:passphrase` 逗号分隔；id 必须非空且唯一；空 passphrase 被跳过；启动期校验 fail-fast。
+
+### ⚠️ 备份 & 多副本一致
 
 - **丢失密钥 = 永久丢失所有 `platform_secrets` 加密凭据**（vCenter 密码、模型网关 key 等）。必须离线备份到密码管理器 / Vault / 加密 USB。
-- 将来要加轮换需要先在密文里塞一个 version 字节并做 re-encrypt 流程（见 `crypto.go` 注释）。**现在不要尝试轮换**。
+- 同一环境所有副本必须使用**同一把** `SECRETS_ENCRYPTION_KEY`（或同一组 `SECRETS_ENCRYPTION_KEYS`，id 顺序一致）——副本之间任何写入会用本进程配置的 active key 加密，副本之间任何读取会用本进程能解的密钥解密；id 列表不一致会出现「副本 A 写的密文副本 B 解不开」。
 - 生产用专用密钥，跟 dev 区分；dev 的串泄露也不会丢生产凭据。
 
 ### `deploy/start_backend_*.sh` 自动生成
