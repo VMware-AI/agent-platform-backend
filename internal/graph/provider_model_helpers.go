@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"strings"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
@@ -289,19 +290,43 @@ func (r *Resolver) ReconcileProviderModelDrift(ctx context.Context, conn *ent.Ga
 
 		// Pull LiteLLM's view of this group. /v2/model/info?model_group=<name>
 		// returns deployments (model_info[].id) under that group.
+		//
+		// IMPORTANT: observed LiteLLM versions do NOT reliably honor the
+		// ?model_group= query param — the response can include deployments
+		// from OTHER groups too. We filter client-side by ModelName ==
+		// pm.Name so the per-PM diff is correct regardless of LiteLLM's
+		// filter behavior. Without this filter, a missing group would be
+		// misreported as "group exists with these (foreign) ids", routing
+		// to /model/update (which 500s when our DB ids don't match the
+		// foreign ones) instead of /model/new per spec.
 		info, gerr := ac.GetGroupedModelInfo(ctx, pm.Name)
 		if gerr != nil {
 			log.Printf("reconcile: provider_models pm_id=%s name=%s GetGroupedModelInfo: %v", pm.ID, pm.Name, gerr)
 			continue
 		}
-		gwIDs, perr := parseGroupedModelInfoIDs(info.Raw)
+		allSpecs, perr := parseGroupedModelInfoSpecs(info.Raw)
 		if perr != nil {
 			log.Printf("reconcile: provider_models pm_id=%s parse grouped info: %v", pm.ID, perr)
 			continue
 		}
-		gwSet := make(map[string]struct{}, len(gwIDs))
-		for _, id := range gwIDs {
-			gwSet[id] = struct{}{}
+		// Filter to ONLY deployments whose model_name matches this PM's
+		// name — the server's group filter is unreliable.
+		var gwSpecs []groupedModelSpec
+		var gwForeign []groupedModelSpec
+		for _, s := range allSpecs {
+			if s.ModelName == pm.Name {
+				gwSpecs = append(gwSpecs, s)
+			} else {
+				gwForeign = append(gwForeign, s)
+			}
+		}
+		gwSet := make(map[string]struct{}, len(gwSpecs))
+		for _, s := range gwSpecs {
+			gwSet[s.ID] = struct{}{}
+		}
+		if len(gwForeign) > 0 {
+			log.Printf("reconcile: provider_models pm_id=%s name=%s note: GetGroupedModelInfo returned %d deployment(s) from other groups (filter is unreliable), ignored %s",
+				pm.ID, pm.Name, len(gwForeign), foreignIDs(gwForeign))
 		}
 
 		// Drift A (LiteLLM-only): any id present at the gateway but not in DB.
@@ -315,7 +340,7 @@ func (r *Resolver) ReconcileProviderModelDrift(ctx context.Context, conn *ent.Ga
 			}
 			if !found {
 				driftA++
-				log.Printf("reconcile: provider_models pm_id=%s drift_a liteLLM_only_id=%s", pm.ID, id)
+				log.Printf("reconcile: provider_models pm_id=%s name=%s drift_a liteLLM_only_id=%s", pm.ID, pm.Name, id)
 			}
 		}
 
@@ -435,25 +460,30 @@ func parseGroupedModelInfoIDs(raw json.RawMessage) ([]string, error) {
 }
 
 // groupedModelSpec is the slim view of one LiteLLM deployment we need for
-// id re-sync: the upstream model name (used as the matching key against DB
-// specs) and the LiteLLM-assigned model_info.id (used to overwrite the
-// possibly-stale DB-side id).
+// per-PM diff and id re-sync: the group name (model_name), the upstream
+// model name (litellm_params.model — used as the stable match key against
+// DB specs), and the LiteLLM-assigned model_info.id (used to overwrite
+// the possibly-stale DB-side id).
 type groupedModelSpec struct {
-	Model string // litellm_params.model — the upstream model name (e.g. "gpt-4o")
-	ID    string // model_info.id — LiteLLM-assigned spec id
+	ModelName string // model_name — the LiteLLM group this deployment belongs to
+	Model     string // litellm_params.model — the upstream model name (e.g. "gpt-4o")
+	ID        string // model_info.id — LiteLLM-assigned spec id
 }
 
-// parseGroupedModelInfoSpecs extracts (model, id) pairs from the LiteLLM
-// /v2/model/info response. Mirrors parseGroupedModelInfoIDs but keeps the
-// per-spec model name so callers can match DB specs to LiteLLM specs by
-// upstream model (a stable key across re-pushes — the model_info.id is
-// what we want to discover, not what we want to match on).
+// parseGroupedModelInfoSpecs extracts (model_name, litellm_params.model,
+// model_info.id) triples from the LiteLLM /v2/model/info response.
+//
+// IMPORTANT: in observed LiteLLM versions the ?model_group=X query param
+// is NOT reliably honored — the response can contain deployments from
+// OTHER groups as well. Callers MUST filter the result by ModelName ==
+// pm.Name themselves before treating it as "specs in this group".
 func parseGroupedModelInfoSpecs(raw json.RawMessage) ([]groupedModelSpec, error) {
 	if len(raw) == 0 {
 		return nil, nil
 	}
 	var resp struct {
 		Data []struct {
+			ModelName     string `json:"model_name"`
 			LitellmParams struct {
 				Model string `json:"model"`
 			} `json:"litellm_params"`
@@ -470,9 +500,33 @@ func parseGroupedModelInfoSpecs(raw json.RawMessage) ([]groupedModelSpec, error)
 		if d.ModelInfo.ID == "" {
 			continue
 		}
-		out = append(out, groupedModelSpec{Model: d.LitellmParams.Model, ID: d.ModelInfo.ID})
+		out = append(out, groupedModelSpec{
+			ModelName: d.ModelName,
+			Model:     d.LitellmParams.Model,
+			ID:        d.ModelInfo.ID,
+		})
 	}
 	return out, nil
+}
+
+// foreignIDs returns a short, comma-separated summary of the model_name +
+// id pairs in a slice of groupedModelSpec, used for the "LiteLLM returned
+// deployments from other groups" diagnostic line. Capped at 4 entries to
+// keep the log readable.
+func foreignIDs(specs []groupedModelSpec) string {
+	const max = 4
+	if len(specs) <= max {
+		parts := make([]string, len(specs))
+		for i, s := range specs {
+			parts[i] = s.ModelName + "=" + s.ID
+		}
+		return strings.Join(parts, ",")
+	}
+	parts := make([]string, 0, max+1)
+	for i := 0; i < max; i++ {
+		parts = append(parts, specs[i].ModelName+"="+specs[i].ID)
+	}
+	return strings.Join(parts, ",") + fmt.Sprintf(",+ %d more", len(specs)-max)
 }
 
 // syncSpecIDsFromLiteLLM is the id re-sync step. After any successful push
@@ -482,6 +536,10 @@ func parseGroupedModelInfoSpecs(raw json.RawMessage) ([]groupedModelSpec, error)
 // one cycle, re-read /v2/model/info and overwrite each DB spec's id with
 // whatever LiteLLM actually has, matched by upstream model name
 // (litellm_params.model — stable across pushes).
+//
+// As with the per-cycle diff above, the LiteLLM response is filtered by
+// model_name before matching — otherwise foreign deployments could be
+// picked up as id candidates.
 //
 // Matching strategy: for each DB spec, find a LiteLLM spec with the same
 // upstream model name. Duplicates within one ProviderModel are matched
@@ -499,11 +557,20 @@ func (r *Resolver) syncSpecIDsFromLiteLLM(ctx context.Context, ac *gateway.Admin
 			pm.ID, pm.Name, err)
 		return
 	}
-	gwSpecs, err := parseGroupedModelInfoSpecs(info.Raw)
+	allSpecs, err := parseGroupedModelInfoSpecs(info.Raw)
 	if err != nil {
 		log.Printf("reconcile: provider_models pm_id=%s name=%s id_sync parse: %v",
 			pm.ID, pm.Name, err)
 		return
+	}
+	var gwSpecs []groupedModelSpec
+	for _, s := range allSpecs {
+		if s.ModelName == pm.Name {
+			gwSpecs = append(gwSpecs, s)
+		}
+	}
+	if len(gwSpecs) == 0 {
+		return // LiteLLM no longer has the group — nothing to sync
 	}
 
 	// Track which LiteLLM specs we've already assigned to a DB spec, so
