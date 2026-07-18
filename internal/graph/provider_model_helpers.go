@@ -320,29 +320,68 @@ func (r *Resolver) ReconcileProviderModelDrift(ctx context.Context, conn *ent.Ga
 		}
 
 		// Drift B (DB-only) and Drift C (whole group empty at LiteLLM): any
-		// spec in DB whose id is not present at the gateway. If we see ≥1
-		// missing spec, re-push the whole group via PushModelUpdate (atomic
-		// replacement on the litellm side).
-		needsRepush := false
-		for _, s := range specs {
-			if s.ModelInfo.ID == "" {
-				continue
-			}
-			if _, ok := gwSet[s.ModelInfo.ID]; !ok {
-				needsRepush = true
-				break
+		// spec in DB whose id is not present at the gateway. The recovery
+		// primitive depends on whether the group exists at LiteLLM at all:
+		//
+		//   - Group exists at LiteLLM (len(gwSet) > 0): use PushModelUpdate
+		//     (POST /model/update) to atomically replace the group. /model/update
+		//     requires the group to already exist — LiteLLM 500s otherwise.
+		//   - Group missing at LiteLLM (len(gwSet) == 0): use pushSpecToLitellm
+		//     (POST /model/new) per spec. /model/new creates a single deployment
+		//     under the group, generating a fresh model_info.id that LiteLLM
+		//     picks itself (the id we POST in model_info is ignored). After
+		//     recovery, the stored ids in pm.ModelSpecs are stale; the next
+		//     reconcile cycle will detect Drift B again (DB ids ≠ LiteLLM ids)
+		//     and re-push via /model/update. If /model/update preserves the
+		//     posted ids, the cycle converges; if not, a future enhancement
+		//     will read /v2/model/info after each push and overwrite DB ids.
+		groupMissing := len(gwSet) == 0
+		needsRepush := groupMissing
+		if !groupMissing {
+			for _, s := range specs {
+				if s.ModelInfo.ID == "" {
+					continue
+				}
+				if _, ok := gwSet[s.ModelInfo.ID]; !ok {
+					needsRepush = true
+					break
+				}
 			}
 		}
 		if !needsRepush {
 			continue
 		}
 
-		if rerr := r.pushModelUpdateToLitellm(ctx, pm, conn, specs); rerr != nil {
-			log.Printf("reconcile: provider_models pm_id=%s repush: %v", pm.ID, rerr)
-			continue
+		if groupMissing {
+			// Whole group empty → create each spec via /model/new.
+			ok := true
+			for _, s := range specs {
+				if perr := r.pushSpecToLitellm(ctx, pm, conn, s); perr != nil {
+					log.Printf("reconcile: provider_models pm_id=%s name=%s push_spec failed: %v",
+						pm.ID, pm.Name, perr)
+					ok = false
+					// continue with remaining specs — partial recovery is
+					// better than none, and the next cycle will retry the
+					// failed ones.
+				}
+			}
+			if !ok {
+				continue
+			}
+			repushed++
+			log.Printf("reconcile: provider_models pm_id=%s name=%s repushed via /model/new spec_count=%d (group was empty)",
+				pm.ID, pm.Name, len(specs))
+		} else {
+			// Group exists with some specs → atomic replace via /model/update.
+			if rerr := r.pushModelUpdateToLitellm(ctx, pm, conn, specs); rerr != nil {
+				log.Printf("reconcile: provider_models pm_id=%s name=%s repush /model/update: %v",
+					pm.ID, pm.Name, rerr)
+				continue
+			}
+			repushed++
+			log.Printf("reconcile: provider_models pm_id=%s name=%s repushed via /model/update spec_count=%d",
+				pm.ID, pm.Name, len(specs))
 		}
-		repushed++
-		log.Printf("reconcile: provider_models pm_id=%s repushed spec_count=%d", pm.ID, len(specs))
 	}
 
 	return repushed, driftA, nil
