@@ -313,22 +313,58 @@ func (c *HTTPClient) DeleteTeam(ctx context.Context, teamID string) error {
 //   - newer / admin:    { "keys": [{"token":..., "key":..., "user_id":..., "team_id":...}] }
 //   - older / minimal:  { "keys": ["sk-...", ...] }
 //
-// Both shapes are accepted; the object form preserves user_id / team_id, the
-// string form just yields the raw key. The raw key wins as the comparable
-// identifier, falling back to the token when the object form reports no key.
+// Both shapes are accepted in a single round-trip: the response body is
+// decoded once into a RawMessage, then dispatched by the first non-WS byte
+// of the "keys" array (a quote → string array, a bracket → object array).
+// No retry, no fallback log noise — a clean diff between the two shapes
+// lives in the bytes themselves.
+//
+// The raw key wins as the comparable identifier, falling back to the
+// token when the object form reports no key.
 func (c *HTTPClient) ListKeys(ctx context.Context) ([]KeyInfo, error) {
-	// First try the rich object form.
-	var objOut struct {
-		Keys []struct {
+	var resp struct {
+		Keys json.RawMessage `json:"keys"`
+	}
+	if err := c.get(ctx, "/key/list", &resp); err != nil {
+		return nil, err
+	}
+
+	// Empty / null → no keys. RawMessage of "null" or "" both decode cleanly
+	// into the empty slice path.
+	trimmed := bytes.TrimSpace(resp.Keys)
+	if len(trimmed) == 0 || string(trimmed) == "null" {
+		return nil, nil
+	}
+
+	switch trimmed[0] {
+	case '"':
+		// String array form: { "keys": ["sk-...", ...] }
+		var strs []string
+		if err := json.Unmarshal(resp.Keys, &strs); err != nil {
+			return nil, fmt.Errorf("decode /key/list keys as string array: %w", err)
+		}
+		out := make([]KeyInfo, 0, len(strs))
+		for _, s := range strs {
+			if s == "" {
+				continue
+			}
+			out = append(out, KeyInfo{Key: s})
+		}
+		return out, nil
+
+	case '[':
+		// Object array form: { "keys": [{"token":..., "key":..., ...}, ...] }
+		var objs []struct {
 			Token  string `json:"token"`
 			Key    string `json:"key"`
 			UserID string `json:"user_id"`
 			TeamID string `json:"team_id"`
-		} `json:"keys"`
-	}
-	if err := c.get(ctx, "/key/list", &objOut); err == nil {
-		keys := make([]KeyInfo, 0, len(objOut.Keys))
-		for _, k := range objOut.Keys {
+		}
+		if err := json.Unmarshal(resp.Keys, &objs); err != nil {
+			return nil, fmt.Errorf("decode /key/list keys as object array: %w", err)
+		}
+		out := make([]KeyInfo, 0, len(objs))
+		for _, k := range objs {
 			id := k.Key
 			if id == "" {
 				id = k.Token
@@ -336,45 +372,13 @@ func (c *HTTPClient) ListKeys(ctx context.Context) ([]KeyInfo, error) {
 			if id == "" {
 				continue
 			}
-			keys = append(keys, KeyInfo{Key: id, UserID: k.UserID, TeamID: k.TeamID})
+			out = append(out, KeyInfo{Key: id, UserID: k.UserID, TeamID: k.TeamID})
 		}
-		return keys, nil
-	} else if !looksLikeStringArrayKeys(err) {
-		return nil, err // a real network / auth failure — surface it
-	}
+		return out, nil
 
-	// Fallback: minimal string-array form.
-	var strOut struct {
-		Keys []string `json:"keys"`
+	default:
+		return nil, fmt.Errorf("decode /key/list: unexpected keys array shape, starts with %q", trimmed[0])
 	}
-	if err := c.get(ctx, "/key/list", &strOut); err != nil {
-		return nil, err
-	}
-	keys := make([]KeyInfo, 0, len(strOut.Keys))
-	for _, id := range strOut.Keys {
-		if id == "" {
-			continue
-		}
-		keys = append(keys, KeyInfo{Key: id})
-	}
-	return keys, nil
-}
-
-// looksLikeStringArrayKeys reports whether a /key/list unmarshal error
-// matches the "keys is a string array, not an object array" signature —
-// i.e. the field name is exactly "keys" and the target type is a struct
-// (object), not a string slice. Used to decide whether to retry the call
-// in the string-array form.
-func looksLikeStringArrayKeys(err error) bool {
-	if err == nil {
-		return false
-	}
-	msg := err.Error()
-	// encoding/json emits:
-	//   "json: cannot unmarshal STRING into Go struct field .keys of type STRUCT"
-	return strings.Contains(msg, ".keys of type") &&
-		strings.Contains(msg, "cannot unmarshal") &&
-		strings.Contains(msg, "string into")
 }
 
 // ListTeams enumerates the gateway's teams via GET /team/list. LiteLLM returns a
