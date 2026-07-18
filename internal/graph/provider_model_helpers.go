@@ -382,6 +382,22 @@ func (r *Resolver) ReconcileProviderModelDrift(ctx context.Context, conn *ent.Ga
 			log.Printf("reconcile: provider_models pm_id=%s name=%s repushed via /model/update spec_count=%d",
 				pm.ID, pm.Name, len(specs))
 		}
+
+		// ID re-sync: re-read /v2/model/info and overwrite the DB-stored
+		// model_info.id with whatever LiteLLM actually has right now.
+		//
+		// Background: /model/new generates a fresh id that ignores any id
+		// we POST in model_info; /model/update's id-preservation behavior
+		// is undocumented. Without this step, a group that came back via
+		// /model/new would have stale DB ids, the next cycle would see
+		// Drift B (DB id missing from gwSet), re-push, and either converge
+		// (if /model/update preserves ids) or loop (if it doesn't).
+		//
+		// Matching is keyed on (ProviderModel.name, litellm_params.model) —
+		// stable across pushes. Duplicate models within one ProviderModel
+		// are matched positionally to keep the order stable (a real edge
+		// case — most ProviderModels have heterogeneous specs).
+		r.syncSpecIDsFromLiteLLM(ctx, ac, pm, specs)
 	}
 
 	return repushed, driftA, nil
@@ -416,4 +432,203 @@ func parseGroupedModelInfoIDs(raw json.RawMessage) ([]string, error) {
 		}
 	}
 	return ids, nil
+}
+
+// groupedModelSpec is the slim view of one LiteLLM deployment we need for
+// id re-sync: the upstream model name (used as the matching key against DB
+// specs) and the LiteLLM-assigned model_info.id (used to overwrite the
+// possibly-stale DB-side id).
+type groupedModelSpec struct {
+	Model string // litellm_params.model — the upstream model name (e.g. "gpt-4o")
+	ID    string // model_info.id — LiteLLM-assigned spec id
+}
+
+// parseGroupedModelInfoSpecs extracts (model, id) pairs from the LiteLLM
+// /v2/model/info response. Mirrors parseGroupedModelInfoIDs but keeps the
+// per-spec model name so callers can match DB specs to LiteLLM specs by
+// upstream model (a stable key across re-pushes — the model_info.id is
+// what we want to discover, not what we want to match on).
+func parseGroupedModelInfoSpecs(raw json.RawMessage) ([]groupedModelSpec, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	var resp struct {
+		Data []struct {
+			LitellmParams struct {
+				Model string `json:"model"`
+			} `json:"litellm_params"`
+			ModelInfo struct {
+				ID string `json:"id"`
+			} `json:"model_info"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, fmt.Errorf("unmarshal grouped model info (specs): %w", err)
+	}
+	out := make([]groupedModelSpec, 0, len(resp.Data))
+	for _, d := range resp.Data {
+		if d.ModelInfo.ID == "" {
+			continue
+		}
+		out = append(out, groupedModelSpec{Model: d.LitellmParams.Model, ID: d.ModelInfo.ID})
+	}
+	return out, nil
+}
+
+// syncSpecIDsFromLiteLLM is the id re-sync step. After any successful push
+// (Drift B via /model/update or Drift C via /model/new), the DB-stored
+// model_info.id may be stale: /model/new always generates a fresh id and
+// /model/update's preservation behavior is undocumented. To converge in
+// one cycle, re-read /v2/model/info and overwrite each DB spec's id with
+// whatever LiteLLM actually has, matched by upstream model name
+// (litellm_params.model — stable across pushes).
+//
+// Matching strategy: for each DB spec, find a LiteLLM spec with the same
+// upstream model name. Duplicates within one ProviderModel are matched
+// positionally (left-to-right) so the assignment is stable across cycles.
+// Specs whose model isn't present at LiteLLM are left untouched (they
+// remain "missing" and the next cycle will retry).
+//
+// The DB write is best-effort: a persist failure is logged but does not
+// invalidate the push that just succeeded. The next cycle will retry the
+// id sync.
+func (r *Resolver) syncSpecIDsFromLiteLLM(ctx context.Context, ac *gateway.AdminClient, pm *ent.ProviderModel, dbSpecs []specJSON) {
+	info, err := ac.GetGroupedModelInfo(ctx, pm.Name)
+	if err != nil {
+		log.Printf("reconcile: provider_models pm_id=%s name=%s id_sync GetGroupedModelInfo: %v",
+			pm.ID, pm.Name, err)
+		return
+	}
+	gwSpecs, err := parseGroupedModelInfoSpecs(info.Raw)
+	if err != nil {
+		log.Printf("reconcile: provider_models pm_id=%s name=%s id_sync parse: %v",
+			pm.ID, pm.Name, err)
+		return
+	}
+
+	// Track which LiteLLM specs we've already assigned to a DB spec, so
+	// duplicates get matched positionally rather than repeatedly to the
+	// first DB spec.
+	used := make(map[int]bool, len(gwSpecs))
+
+	updated := 0
+	newSpecs := make([]map[string]any, len(dbSpecs))
+	for i, s := range dbSpecs {
+		// Re-marshal the spec back to map[string]any (the column's storage
+		// type). We can't avoid this round-trip — ent stores specs as
+		// []map[string]any, not as the typed specJSON shape.
+		newSpecs[i] = marshalSpecForStorage(s)
+		if s.LitellmParams.Model == "" {
+			continue
+		}
+		// Find first unused LiteLLM spec with matching upstream model.
+		matchedIdx := -1
+		for j, gs := range gwSpecs {
+			if used[j] {
+				continue
+			}
+			if gs.Model == s.LitellmParams.Model {
+				matchedIdx = j
+				break
+			}
+		}
+		if matchedIdx < 0 {
+			continue // LiteLLM still doesn't have this spec
+		}
+		used[matchedIdx] = true
+		newID := gwSpecs[matchedIdx].ID
+		if s.ModelInfo.ID == newID {
+			continue // already aligned — no write needed
+		}
+		// Patch the modelInfo.id in the map form.
+		mi, ok := newSpecs[i]["modelInfo"].(map[string]any)
+		if !ok {
+			mi = map[string]any{}
+			newSpecs[i]["modelInfo"] = mi
+		}
+		mi["id"] = newID
+		updated++
+	}
+
+	if updated == 0 {
+		return // nothing changed; skip the write
+	}
+
+	if _, err := r.Ent.ProviderModel.UpdateOneID(pm.ID).
+		SetModelSpecs(newSpecs).
+		Save(ctx); err != nil {
+		log.Printf("reconcile: provider_models pm_id=%s name=%s id_sync persist: %v",
+			pm.ID, pm.Name, err)
+		return
+	}
+	log.Printf("reconcile: provider_models pm_id=%s name=%s id_sync updated=%d (DB ids aligned with LiteLLM)",
+		pm.ID, pm.Name, updated)
+}
+
+// marshalSpecForStorage converts a specJSON (the typed view) back to the
+// map[string]any shape that ent stores in model_specs. The conversion
+// preserves the field names as the DB column expects (camelCase JSON
+// matching specJSON's tags).
+func marshalSpecForStorage(s specJSON) map[string]any {
+	out := map[string]any{
+		"litellmParams": map[string]any{},
+		"modelInfo":     map[string]any{},
+	}
+	lp := map[string]any{}
+	if s.LitellmParams.Model != "" {
+		lp["model"] = s.LitellmParams.Model
+	}
+	if s.LitellmParams.APIKey != nil {
+		lp["apiKey"] = *s.LitellmParams.APIKey
+	}
+	if s.LitellmParams.APIKeyRef != nil {
+		lp["apiKeyRef"] = *s.LitellmParams.APIKeyRef
+	}
+	if s.LitellmParams.APIBase != nil {
+		lp["apiBase"] = *s.LitellmParams.APIBase
+	}
+	if s.LitellmParams.CustomLlmProvider != nil {
+		lp["customLlmProvider"] = *s.LitellmParams.CustomLlmProvider
+	}
+	if s.LitellmParams.Organization != nil {
+		lp["organization"] = *s.LitellmParams.Organization
+	}
+	if s.LitellmParams.Tpm != nil {
+		lp["tpm"] = *s.LitellmParams.Tpm
+	}
+	if s.LitellmParams.Rpm != nil {
+		lp["rpm"] = *s.LitellmParams.Rpm
+	}
+	if s.LitellmParams.MaxBudget != nil {
+		lp["maxBudget"] = *s.LitellmParams.MaxBudget
+	}
+	if s.LitellmParams.BudgetDuration != nil {
+		lp["budgetDuration"] = *s.LitellmParams.BudgetDuration
+	}
+	if len(s.LitellmParams.Tags) > 0 {
+		lp["tags"] = s.LitellmParams.Tags
+	}
+	out["litellmParams"] = lp
+
+	mi := map[string]any{}
+	if s.ModelInfo.ID != "" {
+		mi["id"] = s.ModelInfo.ID
+	}
+	if s.ModelInfo.Mode != nil {
+		mi["mode"] = *s.ModelInfo.Mode
+	}
+	if s.ModelInfo.Blocked {
+		mi["blocked"] = true
+	}
+	if s.ModelInfo.AdditionalProp1 != nil {
+		mi["additionalProp1"] = map[string]any{
+			"status": s.ModelInfo.AdditionalProp1.Status,
+		}
+		if s.ModelInfo.AdditionalProp1.Message != nil {
+			mi["additionalProp1"].(map[string]any)["message"] = *s.ModelInfo.AdditionalProp1.Message
+		}
+	}
+	out["modelInfo"] = mi
+
+	return out
 }
