@@ -776,7 +776,7 @@ type Mutation {
 	addProviderModelSpec(input: AddProviderModelSpecInput!): ProviderModel! @hasRole(any: [admin])
 	updateProviderModelSpec(input: UpdateProviderModelSpecInput!): ProviderModel! @hasRole(any: [admin])
 	updateProviderModel(input: UpdateProviderModelInput!): ProviderModel! @hasRole(any: [admin])
-	deleteProviderModelSpec(input: ProviderModelSpecIdInput!): ProviderModel! @hasRole(any: [admin])
+	deleteProviderModelSpec(input: ProviderModelSpecIdInput!): ProviderModel @hasRole(any: [admin])
 	blockProviderModelSpec(input: ProviderModelSpecBlockInput!): ProviderModel! @hasRole(any: [admin])
 	testProviderConnection(name: String!): ProviderModelStatus! @hasRole(any: [admin])
 	refreshProviderModelStatus(id: ID!): ProviderModel! @hasRole(any: [admin])

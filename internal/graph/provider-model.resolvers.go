@@ -494,6 +494,26 @@ func (r *mutationResolver) DeleteProviderModelSpec(ctx context.Context, input mo
 	if err != nil {
 		return nil, err
 	}
+
+	// Cascade: if this was the last spec, drop the parent ProviderModel
+	// row instead of saving an empty-array column (which leaves a useless
+	// shell row that nothing references). LiteLLM group is already empty
+	// (we called /model/delete for the victim above); LiteLLM has no
+	// "delete empty group" API so the empty group is left for LiteLLM's
+	// own GC. Returns nil because the parent is gone — schema is
+	// nullable on the wire so callers handle this case.
+	//
+	// Concurrency: two simultaneous deletes-of-last-two-specs both splice
+	// to [] and both attempt cascade. The loser's DeleteOneID hits
+	// IsNotFound → treated as success (idempotent delete).
+	if len(specs) == 0 {
+		if err := r.deleteProviderModelCascade(ctx, pm.ID); err != nil {
+			return nil, err
+		}
+		r.audit(ctx, "provider_model.delete", "provider_model", pm.ID.String(), true, actor)
+		return nil, nil
+	}
+
 	pm2, err := r.Ent.ProviderModel.UpdateOneID(pm.ID).SetModelSpecs(updated).Save(ctx)
 	if err != nil {
 		return nil, err
@@ -501,6 +521,19 @@ func (r *mutationResolver) DeleteProviderModelSpec(ctx context.Context, input mo
 	r.audit(ctx, "provider_model.delete_spec", "provider_model", pm.ID.String(), true, actor)
 	r.probeProviderModelInBackground(pm2.ID)
 	return r.toModelProviderModel(ctx, pm2)
+}
+
+// deleteProviderModelCascade drops a ProviderModel row, treating IsNotFound
+// as a no-op so concurrent cascades (two callers both observing
+// len(specs) == 0 after their splice) don't surface as 500s. Used only
+// from DeleteProviderModelSpec's last-spec branch — DeleteProviderModel's
+// own DeleteOneID stays as-is (different audit/observability surface).
+func (r *Resolver) deleteProviderModelCascade(ctx context.Context, pmID uuid.UUID) error {
+	err := r.Ent.ProviderModel.DeleteOneID(pmID).Exec(ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		return err
+	}
+	return nil
 }
 
 // BlockProviderModelSpec is the resolver for the blockProviderModelSpec field.

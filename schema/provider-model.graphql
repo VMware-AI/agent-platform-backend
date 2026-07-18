@@ -216,7 +216,7 @@ extend type Mutation {
   addProviderModelSpec(input: AddProviderModelSpecInput!): ProviderModel! @hasRole(any: [admin])
   updateProviderModelSpec(input: UpdateProviderModelSpecInput!): ProviderModel! @hasRole(any: [admin])
   updateProviderModel(input: UpdateProviderModelInput!): ProviderModel! @hasRole(any: [admin])
-  deleteProviderModelSpec(input: ProviderModelSpecIdInput!): ProviderModel! @hasRole(any: [admin])
+  deleteProviderModelSpec(input: ProviderModelSpecIdInput!): ProviderModel @hasRole(any: [admin])
   blockProviderModelSpec(input: ProviderModelSpecBlockInput!): ProviderModel! @hasRole(any: [admin])
   # 原有 probe / refresh(返回 4 档 status;ProviderModel 实体)
   testProviderConnection(name: String!): ProviderModelStatus! @hasRole(any: [admin])

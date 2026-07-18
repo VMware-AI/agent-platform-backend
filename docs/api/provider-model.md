@@ -95,10 +95,10 @@ updateProviderModel(input: UpdateProviderModelInput!): ProviderModel!
 ### `deleteProviderModelSpec`
 
 ```graphql
-deleteProviderModelSpec(input: ProviderModelSpecIdInput!): ProviderModel!
+deleteProviderModelSpec(input: ProviderModelSpecIdInput!): ProviderModel
 ```
 
-- **Returns:** `ProviderModel!`
+- **Returns:** `ProviderModel`
 - **Auth:** `@hasRole(any: [admin])`
 
 | Argument | Type | Required | Default |

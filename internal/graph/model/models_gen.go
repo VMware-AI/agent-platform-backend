@@ -1364,22 +1364,34 @@ func (e AgentSortField) MarshalJSON() ([]byte, error) {
 type AgentStatus string
 
 const (
-	AgentStatusProvisioning AgentStatus = "provisioning"
-	AgentStatusRunning      AgentStatus = "running"
-	AgentStatusStopped      AgentStatus = "stopped"
-	AgentStatusException    AgentStatus = "exception"
+	AgentStatusProvisioning      AgentStatus = "provisioning"
+	AgentStatusCloning           AgentStatus = "cloning"
+	AgentStatusGuestConfiguring  AgentStatus = "guest_configuring"
+	AgentStatusNetworkConnecting AgentStatus = "network_connecting"
+	AgentStatusServiceStarting   AgentStatus = "service_starting"
+	AgentStatusHealthChecking    AgentStatus = "health_checking"
+	AgentStatusRunning           AgentStatus = "running"
+	AgentStatusStopped           AgentStatus = "stopped"
+	AgentStatusException         AgentStatus = "exception"
+	AgentStatusFailed            AgentStatus = "failed"
 )
 
 var AllAgentStatus = []AgentStatus{
 	AgentStatusProvisioning,
+	AgentStatusCloning,
+	AgentStatusGuestConfiguring,
+	AgentStatusNetworkConnecting,
+	AgentStatusServiceStarting,
+	AgentStatusHealthChecking,
 	AgentStatusRunning,
 	AgentStatusStopped,
 	AgentStatusException,
+	AgentStatusFailed,
 }
 
 func (e AgentStatus) IsValid() bool {
 	switch e {
-	case AgentStatusProvisioning, AgentStatusRunning, AgentStatusStopped, AgentStatusException:
+	case AgentStatusProvisioning, AgentStatusCloning, AgentStatusGuestConfiguring, AgentStatusNetworkConnecting, AgentStatusServiceStarting, AgentStatusHealthChecking, AgentStatusRunning, AgentStatusStopped, AgentStatusException, AgentStatusFailed:
 		return true
 	}
 	return false
