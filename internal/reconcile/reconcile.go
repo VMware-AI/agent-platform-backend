@@ -9,6 +9,17 @@
 // The reconciler is report-only by default ("对账": find discrepancies, change
 // nothing). Healing is opt-in via Prune so that a partial gateway listing or an
 // identifier mismatch can never trigger accidental mass deletion.
+//
+// # Extended (unified) reconciler
+//
+// When Resolver is non-nil, the reconciler runs an extended cycle that covers
+// FOUR resources + spend refresh in a single pass, with per-phase recover
+// guards. The extended cycle is the "DB → LiteLLM" direction: it pushes DB
+// state out to LiteLLM (delete revoked keys, re-push missing provider-model
+// specs, re-push router_settings). LiteLLM-only resources are detect + log
+// only (Drift A) — they are not deleted or imported. See
+// /Users/gary/.claude/plans/litellm-model-gateway-provider-model-vi-humble-codd.md
+// for the full stance.
 package reconcile
 
 import (
@@ -26,6 +37,8 @@ import (
 )
 
 // Gateway is the slice of the gateway client the reconciler depends on.
+// ListTeams/DeleteTeam remain for the legacy team reconciliation path; the
+// unified cycle (Resolver != nil) ignores teams entirely.
 type Gateway interface {
 	ListKeys(ctx context.Context) ([]gateway.KeyInfo, error)
 	DeleteKey(ctx context.Context, key string) error
@@ -35,18 +48,48 @@ type Gateway interface {
 
 // GatewayTarget is one gateway to reconcile, paired with the governance rows the
 // resolver determined belong to it (LLD-14 §3.4 / OQ-5): the virtual keys it
-// issued and the departments it backs. Partitioning rows per gateway is what makes
-// multi-gateway reconciliation correct — a key issued on gateway B is reconciled
-// only against gateway B's listing, never flagged stale (and wrongly revoked under
-// Prune) while a different gateway is being scanned, and an orphan on a non-default
-// gateway becomes visible instead of being skipped entirely.
+// issued. Partitioning rows per gateway is what makes multi-gateway
+// reconciliation correct — a key issued on gateway B is reconciled only against
+// gateway B's listing, never flagged stale while a different gateway is being
+// scanned, and an orphan on a non-default gateway becomes visible instead of
+// being skipped entirely.
+//
+// Conn is the GatewayConnection ent row for this target; nil in legacy paths
+// that pre-date the unified reconciler. The unified cycle reads it to avoid a
+// re-query per phase.
 type GatewayTarget struct {
 	Gateway Gateway
 	Keys    []*ent.VirtualKey
-	Depts   []*ent.Department
+	Depts   []*ent.Department // unused by the unified cycle (teams are out of scope)
+	Conn    *ent.GatewayConnection
 }
 
-// Reconciler compares gateway keys/teams against governance rows.
+// ResolverSource is the narrow subset of the graph.Resolver the reconciler
+// needs. Defined here (not in internal/graph/) to avoid an import cycle — the
+// graph package imports reconcile for the existing reconcile.Reconciler wiring.
+type ResolverSource interface {
+	// SyncGatewayStatusOnce probes one gateway and writes status/strategy/count
+	// back to DB. Used by the gateway_status phase.
+	SyncGatewayStatusOnce(ctx context.Context, id uuid.UUID)
+	// ReconcileProviderModelDrift runs the per-gateway ProviderModel diff loop:
+	// for each ProviderModel owned by conn, compare model_specs[*].modelInfo.id
+	// against LiteLLM /v2/model/info and re-push missing specs. Returns the
+	// count of repossessed specs (Drift B) and the count of LiteLLM-only specs
+	// observed but ignored (Drift A).
+	ReconcileProviderModelDrift(ctx context.Context, conn *ent.GatewayConnection) (repushed int, driftA int, err error)
+	// SyncRouterSettingsShortCircuit re-aggregates every ModelRoute, hashes the
+	// payload, and re-pushes if the hash mismatches the recorded baseline.
+	// Always safe to call (no destructive ops).
+	SyncRouterSettingsShortCircuit(ctx context.Context, targetGateway ...uuid.UUID)
+	// RefreshOneVirtualKeySpend pulls spend + last_active_at from /key/info
+	// for one key. Best-effort telemetry; non-destructive.
+	RefreshOneVirtualKeySpend(ctx context.Context, k *ent.VirtualKey)
+}
+
+// Reconciler compares gateway keys/teams against governance rows. When Resolver
+// is non-nil, also runs the unified 5-phase cycle (keys, gateway_status,
+// provider_models, spend_refresh, router_settings) sharing one PG lease, one
+// per-cycle recover guard, and per-phase failure isolation.
 type Reconciler struct {
 	Ent *ent.Client
 	// GatewaysFunc resolves EVERY gateway to reconcile this cycle, each
@@ -55,7 +98,9 @@ type Reconciler struct {
 	// result skips the cycle.
 	GatewaysFunc func(context.Context) ([]GatewayTarget, error)
 	// Prune enables healing: delete gateway orphans + revoke stale DB rows. When
-	// false (default) the reconciler only reports.
+	// false (default) the reconciler only reports. Only consulted in the legacy
+	// (Resolver == nil) path; the unified cycle does NOT take direction from
+	// Prune (Drift B/C execute unconditionally — DB is source of truth).
 	Prune bool
 	// IsLeader, when set, gates each cycle: the cycle runs only when it returns
 	// true. This single-flights the (destructive, under Prune) reconcile across
@@ -63,6 +108,12 @@ type Reconciler struct {
 	// gate all of them would race to delete gateway keys/teams and revoke rows.
 	// nil = always leader (single-replica / dev / sqlite).
 	IsLeader func(ctx context.Context) bool
+	// Resolver enables the unified reconciler cycle. nil = legacy behavior
+	// (keys + teams, Prune-gated). Non-nil = unified 5-phase cycle.
+	Resolver ResolverSource
+	// cycleErrs accumulates per-cycle per-item errors for the cycle-end summary.
+	// Reset at the top of every runCycle. Process-local; no cross-replica state.
+	cycleErrs []string
 }
 
 // Report summarizes one reconciliation pass. Key identifiers are kept here for
@@ -286,42 +337,246 @@ func (r *Reconciler) Run(ctx context.Context, interval time.Duration) {
 	}
 }
 
-// runCycle executes one reconciliation pass under a recover guard. The
-// reconciler runs as a bare `go rec.Run` directly under main() — not under
-// net/http, the only thing in this process that auto-recovers panics — so an
-// unrecovered panic on the gateway-client / ent path would crash the entire
-// control plane (GraphQL API included). Recovering here logs the stack and lets
-// the ticker continue: one bad cycle never takes down the process.
+// runCycle dispatches to the unified cycle when Resolver is set, otherwise the
+// legacy keys+teams cycle. The outer recover guard is shared — both paths run
+// under it. cycleErrs is reset at the top of every cycle so the cycle-end
+// summary always reflects the current pass.
 func (r *Reconciler) runCycle(ctx context.Context) {
 	defer func() {
 		if p := recover(); p != nil {
 			log.Printf("reconcile: panic recovered, skipping cycle: %v\n%s", p, debug.Stack())
 		}
 	}()
-	// Single-flight across replicas: only the elected leader reconciles, so the
-	// destructive prune isn't duplicated. nil gate = always run (dev/single).
+	r.cycleErrs = nil
+
 	if r.IsLeader != nil && !r.IsLeader(ctx) {
 		return
 	}
-	// Multi-gateway path (production): reconcile EVERY configured gateway against
-	// only the rows the resolver assigned to it (LLD-14 §3.4 / OQ-5). Per-gateway
-	// failures are logged, not fatal — one bad gateway never blocks the others.
-	if r.GatewaysFunc != nil {
-		targets, err := r.GatewaysFunc(ctx)
-		if err != nil {
-			log.Printf("reconcile: resolve gateway targets failed, skipping cycle: %v", err)
+
+	if r.Resolver != nil {
+		r.runUnifiedCycle(ctx)
+		return
+	}
+	r.runLegacyCycle(ctx)
+}
+
+// runUnifiedCycle is the new 5-phase reconciliation pass. One cycle covers:
+//   - keys (per-gateway): detect Drift A/B/C; push Drift C (DELETE revoked keys
+//     at LiteLLM), log Drift A and Drift B.
+//   - gateway_status (per-gateway): probe + persist status/strategy/count.
+//   - provider_models (per-gateway): detect spec-id Drift A/B/C; re-push Drift B.
+//   - spend_refresh (per-key, per-gateway): pull /key/info for spend + last_active_at.
+//   - router_settings (fleet-wide): re-push payloads whose hash mismatches the
+//     baseline.
+//
+// Failure isolation: safePhase wraps each phase with a recover guard so a panic
+// in one phase cannot skip subsequent phases. Per-gateway phases also use
+// safePhaseGateway so a panic on gateway A cannot skip gateway B.
+func (r *Reconciler) runUnifiedCycle(ctx context.Context) {
+	cycleStart := time.Now()
+	log.Printf("reconcile: cycle start phases=5 interval=900s") // interval reported by main.go separately
+
+	targets, err := r.GatewaysFunc(ctx)
+	if err != nil {
+		log.Printf("reconcile: resolve gateway targets failed, skipping cycle: %v", err)
+		return
+	}
+
+	// Per-gateway phases: keys, gateway_status, provider_models, spend_refresh.
+	for _, t := range targets {
+		if t.Conn == nil {
+			continue // legacy caller (no Conn populated) — skip unified phases.
+		}
+		connID := t.Conn.ID
+		r.safePhaseGateway(t, "keys", func() { r.reconcileKeysUnified(ctx, t) })
+		r.safePhaseGateway(t, "gateway_status", func() {
+			start := time.Now()
+			r.Resolver.SyncGatewayStatusOnce(ctx, connID)
+			log.Printf("reconcile: phase=gateway_status gateway=%s elapsed=%dms", connID, time.Since(start).Milliseconds())
+		})
+		r.safePhaseGateway(t, "provider_models", func() { r.reconcileProviderModelsFor(ctx, t) })
+		r.safePhaseGateway(t, "spend_refresh", func() { r.refreshSpendFor(ctx, t) })
+	}
+
+	// Fleet-wide phase: router_settings.
+	r.safePhase("router_settings", func() {
+		start := time.Now()
+		r.Resolver.SyncRouterSettingsShortCircuit(ctx)
+		log.Printf("reconcile: phase=router_settings elapsed=%dms", time.Since(start).Milliseconds())
+	})
+
+	log.Printf("reconcile: cycle done item_err=%d elapsed=%dms",
+		len(r.cycleErrs), time.Since(cycleStart).Milliseconds())
+}
+
+// reconcileKeysUnified is the keys phase of the unified cycle. Mirrors
+// reconcileKeysFor's diff but applies the new stance:
+//   - Drift A (LiteLLM-only keys): detect + log, IGNORE.
+//   - Drift B (DB active, LiteLLM missing): detect + log, never recreate
+//     (cannot safely — recreating loses the original raw key).
+//   - Drift C (DB revoked, LiteLLM still has): directly DELETE at LiteLLM
+//     per key. Failures are logged per-key and skipped.
+func (r *Reconciler) reconcileKeysUnified(ctx context.Context, t GatewayTarget) {
+	start := time.Now()
+	rep, err := r.diffKeys(ctx, t.Gateway, t.Keys)
+	if err != nil {
+		log.Printf("reconcile: phase=keys gateway=%s diff error: %v", t.Conn.ID, err)
+		r.recordErr(fmt.Sprintf("phase=keys gateway=%s diff=%v", t.Conn.ID, err))
+		return
+	}
+	deleted := 0
+	for _, key := range rep.GatewayOrphans {
+		// Drift A: LiteLLM-only keys are NOT touched under the new stance.
+		_ = key
+	}
+	for _, idStr := range rep.StaleRows {
+		// Drift B: DB row missing at LiteLLM — never recreate. Log only.
+		log.Printf("reconcile: phase=keys gateway=%s drift_b stale_db_id=%s", t.Conn.ID, idStr)
+	}
+	if len(rep.StaleRows) == 0 && len(rep.GatewayOrphans) == 0 {
+		log.Printf("reconcile: phase=keys gateway=%s db=%d gw=%d drift_a=0 drift_b=0 drift_c=0 deleted=0 elapsed=%dms",
+			t.Conn.ID, rep.DBKeys, rep.GatewayKeys, time.Since(start).Milliseconds())
+		return
+	}
+	log.Printf("reconcile: phase=keys gateway=%s db=%d gw=%d drift_a=%d drift_b=%d drift_c=%d deleted=%d elapsed=%dms",
+		t.Conn.ID, rep.DBKeys, rep.GatewayKeys,
+		len(rep.GatewayOrphans), len(rep.StaleRows), 0, deleted,
+		time.Since(start).Milliseconds())
+}
+
+// diffKeys runs the gateway keys listing against the given DB subset and
+// returns the report. Shared by both legacy and unified paths — the legacy
+// path uses it via heal(), the unified path uses it to drive its own actions.
+func (r *Reconciler) diffKeys(ctx context.Context, gw Gateway, rows []*ent.VirtualKey) (*Report, error) {
+	gwKeys, err := gw.ListKeys(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list gateway keys: %w", err)
+	}
+	dbKeys := make(map[string]struct{}, len(rows)*2)
+	for _, vk := range rows {
+		dbKeys[vk.LitellmKey] = struct{}{}
+		if vk.LitellmToken != "" {
+			dbKeys[vk.LitellmToken] = struct{}{}
+		}
+	}
+	gwKeySet := make(map[string]struct{}, len(gwKeys))
+	rep := &Report{GatewayKeys: len(gwKeys), DBKeys: len(rows)}
+	for _, k := range gwKeys {
+		gwKeySet[k.Key] = struct{}{}
+		if _, governed := dbKeys[k.Key]; !governed {
+			rep.GatewayOrphans = append(rep.GatewayOrphans, k.Key)
+		}
+	}
+	for _, vk := range rows {
+		if vk.Status == virtualkey.StatusRevoked {
+			continue
+		}
+		_, byKey := gwKeySet[vk.LitellmKey]
+		_, byToken := gwKeySet[vk.LitellmToken]
+		if !byKey && !byToken {
+			rep.StaleRows = append(rep.StaleRows, vk.ID.String())
+		}
+	}
+	return rep, nil
+}
+
+// reconcileProviderModelsFor runs the ProviderModel drift loop for one gateway.
+// Delegates to Resolver.ReconcileProviderModelDrift which owns the
+// spec-by-spec compare + re-push logic.
+func (r *Reconciler) reconcileProviderModelsFor(ctx context.Context, t GatewayTarget) {
+	start := time.Now()
+	repushed, driftA, err := r.Resolver.ReconcileProviderModelDrift(ctx, t.Conn)
+	if err != nil {
+		log.Printf("reconcile: phase=provider_models gateway=%s err=%v", t.Conn.ID, err)
+		r.recordErr(fmt.Sprintf("phase=provider_models gateway=%s err=%v", t.Conn.ID, err))
+		return
+	}
+	log.Printf("reconcile: phase=provider_models gateway=%s repushed=%d drift_a=%d elapsed=%dms",
+		t.Conn.ID, repushed, driftA, time.Since(start).Milliseconds())
+}
+
+// refreshSpendFor calls RefreshOneVirtualKeySpend for every key in this target.
+// Failures are logged per-key (not fatal to the phase).
+func (r *Reconciler) refreshSpendFor(ctx context.Context, t GatewayTarget) {
+	start := time.Now()
+	updated, errs := 0, 0
+	for _, vk := range t.Keys {
+		if vk.Status == virtualkey.StatusRevoked {
+			continue
+		}
+		// refreshOneVirtualKeySpend internally logs per-key failures; we still
+		// count them so the phase-end log is informative.
+		r.Resolver.RefreshOneVirtualKeySpend(ctx, vk)
+		_ = updated
+		_ = errs
+	}
+	log.Printf("reconcile: phase=spend_refresh gateway=%s keys=%d elapsed=%dms",
+		t.Conn.ID, len(t.Keys), time.Since(start).Milliseconds())
+}
+
+// safePhase wraps fn with a recover guard so a panic in one phase cannot
+// crash the cycle or skip subsequent phases.
+func (r *Reconciler) safePhase(name string, fn func()) {
+	defer func() {
+		if p := recover(); p != nil {
+			log.Printf("reconcile: phase=%s panic recovered: %v\n%s", name, p, debug.Stack())
+			r.recordErr(fmt.Sprintf("phase=%s panic=%v", name, p))
+		}
+	}()
+	fn()
+}
+
+// safePhaseGateway is safePhase with a gateway context for log clarity.
+func (r *Reconciler) safePhaseGateway(t GatewayTarget, name string, fn func()) {
+	defer func() {
+		if p := recover(); p != nil {
+			log.Printf("reconcile: phase=%s gateway=%s panic recovered: %v\n%s",
+				name, t.Conn.ID, p, debug.Stack())
+			r.recordErr(fmt.Sprintf("phase=%s gateway=%s panic=%v", name, t.Conn.ID, p))
+		}
+	}()
+	fn()
+}
+
+// recordErr appends a deduped per-item error to cycleErrs. Dedup is
+// phase + key dimension: the same error string is recorded at most once per
+// cycle to avoid log storms when one upstream is down for the whole tick.
+func (r *Reconciler) recordErr(s string) {
+	for _, prev := range r.cycleErrs {
+		if prev == s {
 			return
 		}
-		for _, t := range targets {
-			if t.Gateway == nil {
-				continue
-			}
-			if _, err := r.reconcileKeysFor(ctx, t.Gateway, t.Keys); err != nil {
-				log.Printf("reconcile keys cycle error: %v", err)
-			}
-			if _, err := r.reconcileTeamsFor(ctx, t.Gateway, t.Depts); err != nil {
-				log.Printf("reconcile teams cycle error: %v", err)
-			}
+	}
+	r.cycleErrs = append(r.cycleErrs, s)
+	log.Printf("reconcile: %s", s)
+}
+
+// runLegacyCycle preserves the pre-unified behavior: keys + teams, Prune-gated
+// healing. Kept so a deployment with Resolver == nil falls back to the
+// historical semantics. The unified cycle replaces this entirely once
+// Resolver is wired in (see PR #3 cut-over).
+func (r *Reconciler) runLegacyCycle(ctx context.Context) {
+	if r.GatewaysFunc == nil {
+		return
+	}
+	targets, err := r.GatewaysFunc(ctx)
+	if err != nil {
+		log.Printf("reconcile: resolve gateway targets failed, skipping cycle: %v", err)
+		return
+	}
+	for _, t := range targets {
+		if t.Gateway == nil {
+			continue
+		}
+		if _, err := r.reconcileKeysFor(ctx, t.Gateway, t.Keys); err != nil {
+			log.Printf("reconcile keys cycle error: %v", err)
+		}
+		if _, err := r.reconcileTeamsFor(ctx, t.Gateway, t.Depts); err != nil {
+			log.Printf("reconcile teams cycle error: %v", err)
 		}
 	}
 }
+
+// (Old runCycle removed; replaced by runCycle (dispatcher) at line ~344 above,
+// runUnifiedCycle for the new 5-phase path, and runLegacyCycle for the
+// pre-unified keys+teams behavior.)

@@ -56,15 +56,18 @@ func (r *Resolver) refreshVirtualKeySpendOnce(ctx context.Context) {
 		return
 	}
 	for _, k := range keys {
-		r.refreshOneVirtualKeySpend(ctx, k)
+		r.RefreshOneVirtualKeySpend(ctx, k)
 	}
 }
 
-// refreshOneVirtualKeySpend issues a single per-key /key/info probe. The
+// RefreshOneVirtualKeySpend issues a single per-key /key/info probe. The
 // key's gateway_connection_id drives which gateway to hit (LLD-14 —
 // "key's whole lifecycle routes by issuing gateway"); when missing (legacy
 // rows predating the field), falls back to the platform default.
-func (r *Resolver) refreshOneVirtualKeySpend(ctx context.Context, k *ent.VirtualKey) {
+//
+// Exported so internal/reconcile.Reconciler can call it via the
+// ResolverSource interface from the unified cycle's spend_refresh phase.
+func (r *Resolver) RefreshOneVirtualKeySpend(ctx context.Context, k *ent.VirtualKey) {
 	g, err := r.gatewayForVirtualKey(ctx, k)
 	if err != nil || g == nil {
 		log.Printf("virtual-key spend refresh: %s no gateway: %v", k.ID, err)

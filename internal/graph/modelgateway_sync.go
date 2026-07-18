@@ -28,17 +28,21 @@ func (r *Resolver) syncGatewayInBackground(id uuid.UUID) chan struct{} {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		r.syncGatewayOnce(ctx, id)
+		r.SyncGatewayStatusOnce(ctx, id)
 		close(done)
 	}()
 	return done
 }
 
-// syncGatewayOnce runs one sync pass for a single gateway id: load → probe →
-// write. Used by both the background goroutine and the periodic tick. The
-// caller is responsible for inflight-tracking if SYNCING should be visible;
-// this helper does not touch the resolver's inflightSyncs map.
-func (r *Resolver) syncGatewayOnce(ctx context.Context, id uuid.UUID) {
+// SyncGatewayStatusOnce runs one sync pass for a single gateway id: load →
+// probe → write. Used by both the background goroutine and the unified
+// reconciler (gateway_status phase). The caller is responsible for
+// inflight-tracking if SYNCING should be visible; this helper does not touch
+// the resolver's inflightSyncs map.
+//
+// Exported so internal/reconcile.Reconciler can call it via the ResolverSource
+// interface.
+func (r *Resolver) SyncGatewayStatusOnce(ctx context.Context, id uuid.UUID) {
 	g, err := r.Ent.GatewayConnection.Get(ctx, id)
 	if err != nil {
 		log.Printf("model-gateway background sync: load %s: %v", id, err)
@@ -80,17 +84,21 @@ func (r *Resolver) StartModelGatewayAutoSync(ctx context.Context, interval time.
 			if isLeader != nil && !isLeader(ctx) {
 				continue
 			}
-			r.syncAllGateways(ctx)
+			r.SyncAllGatewaysOnce(ctx)
 		}
 	}
 }
 
-// syncAllGateways fans out one sync pass over every gateway row. Each row is
+// SyncAllGatewaysOnce fans out one sync pass over every gateway row. Each row is
 // loaded + probed + written sequentially — the dataset is small (operator-
 // curated), so the cost of N HTTP probes against litellm is bounded and
 // parallelism would mostly just hammer the litellm box. If that ever changes,
 // wrap the loop in a worker pool.
-func (r *Resolver) syncAllGateways(ctx context.Context) {
+//
+// Exported so internal/reconcile.Reconciler can call it via ResolverSource if
+// a fleet-wide (not per-gateway) gateway_status refresh is desired. The
+// unified cycle currently uses SyncGatewayStatusOnce per-gateway instead.
+func (r *Resolver) SyncAllGatewaysOnce(ctx context.Context) {
 	gws, err := r.Ent.GatewayConnection.Query().All(ctx)
 	if err != nil {
 		log.Printf("model-gateway auto-sync: query: %v", err)

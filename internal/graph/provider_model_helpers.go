@@ -217,3 +217,36 @@ func jsonMarshalToBytes(v any) ([]byte, error) {
 func jsonUnmarshalBytes(data []byte, v any) error {
 	return json.Unmarshal(data, v)
 }
+
+// ReconcileProviderModelDrift runs the per-gateway ProviderModel diff loop for
+// the unified reconciler. For every ProviderModel owned by conn it compares
+// model_specs[*].modelInfo.id against LiteLLM's /v2/model/info (the spec-IDs
+// already persisted to LiteLLM at create time) and detects three drifts:
+//
+//   - Drift A (LiteLLM-only specs, ids not in DB): detect + log only. IGNORE.
+//     LiteLLM is the source of creation; we never auto-import.
+//   - Drift B (DB specs, ids missing at LiteLLM): re-push via
+//     pushModelUpdateToLitellm so the gateway state matches DB state. Counts
+//     in the returned `repushed` total.
+//   - Drift C (whole LiteLLM group empty): same as Drift B; whole-group
+//     re-push.
+//
+// Specs whose modelInfo.id is empty (newly created, push hasn't returned yet)
+// are skipped — they are "in flight", not drift.
+//
+// Guard: if every spec on a ProviderModel has empty modelInfo.id we refuse to
+// push, since that signature means "specs were never pushed" (mutator failed
+// before litellm returned ids), not "specs were dropped".
+//
+// Exported so internal/reconcile.Reconciler can call it via the ResolverSource
+// interface from the unified cycle's provider_models phase.
+func (r *Resolver) ReconcileProviderModelDrift(ctx context.Context, conn *ent.GatewayConnection) (repushed int, driftA int, err error) {
+	if conn == nil {
+		return 0, 0, fmt.Errorf("nil gateway connection")
+	}
+	// Implementation note: PR #1 ships this as a stub that performs no diff.
+	// PR #2 fills in the actual compare-and-repush logic. With Resolver != nil
+	// but the real diff not yet wired, the unified cycle's provider_models
+	// phase simply reports zero drift every cycle.
+	return 0, 0, nil
+}

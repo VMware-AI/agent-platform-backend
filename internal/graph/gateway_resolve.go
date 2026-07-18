@@ -52,6 +52,29 @@ func (r *Resolver) buildGatewayKeyClient(ctx context.Context, g *ent.GatewayConn
 	return c
 }
 
+// buildGatewayAdminClient builds a litellm AdminClient (router settings +
+// grouped-model-info surface) bound to a specific gateway row. Returns nil on
+// construction failure (empty master key / bad endpoint) — caller treats as
+// "no admin client configured".
+//
+// Exposed via BuildGatewayAdminClient for the unified reconciler so the
+// provider_models phase can call GET /v2/model/info without re-implementing
+// the client build (which involves secret-store resolution + master-key
+// fallback to LITELLM_MASTER_KEY env var).
+func (r *Resolver) buildGatewayAdminClient(ctx context.Context, g *ent.GatewayConnection) *gateway.AdminClient {
+	c, err := r.litellmClient(ctx, g)
+	if err != nil {
+		log.Printf("gateway admin client build failed for %s: %v", g.ID, err)
+		return nil
+	}
+	return gateway.NewAdminClient(c)
+}
+
+// BuildGatewayAdminClient is the exported wrapper around buildGatewayAdminClient.
+func (r *Resolver) BuildGatewayAdminClient(ctx context.Context, g *ent.GatewayConnection) *gateway.AdminClient {
+	return r.buildGatewayAdminClient(ctx, g)
+}
+
 // routeGateway resolves the GatewayConnection that hosts a route's
 // router-settings push. A route's gateway_connection_id is the canonical
 // push target; department binding / virtual key issuance follow a separate
@@ -217,6 +240,7 @@ func (r *Resolver) ReconcileTargets(ctx context.Context) ([]reconcile.GatewayTar
 			Gateway: r.buildGatewayKeyClient(ctx, b.conn),
 			Keys:    b.keys,
 			Depts:   b.depts,
+			Conn:    b.conn,
 		})
 	}
 	return targets, nil

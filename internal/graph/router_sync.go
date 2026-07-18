@@ -52,15 +52,18 @@ func (r *Resolver) StartRouterSettingsSync(ctx context.Context, interval time.Du
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			r.syncRouterSettingsOnceShortCircuit(ctx)
+			r.SyncRouterSettingsShortCircuit(ctx)
 		}
 	}
 }
 
-// syncRouterSettingsOnceShortCircuit is the periodic-worker's tick body
+// SyncRouterSettingsShortCircuit is the periodic-worker's tick body
 // and the resolver-side push hook share. It loads active routes, groups
 // them by gateway, builds one RouterSettings per gateway, and short-
 // circuits on hash match.
+//
+// Exported so internal/reconcile.Reconciler can call it via ResolverSource
+// from the unified router_settings phase.
 //
 // Order of operations per gateway:
 //  1. Build the payload. On any build-time failure (DB read, etc.) log
@@ -75,7 +78,7 @@ func (r *Resolver) StartRouterSettingsSync(ctx context.Context, interval time.Du
 // targetGateway, when non-zero, scopes the entire run to one gateway
 // (the resolver-side hook uses this — the route being saved only needs
 // its own gateway re-pushed). uuid.Nil means "every gateway".
-func (r *Resolver) syncRouterSettingsOnceShortCircuit(ctx context.Context, targetGateway ...uuid.UUID) {
+func (r *Resolver) SyncRouterSettingsShortCircuit(ctx context.Context, targetGateway ...uuid.UUID) {
 	routesByGW, err := r.loadRouterSettingsBuckets(ctx)
 	if err != nil {
 		log.Printf("router settings sync: %v", err)
@@ -210,10 +213,10 @@ func (r *Resolver) pushRouterSettingsTo(ctx context.Context, gwID uuid.UUID, set
 // syncRouterSettings use.
 func (r *Resolver) AggregateAndPushRouterSettings(ctx context.Context, targetGateway uuid.UUID) {
 	if targetGateway == uuid.Nil {
-		r.syncRouterSettingsOnceShortCircuit(ctx)
+		r.SyncRouterSettingsShortCircuit(ctx)
 		return
 	}
-	r.syncRouterSettingsOnceShortCircuit(ctx, targetGateway)
+	r.SyncRouterSettingsShortCircuit(ctx, targetGateway)
 }
 
 // AggregateAndPushRouterSettingsFireAndForget schedules a router-settings
