@@ -319,29 +319,73 @@ func (c *HTTPClient) DeleteTeam(ctx context.Context, teamID string) error {
 // No retry, no fallback log noise — a clean diff between the two shapes
 // lives in the bytes themselves.
 //
+// LiteLLM paginates large key lists: the response carries `total_pages`
+// alongside `current_page` and `total_count`. The default page size in
+// upstream LiteLLM is 25; for deployments with > 25 keys we must walk all
+// pages or we'd miss keys (and the reconciler would treat them as Drift A
+// orphans — never deleted but permanently logged). Page iteration uses
+// `?current_page=N` query param and stops at total_pages.
+//
 // The raw key wins as the comparable identifier, falling back to the
 // token when the object form reports no key.
 func (c *HTTPClient) ListKeys(ctx context.Context) ([]KeyInfo, error) {
-	var resp struct {
-		Keys json.RawMessage `json:"keys"`
+	// Page 1: also discovers total_pages.
+	var first struct {
+		Keys       json.RawMessage `json:"keys"`
+		TotalPages int             `json:"total_pages"`
 	}
-	if err := c.get(ctx, "/key/list", &resp); err != nil {
+	if err := c.get(ctx, "/key/list", &first); err != nil {
+		return nil, err
+	}
+	out, err := decodeKeysArray(first.Keys)
+	if err != nil {
 		return nil, err
 	}
 
-	// Empty / null → no keys. RawMessage of "null" or "" both decode cleanly
-	// into the empty slice path.
-	trimmed := bytes.TrimSpace(resp.Keys)
+	// Single-page case — the common path.
+	if first.TotalPages <= 1 {
+		return out, nil
+	}
+
+	// Walk remaining pages. Per-page failure surfaces immediately (caller
+	// decides log-vs-retry; the reconciler logs and skips the gateway).
+	for page := 2; page <= first.TotalPages; page++ {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		var p struct {
+			Keys json.RawMessage `json:"keys"`
+		}
+		if err := c.get(ctx, fmt.Sprintf("/key/list?current_page=%d", page), &p); err != nil {
+			return nil, fmt.Errorf("list keys page %d: %w", page, err)
+		}
+		more, err := decodeKeysArray(p.Keys)
+		if err != nil {
+			return nil, fmt.Errorf("decode keys page %d: %w", page, err)
+		}
+		out = append(out, more...)
+	}
+	return out, nil
+}
+
+// decodeKeysArray decodes a /key/list `keys` field whose element shape
+// is one of:
+//   - string array  → yields KeyInfo{Key: <string>}
+//   - object array  → yields KeyInfo{Key: <key|token>, UserID, TeamID}
+//
+// Returns an empty slice for null / empty input. The shape dispatch
+// looks at the first non-WS byte: `"` (quote) for strings, `[` for
+// objects, anything else is an unknown shape.
+func decodeKeysArray(raw json.RawMessage) ([]KeyInfo, error) {
+	trimmed := bytes.TrimSpace(raw)
 	if len(trimmed) == 0 || string(trimmed) == "null" {
 		return nil, nil
 	}
-
 	switch trimmed[0] {
 	case '"':
-		// String array form: { "keys": ["sk-...", ...] }
 		var strs []string
-		if err := json.Unmarshal(resp.Keys, &strs); err != nil {
-			return nil, fmt.Errorf("decode /key/list keys as string array: %w", err)
+		if err := json.Unmarshal(raw, &strs); err != nil {
+			return nil, fmt.Errorf("decode keys as string array: %w", err)
 		}
 		out := make([]KeyInfo, 0, len(strs))
 		for _, s := range strs {
@@ -353,15 +397,14 @@ func (c *HTTPClient) ListKeys(ctx context.Context) ([]KeyInfo, error) {
 		return out, nil
 
 	case '[':
-		// Object array form: { "keys": [{"token":..., "key":..., ...}, ...] }
 		var objs []struct {
 			Token  string `json:"token"`
 			Key    string `json:"key"`
 			UserID string `json:"user_id"`
 			TeamID string `json:"team_id"`
 		}
-		if err := json.Unmarshal(resp.Keys, &objs); err != nil {
-			return nil, fmt.Errorf("decode /key/list keys as object array: %w", err)
+		if err := json.Unmarshal(raw, &objs); err != nil {
+			return nil, fmt.Errorf("decode keys as object array: %w", err)
 		}
 		out := make([]KeyInfo, 0, len(objs))
 		for _, k := range objs {
@@ -377,7 +420,7 @@ func (c *HTTPClient) ListKeys(ctx context.Context) ([]KeyInfo, error) {
 		return out, nil
 
 	default:
-		return nil, fmt.Errorf("decode /key/list: unexpected keys array shape, starts with %q", trimmed[0])
+		return nil, fmt.Errorf("decode keys: unexpected array shape, starts with %q", trimmed[0])
 	}
 }
 
