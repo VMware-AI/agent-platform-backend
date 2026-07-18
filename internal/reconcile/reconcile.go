@@ -437,15 +437,34 @@ func (r *Reconciler) reconcileKeysUnified(ctx context.Context, t GatewayTarget) 
 
 	deleted := 0
 	if canDelete {
-		// Drift C: revoked DB rows whose LitellmKey is still at the gateway.
+		// Drift C: revoked DB rows whose key is still at the gateway.
+		//
+		// Important: gwKeySet is populated from /key/list, which returns the
+		// hashed token (litellm_token) — NOT the raw sk-... key. So we must
+		// match against BOTH the raw key (vk.LitellmKey, set by older
+		// code paths) and the hashed token (vk.LitellmToken, set on every
+		// /key/generate response). Matching only one would either miss rows
+		// minted through the resolver (which set LitellmToken) or legacy
+		// rows (which only have LitellmKey).
 		for _, vk := range t.Keys {
 			if vk.Status != virtualkey.StatusRevoked {
 				continue
 			}
-			if vk.LitellmKey == "" {
+			if vk.LitellmKey == "" && vk.LitellmToken == "" {
 				continue
 			}
-			if _, present := gwKeySet[vk.LitellmKey]; !present {
+			present := false
+			if vk.LitellmKey != "" {
+				if _, ok := gwKeySet[vk.LitellmKey]; ok {
+					present = true
+				}
+			}
+			if !present && vk.LitellmToken != "" {
+				if _, ok := gwKeySet[vk.LitellmToken]; ok {
+					present = true
+				}
+			}
+			if !present {
 				continue
 			}
 			if err := t.Gateway.DeleteKey(ctx, vk.LitellmKey); err != nil {
