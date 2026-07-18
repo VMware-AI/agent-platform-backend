@@ -523,19 +523,6 @@ func (r *mutationResolver) DeleteProviderModelSpec(ctx context.Context, input mo
 	return r.toModelProviderModel(ctx, pm2)
 }
 
-// deleteProviderModelCascade drops a ProviderModel row, treating IsNotFound
-// as a no-op so concurrent cascades (two callers both observing
-// len(specs) == 0 after their splice) don't surface as 500s. Used only
-// from DeleteProviderModelSpec's last-spec branch — DeleteProviderModel's
-// own DeleteOneID stays as-is (different audit/observability surface).
-func (r *Resolver) deleteProviderModelCascade(ctx context.Context, pmID uuid.UUID) error {
-	err := r.Ent.ProviderModel.DeleteOneID(pmID).Exec(ctx)
-	if err != nil && !ent.IsNotFound(err) {
-		return err
-	}
-	return nil
-}
-
 // BlockProviderModelSpec is the resolver for the blockProviderModelSpec field.
 // TODO 未来调 litellm PATCH /model/{id}/update 同步;本次简化 — 用户接受只本地 toggle。
 func (r *mutationResolver) BlockProviderModelSpec(ctx context.Context, input model.ProviderModelSpecBlockInput) (*model.ProviderModel, error) {
@@ -738,4 +725,17 @@ func (r *queryResolver) ProviderModelInfo(ctx context.Context, filter *model.Pro
 		TotalPages:  totalPages,
 		Size:        size,
 	}, nil
+}
+
+// deleteProviderModelCascade drops a ProviderModel row, treating IsNotFound
+// as a no-op so concurrent cascades (two callers both observing
+// len(specs) == 0 after their splice) don't surface as 500s. Used only
+// from DeleteProviderModelSpec's last-spec branch — DeleteProviderModel's
+// own DeleteOneID stays as-is (different audit/observability surface).
+func (r *Resolver) deleteProviderModelCascade(ctx context.Context, pmID uuid.UUID) error {
+	err := r.Ent.ProviderModel.DeleteOneID(pmID).Exec(ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		return err
+	}
+	return nil
 }

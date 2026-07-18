@@ -118,15 +118,6 @@ departmentMembers(departmentId: ID!): [Membership!]!
 |----------|------|----------|---------|
 | `departmentId` | `ID!` | yes | — |
 
-### `platformSettings`
-
-```graphql
-platformSettings: PlatformSettings!
-```
-
-- **Returns:** `PlatformSettings!`
-- **Auth:** `@hasRole(any: [admin])`
-
 ## Mutations
 
 ### `createUser`
@@ -351,19 +342,6 @@ removeMembership(userId: ID!, departmentId: ID!): Boolean!
 | `userId` | `ID!` | yes | — |
 | `departmentId` | `ID!` | yes | — |
 
-### `updatePlatformSettings`
-
-```graphql
-updatePlatformSettings(input: UpdatePlatformSettingsInput!): PlatformSettings!
-```
-
-- **Returns:** `PlatformSettings!`
-- **Auth:** `@hasRole(any: [admin])`
-
-| Argument | Type | Required | Default |
-|----------|------|----------|---------|
-| `input` | `UpdatePlatformSettingsInput!` | yes | — |
-
 ## Types
 
 ### AccountRoleRef
@@ -466,16 +444,6 @@ The user's role as a lightweight reference (embedded in AccountUser). id is a st
 | `key` | `String!` | — |
 | `description` | `String` | — |
 
-### PlatformSettings
-
-*Object*
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `agentUser` | `String!` | OS user that runs installed agents on the VM. Defaults to "agent" when unset. |
-| `packageSourceUrl` | `String!` | Internal agent-package mirror base URL (e.g. ftp://mirror.internal/agents) and its read-only username. The password is write-only (stored encrypted, never returned). |
-| `packageSourceUser` | `String!` | — |
-
 ### ResetPasswordPayload
 
 *Object*
@@ -569,17 +537,6 @@ A built-in assignable role surfaced as an entity. id is a standard UUID (determi
 | `passwordMode` | `PasswordMode!` | — | — |
 | `customPassword` | `String` | — | — |
 | `enabled` | `Boolean` | `true` | — |
-
-### UpdatePlatformSettingsInput
-
-*Input*
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `agentUser` | `String` | When provided, sets the agent OS user; omitted = unchanged. Must be non-empty. |
-| `packageSourceUrl` | `String` | Package mirror (LLD-16 OQ-2). Each field: omitted = unchanged; empty string clears it. packageSourcePassword is write-only and stored encrypted (secrets). |
-| `packageSourceUser` | `String` | — |
-| `packageSourcePassword` | `String` | — |
 
 ### UpdateUserInput
 
