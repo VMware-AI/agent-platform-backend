@@ -16,7 +16,7 @@ var (
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "name", Type: field.TypeString},
 		{Name: "agent_type", Type: field.TypeString},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"provisioning", "running", "stopped", "exception"}, Default: "provisioning"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"provisioning", "cloning", "guest_configuring", "network_connecting", "service_starting", "health_checking", "running", "stopped", "exception", "failed"}, Default: "provisioning"},
 		{Name: "owner_user_id", Type: field.TypeUUID},
 		{Name: "vm_ref", Type: field.TypeString, Nullable: true},
 		{Name: "config_id", Type: field.TypeUUID, Nullable: true},

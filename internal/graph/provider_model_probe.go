@@ -272,6 +272,9 @@ func (r *Resolver) probeOneSpec(ctx context.Context, s specJSON) specProbeResult
 			apiKey = cred.APIKey
 		}
 	}
+	if apiKey == "" && s.LitellmParams.APIKey != nil && *s.LitellmParams.APIKey != "" {
+		apiKey = *s.LitellmParams.APIKey
+	}
 	if apiKey == "" {
 		apiKey = "probe-placeholder"
 	}

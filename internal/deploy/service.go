@@ -6,11 +6,15 @@ package deploy
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
@@ -159,6 +163,14 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 		key = *k
 	}
 
+	// Auto-detect static IP mode: if a static_ip is provided but ip_mode is not
+	// explicitly set, default to "static". This ensures both the vCenter
+	// CustomizationSpec (buildLinuxCustomization) and the cloud-init network-config
+	// (buildNetplanConfig) pick up the static IP configuration.
+	if req.OVFProperties != nil && req.OVFProperties["guestinfo.static_ip"] != "" && req.OVFProperties["guestinfo.ip_mode"] == "" {
+		req.OVFProperties["guestinfo.ip_mode"] = "static"
+	}
+
 	// Dev mode: skip VM provisioning, return the key immediately.
 	if os.Getenv("DEV_NO_VCENTER") == "1" || os.Getenv("DEV_NO_VCENTER") == "true" {
 		return &Result{VirtualKey: key.Key, VirtualKeyToken: key.Token, VMName: req.VMName}, nil
@@ -197,7 +209,7 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 	}
 
 	// 3) Inject per-VM cloud-init via guestinfo.
-	userdata := buildUserdata(s.GatewayURL, key.Key, req.Hostname, req.DefaultConfig, req.ConfigPath, req.OVFProperties)
+	userdata := buildUserdata(s.GatewayURL, key.Key, req.Hostname, req.DefaultConfig, req.ConfigPath, req.OVFProperties, req.Models)
 	gi := map[string]string{"userdata": userdata}
 	// Static IP: inject network-config so VMware's cloud-init datasource
 	// picks it up. Also set a fresh instance-id to force cloud-init to run.
@@ -344,7 +356,7 @@ func buildNetplanConfig(props map[string]string) string {
 	return b.String()
 }
 
-func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, ovfProps map[string]string) string {
+func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, ovfProps map[string]string, models []string) string {
 	base := strings.TrimRight(gatewayURL, "/")
 	var b strings.Builder
 	b.WriteString("#cloud-config\n")
@@ -354,8 +366,8 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 
 	// OS user/password/SSH from OVF vApp properties — must come before write_files.
 	if ovfProps != nil {
-		pw := ovfProps["password"]
-		user := ovfProps["guestinfo.runas_user"]
+		pw := ovfProps["guestinfo.password"]
+		user := ovfProps["guestinfo.run_as_user"]
 		sshKey := ovfProps["public-keys"]
 
 		if pw != "" {
@@ -385,8 +397,87 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 		}
 	}
 
+	// Ensure OpenCode config directory exists (cloud-init write_files does not create parents).
+	b.WriteString("bootcmd:\n")
+	b.WriteString("  - mkdir -p /home/vmware/.config/opencode\n")
+	b.WriteString("  - chown -R vmware:vmware /home/vmware/.config\n")
+
 	// All write_files entries must come after the write_files: header.
 	b.WriteString("write_files:\n")
+
+	// Build model list fragments from key models (operator-curated per agent).
+	ocModelsJSON := ""
+	ocCodeMap := make(map[string]map[string]string)
+	if len(models) > 0 {
+		type ocModel struct{ ID, Name string }
+		ocList := make([]ocModel, len(models))
+		for i, m := range models {
+			ocList[i] = ocModel{ID: m, Name: m}
+			ocCodeMap[m] = map[string]string{"name": m}
+		}
+		if b, err := json.Marshal(ocList); err == nil {
+			ocModelsJSON = string(b)
+		}
+	}
+
+	// OpenClaw config with API key injected
+	if key != "" {
+		ocGatewayToken := GenerateGatewayToken()
+		b.WriteString("  - path: /home/vmware/.openclaw/openclaw.json\n")
+		b.WriteString("    owner: vmware:vmware\n")
+		b.WriteString("    permissions: \"0600\"\n")
+		b.WriteString("    content: |\n")
+		fmt.Fprintf(&b, "      {\"gateway\":{\"auth\":{\"mode\":\"token\",\"token\":\"%s\"},\"bind\":\"lan\",\"mode\":\"local\",\"port\":18789},\"models\":{\"mode\":\"merge\",\"providers\":{\"litellm\":{\"api\":\"openai-completions\",\"apiKey\":\"%s\",\"baseUrl\":\"%s/v1\",\"models\":[%s]}}}}\n", ocGatewayToken, key, base, ocModelsJSON)
+	}
+
+	// OpenCode config — always written alongside OpenClaw for dual-mode templates.
+	if key != "" && len(models) > 0 {
+		defaultModel := models[0]
+		ocCfg := map[string]interface{}{
+			"model": "openai/" + defaultModel,
+			"provider": map[string]interface{}{
+				"openai": map[string]interface{}{
+					"options": map[string]interface{}{
+						"baseURL": base + "/v1",
+						"apiKey":  key,
+					},
+					"models": ocCodeMap,
+				},
+			},
+		}
+		var ocCfgBytes []byte
+		if b, err := json.Marshal(ocCfg); err == nil {
+			ocCfgBytes = b
+		} else {
+			ocCfgBytes = []byte("{}")
+		}
+		b.WriteString("  - path: /home/vmware/.config/opencode/opencode.json\n")
+		b.WriteString("    owner: vmware:vmware\n")
+		b.WriteString("    permissions: \"0600\"\n")
+		b.WriteString("    content: |\n")
+		fmt.Fprintf(&b, "      %s\n", string(ocCfgBytes))
+	}
+
+	// Hermes config — OpenAI-compatible provider via LiteLLM.
+	if key != "" && len(models) > 0 {
+		b.WriteString("  - path: /home/vmware/.hermes/.env\n")
+		b.WriteString("    owner: vmware:vmware\n")
+		b.WriteString("    permissions: \"0600\"\n")
+		b.WriteString("    content: |\n")
+		fmt.Fprintf(&b, "      OPENAI_API_KEY=%s\n", key)
+		fmt.Fprintf(&b, "      OPENAI_BASE_URL=%s/v1\n", base)
+		b.WriteString("  - path: /home/vmware/.hermes/config.yaml\n")
+		b.WriteString("    owner: vmware:vmware\n")
+		b.WriteString("    permissions: \"0600\"\n")
+		b.WriteString("    content: |\n")
+		fmt.Fprintf(&b, "      model:\n")
+		fmt.Fprintf(&b, "        provider: custom\n")
+		fmt.Fprintf(&b, "        default: %s\n", models[0])
+		fmt.Fprintf(&b, "      custom_providers:\n")
+		fmt.Fprintf(&b, "        - name: litellm\n")
+		fmt.Fprintf(&b, "          base_url: %s/v1\n", base)
+		fmt.Fprintf(&b, "          api_key: %s\n", key)
+	}
 
 	// No netplan needed — CustomizationSpec handles IP natively (vCenter/VMware Tools).
 	// Cloud-init netplan would conflict with vCenter guest customization.
@@ -470,4 +561,44 @@ func toCIDR(ip, mask string) string {
 
 func buildMetadata(hostname string) string {
 	return fmt.Sprintf("local-hostname: %s\n", hostname)
+}
+
+// AgentMgrGuestInfo carries protocol fields for instant clone guest config.
+type AgentMgrGuestInfo struct {
+	Role, DeploymentID, Generation, Command                                     string
+	Hostname, InterfaceMAC, IPAddress, PrefixLength, Gateway, DNS, SearchDomain string
+	OpenClawUser, OpenClawHome, OpenClawPort, OpenClawBaseURL, OpenClawModel    string
+	OpenClawAPIKey, OpenClawGatewayToken                                        string // sensitive
+}
+
+// ToGuestInfo maps fields to bare keys for SetGuestinfo (prefix added by caller).
+func (g *AgentMgrGuestInfo) ToGuestInfo() map[string]string {
+	m := map[string]string{
+		"agentmgr.role": g.Role, "agentmgr.deployment-id": g.DeploymentID,
+		"agentmgr.generation": g.Generation, "agentmgr.command": g.Command,
+		"agentmgr.hostname": g.Hostname, "agentmgr.interface-mac": g.InterfaceMAC,
+		"agentmgr.ip-address": g.IPAddress, "agentmgr.prefix-length": g.PrefixLength,
+		"agentmgr.gateway": g.Gateway, "agentmgr.dns": g.DNS,
+		"agentmgr.search-domain": g.SearchDomain,
+		"agentmgr.openclaw-user": g.OpenClawUser, "agentmgr.openclaw-home": g.OpenClawHome,
+		"agentmgr.openclaw-port": g.OpenClawPort, "agentmgr.openclaw-base-url": g.OpenClawBaseURL,
+		"agentmgr.openclaw-model":         g.OpenClawModel,
+		"agentmgr.openclaw-api-key":       g.OpenClawAPIKey,
+		"agentmgr.openclaw-gateway-token": g.OpenClawGatewayToken,
+	}
+	for k, v := range m {
+		if v == "" {
+			delete(m, k)
+		}
+	}
+	return m
+}
+
+// GenerateGatewayToken creates a unique per-instance OpenClaw gateway auth token.
+func GenerateGatewayToken() string {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return fmt.Sprintf("oc-gw-%x", time.Now().UnixNano())
+	}
+	return "oc-gw-" + hex.EncodeToString(b)
 }

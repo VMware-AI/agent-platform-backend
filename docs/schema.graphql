@@ -116,9 +116,15 @@ enum AgentSortField {
 }
 enum AgentStatus {
 	provisioning
+	cloning
+	guest_configuring
+	network_connecting
+	service_starting
+	health_checking
 	running
 	stopped
 	exception
+	failed
 }
 type AgentTemplate {
 	id: ID!

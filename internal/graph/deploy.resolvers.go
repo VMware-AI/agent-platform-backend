@@ -68,6 +68,19 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		return nil, fmt.Errorf("create agent: %w", err)
 	}
 
+	// If caller picked an existing unbound key, look it up now so we
+	// can hand its litellm_key + token to Provision (which skips
+	// GenerateKey and reuses the existing gateway key).
+	var existingKey, existingKeyToken string
+	if input.ExistingKeyID != nil && *input.ExistingKeyID != "" {
+		if vkID, perr := uuid.Parse(*input.ExistingKeyID); perr == nil {
+			if vk, verr := r.Ent.VirtualKey.Get(ctx, vkID); verr == nil {
+				existingKey = vk.LitellmKey
+				existingKeyToken = vk.LitellmToken
+			}
+		}
+	}
+
 	devNoVC := os.Getenv("DEV_NO_VCENTER") == "1" || os.Getenv("DEV_NO_VCENTER") == "true"
 
 	if devNoVC {
@@ -141,6 +154,8 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		KnowledgePackIDs: r.resolveAgentKnowledge(ctx, ag), // LLD-11 K2: 下发知识包引用
 		KnowledgeRoot:    r.resolveKnowledgeRoot(ctx, ag),  // LLD-11 K4
 		OVFProperties:    mapOVFProperties(input.OvfProperties),
+		ExistingKey:      existingKey,
+		ExistingKeyToken: existingKeyToken,
 	})
 	if err != nil {
 		// Provision rolls back its own partial work (VM+key); the agent row is ours.

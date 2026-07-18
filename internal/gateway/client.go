@@ -238,7 +238,33 @@ func (c *HTTPClient) GenerateKey(ctx context.Context, req GenerateKeyRequest) (*
 	if err := c.post(ctx, "/key/generate", req, &out); err != nil {
 		return nil, err
 	}
+	if out.Key == "" {
+		return nil, fmt.Errorf("gateway: /key/generate returned empty key")
+	}
+	// Verify the key was actually persisted. LiteLLM main-latest has an
+	// intermittent bug where /key/generate returns 200 but the key never
+	// lands in the VerificationToken table. GET /key/info confirms it.
+	if err := c.verifyKeyPersisted(ctx, out.Key); err != nil {
+		return nil, fmt.Errorf("gateway: key not persisted after generate (%w); retry", err)
+	}
 	return &out, nil
+}
+
+// keyVerifyResponse is the minimal response from LiteLLM's GET /key/info?key=<raw>.
+type keyVerifyResponse struct {
+	Token string `json:"token"`
+	Key   string `json:"key"`
+}
+
+func (c *HTTPClient) verifyKeyPersisted(ctx context.Context, rawKey string) error {
+	var v keyVerifyResponse
+	if err := c.get(ctx, "/key/info?key="+rawKey, &v); err != nil {
+		return err
+	}
+	if v.Token == "" && v.Key == "" {
+		return fmt.Errorf("key not found in gateway database")
+	}
+	return nil
 }
 
 func (c *HTTPClient) UpdateKey(ctx context.Context, req UpdateKeyRequest) error {

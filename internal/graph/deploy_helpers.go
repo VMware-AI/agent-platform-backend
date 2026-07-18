@@ -1,30 +1,31 @@
 package graph
 
-// Non-resolver deploy helpers. These live OUTSIDE deploy.resolvers.go on purpose:
-// gqlgen rewrites *.resolvers.go on every generate and moves any function that
-// doesn't match a schema resolver into a commented "to be deleted" graveyard —
-// which silently drops these helpers (and their imports) from the build.
-
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"log"
+	"net"
 	"strings"
 	"time"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
+	"github.com/VMware-AI/agent-platform-backend/internal/deploy"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
+	"github.com/google/uuid"
 )
 
-// mapOVFProperties converts deploy-input OVF property pairs to a map for
-// the deploy service (guestinfo.* keys become VM ExtraConfig). Only keys
-// starting with "guestinfo." are forwarded; anything else is logged and
-// dropped to prevent arbitrary ExtraConfig injection. This is a defense-
-// in-depth check: the deploy mutation is already admin-gated, but a
-// misconfigured client should not be able to inject arbitrary VM config.
+const (
+	toolsTimeout   = 120 * time.Second
+	customTimeout  = 180 * time.Second
+	ipWaitTimeout  = 180 * time.Second
+	ocReadyTimeout = 120 * time.Second
+)
+
 func mapOVFProperties(props []model.OVFPropertyInput) map[string]string {
 	if len(props) == 0 {
 		return nil
@@ -32,7 +33,6 @@ func mapOVFProperties(props []model.OVFPropertyInput) map[string]string {
 	m := make(map[string]string, len(props))
 	for _, p := range props {
 		if !strings.HasPrefix(p.Key, "guestinfo.") {
-			log.Printf("deploy: ignoring ovf property %q — key must start with guestinfo.", p.Key)
 			continue
 		}
 		m[p.Key] = p.Value
@@ -43,8 +43,6 @@ func mapOVFProperties(props []model.OVFPropertyInput) map[string]string {
 	return m
 }
 
-// maskKey returns a masked version of a key for display/storage.
-// e.g. "sk-abc123..." → "sk-a*****23"
 func maskKey(key string) string {
 	if len(key) <= 8 {
 		return key
@@ -52,13 +50,14 @@ func maskKey(key string) string {
 	return key[:4] + "****" + key[len(key)-4:]
 }
 
-// deployAgentInstant runs the Instant Clone path: it power-off → remove
-// serial ports → power-on → InstantClone a parent VM, then injects guestinfo
-// into the already-running child. Brought over from the deploy API branch;
-// the VCenterClient interface methods it relies on (PowerOff/On,
-// RemoveSerialPorts, InstantClone, SetGuestinfo) are all already part of the
-// shared graph.Resolver interface. VirtualKey persistence uses the model-
-// routing schema (organization + model_gateway, not user/team).
+func secureToken() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+// deployAgentInstant: InstantClone → VMware Tools → CustomizeGuest (static IP)
+// → StartGuestNetwork → wait IP → GuestInfo (OpenClaw) → ACK → RUNNING.
 func (r *mutationResolver) deployAgentInstant(
 	ctx context.Context,
 	ag *ent.Agent,
@@ -66,53 +65,46 @@ func (r *mutationResolver) deployAgentInstant(
 	conn VCenterClient,
 	input model.DeployAgentInput,
 	vmName string,
-	enrollToken string,
-	defaultConfig string,
-	configPath string,
+	_ string, // enrollToken (unused in new flow)
+	_ string, // defaultConfig (unused)
+	_ string, // configPath (unused)
 ) (*model.DeployedAgent, error) {
 	parentVM := derefString(input.InstantCloneParent)
 	if parentVM == "" {
 		return nil, fmt.Errorf("instantCloneParent required")
 	}
+	deploymentID := uuid.New().String()
+	generation := fmt.Sprintf("%d", time.Now().UnixMilli())
 
-	// 1. Issue gateway key.
+	// 1. Gateway key
 	key, err := t.gw.GenerateKey(ctx, gateway.GenerateKeyRequest{
-		UserID:    ag.OwnerUserID.String(),
-		TeamID:    t.deployTeamID,
-		Models:    nil,
+		UserID: ag.OwnerUserID.String(), TeamID: t.deployTeamID, Models: nil,
 		MaxBudget: input.MaxBudget,
-		Metadata:  map[string]any{"agent": ag.Name},
+		Metadata:  map[string]any{"agent": ag.Name, "deployment": deploymentID},
 	})
 	if err != nil {
 		r.deleteAgentRow(ctx, ag)
 		return nil, fmt.Errorf("generate key: %w", err)
 	}
 
-	// 2. Power off the parent so RemoveSerialPorts is safe; tolerate failures
-	// (vcsim/standalone may not implement power transitions).
-	if err := conn.PowerOff(ctx, parentVM); err != nil {
-		log.Printf("[instant-clone] power off non-fatal: %v", err)
+	rollback := func(phase string, vm string) {
+		log.Printf("[instant-clone] ROLLBACK phase=%s deployment=%s vm=%s (keeping VM for diagnosis)", phase, deploymentID, vm)
+		_ = t.gw.DeleteKey(context.Background(), key.Key)
+		r.deleteAgentRow(context.Background(), ag)
+		// Keep VM alive for diagnosis
 	}
-	time.Sleep(3 * time.Second)
-	if err := conn.RemoveSerialPorts(ctx, parentVM); err != nil {
+
+	// 2. CLONING
+	ag, err = r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusCloning).Save(ctx)
+	if err != nil {
 		_ = t.gw.DeleteKey(ctx, key.Key)
 		r.deleteAgentRow(ctx, ag)
-		return nil, fmt.Errorf("remove serial ports from %q: %w", parentVM, err)
+		return nil, fmt.Errorf("set cloning: %w", err)
 	}
-	if err := conn.PowerOn(ctx, parentVM); err != nil {
-		if !strings.Contains(err.Error(), "Powered on") {
-			_ = t.gw.DeleteKey(ctx, key.Key)
-			r.deleteAgentRow(ctx, ag)
-			return nil, fmt.Errorf("power on parent %q: %w", parentVM, err)
-		}
-		log.Printf("[instant-clone] power on parent %s non-fatal: %v", parentVM, err)
-	}
-	time.Sleep(5 * time.Second)
 
-	// 3. Instant Clone the parent.
+	// 3. InstantClone (no DeviceChange — inherit parent NIC as-is)
 	icSpec := vcenter.InstantCloneSpec{
-		ParentVM:     parentVM,
-		Name:         vmName,
+		ParentVM: parentVM, Name: vmName,
 		ResourcePool: derefString(input.TargetResourcePool),
 		Network:      derefString(input.TargetNetwork),
 	}
@@ -123,56 +115,192 @@ func (r *mutationResolver) deployAgentInstant(
 		}
 	}
 	if _, err := conn.InstantClone(ctx, icSpec); err != nil {
-		_ = t.gw.DeleteKey(ctx, key.Key)
-		r.deleteAgentRow(ctx, ag)
+		rollback("clone", "")
 		return nil, fmt.Errorf("instant clone: %w", err)
 	}
+	log.Printf("[instant-clone] created %s deployment=%s", vmName, deploymentID)
 
-	// 4. Inject guestinfo (the clone is already running).
-	gi := map[string]string{}
-	if enrollToken != "" {
-		gi["agentmgr.enroll_token"] = enrollToken
-		gi["agentmgr.vm_id"] = vmName
-		gi["agentmgr.control_plane_url"] = r.ControlPlaneURL
+	// 4. Extract config from ovfProperties
+	staticIP, netmask, gateway, dns, hostname := "", "255.255.255.0", "", "", ""
+	runAsUser, runAsPass := "", ""
+	for _, p := range input.OvfProperties {
+		switch p.Key {
+		case "guestinfo.static_ip":
+			staticIP = p.Value
+		case "guestinfo.netmask":
+			netmask = p.Value
+		case "guestinfo.gateway":
+			gateway = p.Value
+		case "guestinfo.dns":
+			dns = p.Value
+		case "guestinfo.run_as_user":
+			runAsUser = p.Value
+		case "guestinfo.password":
+			runAsPass = p.Value
+		}
 	}
-	if defaultConfig != "" {
-		gi["agent.default_config"] = defaultConfig
+	if runAsUser == "" {
+		runAsUser = "vmware"
 	}
-	if len(gi) > 0 {
-		_ = conn.SetGuestinfo(ctx, vmName, gi)
+	if runAsPass == "" {
+		return nil, fmt.Errorf("guestinfo.password required for instant clone guest customization")
+	}
+	if derefString(input.Hostname) != "" {
+		hostname = derefString(input.Hostname)
 	}
 
-	// 5. Persist virtual key (model-routing schema: org + gateway, not user/team).
+	// 5. CustomizeGuest (may return vCenter timeout but IP is actually set)
+	ag, err = r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusGuestConfiguring).Save(ctx)
+	if err != nil {
+		rollback("set-gc", vmName)
+		return nil, fmt.Errorf("set guest_configuring: %w", err)
+	}
+
+	var dnsList []string
+	if dns != "" {
+		dnsList = strings.Split(dns, ",")
+	}
+	prefixLen := 24
+	if netmask == "255.255.0.0" {
+		prefixLen = 16
+	}
+
+	log.Printf("[instant-clone] customizing guest: ip=%s gw=%s dns=%v", staticIP, gateway, dnsList)
+	custErr := conn.CustomizeInstantCloneGuest(ctx, vmName, vcenter.CustomizeGuestRequest{
+		Username: runAsUser, Password: runAsPass,
+		Hostname: hostname, IPAddress: staticIP,
+		PrefixLen: prefixLen, SubnetMask: netmask,
+		Gateway: gateway, DNSServers: dnsList,
+	})
+	if custErr != nil {
+		log.Printf("[instant-clone] CustomizeGuest returned: %v (verifying IP directly...)", custErr)
+	}
+
+	// 6. Connect NIC — the reconnect triggers guest kernel to detect new MAC.
+	// NIC was disconnected during InstantClone, then GOSC configured static IP.
+	// ConnectNIC brings the interface up so the guest sees the new MAC+IP.
+	ag, err = r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusNetworkConnecting).Save(ctx)
+	if err != nil {
+		rollback("set-nc", vmName)
+		return nil, fmt.Errorf("set network_connecting: %w", err)
+	}
+	if err := conn.ConnectNIC(ctx, vmName); err != nil {
+		ag, _ = r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusFailed).Save(context.Background())
+		rollback("connect-nic", vmName)
+		return nil, fmt.Errorf("connect nic: %w", err)
+	}
+
+	// 7. Wait for IP
+	if err := conn.WaitForGuestIP(ctx, vmName, staticIP, ipWaitTimeout); err != nil {
+		ag, _ = r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusFailed).Save(context.Background())
+		rollback("wait-ip", vmName)
+		return nil, fmt.Errorf("wait IP: %w", err)
+	}
+
+	// 7.5 Cold reboot — forces guest kernel to re-read vNIC hardware,
+	// giving the clone a unique MAC distinct from the parent.
+	log.Printf("[instant-clone] cold rebooting %s for unique MAC", vmName)
+	if err := conn.PowerOff(ctx, vmName); err != nil {
+		log.Printf("[instant-clone] power off non-fatal: %v", err)
+	}
+	select {
+	case <-ctx.Done():
+		rollback("reboot-off", vmName)
+		return nil, ctx.Err()
+	case <-time.After(5 * time.Second):
+	}
+	if err := conn.PowerOn(ctx, vmName); err != nil {
+		ag, _ = r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusFailed).Save(context.Background())
+		rollback("reboot-on", vmName)
+		return nil, fmt.Errorf("cold reboot power on: %w", err)
+	}
+	log.Printf("[instant-clone] waiting for IP %s after cold reboot", staticIP)
+	if err := conn.WaitForGuestIP(ctx, vmName, staticIP, ipWaitTimeout); err != nil {
+		ag, _ = r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusFailed).Save(context.Background())
+		rollback("wait-ip2", vmName)
+		return nil, fmt.Errorf("wait IP after reboot: %w", err)
+	}
+
+	// 8. GuestInfo (OpenClaw config, command=start-openclaw)
+	ocToken := secureToken()
+	gi := &deploy.AgentMgrGuestInfo{
+		Role: "clone", DeploymentID: deploymentID, Generation: generation,
+		Command:      "start-openclaw",
+		OpenClawUser: runAsUser, OpenClawHome: "/home/" + runAsUser,
+		OpenClawPort: "18789", OpenClawBaseURL: t.gwURL,
+		OpenClawModel: "minmax", OpenClawAPIKey: key.Key,
+		OpenClawGatewayToken: ocToken,
+	}
+	giMap := gi.ToGuestInfo()
+	if err := conn.SetGuestinfo(ctx, vmName, giMap); err != nil {
+		rollback("gi", vmName)
+		return nil, fmt.Errorf("set guestinfo: %w", err)
+	}
+	if err := conn.SetGuestinfo(ctx, vmName, map[string]string{"agentmgr.commit": generation}); err != nil {
+		rollback("commit", vmName)
+		return nil, fmt.Errorf("commit: %w", err)
+	}
+	log.Printf("[instant-clone] guestinfo oc written gen=%s", generation)
+
+	// 8. Wait for OpenClaw ACK (TCP :18789)
+	ag, err = r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusServiceStarting).Save(ctx)
+	if err != nil {
+		rollback("svc", vmName)
+		return nil, err
+	}
+
+	log.Printf("[instant-clone] waiting openclaw port on %s:18789", staticIP)
+	ocAddr := fmt.Sprintf("%s:18789", staticIP)
+	dl := time.Now().Add(ocReadyTimeout)
+	for {
+		if time.Now().After(dl) {
+			ag, _ = r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusFailed).Save(context.Background())
+			rollback("oc-timeout", vmName)
+			return nil, fmt.Errorf("openclaw not ready after %v", ocReadyTimeout)
+		}
+		c, err := net.DialTimeout("tcp", ocAddr, 3*time.Second)
+		if err == nil {
+			c.Close()
+			break
+		}
+		select {
+		case <-ctx.Done():
+			rollback("oc-ctx", vmName)
+			return nil, ctx.Err()
+		case <-time.After(3 * time.Second):
+		}
+	}
+
+	// 9. Clear sensitive + persist + RUNNING
+	_ = conn.SetGuestinfo(ctx, vmName, map[string]string{
+		"agentmgr.openclaw-api-key": "", "agentmgr.openclaw-gateway-token": "",
+	})
 	vkCreate := r.Ent.VirtualKey.Create().
-		SetLitellmKey(key.Key).
-		SetModelGatewayID(t.gwConn.ID).
-		SetModels(nil).
-		SetUserID(t.ownerID.String()).
-		SetName(ag.Name)
+		SetLitellmKey(key.Key).SetMaskedKey(maskKey(key.Key)).
+		SetModelGatewayID(t.gwConn.ID).SetModels(nil).
+		SetUserID(t.ownerID.String()).SetName(ag.Name + "-" + deploymentID[:8])
 	if key.Token != "" {
 		vkCreate.SetLitellmToken(key.Token)
 	}
 	vk, err := vkCreate.Save(ctx)
 	if err != nil {
-		r.rollbackDeployCreate(ctx, conn, t.gw, ag, vmName, key.Key)
-		return nil, fmt.Errorf("save vk: %w", err)
+		rollback("vk", vmName)
+		return nil, err
 	}
 
-	// 6. Mark the agent row running and point at the new VM.
 	updated, err := r.Ent.Agent.UpdateOne(ag).
-		SetStatus(agent.StatusRunning).
-		SetVMRef(vmName).
-		SetVirtualKeyID(vk.ID).
-		Save(ctx)
+		SetStatus(agent.StatusRunning).SetVMRef(vmName).SetVirtualKeyID(vk.ID).Save(ctx)
 	if err != nil {
 		r.rollbackDeployCreate(ctx, conn, t.gw, ag, vmName, key.Key)
-		return nil, fmt.Errorf("update agent: %w", err)
+		return nil, err
 	}
 
+	log.Printf("[instant-clone] SUCCESS deployment=%s agent=%s vm=%s ip=%s",
+		deploymentID, ag.Name, vmName, staticIP)
+
 	return &model.DeployedAgent{
-		Agent:            toModelAgent(updated),
-		VirtualKeySecret: key.Key,
-		TemplateVersion:  toModelOvaVersion(t.version, t.familyID.String()),
-		ResourcePool:     toModelResourcePool(t.pool),
+		Agent: toModelAgent(updated), VirtualKeySecret: key.Key,
+		TemplateVersion: toModelOvaVersion(t.version, t.familyID.String()),
+		ResourcePool:    toModelResourcePool(t.pool),
 	}, nil
 }

@@ -22,7 +22,7 @@ func (Agent) Fields() []ent.Field {
 		field.String("name").NotEmpty(),
 		field.String("agent_type").NotEmpty(), // = AgentTemplate.kind
 		field.Enum("status").
-			Values("provisioning", "running", "stopped", "exception").
+			Values("provisioning", "cloning", "guest_configuring", "network_connecting", "service_starting", "health_checking", "running", "stopped", "exception", "failed").
 			Default("provisioning"),
 		field.UUID("owner_user_id", uuid.UUID{}),
 		field.String("vm_ref").Optional(), // vCenter VM moRef/name
