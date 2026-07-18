@@ -5998,9 +5998,15 @@ enum AgentTemplateStatus {
 
 enum AgentStatus {
   provisioning
+  cloning
+  guest_configuring
+  network_connecting
+  service_starting
+  health_checking
   running
   stopped
   exception
+  failed
 }
 
 type AgentTemplate {
@@ -7563,7 +7569,7 @@ extend type Mutation {
   addProviderModelSpec(input: AddProviderModelSpecInput!): ProviderModel! @hasRole(any: [admin])
   updateProviderModelSpec(input: UpdateProviderModelSpecInput!): ProviderModel! @hasRole(any: [admin])
   updateProviderModel(input: UpdateProviderModelInput!): ProviderModel! @hasRole(any: [admin])
-  deleteProviderModelSpec(input: ProviderModelSpecIdInput!): ProviderModel! @hasRole(any: [admin])
+  deleteProviderModelSpec(input: ProviderModelSpecIdInput!): ProviderModel @hasRole(any: [admin])
   blockProviderModelSpec(input: ProviderModelSpecBlockInput!): ProviderModel! @hasRole(any: [admin])
   # 原有 probe / refresh(返回 4 档 status;ProviderModel 实体)
   testProviderConnection(name: String!): ProviderModelStatus! @hasRole(any: [admin])
@@ -22388,10 +22394,10 @@ func (ec *executionContext) _Mutation_deleteProviderModelSpec(ctx context.Contex
 			return next
 		},
 		func(ctx context.Context, selections ast.SelectionSet, v *model.ProviderModel) graphql.Marshaler {
-			return ec.marshalNProviderModel2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐProviderModel(ctx, selections, v)
+			return ec.marshalOProviderModel2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐProviderModel(ctx, selections, v)
 		},
 		true,
-		true,
+		false,
 	)
 }
 func (ec *executionContext) fieldContext_Mutation_deleteProviderModelSpec(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -40391,7 +40397,7 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_deleteProviderModelSpec(ctx, field)
 			})
-			if out.Values[i] == graphql.Null {
+			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
 		case "blockProviderModelSpec":
@@ -47836,6 +47842,13 @@ func (ec *executionContext) unmarshalOPagination2ᚖgithubᚗcomᚋVMwareᚑAI�
 	}
 	res, err := ec.unmarshalInputPagination(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOProviderModel2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐProviderModel(ctx context.Context, sel ast.SelectionSet, v *model.ProviderModel) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._ProviderModel(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOProviderModelInfoFilterInput2ᚖgithubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐProviderModelInfoFilterInput(ctx context.Context, v any) (*model.ProviderModelInfoFilterInput, error) {

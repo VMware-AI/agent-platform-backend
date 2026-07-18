@@ -11,37 +11,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// StartVirtualKeySpendRefresh periodically reads litellm /key/info for every
-// active VirtualKey and writes the resulting spend + last_active_at back to
-// the platform row. Drives the "消费进度" column on the M3 令牌管理 page
-// (design doc §4.1 — "消费控制进度条"). Spend is best-effort metadata; the
-// authoritative source is the gateway, so a worker failure is logged but
-// never surfaces as a request error.
-//
-// Each tick iterates every key sequentially — the dataset is small
-// (operator-curated; usually dozens, not thousands) and parallelism would
-// just hammer litellm. The per-row probe carries a 5s timeout; the worker's
-// overall tick is bounded by (5s × N) which for any reasonable fleet
-// stays well under the default 5m interval.
-//
-// Disabled when interval <= 0.
-func (r *Resolver) StartVirtualKeySpendRefresh(ctx context.Context, interval time.Duration) {
-	if interval <= 0 {
-		log.Printf("virtual-key spend refresh: disabled (VK_SPEND_REFRESH_INTERVAL_SECONDS=0)")
-		return
-	}
-	log.Printf("virtual-key spend refresh: every %s", interval)
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			r.refreshVirtualKeySpendOnce(ctx)
-		}
-	}
-}
+// StartVirtualKeySpendRefresh was removed in PR #3 cut-over. The unified
+// reconciler's spend_refresh phase now drives this loop; the body lives in
+// refreshVirtualKeySpendOnce below, which RefreshOneVirtualKeySpend calls
+// per-key.
 
 // refreshVirtualKeySpendOnce walks every active (non-revoked) key, calls
 // the issuing gateway's /key/info, and updates the platform row with the
@@ -56,15 +29,18 @@ func (r *Resolver) refreshVirtualKeySpendOnce(ctx context.Context) {
 		return
 	}
 	for _, k := range keys {
-		r.refreshOneVirtualKeySpend(ctx, k)
+		r.RefreshOneVirtualKeySpend(ctx, k)
 	}
 }
 
-// refreshOneVirtualKeySpend issues a single per-key /key/info probe. The
+// RefreshOneVirtualKeySpend issues a single per-key /key/info probe. The
 // key's gateway_connection_id drives which gateway to hit (LLD-14 —
 // "key's whole lifecycle routes by issuing gateway"); when missing (legacy
 // rows predating the field), falls back to the platform default.
-func (r *Resolver) refreshOneVirtualKeySpend(ctx context.Context, k *ent.VirtualKey) {
+//
+// Exported so internal/reconcile.Reconciler can call it via the
+// ResolverSource interface from the unified cycle's spend_refresh phase.
+func (r *Resolver) RefreshOneVirtualKeySpend(ctx context.Context, k *ent.VirtualKey) {
 	g, err := r.gatewayForVirtualKey(ctx, k)
 	if err != nil || g == nil {
 		log.Printf("virtual-key spend refresh: %s no gateway: %v", k.ID, err)

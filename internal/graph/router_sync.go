@@ -15,52 +15,18 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 )
 
-// StartRouterSettingsSync periodically re-aggregates every ModelRoute
-// row and POSTs the per-gateway router_settings payload to /config/update.
-// Driven by the LiteLLM design doc §3.2 "原子化路由策略全量覆盖刷新":
-// every save also pushes immediately (see
-// aggregateAndPushRouterSettings on the resolver side), but this worker is
-// the safety net that reconciles drift after an out-of-band edit or a
-// transient /config/update failure.
-//
-// Each ModelRoute is bound to exactly one GatewayConnection
-// (route.gateway_connection_id, NOT NULL), and the push is partitioned
-// accordingly: one POST per gateway, each carrying the routes bound to
-// that gateway only. This is the per-route "→ its litellm" mapping the
-// console needs; there is no platform default.
-//
-// Short-circuit: each (gateway, payload) pair is hashed (SHA-256 of the
-// canonical JSON). If the hash matches Resolver.lastRouterSettingsHash
-// (a process-local map shared with the resolver-side fire-and-forget
-// push), the tick skips the POST — nothing changed for that gateway
-// since the last push. On any mismatch — the first-ever tick, or a
-// previous push that failed — the tick falls through to the real POST.
-// Multi-replica deployments accept the redundant-but-correct first-tick
-// push from each replica.
-//
-// Disabled when interval <= 0.
-func (r *Resolver) StartRouterSettingsSync(ctx context.Context, interval time.Duration) {
-	if interval <= 0 {
-		log.Printf("router settings sync: disabled (ROUTER_SYNC_INTERVAL_SECONDS=0)")
-		return
-	}
-	log.Printf("router settings sync: every %s", interval)
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			r.syncRouterSettingsOnceShortCircuit(ctx)
-		}
-	}
-}
+// StartRouterSettingsSync was removed in PR #3 cut-over. The unified
+// reconciler's router_settings phase now drives this loop; see
+// SyncRouterSettingsShortCircuit below for the body that PR #3's
+// router_settings phase calls per cycle.
 
-// syncRouterSettingsOnceShortCircuit is the periodic-worker's tick body
+// SyncRouterSettingsShortCircuit is the unified reconciler's tick body
 // and the resolver-side push hook share. It loads active routes, groups
 // them by gateway, builds one RouterSettings per gateway, and short-
 // circuits on hash match.
+//
+// Exported so internal/reconcile.Reconciler can call it via ResolverSource
+// from the unified router_settings phase.
 //
 // Order of operations per gateway:
 //  1. Build the payload. On any build-time failure (DB read, etc.) log
@@ -75,7 +41,7 @@ func (r *Resolver) StartRouterSettingsSync(ctx context.Context, interval time.Du
 // targetGateway, when non-zero, scopes the entire run to one gateway
 // (the resolver-side hook uses this — the route being saved only needs
 // its own gateway re-pushed). uuid.Nil means "every gateway".
-func (r *Resolver) syncRouterSettingsOnceShortCircuit(ctx context.Context, targetGateway ...uuid.UUID) {
+func (r *Resolver) SyncRouterSettingsShortCircuit(ctx context.Context, targetGateway ...uuid.UUID) {
 	routesByGW, err := r.loadRouterSettingsBuckets(ctx)
 	if err != nil {
 		log.Printf("router settings sync: %v", err)
@@ -210,10 +176,10 @@ func (r *Resolver) pushRouterSettingsTo(ctx context.Context, gwID uuid.UUID, set
 // syncRouterSettings use.
 func (r *Resolver) AggregateAndPushRouterSettings(ctx context.Context, targetGateway uuid.UUID) {
 	if targetGateway == uuid.Nil {
-		r.syncRouterSettingsOnceShortCircuit(ctx)
+		r.SyncRouterSettingsShortCircuit(ctx)
 		return
 	}
-	r.syncRouterSettingsOnceShortCircuit(ctx, targetGateway)
+	r.SyncRouterSettingsShortCircuit(ctx, targetGateway)
 }
 
 // AggregateAndPushRouterSettingsFireAndForget schedules a router-settings

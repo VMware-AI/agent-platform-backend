@@ -11,7 +11,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"log/slog"
+	"strings"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
@@ -216,4 +218,484 @@ func jsonMarshalToBytes(v any) ([]byte, error) {
 
 func jsonUnmarshalBytes(data []byte, v any) error {
 	return json.Unmarshal(data, v)
+}
+
+// ReconcileProviderModelDrift runs the per-gateway ProviderModel diff loop for
+// the unified reconciler. For every ProviderModel owned by conn it compares
+// model_specs[*].modelInfo.id against LiteLLM's /v2/model/info (the spec-IDs
+// already persisted to LiteLLM at create time) and detects three drifts:
+//
+//   - Drift A (LiteLLM-only specs, ids not in DB): detect + log only. IGNORE.
+//     LiteLLM is the source of creation; we never auto-import.
+//   - Drift B (DB specs, ids missing at LiteLLM): re-push via
+//     pushModelUpdateToLitellm so the gateway state matches DB state. Counts
+//     in the returned `repushed` total.
+//   - Drift C (whole LiteLLM group empty): same as Drift B; whole-group
+//     re-push.
+//
+// Specs whose modelInfo.id is empty (newly created, push hasn't returned yet)
+// are skipped — they are "in flight", not drift.
+//
+// Guard: if every spec on a ProviderModel has empty modelInfo.id we refuse to
+// push, since that signature means "specs were never pushed" (mutator failed
+// before litellm returned ids), not "specs were dropped".
+//
+// Exported so internal/reconcile.Reconciler can call it via the ResolverSource
+// interface from the unified cycle's provider_models phase.
+func (r *Resolver) ReconcileProviderModelDrift(ctx context.Context, conn *ent.GatewayConnection) (repushed int, driftA int, err error) {
+	if conn == nil {
+		return 0, 0, fmt.Errorf("nil gateway connection")
+	}
+
+	ac := r.buildGatewayAdminClient(ctx, conn)
+	if ac == nil {
+		return 0, 0, fmt.Errorf("admin client build failed for gateway %s", conn.ID)
+	}
+
+	// Every ProviderModel owned by this gateway. model_gateway_id on
+	// ProviderModel is the canonical owner link.
+	pms, qerr := r.Ent.ProviderModel.Query().All(ctx)
+	if qerr != nil {
+		return 0, 0, fmt.Errorf("query provider models: %w", qerr)
+	}
+
+	for _, pm := range pms {
+		if pm == nil {
+			continue
+		}
+		if pm.ModelGatewayID != conn.ID {
+			continue
+		}
+
+		specs, parseErr := parseModelSpecsJSON(pm.ModelSpecs)
+		if parseErr != nil {
+			log.Printf("reconcile: provider_models pm_id=%s parse specs: %v", pm.ID, parseErr)
+			continue
+		}
+
+		// Guard: refuse to push if every spec has empty model_info.id — that's
+		// the "specs were never pushed" signature (mutator failed before
+		// litellm returned ids), not "specs were dropped".
+		anyID := false
+		for _, s := range specs {
+			if s.ModelInfo.ID != "" {
+				anyID = true
+				break
+			}
+		}
+		if !anyID {
+			log.Printf("reconcile: provider_models pm_id=%s all specs have empty model_info.id; refusing to push", pm.ID)
+			continue
+		}
+
+		// Pull LiteLLM's view of this group. /v2/model/info?model_group=<name>
+		// returns deployments (model_info[].id) under that group.
+		//
+		// IMPORTANT: observed LiteLLM versions do NOT reliably honor the
+		// ?model_group= query param — the response can include deployments
+		// from OTHER groups too. We filter client-side by ModelName ==
+		// pm.Name so the per-PM diff is correct regardless of LiteLLM's
+		// filter behavior. Without this filter, a missing group would be
+		// misreported as "group exists with these (foreign) ids", routing
+		// to /model/update (which 500s when our DB ids don't match the
+		// foreign ones) instead of /model/new per spec.
+		info, gerr := ac.GetGroupedModelInfo(ctx, pm.Name)
+		if gerr != nil {
+			log.Printf("reconcile: provider_models pm_id=%s name=%s GetGroupedModelInfo: %v", pm.ID, pm.Name, gerr)
+			continue
+		}
+		allSpecs, perr := parseGroupedModelInfoSpecs(info.Raw)
+		if perr != nil {
+			log.Printf("reconcile: provider_models pm_id=%s parse grouped info: %v", pm.ID, perr)
+			continue
+		}
+		// Filter to ONLY deployments whose model_name matches this PM's
+		// name — the server's group filter is unreliable.
+		var gwSpecs []groupedModelSpec
+		var gwForeign []groupedModelSpec
+		for _, s := range allSpecs {
+			if s.ModelName == pm.Name {
+				gwSpecs = append(gwSpecs, s)
+			} else {
+				gwForeign = append(gwForeign, s)
+			}
+		}
+		gwSet := make(map[string]struct{}, len(gwSpecs))
+		for _, s := range gwSpecs {
+			gwSet[s.ID] = struct{}{}
+		}
+		if len(gwForeign) > 0 {
+			log.Printf("reconcile: provider_models pm_id=%s name=%s note: GetGroupedModelInfo returned %d deployment(s) from other groups (filter is unreliable), ignored %s",
+				pm.ID, pm.Name, len(gwForeign), foreignIDs(gwForeign))
+		}
+
+		// Drift A (LiteLLM-only): any id present at the gateway but not in DB.
+		for id := range gwSet {
+			found := false
+			for _, s := range specs {
+				if s.ModelInfo.ID == id {
+					found = true
+					break
+				}
+			}
+			if !found {
+				driftA++
+				log.Printf("reconcile: provider_models pm_id=%s name=%s drift_a liteLLM_only_id=%s", pm.ID, pm.Name, id)
+			}
+		}
+
+		// Drift B (DB-only) and Drift C (whole group empty at LiteLLM): any
+		// spec in DB whose id is not present at the gateway. The recovery
+		// primitive depends on whether the group exists at LiteLLM at all:
+		//
+		//   - Group exists at LiteLLM (len(gwSet) > 0): use PushModelUpdate
+		//     (POST /model/update) to atomically replace the group. /model/update
+		//     requires the group to already exist — LiteLLM 500s otherwise.
+		//   - Group missing at LiteLLM (len(gwSet) == 0): use pushSpecToLitellm
+		//     (POST /model/new) per spec. /model/new creates a single deployment
+		//     under the group, generating a fresh model_info.id that LiteLLM
+		//     picks itself (the id we POST in model_info is ignored). After
+		//     recovery, the stored ids in pm.ModelSpecs are stale; the next
+		//     reconcile cycle will detect Drift B again (DB ids ≠ LiteLLM ids)
+		//     and re-push via /model/update. If /model/update preserves the
+		//     posted ids, the cycle converges; if not, a future enhancement
+		//     will read /v2/model/info after each push and overwrite DB ids.
+		groupMissing := len(gwSet) == 0
+		needsRepush := groupMissing
+		if !groupMissing {
+			for _, s := range specs {
+				if s.ModelInfo.ID == "" {
+					continue
+				}
+				if _, ok := gwSet[s.ModelInfo.ID]; !ok {
+					needsRepush = true
+					break
+				}
+			}
+		}
+		if !needsRepush {
+			continue
+		}
+
+		if groupMissing {
+			// Whole group empty → create each spec via /model/new.
+			ok := true
+			for _, s := range specs {
+				if perr := r.pushSpecToLitellm(ctx, pm, conn, s); perr != nil {
+					log.Printf("reconcile: provider_models pm_id=%s name=%s push_spec failed: %v",
+						pm.ID, pm.Name, perr)
+					ok = false
+					// continue with remaining specs — partial recovery is
+					// better than none, and the next cycle will retry the
+					// failed ones.
+				}
+			}
+			if !ok {
+				continue
+			}
+			repushed++
+			log.Printf("reconcile: provider_models pm_id=%s name=%s repushed via /model/new spec_count=%d (group was empty)",
+				pm.ID, pm.Name, len(specs))
+		} else {
+			// Group exists with some specs → atomic replace via /model/update.
+			if rerr := r.pushModelUpdateToLitellm(ctx, pm, conn, specs); rerr != nil {
+				log.Printf("reconcile: provider_models pm_id=%s name=%s repush /model/update: %v",
+					pm.ID, pm.Name, rerr)
+				continue
+			}
+			repushed++
+			log.Printf("reconcile: provider_models pm_id=%s name=%s repushed via /model/update spec_count=%d",
+				pm.ID, pm.Name, len(specs))
+		}
+
+		// ID re-sync: re-read /v2/model/info and overwrite the DB-stored
+		// model_info.id with whatever LiteLLM actually has right now.
+		//
+		// Background: /model/new generates a fresh id that ignores any id
+		// we POST in model_info; /model/update's id-preservation behavior
+		// is undocumented. Without this step, a group that came back via
+		// /model/new would have stale DB ids, the next cycle would see
+		// Drift B (DB id missing from gwSet), re-push, and either converge
+		// (if /model/update preserves ids) or loop (if it doesn't).
+		//
+		// Matching is keyed on (ProviderModel.name, litellm_params.model) —
+		// stable across pushes. Duplicate models within one ProviderModel
+		// are matched positionally to keep the order stable (a real edge
+		// case — most ProviderModels have heterogeneous specs).
+		r.syncSpecIDsFromLiteLLM(ctx, ac, pm, specs)
+	}
+
+	return repushed, driftA, nil
+}
+
+// parseGroupedModelInfoIDs extracts model_info[].id strings from the LiteLLM
+// /v2/model/info response. The wire shape (LiteLLM 1.40+) is:
+//
+//	{ "data": [ { "model_info": { "id": "..." }, ... }, ... ] }
+//
+// Defensive: missing fields, empty data, non-array responses all return an
+// empty slice (NOT an error) — "no deployments" is a valid state that simply
+// means Drift C re-push should run.
+func parseGroupedModelInfoIDs(raw json.RawMessage) ([]string, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	var resp struct {
+		Data []struct {
+			ModelInfo struct {
+				ID string `json:"id"`
+			} `json:"model_info"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, fmt.Errorf("unmarshal grouped model info: %w", err)
+	}
+	ids := make([]string, 0, len(resp.Data))
+	for _, d := range resp.Data {
+		if d.ModelInfo.ID != "" {
+			ids = append(ids, d.ModelInfo.ID)
+		}
+	}
+	return ids, nil
+}
+
+// groupedModelSpec is the slim view of one LiteLLM deployment we need for
+// per-PM diff and id re-sync: the group name (model_name), the upstream
+// model name (litellm_params.model — used as the stable match key against
+// DB specs), and the LiteLLM-assigned model_info.id (used to overwrite
+// the possibly-stale DB-side id).
+type groupedModelSpec struct {
+	ModelName string // model_name — the LiteLLM group this deployment belongs to
+	Model     string // litellm_params.model — the upstream model name (e.g. "gpt-4o")
+	ID        string // model_info.id — LiteLLM-assigned spec id
+}
+
+// parseGroupedModelInfoSpecs extracts (model_name, litellm_params.model,
+// model_info.id) triples from the LiteLLM /v2/model/info response.
+//
+// IMPORTANT: in observed LiteLLM versions the ?model_group=X query param
+// is NOT reliably honored — the response can contain deployments from
+// OTHER groups as well. Callers MUST filter the result by ModelName ==
+// pm.Name themselves before treating it as "specs in this group".
+func parseGroupedModelInfoSpecs(raw json.RawMessage) ([]groupedModelSpec, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	var resp struct {
+		Data []struct {
+			ModelName     string `json:"model_name"`
+			LitellmParams struct {
+				Model string `json:"model"`
+			} `json:"litellm_params"`
+			ModelInfo struct {
+				ID string `json:"id"`
+			} `json:"model_info"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, fmt.Errorf("unmarshal grouped model info (specs): %w", err)
+	}
+	out := make([]groupedModelSpec, 0, len(resp.Data))
+	for _, d := range resp.Data {
+		if d.ModelInfo.ID == "" {
+			continue
+		}
+		out = append(out, groupedModelSpec{
+			ModelName: d.ModelName,
+			Model:     d.LitellmParams.Model,
+			ID:        d.ModelInfo.ID,
+		})
+	}
+	return out, nil
+}
+
+// foreignIDs returns a short, comma-separated summary of the model_name +
+// id pairs in a slice of groupedModelSpec, used for the "LiteLLM returned
+// deployments from other groups" diagnostic line. Capped at 4 entries to
+// keep the log readable.
+func foreignIDs(specs []groupedModelSpec) string {
+	const max = 4
+	if len(specs) <= max {
+		parts := make([]string, len(specs))
+		for i, s := range specs {
+			parts[i] = s.ModelName + "=" + s.ID
+		}
+		return strings.Join(parts, ",")
+	}
+	parts := make([]string, 0, max+1)
+	for i := 0; i < max; i++ {
+		parts = append(parts, specs[i].ModelName+"="+specs[i].ID)
+	}
+	return strings.Join(parts, ",") + fmt.Sprintf(",+ %d more", len(specs)-max)
+}
+
+// syncSpecIDsFromLiteLLM is the id re-sync step. After any successful push
+// (Drift B via /model/update or Drift C via /model/new), the DB-stored
+// model_info.id may be stale: /model/new always generates a fresh id and
+// /model/update's preservation behavior is undocumented. To converge in
+// one cycle, re-read /v2/model/info and overwrite each DB spec's id with
+// whatever LiteLLM actually has, matched by upstream model name
+// (litellm_params.model — stable across pushes).
+//
+// As with the per-cycle diff above, the LiteLLM response is filtered by
+// model_name before matching — otherwise foreign deployments could be
+// picked up as id candidates.
+//
+// Matching strategy: for each DB spec, find a LiteLLM spec with the same
+// upstream model name. Duplicates within one ProviderModel are matched
+// positionally (left-to-right) so the assignment is stable across cycles.
+// Specs whose model isn't present at LiteLLM are left untouched (they
+// remain "missing" and the next cycle will retry).
+//
+// The DB write is best-effort: a persist failure is logged but does not
+// invalidate the push that just succeeded. The next cycle will retry the
+// id sync.
+func (r *Resolver) syncSpecIDsFromLiteLLM(ctx context.Context, ac *gateway.AdminClient, pm *ent.ProviderModel, dbSpecs []specJSON) {
+	info, err := ac.GetGroupedModelInfo(ctx, pm.Name)
+	if err != nil {
+		log.Printf("reconcile: provider_models pm_id=%s name=%s id_sync GetGroupedModelInfo: %v",
+			pm.ID, pm.Name, err)
+		return
+	}
+	allSpecs, err := parseGroupedModelInfoSpecs(info.Raw)
+	if err != nil {
+		log.Printf("reconcile: provider_models pm_id=%s name=%s id_sync parse: %v",
+			pm.ID, pm.Name, err)
+		return
+	}
+	var gwSpecs []groupedModelSpec
+	for _, s := range allSpecs {
+		if s.ModelName == pm.Name {
+			gwSpecs = append(gwSpecs, s)
+		}
+	}
+	if len(gwSpecs) == 0 {
+		return // LiteLLM no longer has the group — nothing to sync
+	}
+
+	// Track which LiteLLM specs we've already assigned to a DB spec, so
+	// duplicates get matched positionally rather than repeatedly to the
+	// first DB spec.
+	used := make(map[int]bool, len(gwSpecs))
+
+	updated := 0
+	newSpecs := make([]map[string]any, len(dbSpecs))
+	for i, s := range dbSpecs {
+		// Re-marshal the spec back to map[string]any (the column's storage
+		// type). We can't avoid this round-trip — ent stores specs as
+		// []map[string]any, not as the typed specJSON shape.
+		newSpecs[i] = marshalSpecForStorage(s)
+		if s.LitellmParams.Model == "" {
+			continue
+		}
+		// Find first unused LiteLLM spec with matching upstream model.
+		matchedIdx := -1
+		for j, gs := range gwSpecs {
+			if used[j] {
+				continue
+			}
+			if gs.Model == s.LitellmParams.Model {
+				matchedIdx = j
+				break
+			}
+		}
+		if matchedIdx < 0 {
+			continue // LiteLLM still doesn't have this spec
+		}
+		used[matchedIdx] = true
+		newID := gwSpecs[matchedIdx].ID
+		if s.ModelInfo.ID == newID {
+			continue // already aligned — no write needed
+		}
+		// Patch the modelInfo.id in the map form.
+		mi, ok := newSpecs[i]["modelInfo"].(map[string]any)
+		if !ok {
+			mi = map[string]any{}
+			newSpecs[i]["modelInfo"] = mi
+		}
+		mi["id"] = newID
+		updated++
+	}
+
+	if updated == 0 {
+		return // nothing changed; skip the write
+	}
+
+	if _, err := r.Ent.ProviderModel.UpdateOneID(pm.ID).
+		SetModelSpecs(newSpecs).
+		Save(ctx); err != nil {
+		log.Printf("reconcile: provider_models pm_id=%s name=%s id_sync persist: %v",
+			pm.ID, pm.Name, err)
+		return
+	}
+	log.Printf("reconcile: provider_models pm_id=%s name=%s id_sync updated=%d (DB ids aligned with LiteLLM)",
+		pm.ID, pm.Name, updated)
+}
+
+// marshalSpecForStorage converts a specJSON (the typed view) back to the
+// map[string]any shape that ent stores in model_specs. The conversion
+// preserves the field names as the DB column expects (camelCase JSON
+// matching specJSON's tags).
+func marshalSpecForStorage(s specJSON) map[string]any {
+	out := map[string]any{
+		"litellmParams": map[string]any{},
+		"modelInfo":     map[string]any{},
+	}
+	lp := map[string]any{}
+	if s.LitellmParams.Model != "" {
+		lp["model"] = s.LitellmParams.Model
+	}
+	if s.LitellmParams.APIKey != nil {
+		lp["apiKey"] = *s.LitellmParams.APIKey
+	}
+	if s.LitellmParams.APIKeyRef != nil {
+		lp["apiKeyRef"] = *s.LitellmParams.APIKeyRef
+	}
+	if s.LitellmParams.APIBase != nil {
+		lp["apiBase"] = *s.LitellmParams.APIBase
+	}
+	if s.LitellmParams.CustomLlmProvider != nil {
+		lp["customLlmProvider"] = *s.LitellmParams.CustomLlmProvider
+	}
+	if s.LitellmParams.Organization != nil {
+		lp["organization"] = *s.LitellmParams.Organization
+	}
+	if s.LitellmParams.Tpm != nil {
+		lp["tpm"] = *s.LitellmParams.Tpm
+	}
+	if s.LitellmParams.Rpm != nil {
+		lp["rpm"] = *s.LitellmParams.Rpm
+	}
+	if s.LitellmParams.MaxBudget != nil {
+		lp["maxBudget"] = *s.LitellmParams.MaxBudget
+	}
+	if s.LitellmParams.BudgetDuration != nil {
+		lp["budgetDuration"] = *s.LitellmParams.BudgetDuration
+	}
+	if len(s.LitellmParams.Tags) > 0 {
+		lp["tags"] = s.LitellmParams.Tags
+	}
+	out["litellmParams"] = lp
+
+	mi := map[string]any{}
+	if s.ModelInfo.ID != "" {
+		mi["id"] = s.ModelInfo.ID
+	}
+	if s.ModelInfo.Mode != nil {
+		mi["mode"] = *s.ModelInfo.Mode
+	}
+	if s.ModelInfo.Blocked {
+		mi["blocked"] = true
+	}
+	if s.ModelInfo.AdditionalProp1 != nil {
+		mi["additionalProp1"] = map[string]any{
+			"status": s.ModelInfo.AdditionalProp1.Status,
+		}
+		if s.ModelInfo.AdditionalProp1.Message != nil {
+			mi["additionalProp1"].(map[string]any)["message"] = *s.ModelInfo.AdditionalProp1.Message
+		}
+	}
+	out["modelInfo"] = mi
+
+	return out
 }

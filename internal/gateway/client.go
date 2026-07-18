@@ -307,33 +307,145 @@ func (c *HTTPClient) DeleteTeam(ctx context.Context, teamID string) error {
 	return c.post(ctx, "/team/delete", map[string]any{"team_ids": []string{teamID}}, nil)
 }
 
-// ListKeys enumerates the gateway's keys via GET /key/list. The wire item carries
-// both a hashed token and (when configured) a raw key; the raw key wins as the
-// comparable identifier, falling back to the token.
+// ListKeys enumerates the gateway's keys via GET /key/list. The wire item
+// shape varies by LiteLLM version and admin permissions:
+//
+//   - newer / admin:    { "keys": [{"token":..., "key":..., "user_id":..., "team_id":...}] }
+//   - older / minimal:  { "keys": ["sk-...", ...] }
+//
+// Both shapes are accepted in a single round-trip: the response body is
+// decoded once into a RawMessage, then dispatched by the first non-WS byte
+// of the "keys" array (a quote → string array, a bracket → object array).
+// No retry, no fallback log noise — a clean diff between the two shapes
+// lives in the bytes themselves.
+//
+// LiteLLM paginates large key lists: the response carries `total_pages`
+// alongside `current_page` and `total_count`. The default page size in
+// upstream LiteLLM is 25; for deployments with > 25 keys we must walk all
+// pages or we'd miss keys (and the reconciler would treat them as Drift A
+// orphans — never deleted but permanently logged). Page iteration uses
+// `?current_page=N` query param and stops at total_pages.
+//
+// The raw key wins as the comparable identifier, falling back to the
+// token when the object form reports no key.
 func (c *HTTPClient) ListKeys(ctx context.Context) ([]KeyInfo, error) {
-	var out struct {
-		Keys []struct {
+	// Page 1: also discovers total_pages.
+	var first struct {
+		Keys       json.RawMessage `json:"keys"`
+		TotalPages int             `json:"total_pages"`
+	}
+	if err := c.get(ctx, "/key/list", &first); err != nil {
+		return nil, err
+	}
+	out, err := decodeKeysArray(first.Keys)
+	if err != nil {
+		return nil, err
+	}
+
+	// Single-page case — the common path.
+	if first.TotalPages <= 1 {
+		return out, nil
+	}
+
+	// Walk remaining pages. Per-page failure surfaces immediately (caller
+	// decides log-vs-retry; the reconciler logs and skips the gateway).
+	for page := 2; page <= first.TotalPages; page++ {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		var p struct {
+			Keys json.RawMessage `json:"keys"`
+		}
+		if err := c.get(ctx, fmt.Sprintf("/key/list?current_page=%d", page), &p); err != nil {
+			return nil, fmt.Errorf("list keys page %d: %w", page, err)
+		}
+		more, err := decodeKeysArray(p.Keys)
+		if err != nil {
+			return nil, fmt.Errorf("decode keys page %d: %w", page, err)
+		}
+		out = append(out, more...)
+	}
+	return out, nil
+}
+
+// decodeKeysArray decodes a /key/list `keys` field whose element shape
+// is one of:
+//   - string array  → yields KeyInfo{Key: <string>}
+//   - object array  → yields KeyInfo{Key: <key|token>, UserID, TeamID}
+//
+// Returns an empty slice for null / empty input.
+//
+// Shape dispatch: probe the array into []json.RawMessage, then peek the
+// first element. An earlier version peeked trimmed[0] which always saw
+// `[` (the array wrapper) and misrouted string arrays to the object-
+// array branch — producing a misleading
+// "cannot unmarshal string into struct {Token, Key, UserID, TeamID}"
+// error on every cycle. Looking INSIDE the array at the first element
+// gives the actual shape: `"` for strings, `{` for objects.
+func decodeKeysArray(raw json.RawMessage) ([]KeyInfo, error) {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 || string(trimmed) == "null" {
+		return nil, nil
+	}
+
+	// Probe: decode the outer array as []json.RawMessage. This handles
+	// any leading/trailing whitespace and validates JSON syntax up front.
+	var elements []json.RawMessage
+	if err := json.Unmarshal(trimmed, &elements); err != nil {
+		return nil, fmt.Errorf("decode keys array: %w", err)
+	}
+	if len(elements) == 0 {
+		return nil, nil
+	}
+
+	// Peek the first element's first non-WS byte.
+	first := bytes.TrimSpace(elements[0])
+	if len(first) == 0 {
+		return nil, fmt.Errorf("decode keys: first element is empty")
+	}
+	switch first[0] {
+	case '"':
+		// String array form: { "keys": ["sk-...", ...] }
+		var strs []string
+		if err := json.Unmarshal(trimmed, &strs); err != nil {
+			return nil, fmt.Errorf("decode keys as string array: %w", err)
+		}
+		out := make([]KeyInfo, 0, len(strs))
+		for _, s := range strs {
+			if s == "" {
+				continue
+			}
+			out = append(out, KeyInfo{Key: s})
+		}
+		return out, nil
+
+	case '{':
+		// Object array form: { "keys": [{"token":..., "key":..., ...}, ...] }
+		var objs []struct {
 			Token  string `json:"token"`
 			Key    string `json:"key"`
 			UserID string `json:"user_id"`
 			TeamID string `json:"team_id"`
-		} `json:"keys"`
-	}
-	if err := c.get(ctx, "/key/list", &out); err != nil {
-		return nil, err
-	}
-	keys := make([]KeyInfo, 0, len(out.Keys))
-	for _, k := range out.Keys {
-		id := k.Key
-		if id == "" {
-			id = k.Token
 		}
-		if id == "" {
-			continue // unidentifiable entry — skip rather than treat "" as an orphan
+		if err := json.Unmarshal(trimmed, &objs); err != nil {
+			return nil, fmt.Errorf("decode keys as object array: %w", err)
 		}
-		keys = append(keys, KeyInfo{Key: id, UserID: k.UserID, TeamID: k.TeamID})
+		out := make([]KeyInfo, 0, len(objs))
+		for _, k := range objs {
+			id := k.Key
+			if id == "" {
+				id = k.Token
+			}
+			if id == "" {
+				continue
+			}
+			out = append(out, KeyInfo{Key: id, UserID: k.UserID, TeamID: k.TeamID})
+		}
+		return out, nil
+
+	default:
+		return nil, fmt.Errorf("decode keys: unexpected element shape, starts with %q", first[0])
 	}
-	return keys, nil
 }
 
 // ListTeams enumerates the gateway's teams via GET /team/list. LiteLLM returns a
