@@ -373,18 +373,41 @@ func (c *HTTPClient) ListKeys(ctx context.Context) ([]KeyInfo, error) {
 //   - string array  → yields KeyInfo{Key: <string>}
 //   - object array  → yields KeyInfo{Key: <key|token>, UserID, TeamID}
 //
-// Returns an empty slice for null / empty input. The shape dispatch
-// looks at the first non-WS byte: `"` (quote) for strings, `[` for
-// objects, anything else is an unknown shape.
+// Returns an empty slice for null / empty input.
+//
+// Shape dispatch: probe the array into []json.RawMessage, then peek the
+// first element. An earlier version peeked trimmed[0] which always saw
+// `[` (the array wrapper) and misrouted string arrays to the object-
+// array branch — producing a misleading
+// "cannot unmarshal string into struct {Token, Key, UserID, TeamID}"
+// error on every cycle. Looking INSIDE the array at the first element
+// gives the actual shape: `"` for strings, `{` for objects.
 func decodeKeysArray(raw json.RawMessage) ([]KeyInfo, error) {
 	trimmed := bytes.TrimSpace(raw)
 	if len(trimmed) == 0 || string(trimmed) == "null" {
 		return nil, nil
 	}
-	switch trimmed[0] {
+
+	// Probe: decode the outer array as []json.RawMessage. This handles
+	// any leading/trailing whitespace and validates JSON syntax up front.
+	var elements []json.RawMessage
+	if err := json.Unmarshal(trimmed, &elements); err != nil {
+		return nil, fmt.Errorf("decode keys array: %w", err)
+	}
+	if len(elements) == 0 {
+		return nil, nil
+	}
+
+	// Peek the first element's first non-WS byte.
+	first := bytes.TrimSpace(elements[0])
+	if len(first) == 0 {
+		return nil, fmt.Errorf("decode keys: first element is empty")
+	}
+	switch first[0] {
 	case '"':
+		// String array form: { "keys": ["sk-...", ...] }
 		var strs []string
-		if err := json.Unmarshal(raw, &strs); err != nil {
+		if err := json.Unmarshal(trimmed, &strs); err != nil {
 			return nil, fmt.Errorf("decode keys as string array: %w", err)
 		}
 		out := make([]KeyInfo, 0, len(strs))
@@ -396,14 +419,15 @@ func decodeKeysArray(raw json.RawMessage) ([]KeyInfo, error) {
 		}
 		return out, nil
 
-	case '[':
+	case '{':
+		// Object array form: { "keys": [{"token":..., "key":..., ...}, ...] }
 		var objs []struct {
 			Token  string `json:"token"`
 			Key    string `json:"key"`
 			UserID string `json:"user_id"`
 			TeamID string `json:"team_id"`
 		}
-		if err := json.Unmarshal(raw, &objs); err != nil {
+		if err := json.Unmarshal(trimmed, &objs); err != nil {
 			return nil, fmt.Errorf("decode keys as object array: %w", err)
 		}
 		out := make([]KeyInfo, 0, len(objs))
@@ -420,7 +444,7 @@ func decodeKeysArray(raw json.RawMessage) ([]KeyInfo, error) {
 		return out, nil
 
 	default:
-		return nil, fmt.Errorf("decode keys: unexpected array shape, starts with %q", trimmed[0])
+		return nil, fmt.Errorf("decode keys: unexpected element shape, starts with %q", first[0])
 	}
 }
 
