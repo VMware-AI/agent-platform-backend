@@ -998,216 +998,250 @@ func (c *Client) ConnectNIC(ctx context.Context, vmName string) error {
 		return task.Wait(ctx)
 	}
 	return fmt.Errorf("no ethernet adapter found on %s", vmName)
+}
+
+// ── Guest Customization Manager (Instant Clone static IP) ───────────────
+
+// CustomizeGuestRequest describes static IP customization for instant clones.
+type CustomizeGuestRequest struct {
+	Username, Password, Hostname, IPAddress, SubnetMask, Gateway string
+	PrefixLen                                                    int
+	DNSServers, DNSSearch                                        []string
+}
+
+// CustomizeInstantCloneGuest calls vCenter GuestCustomizationManager:
+// wait VMware Tools → CustomizeGuest_Task → StartGuestNetwork_Task.
+func (c *Client) CustomizeInstantCloneGuest(ctx context.Context, vmName string, req CustomizeGuestRequest) error {
+	vm, err := c.findVM(ctx, vmName)
+	if err != nil {
+		return fmt.Errorf("find vm: %w", err)
+	}
+	gcmRef := c.vc.ServiceContent.GuestCustomizationManager
+	if gcmRef == nil {
+		return fmt.Errorf("GuestCustomizationManager unavailable on this vCenter")
+	}
+	// Wait VMware Tools with longer timeout for instant clone stabilization
+	// NIC must be disconnected for GOSC to customize (VMware docs step 3).
+	// Also: disconnect+reconnect forces guest kernel to detect new MAC.
+	log.Printf("[guest-customize] disconnecting NIC on %s before customization", vmName)
+	if err := c.disconnectNIC(ctx, vm); err != nil {
+		log.Printf("[guest-customize] disconnect NIC non-fatal: %v", err)
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(2 * time.Second):
 	}
 
-	// ── Guest Customization Manager (Instant Clone static IP) ───────────────
-
-	// CustomizeGuestRequest describes static IP customization for instant clones.
-	type CustomizeGuestRequest struct {
-		Username, Password, Hostname, IPAddress, SubnetMask, Gateway string
-		PrefixLen int
-		DNSServers, DNSSearch []string
+	log.Printf("[guest-customize] waiting for VMware Tools on %s", vmName)
+	if err := waitForTools(ctx, vm); err != nil {
+		return fmt.Errorf("vmware tools: %w", err)
 	}
-
-	// CustomizeInstantCloneGuest calls vCenter GuestCustomizationManager:
-	// wait VMware Tools → CustomizeGuest_Task → StartGuestNetwork_Task.
-	func (c *Client) CustomizeInstantCloneGuest(ctx context.Context, vmName string, req CustomizeGuestRequest) error {
-		vm, err := c.findVM(ctx, vmName)
-		if err != nil {
-			return fmt.Errorf("find vm: %w", err)
-		}
-		gcmRef := c.vc.ServiceContent.GuestCustomizationManager
-		if gcmRef == nil {
-			return fmt.Errorf("GuestCustomizationManager unavailable on this vCenter")
-		}
-		// Wait VMware Tools with longer timeout for instant clone stabilization
-		// NIC must be disconnected for GOSC to customize (VMware docs step 3).
-		// Also: disconnect+reconnect forces guest kernel to detect new MAC.
-		log.Printf("[guest-customize] disconnecting NIC on %s before customization", vmName)
-		if err := c.disconnectNIC(ctx, vm); err != nil {
-			log.Printf("[guest-customize] disconnect NIC non-fatal: %v", err)
-		}
-		select { case <-ctx.Done(): return ctx.Err(); case <-time.After(2 * time.Second): }
-
-		log.Printf("[guest-customize] waiting for VMware Tools on %s", vmName)
-		if err := waitForTools(ctx, vm); err != nil {
-			return fmt.Errorf("vmware tools: %w", err)
-		}
-		select {
-		case <-ctx.Done(): return ctx.Err()
-		case <-time.After(10 * time.Second):
-		}
-		// Build spec
-		mask := req.SubnetMask
-		if mask == "" { mask = prefixToMask(req.PrefixLen) }
-		host := req.Hostname; if host == "" { host = req.IPAddress }
-		gws := []string{}; if req.Gateway != "" { gws = []string{req.Gateway} }
-		spec := &types.CustomizationSpec{
-			Identity: &types.CustomizationLinuxPrep{
-				HostName: &types.CustomizationFixedName{Name: host},
-				Password: &types.CustomizationPassword{
-					Value:     req.Password,
-					PlainText: true,
-				},
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(10 * time.Second):
+	}
+	// Build spec
+	mask := req.SubnetMask
+	if mask == "" {
+		mask = prefixToMask(req.PrefixLen)
+	}
+	host := req.Hostname
+	if host == "" {
+		host = req.IPAddress
+	}
+	gws := []string{}
+	if req.Gateway != "" {
+		gws = []string{req.Gateway}
+	}
+	spec := &types.CustomizationSpec{
+		Identity: &types.CustomizationLinuxPrep{
+			HostName: &types.CustomizationFixedName{Name: host},
+			Password: &types.CustomizationPassword{
+				Value:     req.Password,
+				PlainText: true,
 			},
-			GlobalIPSettings: types.CustomizationGlobalIPSettings{
+		},
+		GlobalIPSettings: types.CustomizationGlobalIPSettings{
+			DnsServerList: req.DNSServers,
+			DnsSuffixList: req.DNSSearch,
+		},
+		NicSettingMap: []types.CustomizationAdapterMapping{{
+			Adapter: types.CustomizationIPSettings{
+				Ip:         &types.CustomizationFixedIp{IpAddress: req.IPAddress},
+				SubnetMask: mask, Gateway: gws,
 				DnsServerList: req.DNSServers,
-				DnsSuffixList: req.DNSSearch,
 			},
-			NicSettingMap: []types.CustomizationAdapterMapping{{
-				Adapter: types.CustomizationIPSettings{
-					Ip: &types.CustomizationFixedIp{IpAddress: req.IPAddress},
-					SubnetMask: mask, Gateway: gws,
-					DnsServerList: req.DNSServers,
-				},
-			}},
-		}
-		auth := &types.NamePasswordAuthentication{Username: req.Username, Password: req.Password}
-		// CustomizeGuest_Task (NIC must be disconnected)
-		log.Printf("[guest-customize] CustomizeGuest_Task %s ip=%s", vmName, req.IPAddress)
-		cr, err := methods.CustomizeGuest_Task(ctx, c.vc.Client.RoundTripper, &types.CustomizeGuest_Task{
-			This: *gcmRef, Vm: vm.Reference(), Auth: auth, Spec: *spec,
-		})
-		if err != nil { return fmt.Errorf("CustomizeGuest_Task: %w", err) }
-		if res, err := object.NewTask(c.vc.Client, cr.Returnval).WaitForResult(ctx, nil); err != nil {
-			// GOSC scripts complete but vCenter times out after 30s.
-			// Don't fail — the IP is actually set. Verify below.
-			log.Printf("[guest-customize] CustomizeGuest_Task returned: %v (GOSC may have succeeded despite timeout)", err)
-		} else if res.Error != nil {
-			log.Printf("[guest-customize] CustomizeGuest_Task: %s (may still be OK)", res.Error.LocalizedMessage)
-		}
-		log.Printf("[guest-customize] CustomizeGuest_Task done %s", vmName)
-		return nil
+		}},
 	}
-
-	// StartGuestNetwork starts the guest network after NIC reconnection.
-	func (c *Client) StartGuestNetwork(ctx context.Context, vmName string, user, pass string) error {
-		vm, err := c.findVM(ctx, vmName)
-		if err != nil { return fmt.Errorf("find vm: %w", err) }
-		gcmRef := c.vc.ServiceContent.GuestCustomizationManager
-		if gcmRef == nil { return fmt.Errorf("GuestCustomizationManager unavailable") }
-		auth := &types.NamePasswordAuthentication{Username: user, Password: pass}
-		nr, err := methods.StartGuestNetwork_Task(ctx, c.vc.Client.RoundTripper, &types.StartGuestNetwork_Task{
-			This: *gcmRef, Vm: vm.Reference(), Auth: auth,
-		})
-		if err != nil { return fmt.Errorf("StartGuestNetwork_Task: %w", err) }
-		if res, err := object.NewTask(c.vc.Client, nr.Returnval).WaitForResult(ctx, nil); err != nil {
-			// vCenter 30s timeout — the network is restarted anyway
-			log.Printf("[guest-customize] StartGuestNetwork returned: %v (may have succeeded)", err)
-		} else if res.Error != nil {
-			log.Printf("[guest-customize] StartGuestNetwork: %s (may be OK)", res.Error.LocalizedMessage)
-		}
-		return nil
+	auth := &types.NamePasswordAuthentication{Username: req.Username, Password: req.Password}
+	// CustomizeGuest_Task (NIC must be disconnected)
+	log.Printf("[guest-customize] CustomizeGuest_Task %s ip=%s", vmName, req.IPAddress)
+	cr, err := methods.CustomizeGuest_Task(ctx, c.vc.Client.RoundTripper, &types.CustomizeGuest_Task{
+		This: *gcmRef, Vm: vm.Reference(), Auth: auth, Spec: *spec,
+	})
+	if err != nil {
+		return fmt.Errorf("CustomizeGuest_Task: %w", err)
 	}
+	if res, err := object.NewTask(c.vc.Client, cr.Returnval).WaitForResult(ctx, nil); err != nil {
+		// GOSC scripts complete but vCenter times out after 30s.
+		// Don't fail — the IP is actually set. Verify below.
+		log.Printf("[guest-customize] CustomizeGuest_Task returned: %v (GOSC may have succeeded despite timeout)", err)
+	} else if res.Error != nil {
+		log.Printf("[guest-customize] CustomizeGuest_Task: %s (may still be OK)", res.Error.LocalizedMessage)
+	}
+	log.Printf("[guest-customize] CustomizeGuest_Task done %s", vmName)
+	return nil
+}
 
-	// WaitForGuestIP polls guest.ipAddress until it matches expectedIP.
-	func (c *Client) WaitForGuestIP(ctx context.Context, vmName, expectedIP string, timeout time.Duration) error {
-		vm, err := c.findVM(ctx, vmName)
-		if err != nil { return fmt.Errorf("find vm: %w", err) }
-		deadline := time.Now().Add(timeout)
-		ticker := time.NewTicker(3 * time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done(): return ctx.Err()
-			case <-ticker.C:
-				if time.Now().After(deadline) {
-					return fmt.Errorf("wait guest IP %s timed out", expectedIP)
-				}
-				var mvm mo.VirtualMachine
-				if err := vm.Properties(ctx, vm.Reference(), []string{"guest.ipAddress"}, &mvm); err != nil {
-					continue
-				}
-				ip := ""; if mvm.Guest != nil { ip = mvm.Guest.IpAddress }
-				if ip == expectedIP { return nil }
-				if ip != "" && ip != "127.0.0.1" {
-					log.Printf("[guest-customize] %s reported IP=%s", vmName, ip)
-				}
+// StartGuestNetwork starts the guest network after NIC reconnection.
+func (c *Client) StartGuestNetwork(ctx context.Context, vmName string, user, pass string) error {
+	vm, err := c.findVM(ctx, vmName)
+	if err != nil {
+		return fmt.Errorf("find vm: %w", err)
+	}
+	gcmRef := c.vc.ServiceContent.GuestCustomizationManager
+	if gcmRef == nil {
+		return fmt.Errorf("GuestCustomizationManager unavailable")
+	}
+	auth := &types.NamePasswordAuthentication{Username: user, Password: pass}
+	nr, err := methods.StartGuestNetwork_Task(ctx, c.vc.Client.RoundTripper, &types.StartGuestNetwork_Task{
+		This: *gcmRef, Vm: vm.Reference(), Auth: auth,
+	})
+	if err != nil {
+		return fmt.Errorf("StartGuestNetwork_Task: %w", err)
+	}
+	if res, err := object.NewTask(c.vc.Client, nr.Returnval).WaitForResult(ctx, nil); err != nil {
+		// vCenter 30s timeout — the network is restarted anyway
+		log.Printf("[guest-customize] StartGuestNetwork returned: %v (may have succeeded)", err)
+	} else if res.Error != nil {
+		log.Printf("[guest-customize] StartGuestNetwork: %s (may be OK)", res.Error.LocalizedMessage)
+	}
+	return nil
+}
+
+// WaitForGuestIP polls guest.ipAddress until it matches expectedIP.
+func (c *Client) WaitForGuestIP(ctx context.Context, vmName, expectedIP string, timeout time.Duration) error {
+	vm, err := c.findVM(ctx, vmName)
+	if err != nil {
+		return fmt.Errorf("find vm: %w", err)
+	}
+	deadline := time.Now().Add(timeout)
+	ticker := time.NewTicker(3 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			if time.Now().After(deadline) {
+				return fmt.Errorf("wait guest IP %s timed out", expectedIP)
+			}
+			var mvm mo.VirtualMachine
+			if err := vm.Properties(ctx, vm.Reference(), []string{"guest.ipAddress"}, &mvm); err != nil {
+				continue
+			}
+			ip := ""
+			if mvm.Guest != nil {
+				ip = mvm.Guest.IpAddress
+			}
+			if ip == expectedIP {
+				return nil
+			}
+			if ip != "" && ip != "127.0.0.1" {
+				log.Printf("[guest-customize] %s reported IP=%s", vmName, ip)
 			}
 		}
 	}
+}
 
-	// ── internal helpers ─────────────────────────────────────────────────
+// ── internal helpers ─────────────────────────────────────────────────
 
-	// readGOSCLog runs "cat /var/log/vmware-gosc/instant_clone_customization.log"
-	// inside the guest via StartProgramInGuest and returns its output.
-	func (c *Client) readGOSCLog(ctx context.Context, vm *object.VirtualMachine, user, pass string) (string, error) {
-		auth := &types.NamePasswordAuthentication{Username: user, Password: pass}
-		spec := &types.GuestProgramSpec{
-			ProgramPath: "/bin/cat",
-			Arguments:   "/var/log/vmware-gosc/instant_clone_customization.log",
-		}
-		req := &types.StartProgramInGuest{
-			This: vm.Reference(),
-			Vm:   vm.Reference(),
-			Auth: auth,
-			Spec: spec,
-		}
-		resp, err := methods.StartProgramInGuest(ctx, c.vc.Client.RoundTripper, req)
-		if err != nil {
-			return "", fmt.Errorf("StartProgramInGuest: %w", err)
-		}
-		// The response contains a PID; we'd need to read its output.
-		// For now just report the PID.
-		return fmt.Sprintf("started PID=%d", resp.Returnval), nil
+// readGOSCLog runs "cat /var/log/vmware-gosc/instant_clone_customization.log"
+// inside the guest via StartProgramInGuest and returns its output.
+func (c *Client) readGOSCLog(ctx context.Context, vm *object.VirtualMachine, user, pass string) (string, error) {
+	auth := &types.NamePasswordAuthentication{Username: user, Password: pass}
+	spec := &types.GuestProgramSpec{
+		ProgramPath: "/bin/cat",
+		Arguments:   "/var/log/vmware-gosc/instant_clone_customization.log",
 	}
+	req := &types.StartProgramInGuest{
+		This: vm.Reference(),
+		Vm:   vm.Reference(),
+		Auth: auth,
+		Spec: spec,
+	}
+	resp, err := methods.StartProgramInGuest(ctx, c.vc.Client.RoundTripper, req)
+	if err != nil {
+		return "", fmt.Errorf("StartProgramInGuest: %w", err)
+	}
+	// The response contains a PID; we'd need to read its output.
+	// For now just report the PID.
+	return fmt.Sprintf("started PID=%d", resp.Returnval), nil
+}
 
-
-
-	// disconnectNIC sets connected=false on the first ethernet adapter.
-	func (c *Client) disconnectNIC(ctx context.Context, vm *object.VirtualMachine) error {
-		devs, err := vm.Device(ctx)
-		if err != nil { return fmt.Errorf("get devices: %w", err) }
-		for _, d := range devs {
-			if nic, ok := d.(types.BaseVirtualEthernetCard); ok {
-				card := nic.GetVirtualEthernetCard()
-				if card.Connectable == nil { card.Connectable = &types.VirtualDeviceConnectInfo{} }
-				card.Connectable.Connected = false
-				card.Connectable.StartConnected = false
-				task, err := vm.Reconfigure(ctx, types.VirtualMachineConfigSpec{
-					DeviceChange: []types.BaseVirtualDeviceConfigSpec{
-						&types.VirtualDeviceConfigSpec{
-							Operation: types.VirtualDeviceConfigSpecOperationEdit,
-							Device: d,
-						},
+// disconnectNIC sets connected=false on the first ethernet adapter.
+func (c *Client) disconnectNIC(ctx context.Context, vm *object.VirtualMachine) error {
+	devs, err := vm.Device(ctx)
+	if err != nil {
+		return fmt.Errorf("get devices: %w", err)
+	}
+	for _, d := range devs {
+		if nic, ok := d.(types.BaseVirtualEthernetCard); ok {
+			card := nic.GetVirtualEthernetCard()
+			if card.Connectable == nil {
+				card.Connectable = &types.VirtualDeviceConnectInfo{}
+			}
+			card.Connectable.Connected = false
+			card.Connectable.StartConnected = false
+			task, err := vm.Reconfigure(ctx, types.VirtualMachineConfigSpec{
+				DeviceChange: []types.BaseVirtualDeviceConfigSpec{
+					&types.VirtualDeviceConfigSpec{
+						Operation: types.VirtualDeviceConfigSpecOperationEdit,
+						Device:    d,
 					},
-				})
-				if err != nil { return fmt.Errorf("disconnect nic: %w", err) }
-				return task.Wait(ctx)
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("disconnect nic: %w", err)
 			}
-		}
-		return nil
-	}
-
-	func waitForTools(ctx context.Context, vm *object.VirtualMachine) error {
-		deadline := time.Now().Add(120 * time.Second)
-		ticker := time.NewTicker(2 * time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done(): return ctx.Err()
-			case <-ticker.C:
-				if time.Now().After(deadline) {
-					return fmt.Errorf("VMware Tools timeout for %s", vm.Name())
-				}
-				var mvm mo.VirtualMachine
-				if err := vm.Properties(ctx, vm.Reference(), []string{"guest.toolsRunningStatus"}, &mvm); err != nil {
-					continue
-				}
-				if mvm.Guest != nil && mvm.Guest.ToolsRunningStatus == string(types.VirtualMachineToolsRunningStatusGuestToolsRunning) {
-					return nil
-				}
-			}
+			return task.Wait(ctx)
 		}
 	}
+	return nil
+}
 
-	func prefixToMask(prefixLen int) string {
-		if prefixLen <= 0 || prefixLen > 32 { return "255.255.255.0" }
-		m := ^uint32(0) << (32 - prefixLen)
-		return fmt.Sprintf("%d.%d.%d.%d", byte(m>>24), byte(m>>16), byte(m>>8), byte(m))
+func waitForTools(ctx context.Context, vm *object.VirtualMachine) error {
+	deadline := time.Now().Add(120 * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			if time.Now().After(deadline) {
+				return fmt.Errorf("VMware Tools timeout for %s", vm.Name())
+			}
+			var mvm mo.VirtualMachine
+			if err := vm.Properties(ctx, vm.Reference(), []string{"guest.toolsRunningStatus"}, &mvm); err != nil {
+				continue
+			}
+			if mvm.Guest != nil && mvm.Guest.ToolsRunningStatus == string(types.VirtualMachineToolsRunningStatusGuestToolsRunning) {
+				return nil
+			}
+		}
 	}
+}
 
-
+func prefixToMask(prefixLen int) string {
+	if prefixLen <= 0 || prefixLen > 32 {
+		return "255.255.255.0"
+	}
+	m := ^uint32(0) << (32 - prefixLen)
+	return fmt.Sprintf("%d.%d.%d.%d", byte(m>>24), byte(m>>16), byte(m>>8), byte(m))
+}
 
 // ReadGuestInfo reads guestinfo.* from config.extraConfig. Guest-set values
 // (via vmware-rpctool info-set) are synced into config.extraConfig by the host.

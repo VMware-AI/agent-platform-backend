@@ -828,9 +828,15 @@ A single OVF property value for the deploy mutation.
 | Value | Description |
 |-------|-------------|
 | `provisioning` | — |
+| `cloning` | — |
+| `guest_configuring` | — |
+| `network_connecting` | — |
+| `service_starting` | — |
+| `health_checking` | — |
 | `running` | — |
 | `stopped` | — |
 | `exception` | — |
+| `failed` | — |
 
 ### AgentTemplateStatus
 

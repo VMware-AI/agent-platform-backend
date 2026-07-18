@@ -565,10 +565,10 @@ func buildMetadata(hostname string) string {
 
 // AgentMgrGuestInfo carries protocol fields for instant clone guest config.
 type AgentMgrGuestInfo struct {
-	Role, DeploymentID, Generation, Command string
+	Role, DeploymentID, Generation, Command                                     string
 	Hostname, InterfaceMAC, IPAddress, PrefixLength, Gateway, DNS, SearchDomain string
-	OpenClawUser, OpenClawHome, OpenClawPort, OpenClawBaseURL, OpenClawModel string
-	OpenClawAPIKey, OpenClawGatewayToken string // sensitive
+	OpenClawUser, OpenClawHome, OpenClawPort, OpenClawBaseURL, OpenClawModel    string
+	OpenClawAPIKey, OpenClawGatewayToken                                        string // sensitive
 }
 
 // ToGuestInfo maps fields to bare keys for SetGuestinfo (prefix added by caller).
@@ -582,8 +582,8 @@ func (g *AgentMgrGuestInfo) ToGuestInfo() map[string]string {
 		"agentmgr.search-domain": g.SearchDomain,
 		"agentmgr.openclaw-user": g.OpenClawUser, "agentmgr.openclaw-home": g.OpenClawHome,
 		"agentmgr.openclaw-port": g.OpenClawPort, "agentmgr.openclaw-base-url": g.OpenClawBaseURL,
-		"agentmgr.openclaw-model": g.OpenClawModel,
-		"agentmgr.openclaw-api-key": g.OpenClawAPIKey,
+		"agentmgr.openclaw-model":         g.OpenClawModel,
+		"agentmgr.openclaw-api-key":       g.OpenClawAPIKey,
 		"agentmgr.openclaw-gateway-token": g.OpenClawGatewayToken,
 	}
 	for k, v := range m {

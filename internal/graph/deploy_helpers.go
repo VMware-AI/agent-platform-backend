@@ -97,22 +97,26 @@ func (r *mutationResolver) deployAgentInstant(
 	// 2. CLONING
 	ag, err = r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusCloning).Save(ctx)
 	if err != nil {
-		_ = t.gw.DeleteKey(ctx, key.Key); r.deleteAgentRow(ctx, ag)
+		_ = t.gw.DeleteKey(ctx, key.Key)
+		r.deleteAgentRow(ctx, ag)
 		return nil, fmt.Errorf("set cloning: %w", err)
 	}
 
 	// 3. InstantClone (no DeviceChange — inherit parent NIC as-is)
 	icSpec := vcenter.InstantCloneSpec{
-		ParentVM:     parentVM, Name: vmName,
+		ParentVM: parentVM, Name: vmName,
 		ResourcePool: derefString(input.TargetResourcePool),
 		Network:      derefString(input.TargetNetwork),
 	}
 	if len(input.OvfProperties) > 0 {
 		icSpec.ExtraConfig = make(map[string]string, len(input.OvfProperties))
-		for _, p := range input.OvfProperties { icSpec.ExtraConfig[p.Key] = p.Value }
+		for _, p := range input.OvfProperties {
+			icSpec.ExtraConfig[p.Key] = p.Value
+		}
 	}
 	if _, err := conn.InstantClone(ctx, icSpec); err != nil {
-		rollback("clone", ""); return nil, fmt.Errorf("instant clone: %w", err)
+		rollback("clone", "")
+		return nil, fmt.Errorf("instant clone: %w", err)
 	}
 	log.Printf("[instant-clone] created %s deployment=%s", vmName, deploymentID)
 
@@ -121,26 +125,45 @@ func (r *mutationResolver) deployAgentInstant(
 	runAsUser, runAsPass := "", ""
 	for _, p := range input.OvfProperties {
 		switch p.Key {
-		case "guestinfo.static_ip": staticIP = p.Value
-		case "guestinfo.netmask": netmask = p.Value
-		case "guestinfo.gateway": gateway = p.Value
-		case "guestinfo.dns": dns = p.Value
-		case "guestinfo.run_as_user": runAsUser = p.Value
-		case "guestinfo.password": runAsPass = p.Value
+		case "guestinfo.static_ip":
+			staticIP = p.Value
+		case "guestinfo.netmask":
+			netmask = p.Value
+		case "guestinfo.gateway":
+			gateway = p.Value
+		case "guestinfo.dns":
+			dns = p.Value
+		case "guestinfo.run_as_user":
+			runAsUser = p.Value
+		case "guestinfo.password":
+			runAsPass = p.Value
 		}
 	}
-	if runAsUser == "" { runAsUser = "vmware" }
-	if runAsPass == "" { return nil, fmt.Errorf("guestinfo.password required for instant clone guest customization") }
-	if derefString(input.Hostname) != "" { hostname = derefString(input.Hostname) }
+	if runAsUser == "" {
+		runAsUser = "vmware"
+	}
+	if runAsPass == "" {
+		return nil, fmt.Errorf("guestinfo.password required for instant clone guest customization")
+	}
+	if derefString(input.Hostname) != "" {
+		hostname = derefString(input.Hostname)
+	}
 
 	// 5. CustomizeGuest (may return vCenter timeout but IP is actually set)
 	ag, err = r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusGuestConfiguring).Save(ctx)
-	if err != nil { rollback("set-gc", vmName); return nil, fmt.Errorf("set guest_configuring: %w", err) }
+	if err != nil {
+		rollback("set-gc", vmName)
+		return nil, fmt.Errorf("set guest_configuring: %w", err)
+	}
 
 	var dnsList []string
-	if dns != "" { dnsList = strings.Split(dns, ",") }
+	if dns != "" {
+		dnsList = strings.Split(dns, ",")
+	}
 	prefixLen := 24
-	if netmask == "255.255.0.0" { prefixLen = 16 }
+	if netmask == "255.255.0.0" {
+		prefixLen = 16
+	}
 
 	log.Printf("[instant-clone] customizing guest: ip=%s gw=%s dns=%v", staticIP, gateway, dnsList)
 	custErr := conn.CustomizeInstantCloneGuest(ctx, vmName, vcenter.CustomizeGuestRequest{
@@ -157,7 +180,10 @@ func (r *mutationResolver) deployAgentInstant(
 	// NIC was disconnected during InstantClone, then GOSC configured static IP.
 	// ConnectNIC brings the interface up so the guest sees the new MAC+IP.
 	ag, err = r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusNetworkConnecting).Save(ctx)
-	if err != nil { rollback("set-nc", vmName); return nil, fmt.Errorf("set network_connecting: %w", err) }
+	if err != nil {
+		rollback("set-nc", vmName)
+		return nil, fmt.Errorf("set network_connecting: %w", err)
+	}
 	if err := conn.ConnectNIC(ctx, vmName); err != nil {
 		ag, _ = r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusFailed).Save(context.Background())
 		rollback("connect-nic", vmName)
@@ -178,7 +204,9 @@ func (r *mutationResolver) deployAgentInstant(
 		log.Printf("[instant-clone] power off non-fatal: %v", err)
 	}
 	select {
-	case <-ctx.Done(): rollback("reboot-off", vmName); return nil, ctx.Err()
+	case <-ctx.Done():
+		rollback("reboot-off", vmName)
+		return nil, ctx.Err()
 	case <-time.After(5 * time.Second):
 	}
 	if err := conn.PowerOn(ctx, vmName); err != nil {
@@ -197,7 +225,7 @@ func (r *mutationResolver) deployAgentInstant(
 	ocToken := secureToken()
 	gi := &deploy.AgentMgrGuestInfo{
 		Role: "clone", DeploymentID: deploymentID, Generation: generation,
-		Command: "start-openclaw",
+		Command:      "start-openclaw",
 		OpenClawUser: runAsUser, OpenClawHome: "/home/" + runAsUser,
 		OpenClawPort: "18789", OpenClawBaseURL: t.gwURL,
 		OpenClawModel: "minmax", OpenClawAPIKey: key.Key,
@@ -205,16 +233,21 @@ func (r *mutationResolver) deployAgentInstant(
 	}
 	giMap := gi.ToGuestInfo()
 	if err := conn.SetGuestinfo(ctx, vmName, giMap); err != nil {
-		rollback("gi", vmName); return nil, fmt.Errorf("set guestinfo: %w", err)
+		rollback("gi", vmName)
+		return nil, fmt.Errorf("set guestinfo: %w", err)
 	}
 	if err := conn.SetGuestinfo(ctx, vmName, map[string]string{"agentmgr.commit": generation}); err != nil {
-		rollback("commit", vmName); return nil, fmt.Errorf("commit: %w", err)
+		rollback("commit", vmName)
+		return nil, fmt.Errorf("commit: %w", err)
 	}
 	log.Printf("[instant-clone] guestinfo oc written gen=%s", generation)
 
 	// 8. Wait for OpenClaw ACK (TCP :18789)
 	ag, err = r.Ent.Agent.UpdateOne(ag).SetStatus(agent.StatusServiceStarting).Save(ctx)
-	if err != nil { rollback("svc", vmName); return nil, err }
+	if err != nil {
+		rollback("svc", vmName)
+		return nil, err
+	}
 
 	log.Printf("[instant-clone] waiting openclaw port on %s:18789", staticIP)
 	ocAddr := fmt.Sprintf("%s:18789", staticIP)
@@ -226,10 +259,14 @@ func (r *mutationResolver) deployAgentInstant(
 			return nil, fmt.Errorf("openclaw not ready after %v", ocReadyTimeout)
 		}
 		c, err := net.DialTimeout("tcp", ocAddr, 3*time.Second)
-		if err == nil { c.Close(); break }
+		if err == nil {
+			c.Close()
+			break
+		}
 		select {
 		case <-ctx.Done():
-			rollback("oc-ctx", vmName); return nil, ctx.Err()
+			rollback("oc-ctx", vmName)
+			return nil, ctx.Err()
 		case <-time.After(3 * time.Second):
 		}
 	}
@@ -242,13 +279,21 @@ func (r *mutationResolver) deployAgentInstant(
 		SetLitellmKey(key.Key).SetMaskedKey(maskKey(key.Key)).
 		SetModelGatewayID(t.gwConn.ID).SetModels(nil).
 		SetUserID(t.ownerID.String()).SetName(ag.Name + "-" + deploymentID[:8])
-	if key.Token != "" { vkCreate.SetLitellmToken(key.Token) }
+	if key.Token != "" {
+		vkCreate.SetLitellmToken(key.Token)
+	}
 	vk, err := vkCreate.Save(ctx)
-	if err != nil { rollback("vk", vmName); return nil, err }
+	if err != nil {
+		rollback("vk", vmName)
+		return nil, err
+	}
 
 	updated, err := r.Ent.Agent.UpdateOne(ag).
 		SetStatus(agent.StatusRunning).SetVMRef(vmName).SetVirtualKeyID(vk.ID).Save(ctx)
-	if err != nil { r.rollbackDeployCreate(ctx, conn, t.gw, ag, vmName, key.Key); return nil, err }
+	if err != nil {
+		r.rollbackDeployCreate(ctx, conn, t.gw, ag, vmName, key.Key)
+		return nil, err
+	}
 
 	log.Printf("[instant-clone] SUCCESS deployment=%s agent=%s vm=%s ip=%s",
 		deploymentID, ag.Name, vmName, staticIP)
@@ -259,4 +304,3 @@ func (r *mutationResolver) deployAgentInstant(
 		ResourcePool:    toModelResourcePool(t.pool),
 	}, nil
 }
-
