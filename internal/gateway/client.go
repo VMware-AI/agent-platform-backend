@@ -307,11 +307,18 @@ func (c *HTTPClient) DeleteTeam(ctx context.Context, teamID string) error {
 	return c.post(ctx, "/team/delete", map[string]any{"team_ids": []string{teamID}}, nil)
 }
 
-// ListKeys enumerates the gateway's keys via GET /key/list. The wire item carries
-// both a hashed token and (when configured) a raw key; the raw key wins as the
-// comparable identifier, falling back to the token.
+// ListKeys enumerates the gateway's keys via GET /key/list. The wire item
+// shape varies by LiteLLM version and admin permissions:
+//
+//   - newer / admin:    { "keys": [{"token":..., "key":..., "user_id":..., "team_id":...}] }
+//   - older / minimal:  { "keys": ["sk-...", ...] }
+//
+// Both shapes are accepted; the object form preserves user_id / team_id, the
+// string form just yields the raw key. The raw key wins as the comparable
+// identifier, falling back to the token when the object form reports no key.
 func (c *HTTPClient) ListKeys(ctx context.Context) ([]KeyInfo, error) {
-	var out struct {
+	// First try the rich object form.
+	var objOut struct {
 		Keys []struct {
 			Token  string `json:"token"`
 			Key    string `json:"key"`
@@ -319,21 +326,55 @@ func (c *HTTPClient) ListKeys(ctx context.Context) ([]KeyInfo, error) {
 			TeamID string `json:"team_id"`
 		} `json:"keys"`
 	}
-	if err := c.get(ctx, "/key/list", &out); err != nil {
+	if err := c.get(ctx, "/key/list", &objOut); err == nil {
+		keys := make([]KeyInfo, 0, len(objOut.Keys))
+		for _, k := range objOut.Keys {
+			id := k.Key
+			if id == "" {
+				id = k.Token
+			}
+			if id == "" {
+				continue
+			}
+			keys = append(keys, KeyInfo{Key: id, UserID: k.UserID, TeamID: k.TeamID})
+		}
+		return keys, nil
+	} else if !looksLikeStringArrayKeys(err) {
+		return nil, err // a real network / auth failure — surface it
+	}
+
+	// Fallback: minimal string-array form.
+	var strOut struct {
+		Keys []string `json:"keys"`
+	}
+	if err := c.get(ctx, "/key/list", &strOut); err != nil {
 		return nil, err
 	}
-	keys := make([]KeyInfo, 0, len(out.Keys))
-	for _, k := range out.Keys {
-		id := k.Key
+	keys := make([]KeyInfo, 0, len(strOut.Keys))
+	for _, id := range strOut.Keys {
 		if id == "" {
-			id = k.Token
+			continue
 		}
-		if id == "" {
-			continue // unidentifiable entry — skip rather than treat "" as an orphan
-		}
-		keys = append(keys, KeyInfo{Key: id, UserID: k.UserID, TeamID: k.TeamID})
+		keys = append(keys, KeyInfo{Key: id})
 	}
 	return keys, nil
+}
+
+// looksLikeStringArrayKeys reports whether a /key/list unmarshal error
+// matches the "keys is a string array, not an object array" signature —
+// i.e. the field name is exactly "keys" and the target type is a struct
+// (object), not a string slice. Used to decide whether to retry the call
+// in the string-array form.
+func looksLikeStringArrayKeys(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	// encoding/json emits:
+	//   "json: cannot unmarshal STRING into Go struct field .keys of type STRUCT"
+	return strings.Contains(msg, ".keys of type") &&
+		strings.Contains(msg, "cannot unmarshal") &&
+		strings.Contains(msg, "string into")
 }
 
 // ListTeams enumerates the gateway's teams via GET /team/list. LiteLLM returns a
