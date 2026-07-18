@@ -201,7 +201,7 @@ func Load() (*Config, error) {
 	}
 	c.ReconcileInterval = ri
 	c.ReconcilePrune = getenv("RECONCILE_PRUNE", "false") == "true"
-	c.LitellmReconcileUnified = getenv("LITELLM_RECONCILE_UNIFIED", "false") == "true"
+	c.LitellmReconcileUnified = getenv("LITELLM_RECONCILE_UNIFIED", "true") == "true"
 	c.AgentPkgBaseURL = strings.TrimRight(os.Getenv("AGENT_PKG_BASE_URL"), "/")
 	if c.AgentKeepVersions, err = getenvInt("AGENT_KEEP_VERSIONS", 0); err != nil {
 		return nil, err

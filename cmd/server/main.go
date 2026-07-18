@@ -216,17 +216,18 @@ func main() {
 			// Single-flight across replicas so the prune runs on exactly one replica
 			// (nil on the dev sqlite path → always leader).
 			IsLeader: isLeader,
-			// When LITELLM_RECONCILE_UNIFIED=true, switch the reconciler to the
-			// unified 5-phase cycle (DB→LiteLLM push for keys / gateway_status /
-			// provider_models / spend_refresh / router_settings). Drift A
-			// (LiteLLM-only) is detected + logged + IGNORED. Drift B (DB-only)
-			// and Drift C (DB-revoked but LiteLLM still has) execute directly.
-			// Runs in parallel with the 3 legacy tickers below; PR #3 cuts over
-			// by removing those tickers.
-			Resolver: nil,
+			// Default: unified 5-phase cycle (DB→LiteLLM push for keys /
+			// gateway_status / provider_models / spend_refresh / router_settings).
+			// Drift A (LiteLLM-only) is detected + logged + IGNORED. Drift B
+			// (DB-only) and Drift C (DB-revoked but LiteLLM still has) execute
+			// directly. Operators can opt back to the legacy keys+teams cycle
+			// by setting LITELLM_RECONCILE_UNIFIED=false (not recommended —
+			// the legacy cycle doesn't cover provider_models / router_settings /
+			// spend_refresh).
+			Resolver: resolver,
 		}
-		if cfg.LitellmReconcileUnified {
-			rec.Resolver = resolver
+		if !cfg.LitellmReconcileUnified {
+			rec.Resolver = nil // opt-out: run legacy keys+teams cycle
 		}
 		interval := time.Duration(cfg.ReconcileInterval) * time.Second
 		log.Printf("gateway-key reconciler: every %s (prune=%v, unified=%v), all gateways",
@@ -243,19 +244,11 @@ func main() {
 		go resolver.StartAutoSync(poolSyncCtx, time.Duration(cfg.PoolSyncIntervalSeconds)*time.Second, isLeader)
 	}
 
-	// Periodically re-sync every model gateway (status, loadBalancingStrategy,
-	// backendModelCount). Default 10m; disable with MODEL_GATEWAY_SYNC_INTERVAL_SECONDS=0.
-	// Leader-gated so only one replica probes litellm and writes gateway status.
-	if cfg.ModelGatewaySyncIntervalSeconds > 0 {
-		mgSyncCtx, stopMGSync := context.WithCancel(context.Background())
-		defer stopMGSync()
-		log.Printf("model-gateway auto-sync: every %s", time.Duration(cfg.ModelGatewaySyncIntervalSeconds)*time.Second)
-		go resolver.StartModelGatewayAutoSync(mgSyncCtx, time.Duration(cfg.ModelGatewaySyncIntervalSeconds)*time.Second, isLeader)
-	}
-
 	// Periodically probe every enabled ProviderModel against its upstream API
 	// and write the cached Active/Degraded/Melted/Unknown status back to the
 	// row. Default 60s; disabled with PROVIDER_PROBE_INTERVAL_SECONDS=0.
+	// This is orthogonal to DB↔LiteLLM sync — it probes the upstream provider
+	// directly, not the gateway — and is kept outside the unified cycle.
 	// See internal/graph/provider_model_probe.go and LiteLLM design doc §2.2.
 	// An upsert also kicks off a one-shot probe (probeProviderModelInBackground)
 	// so the operator sees the real status within seconds rather than waiting
@@ -264,22 +257,14 @@ func main() {
 	defer stopProbe()
 	go resolver.StartProviderModelHealthProbe(probeCtx, time.Duration(cfg.ProviderProbeIntervalSeconds)*time.Second)
 
-	// Periodically re-aggregate every ModelRoute and POST the full
-	// router_settings payload to /config/update, grouped by
-	// backendGatewayId. Default 5m; disabled with
-	// ROUTER_SYNC_INTERVAL_SECONDS=0. See internal/graph/router_sync.go
-	// and LiteLLM design doc §3.2 "原子化路由策略全量覆盖刷新".
-	rsCtx, stopRS := context.WithCancel(context.Background())
-	defer stopRS()
-	go resolver.StartRouterSettingsSync(rsCtx, time.Duration(cfg.RouterSyncIntervalSeconds)*time.Second)
-
-	// Periodically read litellm /key/info for every active VirtualKey and
-	// persist spend + last_active_at back to the platform row. Drives the
-	// 消费进度 column on the 令牌管理 page (design doc §4.1). Default
-	// 5m; disabled with VK_SPEND_REFRESH_INTERVAL_SECONDS=0.
-	vkCtx, stopVK := context.WithCancel(context.Background())
-	defer stopVK()
-	go resolver.StartVirtualKeySpendRefresh(vkCtx, time.Duration(cfg.VirtualKeySpendRefreshIntervalSeconds)*time.Second)
+	// (Removed in PR #3 cut-over: StartModelGatewayAutoSync, StartRouterSettingsSync,
+	// StartVirtualKeySpendRefresh. Their work is now covered by the unified
+	// reconciler cycle above — gateway_status phase replaces model-gateway
+	// auto-sync, router_settings phase replaces router settings sync, and
+	// spend_refresh phase replaces virtual-key spend refresh. The env vars
+	// MODEL_GATEWAY_SYNC_INTERVAL_SECONDS, ROUTER_SYNC_INTERVAL_SECONDS, and
+	// VK_SPEND_REFRESH_INTERVAL_SECONDS are now read but ignored — they will
+	// be removed in PR #4.)
 
 	es := graph.NewExecutableSchema(graph.Config{
 		Resolvers: resolver,
