@@ -7,8 +7,10 @@
 #   ./start.sh down                  # stop + remove containers (keeps the pg volume)
 #   ./start.sh clean                  # stop + remove containers AND the pg volume
 #
-# After it's up, point the backend at it (the script prints the exact line):
-#   LITELLM_BASE_URL=http://localhost:4000 LITELLM_MASTER_KEY=<printed> make run
+# After it's up, the script prints the master key + the gateway endpoint.
+# Point the backend at the gateway in the console (模型网关接入 page):
+#   endpoint = http://localhost:4000  master_key = <printed>
+# No backend startup env is needed for the gateway — see LLD-13 §3.3.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -52,13 +54,11 @@ cat <<EOF
  LiteLLM gateway is up:  http://localhost:4000   (postgres :5433)
  Master key:             ${MASTER_KEY}
 
- Point the backend at it:
-   LITELLM_ADMIN_URL=http://localhost:4000/ui
-   LITELLM_BASE_URL=http://localhost:4000 \\
-   LITELLM_MASTER_KEY=${MASTER_KEY} \\
-   ALLOWED_ORIGINS=http://localhost:5173 \\
-   ADMIN_BOOTSTRAP_PASSWORD=<your-≥12-char-pw> \\
-   make run
+ Wire it into the backend in the console (模型网关接入 page):
+   endpoint   = http://localhost:4000
+   master_key = ${MASTER_KEY}
+ No backend startup env is needed — the resolver reads the gateway
+ from the gateway_connections table (LLD-13 §3.3).
 
  Then add a minimax upstream from the UI (or GraphQL):
    model=openai/MiniMax-Text-01  api_base=https://api.minimaxi.com/v1  apiKey=<your minimax key>

@@ -31,8 +31,7 @@ func (r *mutationResolver) CreateDepartment(ctx context.Context, input model.Cre
 	// Pre-generate the id so the litellm team handle is written atomically with
 	// the row — it is never empty/wrong. A crash between this commit and the
 	// gateway call leaves a row pointing at a not-yet-created team; that is
-	// recoverable by re-running (the team id is deterministic = dept id) and is
-	// also surfaced as a DanglingDepts entry by reconcile.ReconcileTeams. C3.
+	// recoverable by re-running (the team id is deterministic = dept id). C3.
 	// Tenant stamp (LLD-10 §1.5): tenant-admin branch removed in the 3-role
 	// refactor; the platform admin (now the only caller of createDepartment via
 	// @hasRole([admin])) may set it explicitly via input.

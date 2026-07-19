@@ -73,13 +73,13 @@ Endpoints after boot:
 
 If you'd rather run it yourself with the same env (or override one):
 ```bash
-LITELLM_BASE_URL=http://localhost:4000 \
-LITELLM_MASTER_KEY=$(grep '^LITELLM_MASTER_KEY=' deploy/.env | cut -d= -f2-) \
 DATABASE_URL=postgres://agentplatform_user:agentplatform_passwd@127.0.0.1:5433/agentplatform?sslmode=disable \
 REDIS_URL=redis://127.0.0.1:6379/0 \
 ALLOWED_ORIGINS=http://localhost:5173 \
 ADMIN_BOOTSTRAP_PASSWORD=AdminLocal123! \
+SECRETS_ENCRYPTION_KEY=$(openssl rand -hex 32) \
 make run
+# 模型网关在 console「模型网关接入」页添加：http://localhost:4000 + deploy/.env 里的 master key
 ```
 
 ### 2a. Via the container image

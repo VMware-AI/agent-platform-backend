@@ -171,10 +171,6 @@ func (r *Resolver) ReconcileTargets(ctx context.Context) ([]reconcile.GatewayTar
 	if err != nil {
 		return nil, err
 	}
-	depts, err := r.Ent.Department.Query().All(ctx)
-	if err != nil {
-		return nil, err
-	}
 
 	// No DB gateway configured → nothing to reconcile against.
 	if len(conns) == 0 {
@@ -183,30 +179,12 @@ func (r *Resolver) ReconcileTargets(ctx context.Context) ([]reconcile.GatewayTar
 
 	// One row bucket per GatewayConnection.
 	type bucket struct {
-		conn  *ent.GatewayConnection
-		keys  []*ent.VirtualKey
-		depts []*ent.Department
+		conn *ent.GatewayConnection
+		keys []*ent.VirtualKey
 	}
 	buckets := make(map[uuid.UUID]*bucket, len(conns))
 	for _, c := range conns {
 		buckets[c.ID] = &bucket{conn: c}
-	}
-	deptByID := make(map[uuid.UUID]*ent.Department, len(depts))
-	for _, d := range depts {
-		deptByID[d.ID] = d
-	}
-
-	// connForDept applies resolveDeptGateway's binding selection to the
-	// partition: a department's bound gateway when it still exists. A
-	// dangling binding is dropped → the row is left unscanned (rather than
-	// silently rerouted).
-	connForDept := func(d *ent.Department) *ent.GatewayConnection {
-		if d != nil && d.GatewayConnectionID != nil {
-			if b, ok := buckets[*d.GatewayConnectionID]; ok {
-				return b.conn
-			}
-		}
-		return nil
 	}
 
 	// Assign each key to its issuing gateway (persisted id). Per-agent-per-org
@@ -226,20 +204,11 @@ func (r *Resolver) ReconcileTargets(ctx context.Context) ([]reconcile.GatewayTar
 		buckets[c.ID].keys = append(buckets[c.ID].keys, vk)
 	}
 
-	// Assign each department to its serving gateway (its binding only —
-	// un-bound departments are left unscanned).
-	for _, d := range depts {
-		if c := connForDept(d); c != nil {
-			buckets[c.ID].depts = append(buckets[c.ID].depts, d)
-		}
-	}
-
 	targets := make([]reconcile.GatewayTarget, 0, len(buckets))
 	for _, b := range buckets {
 		targets = append(targets, reconcile.GatewayTarget{
 			Gateway: r.buildGatewayKeyClient(ctx, b.conn),
 			Keys:    b.keys,
-			Depts:   b.depts,
 			Conn:    b.conn,
 		})
 	}

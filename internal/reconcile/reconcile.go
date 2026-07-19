@@ -1,24 +1,21 @@
-// Package reconcile detects and (optionally) heals drift between the platform's
-// virtual-key governance rows and the keys the LiteLLM gateway actually holds.
+// Package reconcile detects and heals drift between the platform's
+// virtual-key / provider-model / router-settings governance rows and the
+// state the LiteLLM gateway actually holds.
 //
 // Drift arises when a mutation half-completes: e.g. IssueVirtualKey mints a key
 // at the gateway but the governing DB row fails to persist AND the compensating
 // revoke also fails (virtualkey.resolvers.go) — leaving an ungoverned key. Such a
 // key bypasses budget/rate-limit governance and is a security risk.
 //
-// The reconciler is report-only by default ("对账": find discrepancies, change
-// nothing). Healing is opt-in via Prune so that a partial gateway listing or an
-// identifier mismatch can never trigger accidental mass deletion.
+// The reconciler runs a single 5-phase unified cycle per tick. DB is the source
+// of truth: Drift B (DB-only at the gateway) is re-pushed; Drift C (DB-revoked
+// but the gateway still has it) is DELETEd at the gateway per-key. Drift A
+// (gateway-only keys) is detected + logged only — operator-created keys are
+// never destroyed under the unified stance. Per-phase recover guards and
+// identifier-mismatch guards prevent accidental mass deletion when a gateway
+// listing looks broken.
 //
-// # Extended (unified) reconciler
-//
-// When Resolver is non-nil, the reconciler runs an extended cycle that covers
-// FOUR resources + spend refresh in a single pass, with per-phase recover
-// guards. The extended cycle is the "DB → LiteLLM" direction: it pushes DB
-// state out to LiteLLM (delete revoked keys, re-push missing provider-model
-// specs, re-push router_settings). LiteLLM-only resources are detect + log
-// only (Drift A) — they are not deleted or imported. See
-// /Users/gary/.claude/plans/litellm-model-gateway-provider-model-vi-humble-codd.md
+// See /Users/gary/.claude/plans/litellm-model-gateway-provider-model-vi-humble-codd.md
 // for the full stance.
 package reconcile
 
@@ -36,14 +33,11 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 )
 
-// Gateway is the slice of the gateway client the reconciler depends on.
-// ListTeams/DeleteTeam remain for the legacy team reconciliation path; the
-// unified cycle (Resolver != nil) ignores teams entirely.
+// Gateway is the slice of the gateway client the reconciler depends on. The
+// unified cycle uses only ListKeys / DeleteKey (keys phase).
 type Gateway interface {
 	ListKeys(ctx context.Context) ([]gateway.KeyInfo, error)
 	DeleteKey(ctx context.Context, key string) error
-	ListTeams(ctx context.Context) ([]gateway.TeamInfo, error)
-	DeleteTeam(ctx context.Context, teamID string) error
 }
 
 // GatewayTarget is one gateway to reconcile, paired with the governance rows the
@@ -54,13 +48,11 @@ type Gateway interface {
 // scanned, and an orphan on a non-default gateway becomes visible instead of
 // being skipped entirely.
 //
-// Conn is the GatewayConnection ent row for this target; nil in legacy paths
-// that pre-date the unified reconciler. The unified cycle reads it to avoid a
-// re-query per phase.
+// Conn is the GatewayConnection ent row for this target; the unified cycle
+// reads it to avoid a re-query per phase.
 type GatewayTarget struct {
 	Gateway Gateway
 	Keys    []*ent.VirtualKey
-	Depts   []*ent.Department // unused by the unified cycle (teams are out of scope)
 	Conn    *ent.GatewayConnection
 }
 
@@ -86,244 +78,51 @@ type ResolverSource interface {
 	RefreshOneVirtualKeySpend(ctx context.Context, k *ent.VirtualKey)
 }
 
-// Reconciler compares gateway keys/teams against governance rows. When Resolver
-// is non-nil, also runs the unified 5-phase cycle (keys, gateway_status,
+// Reconciler runs the unified 5-phase DB→LiteLLM cycle (keys, gateway_status,
 // provider_models, spend_refresh, router_settings) sharing one PG lease, one
 // per-cycle recover guard, and per-phase failure isolation.
 type Reconciler struct {
 	Ent *ent.Client
 	// GatewaysFunc resolves EVERY gateway to reconcile this cycle, each
 	// paired with the rows it owns (LLD-14 §3.4 / OQ-5). The reconciler
-	// scans each gateway against only its own keys/teams. A nil/empty
-	// result skips the cycle.
+	// scans each gateway against only its own keys. A nil/empty result
+	// skips the cycle.
 	GatewaysFunc func(context.Context) ([]GatewayTarget, error)
-	// Prune enables healing: delete gateway orphans + revoke stale DB rows. When
-	// false (default) the reconciler only reports. Only consulted in the legacy
-	// (Resolver == nil) path; the unified cycle does NOT take direction from
-	// Prune (Drift B/C execute unconditionally — DB is source of truth).
-	Prune bool
 	// IsLeader, when set, gates each cycle: the cycle runs only when it returns
-	// true. This single-flights the (destructive, under Prune) reconcile across
-	// replicas — the bare `go rec.Run` is started on every replica, so without a
-	// gate all of them would race to delete gateway keys/teams and revoke rows.
-	// nil = always leader (single-replica / dev / sqlite).
+	// true. This single-flights the destructive Drift C DELETE across replicas —
+	// the bare `go rec.Run` is started on every replica, so without a gate all
+	// of them would race to delete the same gateway keys. nil = always leader
+	// (single-replica / dev / sqlite).
 	IsLeader func(ctx context.Context) bool
-	// Resolver enables the unified reconciler cycle. nil = legacy behavior
-	// (keys + teams, Prune-gated). Non-nil = unified 5-phase cycle.
+	// Resolver is the narrow surface the per-phase functions call. Required:
+	// the unified cycle owns the action semantics and there is no fallback.
 	Resolver ResolverSource
 	// cycleErrs accumulates per-cycle per-item errors for the cycle-end summary.
 	// Reset at the top of every runCycle. Process-local; no cross-replica state.
 	cycleErrs []string
 }
 
-// Report summarizes one reconciliation pass. Key identifiers are kept here for
-// the caller but never written to logs (they are secrets/sensitive).
+// Report summarizes one keys-phase diff against the governance rows. Key
+// identifiers are kept here for the caller but never written to logs (they
+// are secrets/sensitive).
 type Report struct {
 	GatewayKeys    int      // keys the gateway reported
 	DBKeys         int      // governance rows in the DB
-	GatewayOrphans []string // at gateway, no DB row (ungoverned)
-	StaleRows      []string // DB ids: non-revoked rows whose key vanished at gateway
-	Pruned         int      // orphans deleted at the gateway (Prune only)
-	Revoked        int      // stale rows marked revoked (Prune only)
-}
-
-// ReconcileKeys runs one pass over ALL governance rows against the given
-// gateway. Used by the per-gateway path (runCycle) for a pre-scoped row
-// subset. Returns an error only when it cannot read both sides; per-item
-// heal failures are logged and counted, not fatal.
-func (r *Reconciler) ReconcileKeys(ctx context.Context, gw Gateway) (*Report, error) {
-	rows, err := r.Ent.VirtualKey.Query().All(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list governance rows: %w", err)
-	}
-	return r.reconcileKeysFor(ctx, gw, rows)
-}
-
-// reconcileKeysFor diffs ONE gateway's listed keys against the GIVEN governance
-// rows — the subset the resolver assigned to that gateway. Keeping the row set
-// scoped to the gateway is what makes the diff correct under multiple gateways:
-// the stale/orphan guards (see heal) then reason only about keys that should live
-// on this gateway. Returns an error only when it cannot read the gateway side.
-func (r *Reconciler) reconcileKeysFor(ctx context.Context, gw Gateway, rows []*ent.VirtualKey) (*Report, error) {
-	gwKeys, err := gw.ListKeys(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list gateway keys: %w", err)
-	}
-
-	// A row is identified at the gateway by EITHER its raw key or its hashed token
-	// (whichever LiteLLM's /key/list returns). Index both so reconciliation works
-	// regardless of which identifier the gateway reports — and so rows persisted
-	// before litellm_token existed still match by their raw key.
-	dbKeys := make(map[string]struct{}, len(rows)*2)
-	for _, vk := range rows {
-		dbKeys[vk.LitellmKey] = struct{}{}
-		if vk.LitellmToken != "" {
-			dbKeys[vk.LitellmToken] = struct{}{}
-		}
-	}
-	gwKeySet := make(map[string]struct{}, len(gwKeys))
-
-	rep := &Report{GatewayKeys: len(gwKeys), DBKeys: len(rows)}
-	for _, k := range gwKeys {
-		gwKeySet[k.Key] = struct{}{}
-		if _, governed := dbKeys[k.Key]; !governed {
-			rep.GatewayOrphans = append(rep.GatewayOrphans, k.Key)
-		}
-	}
-	for _, vk := range rows {
-		if vk.Status == virtualkey.StatusRevoked {
-			continue // already terminal — its key is expected to be gone
-		}
-		// Present if the gateway lists either identifier. An empty token never
-		// matches (the gateway set has no empty entries), so it is harmless.
-		_, byKey := gwKeySet[vk.LitellmKey]
-		_, byToken := gwKeySet[vk.LitellmToken]
-		if !byKey && !byToken {
-			rep.StaleRows = append(rep.StaleRows, vk.ID.String())
-		}
-	}
-
-	if r.Prune {
-		r.heal(ctx, gw, rep)
-	}
-
-	// Log counts only — never the key identifiers themselves.
-	log.Printf("reconcile keys: gateway=%d db=%d orphans=%d stale=%d pruned=%d revoked=%d prune=%v",
-		rep.GatewayKeys, rep.DBKeys, len(rep.GatewayOrphans), len(rep.StaleRows),
-		rep.Pruned, rep.Revoked, r.Prune)
-	return rep, nil
-}
-
-// TeamReport summarizes one team reconciliation pass.
-type TeamReport struct {
-	GatewayTeams  int      // teams the gateway reported
-	DBDepartments int      // departments with a litellm_team_id
-	TeamOrphans   []string // team ids at gateway with no department (prune candidates)
-	DanglingDepts []string // department ids whose litellm_team_id is absent at gateway
-	Pruned        int      // orphan teams deleted at the gateway (Prune only)
-}
-
-// ReconcileTeams compares the given gateway's teams against ALL department
-// rows. Mirrors ReconcileKeys' per-item count/log behavior.
-func (r *Reconciler) ReconcileTeams(ctx context.Context, gw Gateway) (*TeamReport, error) {
-	depts, err := r.Ent.Department.Query().All(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list departments: %w", err)
-	}
-	return r.reconcileTeamsFor(ctx, gw, depts)
-}
-
-// reconcileTeamsFor diffs ONE gateway's teams against the GIVEN department subset
-// (the departments the resolver assigned to that gateway). Gateway team orphans
-// (no backing department) are pruned under Prune; dangling department references
-// are only reported — re-creating vs clearing the link is an operator policy
-// decision. Returns an error only when it cannot read the gateway side.
-func (r *Reconciler) reconcileTeamsFor(ctx context.Context, gw Gateway, depts []*ent.Department) (*TeamReport, error) {
-	gwTeams, err := gw.ListTeams(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list gateway teams: %w", err)
-	}
-
-	dbTeams := make(map[string]struct{})
-	dbCount := 0
-	for _, d := range depts {
-		if d.LitellmTeamID == "" {
-			continue // not linked to a gateway team
-		}
-		dbCount++
-		dbTeams[d.LitellmTeamID] = struct{}{}
-	}
-	gwTeamSet := make(map[string]struct{}, len(gwTeams))
-
-	rep := &TeamReport{GatewayTeams: len(gwTeams), DBDepartments: dbCount}
-	for _, t := range gwTeams {
-		gwTeamSet[t.TeamID] = struct{}{}
-		if _, backed := dbTeams[t.TeamID]; !backed {
-			rep.TeamOrphans = append(rep.TeamOrphans, t.TeamID)
-		}
-	}
-	for _, d := range depts {
-		if d.LitellmTeamID == "" {
-			continue
-		}
-		if _, present := gwTeamSet[d.LitellmTeamID]; !present {
-			rep.DanglingDepts = append(rep.DanglingDepts, d.ID.String())
-		}
-	}
-
-	if r.Prune {
-		// Same guard as keys: if EVERY gateway team is unmatched against a non-empty
-		// department set, it's a mismatch or a shared gateway full of foreign teams —
-		// refuse to delete them all.
-		if allUnmatched(len(rep.TeamOrphans), rep.GatewayTeams, rep.DBDepartments) {
-			log.Printf("reconcile: SKIP team prune — all %d gateway teams unmatched against %d departments; likely mismatch or foreign teams, refusing to prune",
-				rep.GatewayTeams, rep.DBDepartments)
-		} else {
-			for _, teamID := range rep.TeamOrphans {
-				if err := gw.DeleteTeam(ctx, teamID); err != nil {
-					log.Printf("reconcile: prune gateway team orphan failed: %v", err)
-					continue
-				}
-				rep.Pruned++
-			}
-		}
-	}
-
-	log.Printf("reconcile teams: gateway=%d db=%d orphans=%d dangling=%d pruned=%d prune=%v",
-		rep.GatewayTeams, rep.DBDepartments, len(rep.TeamOrphans), len(rep.DanglingDepts),
-		rep.Pruned, r.Prune)
-	return rep, nil
+	GatewayOrphans []string // at gateway, no DB row (ungoverned; Drift A — detected + logged)
+	StaleRows      []string // DB ids: non-revoked rows whose key vanished at gateway (Drift B — detected + logged)
 }
 
 // allUnmatched reports the catastrophic signature where EVERY gateway item is
 // unmatched against a non-empty DB side. That almost always means an identifier
 // mismatch (e.g. gateway lists hashed tokens, DB stores raw keys) or a
-// partial/garbled listing — NOT that every item is genuinely orphaned. Pruning on
-// it would delete everything, so callers refuse and report instead.
+// partial/garbled listing — NOT that every item is genuinely orphaned. Drift
+// C DELETE refuses on this signature so a broken listing cannot nuke every key.
 func allUnmatched(orphans, gatewayTotal, dbTotal int) bool {
 	return gatewayTotal > 0 && orphans == gatewayTotal && dbTotal > 0
 }
 
-// heal deletes gateway orphans and revokes stale rows, counting successes. Two
-// safety guards prevent mass destruction from a bad diff: (1) refuse entirely
-// when every gateway key is unmatched (identifier mismatch); (2) never revoke
-// stale rows when the gateway returned no keys at all (a failed/empty listing
-// must not nuke every governance row).
-func (r *Reconciler) heal(ctx context.Context, gw Gateway, rep *Report) {
-	if allUnmatched(len(rep.GatewayOrphans), rep.GatewayKeys, rep.DBKeys) {
-		log.Printf("reconcile: SKIP key heal — all %d gateway keys unmatched against %d DB rows; likely identifier mismatch or partial list, refusing to prune/revoke",
-			rep.GatewayKeys, rep.DBKeys)
-		return
-	}
-	for _, key := range rep.GatewayOrphans {
-		if err := gw.DeleteKey(ctx, key); err != nil {
-			log.Printf("reconcile: prune gateway orphan failed: %v", err)
-			continue
-		}
-		rep.Pruned++
-	}
-	if rep.GatewayKeys == 0 && len(rep.StaleRows) > 0 {
-		log.Printf("reconcile: SKIP revoking %d stale rows — gateway returned no keys (possible failed/empty list)",
-			len(rep.StaleRows))
-		return
-	}
-	for _, id := range rep.StaleRows {
-		kid, err := uuid.Parse(id)
-		if err != nil {
-			log.Printf("reconcile: bad stale row id %q: %v", id, err)
-			continue
-		}
-		if _, err := r.Ent.VirtualKey.UpdateOneID(kid).
-			SetStatus(virtualkey.StatusRevoked).Save(ctx); err != nil {
-			log.Printf("reconcile: revoke stale row %s failed: %v", id, err)
-			continue
-		}
-		rep.Revoked++
-	}
-}
-
-// Run reconciles keys and teams immediately, then every interval until ctx is
-// canceled. Cycle errors are logged, not fatal — the loop keeps running.
+// Run drives the unified 5-phase cycle every interval until ctx is canceled.
+// Cycle errors are logged, not fatal — the loop keeps running.
 func (r *Reconciler) Run(ctx context.Context, interval time.Duration) {
 	t := time.NewTicker(interval)
 	defer t.Stop()
@@ -337,10 +136,9 @@ func (r *Reconciler) Run(ctx context.Context, interval time.Duration) {
 	}
 }
 
-// runCycle dispatches to the unified cycle when Resolver is set, otherwise the
-// legacy keys+teams cycle. The outer recover guard is shared — both paths run
-// under it. cycleErrs is reset at the top of every cycle so the cycle-end
-// summary always reflects the current pass.
+// runCycle runs the unified 5-phase cycle under an outer recover guard so a
+// cycle-start panic cannot crash the ticker. cycleErrs is reset at the top of
+// every cycle so the cycle-end summary always reflects the current pass.
 func (r *Reconciler) runCycle(ctx context.Context) {
 	defer func() {
 		if p := recover(); p != nil {
@@ -352,15 +150,10 @@ func (r *Reconciler) runCycle(ctx context.Context) {
 	if r.IsLeader != nil && !r.IsLeader(ctx) {
 		return
 	}
-
-	if r.Resolver != nil {
-		r.runUnifiedCycle(ctx)
-		return
-	}
-	r.runLegacyCycle(ctx)
+	r.runUnifiedCycle(ctx)
 }
 
-// runUnifiedCycle is the new 5-phase reconciliation pass. One cycle covers:
+// runUnifiedCycle is the 5-phase reconciliation pass. One cycle covers:
 //   - keys (per-gateway): detect Drift A/B/C; push Drift C (DELETE revoked keys
 //     at LiteLLM), log Drift A and Drift B.
 //   - gateway_status (per-gateway): probe + persist status/strategy/count.
@@ -385,7 +178,7 @@ func (r *Reconciler) runUnifiedCycle(ctx context.Context) {
 	// Per-gateway phases: keys, gateway_status, provider_models, spend_refresh.
 	for _, t := range targets {
 		if t.Conn == nil {
-			continue // legacy caller (no Conn populated) — skip unified phases.
+			continue // caller didn't populate Conn — skip the per-gateway phases.
 		}
 		connID := t.Conn.ID
 		r.safePhaseGateway(t, "keys", func() { r.reconcileKeysUnified(ctx, t) })
@@ -409,8 +202,8 @@ func (r *Reconciler) runUnifiedCycle(ctx context.Context) {
 		len(r.cycleErrs), time.Since(cycleStart).Milliseconds())
 }
 
-// reconcileKeysUnified is the keys phase of the unified cycle. Mirrors
-// reconcileKeysFor's diff but applies the new stance:
+// reconcileKeysUnified is the keys phase of the unified cycle. Applies the
+// unified-cycle stance:
 //   - Drift A (LiteLLM-only keys): detect + log, IGNORE.
 //   - Drift B (DB active, LiteLLM missing): detect + log, never recreate
 //     (cannot safely — recreating loses the original raw key).
@@ -488,12 +281,9 @@ func (r *Reconciler) reconcileKeysUnified(ctx context.Context, t GatewayTarget) 
 }
 
 // diffKeys runs the gateway keys listing against the given DB subset and
-// returns the report plus the raw gateway key set. The legacy path uses the
-// report via heal(); the unified path uses both the report (for counts) and
-// the gwKeySet (for Drift C DELETE without re-listing).
-//
-// Shared between legacy and unified — we only ever call /key/list ONCE per
-// phase.
+// returns the report plus the raw gateway key set. The keys phase uses both
+// the report (for counts) and the gwKeySet (for Drift C DELETE without
+// re-listing). /key/list is called ONCE per phase.
 func (r *Reconciler) diffKeys(ctx context.Context, gw Gateway, rows []*ent.VirtualKey) (*Report, map[string]struct{}, error) {
 	gwKeys, err := gw.ListKeys(ctx)
 	if err != nil {
@@ -597,33 +387,3 @@ func (r *Reconciler) recordErr(s string) {
 	r.cycleErrs = append(r.cycleErrs, s)
 	log.Printf("reconcile: %s", s)
 }
-
-// runLegacyCycle preserves the pre-unified behavior: keys + teams, Prune-gated
-// healing. Kept so a deployment with Resolver == nil falls back to the
-// historical semantics. The unified cycle replaces this entirely once
-// Resolver is wired in (see PR #3 cut-over).
-func (r *Reconciler) runLegacyCycle(ctx context.Context) {
-	if r.GatewaysFunc == nil {
-		return
-	}
-	targets, err := r.GatewaysFunc(ctx)
-	if err != nil {
-		log.Printf("reconcile: resolve gateway targets failed, skipping cycle: %v", err)
-		return
-	}
-	for _, t := range targets {
-		if t.Gateway == nil {
-			continue
-		}
-		if _, err := r.reconcileKeysFor(ctx, t.Gateway, t.Keys); err != nil {
-			log.Printf("reconcile keys cycle error: %v", err)
-		}
-		if _, err := r.reconcileTeamsFor(ctx, t.Gateway, t.Depts); err != nil {
-			log.Printf("reconcile teams cycle error: %v", err)
-		}
-	}
-}
-
-// (Old runCycle removed; replaced by runCycle (dispatcher) at line ~344 above,
-// runUnifiedCycle for the new 5-phase path, and runLegacyCycle for the
-// pre-unified keys+teams behavior.)

@@ -200,38 +200,29 @@ func main() {
 		isLeader = lease.IsLeader
 	}
 
-	// Periodically reconcile gateway keys against governance rows (detect/heal
-	// ungoverned orphans + stale rows). Disabled unless an interval is set AND a
-	// gateway is configured. Report-only unless RECONCILE_PRUNE=true.
+	// Periodically reconcile DB → LiteLLM drift across every configured gateway.
+	// Disabled unless an interval is set AND a gateway is configured. The
+	// reconciler runs a single 5-phase cycle per tick: keys, gateway_status,
+	// provider_models, spend_refresh, router_settings (LLD-14 §3.4 / OQ-5).
 	reconcileCtx, stopReconcile := context.WithCancel(context.Background())
 	defer stopReconcile()
 	if cfg.LitellmReconcileInterval > 0 {
 		rec := &reconcile.Reconciler{
 			Ent: client,
-			// Reconcile EVERY configured gateway against only its own keys/teams,
-			// partitioned from DB each cycle (LLD-14 §3.4 / OQ-5); cycles are skipped
-			// until at least one gateway is configured.
+			// Reconcile EVERY configured gateway against only its own keys,
+			// partitioned from DB each cycle; cycles are skipped until at least
+			// one gateway is configured.
 			GatewaysFunc: resolver.ReconcileTargets,
-			Prune:        cfg.ReconcilePrune,
-			// Single-flight across replicas so the prune runs on exactly one replica
-			// (nil on the dev sqlite path → always leader).
+			// Single-flight across replicas so the destructive Drift C DELETE
+			// runs on exactly one replica (nil on the dev sqlite path → always
+			// leader).
 			IsLeader: isLeader,
-			// Default: unified 5-phase cycle (DB→LiteLLM push for keys /
-			// gateway_status / provider_models / spend_refresh / router_settings).
-			// Drift A (LiteLLM-only) is detected + logged + IGNORED. Drift B
-			// (DB-only) and Drift C (DB-revoked but LiteLLM still has) execute
-			// directly. Operators can opt back to the legacy keys+teams cycle
-			// by setting LITELLM_RECONCILE_UNIFIED=false (not recommended —
-			// the legacy cycle doesn't cover provider_models / router_settings /
-			// spend_refresh).
+			// Resolver is required: the unified cycle owns the action semantics
+			// and there is no fallback.
 			Resolver: resolver,
 		}
-		if !cfg.LitellmReconcileUnified {
-			rec.Resolver = nil // opt-out: run legacy keys+teams cycle
-		}
 		interval := time.Duration(cfg.LitellmReconcileInterval) * time.Second
-		log.Printf("gateway-key reconciler: every %s (prune=%v, unified=%v), all gateways",
-			interval, cfg.ReconcilePrune, cfg.LitellmReconcileUnified)
+		log.Printf("gateway-key reconciler: every %s, 5-phase unified cycle, all gateways", interval)
 		go rec.Run(reconcileCtx, interval)
 	}
 

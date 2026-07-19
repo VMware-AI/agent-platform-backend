@@ -7,10 +7,13 @@
 # stack's redis (6379): litellm=4000, its own postgres=5433.
 #
 # Usage:
-#   cd deploy/litellm
+#   cd deploy
 #   cp .env.example .env        # then fill MINIMAX_API_KEY + a master key
 #   docker compose up -d
-#   # backend: LITELLM_BASE_URL=http://localhost:4000 LITELLM_MASTER_KEY=<same> make run
+#   # then in the backend console (模型网关接入):
+#   #   endpoint=http://localhost:4000  master_key=<same as LITELLM_MASTER_KEY above>
+#   # The backend does not consume LITELLM_BASE_URL / LITELLM_MASTER_KEY at startup
+#   # — it reads the gateway from gateway_connections (LLD-13 §3.3).
 services:
   litellm:
     # Mirrored from litellm/litellm:v1.89.4 to quay.io/vmware-ai/litellm:v1.89.4
