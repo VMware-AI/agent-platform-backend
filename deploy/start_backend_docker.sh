@@ -73,8 +73,6 @@ set -euo pipefail
 # ║     ENV_SCOPE_ENABLED, CONTROL_PLANE_URL                               ║
 # ║   Secrets (advanced):                                                 ║
 # ║     SECRETS_ROTATION_INTERVAL_SECONDS, SECRETS_AUDIT_ENABLED           ║
-# ║   Dev escape hatches (do NOT set in any vCenter-backed deploy):       ║
-# ║     DEV_NO_VCENTER                                                     ║
 # ║                                                                       ║
 # ║ Docker-only knobs (no local-script equivalent):                       ║
 # ║   HOST_IP       — required: the host address reachable from the       ║
@@ -411,5 +409,4 @@ exec docker run \
   -e AGENT_KEEP_VERSIONS \
   -e AGENT_USER \
   -e ENV_SCOPE_ENABLED \
-  -e DEV_NO_VCENTER \
   "${IMAGE}"

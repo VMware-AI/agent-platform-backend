@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/VMware-AI/agent-platform-backend/ent/agent"
 	"github.com/VMware-AI/agent-platform-backend/ent/rotationcommand"
@@ -81,12 +80,6 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 				keyModels = vk.Models
 			}
 		}
-	}
-
-	devNoVC := os.Getenv("DEV_NO_VCENTER") == "1" || os.Getenv("DEV_NO_VCENTER") == "true"
-
-	if devNoVC {
-		return r.devDeployAgent(ctx, ag, t)
 	}
 
 	conn, err := r.VCenterConnect(ctx, t.pool.Endpoint, t.cred.Username, t.cred.Password, t.pool.Insecure)

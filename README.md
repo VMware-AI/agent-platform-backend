@@ -112,7 +112,6 @@ dev/prod 行为不同的用 ✅ / ⚠️ 标注。
 | `AGENT_KEEP_VERSIONS` | `3` | 否 | 部署时以 `guestinfo.agentmgr.agent_keep_versions` 下发：VM 升级后保留的历史版本数。`0`（默认）= 不下发（与未设置等价），走 daemon 默认 `3`；daemon 侧拒绝 `<1`，最小有效值为 `1` |
 | `AGENT_USER` | `agent` | 否 | 仅作 `os.Getenv` 直读（**不经 `config.Load`**）：装机命令里 `{{AGENT_USER}}` 替换的 OS 用户。生产值走 LLD-13 数据库「平台设置」表，不推荐用此 env 覆盖 |
 | `ENV_SCOPE_ENABLED` | `false` | 否 | LLD-10 环境隔离；前端 `X-Environment` 契约未就绪前保持关 |
-| `DEV_NO_VCENTER` | `1` \| `true` | **dev only** | 让 `deployAgent` 跳过 vCenter 直接 issue gateway key + 落库（方便无 vcsim 环境 e2e）；**任何带 vCenter 的部署都别设** |
 | `SECRETS_ENCRYPTION_KEY` | `openssl rand -hex 32` | **是**（任何环境，除非用 `SECRETS_ENCRYPTION_KEYS`） | AES-256-GCM 加密 `platform_secrets` 的密钥；SHA-256 派生到 32 字节；空 → 启动 fail-fast。dev 用 `deploy/start_backend_*.sh` 首次运行自动生成并写到 `deploy/.secrets_encryption_key`（mode `0600`），prod 必须手动注入并离线备份。详见下方「凭据加密密钥」一节 |
 | `SECRETS_ENCRYPTION_KEYS` | `k1:passphrase1,k2:passphrase2` | 轮换期 **是**（否则空） | 轮换友好的多密钥形式：`id:passphrase` 逗号分隔。**第一项是 active key**（新写入用它）；其余参与解密以兼容旧密文。**优先级高于 `SECRETS_ENCRYPTION_KEY`**；设置它就忽略单密钥版本。详见下方「密钥轮换」 |
 | `SECRETS_ROTATION_INTERVAL_SECONDS` | `0` | 否 | 后台 worker 扫描 `platform_secrets` 中用退役 key 加密的行并 re-encrypt 到 active key 的周期；`0`=关闭（轮换是运维主动行为，不自动迁）。`>0` 才启用 |
