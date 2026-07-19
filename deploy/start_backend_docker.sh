@@ -46,9 +46,33 @@ set -euo pipefail
 # ║ Same env contract as start_backend_local.sh:                          ║
 # ║   APP_ENV, HTTP_ADDR, DATABASE_URL, REDIS_URL, ALLOWED_ORIGINS,        ║
 # ║   DB_AUTO_MIGRATE, SESSION_TTL_SECONDS, ADMIN_BOOTSTRAP_PASSWORD.     ║
+# ║ Plus the secrets key (required in any environment):                   ║
+# ║   SECRETS_ENCRYPTION_KEY — single key, simple                          ║
+# ║   SECRETS_ENCRYPTION_KEYS — multi-key form (rotation; takes           ║
+# ║     precedence over SECRETS_ENCRYPTION_KEY when set)                   ║
 # ║ The defaults below mirror start_backend_local.sh, except addresses    ║
 # ║ that resolve to the host (DATABASE_URL/REDIS_URL/ALLOWED_ORIGINS) use  ║
 # ║ HOST_IP instead of 127.0.0.1, because the backend runs in a container.║
+# ║                                                                       ║
+# ║ Pass-through backend env vars (no default here; if set in your shell  ║
+# ║ they are forwarded via `-e` to the container, otherwise the binary's   ║
+# ║ own defaults in internal/config/config.go apply):                     ║
+# ║   Reconciler / spend / probe:                                        ║
+# ║     LITELLM_RECONCILE_INTERVAL_SECONDS,                                ║
+# ║     PROVIDER_PROBE_INTERVAL_SECONDS,                                  ║
+# ║     OBS_SPEND_CACHE_TTL_SECONDS, PERM_CACHE_TTL_SECONDS                ║
+# ║   Resource pool sync:                                                  ║
+# ║     POOL_SYNC_INTERVAL_SECONDS, POOL_SYNC_TIMEOUT_SECONDS,             ║
+# ║     POOL_SYNC_MAX_RETRIES, POOL_SYNC_BREAKER_THRESHOLD,                ║
+# ║     POOL_SYNC_BREAKER_OPEN_SECONDS                                    ║
+# ║   Postgres pool tuning:                                                ║
+# ║     DB_MAX_OPEN_CONNS, DB_MAX_IDLE_CONNS,                              ║
+# ║     DB_CONN_MAX_LIFETIME_MINUTES                                       ║
+# ║   Agent / scope / misc:                                                ║
+# ║     AGENT_PKG_BASE_URL, AGENT_KEEP_VERSIONS, AGENT_USER,               ║
+# ║     ENV_SCOPE_ENABLED, CONTROL_PLANE_URL                               ║
+# ║   Secrets (advanced):                                                 ║
+# ║     SECRETS_ROTATION_INTERVAL_SECONDS, SECRETS_AUDIT_ENABLED           ║
 # ║                                                                       ║
 # ║ Docker-only knobs (no local-script equivalent):                       ║
 # ║   HOST_IP       — required: the host address reachable from the       ║
@@ -338,6 +362,10 @@ echo "   DATABASE_URL=${DATABASE_URL}"
 echo "   REDIS_URL=${REDIS_URL}"
 echo "   ALLOWED_ORIGINS=${ALLOWED_ORIGINS}"
 echo "   SECRETS_ENCRYPTION_KEY=<set>  (key file: ${KEY_FILE})"
+if [[ -n "${SECRETS_ENCRYPTION_KEYS:-}" ]]; then
+  echo "   SECRETS_ENCRYPTION_KEYS=<set>  (multi-key rotation; overrides single-key)"
+fi
+echo "   (other backend env vars from your shell are forwarded; see header)"
 echo "────────────────────────────────────────────────────────────"
 echo
 echo "(pulling ${IMAGE}; Ctrl-C to stop and remove the container)"
@@ -360,5 +388,25 @@ exec docker run \
   -e DB_AUTO_MIGRATE \
   -e SESSION_TTL_SECONDS \
   -e ADMIN_BOOTSTRAP_PASSWORD \
+  -e CONTROL_PLANE_URL \
   -e SECRETS_ENCRYPTION_KEY \
+  -e SECRETS_ENCRYPTION_KEYS \
+  -e SECRETS_ROTATION_INTERVAL_SECONDS \
+  -e SECRETS_AUDIT_ENABLED \
+  -e LITELLM_RECONCILE_INTERVAL_SECONDS \
+  -e POOL_SYNC_INTERVAL_SECONDS \
+  -e POOL_SYNC_TIMEOUT_SECONDS \
+  -e POOL_SYNC_MAX_RETRIES \
+  -e POOL_SYNC_BREAKER_THRESHOLD \
+  -e POOL_SYNC_BREAKER_OPEN_SECONDS \
+  -e PROVIDER_PROBE_INTERVAL_SECONDS \
+  -e OBS_SPEND_CACHE_TTL_SECONDS \
+  -e PERM_CACHE_TTL_SECONDS \
+  -e DB_MAX_OPEN_CONNS \
+  -e DB_MAX_IDLE_CONNS \
+  -e DB_CONN_MAX_LIFETIME_MINUTES \
+  -e AGENT_PKG_BASE_URL \
+  -e AGENT_KEEP_VERSIONS \
+  -e AGENT_USER \
+  -e ENV_SCOPE_ENABLED \
   "${IMAGE}"

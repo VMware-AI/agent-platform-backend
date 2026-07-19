@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -120,19 +119,9 @@ type Result struct {
 // Provision issues a key, clones the agent VM from the OVA template, injects
 // cloud-init via guestinfo, and powers it on. On any step's failure it rolls
 // back the work already done so no orphan VM or gateway key is left (LLD-05 §3).
-//
-// DEV_NO_VCENTER: when set (e.g. "1" or "true"), skips all vCenter operations
-// and returns the issued key immediately. The agent row is created but the VM
-// does not exist. This is for frontend/UI development without a live vCenter.
 func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
-	if s.Gateway == nil {
-		return nil, fmt.Errorf("deploy: gateway must be configured")
-	}
-	// Dev mode: vCenter is optional; gateway is always required.
-	if os.Getenv("DEV_NO_VCENTER") != "1" && os.Getenv("DEV_NO_VCENTER") != "true" {
-		if s.VCenter == nil {
-			return nil, fmt.Errorf("deploy: gateway and vcenter must be configured")
-		}
+	if s.Gateway == nil || s.VCenter == nil {
+		return nil, fmt.Errorf("deploy: gateway and vcenter must be configured")
 	}
 	if req.VMName == "" || req.UserID == "" || req.Template == "" {
 		return nil, fmt.Errorf("deploy: template, vmName and userId are required")
@@ -169,11 +158,6 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 	// (buildNetplanConfig) pick up the static IP configuration.
 	if req.OVFProperties != nil && req.OVFProperties["guestinfo.static_ip"] != "" && req.OVFProperties["guestinfo.ip_mode"] == "" {
 		req.OVFProperties["guestinfo.ip_mode"] = "static"
-	}
-
-	// Dev mode: skip VM provisioning, return the key immediately.
-	if os.Getenv("DEV_NO_VCENTER") == "1" || os.Getenv("DEV_NO_VCENTER") == "true" {
-		return &Result{VirtualKey: key.Key, VirtualKeyToken: key.Token, VMName: req.VMName}, nil
 	}
 
 	// 2) Deploy the agent VM. Two paths:
