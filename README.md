@@ -97,6 +97,7 @@ dev/prod 行为不同的用 ✅ / ⚠️ 标注。
 | `ADMIN_BOOTSTRAP_PASSWORD` | `AdminLocal123!` | prod 是（dev 否） | 空库时种子 admin 密码；dev 不设会用 `ChangeMe123!` 并强制首登改密 |
 | `CONTROL_PLANE_URL` | `https://api.example.com` | 否 | 控制面自身对外 URL；resolver 透传 |
 | `LITELLM_RECONCILE_INTERVAL_SECONDS` | `900`（15m） | 否 | DB→LiteLLM 5 阶段统一对账周期（keys / gateway_status / provider_models / spend_refresh / router_settings）。Drift A（LiteLLM 单方面）只记录不处理；Drift B/C（DB 单方面）直接执行。`0`=关闭后台 ticker（手动触发仍可用）；多副本经 Postgres advisory lock 选主 |
+| `LITELLM_MASTER_KEY` | `sk-...` | **dev only** | gateway master key 解析的兜底：console 配置的 `gateway_connections.master_key_ref` 在 secrets store 解不出来时（如首次启动 / 加密密钥尚未就绪），落到这个 env var 上拿值。**主路径是 DB store**，任何带 vCenter/litellm 的真实部署都别设——会绕过 secrets 加密 |
 | `POOL_SYNC_INTERVAL_SECONDS` | `3600`（60m） | 否 | 资源池后台同步周期；扫描所有有 `secret_ref` 的池子并过 timeout→retry→breaker 链。`0`=关闭后台 ticker（手动 `syncResourcePool` 或创建即同步仍可用）。详见 [ResourcePool 同步机制](#resourcepool-同步机制) |
 | `POOL_SYNC_TIMEOUT_SECONDS` | `30` | 否 | 单池同步全链（connect + inventory + full inventory + DB 写回）总超时；终端 vCenter 慢响应不会拖住整个 ticker。`0` 走 30s 兜底（防 `ctx(0)` 即过期） |
 | `POOL_SYNC_MAX_RETRIES` | `3` | 否 | 失败重试次数（不含首次尝试）；指数退避 1s/2s/4s + 25% jitter。仅 `*vcenter.RetryableError`（网络/超时/5xx 等）触发；鉴权失败、对象不存在等业务错误不重试。`0`=只试一次 |
@@ -119,7 +120,7 @@ dev/prod 行为不同的用 ✅ / ⚠️ 标注。
 | `ATLAS_DEV_URL` | `postgres://localhost:5432/atlas_dev` | 仅 `make migrate-diff` 时 | Atlas diff 的 dev DB；运行 backend 不读 |
 | `*` (任意) | — | — | 凭据引用：模型网关 / vCenter 等凭据在 console 配置后由 `internal/secrets` 解析到 `platform_secrets` 表里的密文（不需要 `vaultwarden://` 这类特殊 scheme——旧方案已删除）。小众 air-gap 场景可用 `env://USER_VAR,PASS_VAR[,APIKEY_VAR]` 从进程 env 直读（不落库），但主路径是 DBStore |
 
-> 模型网关（`LITELLM_BASE_URL` / `LITELLM_MASTER_KEY` / `GATEWAY_PUBLIC_URL`）不再是启动 env——在 console「模型网关接入」页添加网关连接，后端按部门/默认网关从 DB 解析（LLD-13 §3.3）。`AGENT_USER` 仍然只在启动时从 env 读，未来再迁移到平台设置表。
+> 模型网关 endpoint（`LITELLM_BASE_URL` / `GATEWAY_PUBLIC_URL`）不再是启动 env——在 console「模型网关接入」页添加网关连接，后端按部门/默认网关从 DB 解析（LLD-13 §3.3）。`LITELLM_MASTER_KEY` 仅作为 gateway master key 的 dev 兜底（见上表），主路径是 `platform_secrets`。`AGENT_USER` 仍然只在启动时从 env 读，未来再迁移到平台设置表。
 
 ## 凭据加密密钥（`SECRETS_ENCRYPTION_KEY` / `SECRETS_ENCRYPTION_KEYS`）
 

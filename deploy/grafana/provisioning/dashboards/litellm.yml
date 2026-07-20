@@ -1,0 +1,20 @@
+# Auto-load dashboards from /var/lib/grafana/dashboards/ at startup.
+# Grafana re-scans every 30s, so editing the JSON file in place is enough
+# to update a dashboard — no container restart required.
+#
+# The dashboard JSON is offline'd under deploy/grafana/dashboards/ so this
+# stack works in air-gapped networks. Source:
+# https://raw.githubusercontent.com/BerriAI/litellm/refs/heads/main/cookbook/litellm_proxy_server/grafana_dashboard/dashboard_v2/grafana_dashboard.json
+apiVersion: 1
+
+providers:
+  - name: litellm
+    orgId: 1
+    folder: LiteLLM
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

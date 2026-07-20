@@ -1,0 +1,19 @@
+# Auto-configured datasource for grafana. Grafana reads everything under
+# /etc/grafana/provisioning/datasources/ at startup; this file is mounted
+# read-only from deploy/grafana/provisioning/datasources/.
+#
+# Points at the litellm-prometheus service in docker-compose.yml (the
+# compose service name, NOT the container_name — they're the same here but
+# compose resolves service names via DNS).
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://litellm-prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: 15s
+      httpMethod: POST

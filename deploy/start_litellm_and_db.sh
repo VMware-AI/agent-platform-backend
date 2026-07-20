@@ -62,5 +62,12 @@ cat <<EOF
 
  Then add a minimax upstream from the UI (or GraphQL):
    model=openai/MiniMax-Text-01  api_base=https://api.minimaxi.com/v1  apiKey=<your minimax key>
+
+ Observability:
+   Prometheus   → http://localhost:9090/targets?search=litellm
+   Grafana      → http://localhost:3000   (admin/admin, anonymous viewer enabled)
+                 The LiteLLM dashboard is auto-loaded under the "LiteLLM" folder
+                 and pre-wired to the Prometheus datasource — open it to start
+                 charting request rate / latency / token usage.
 ────────────────────────────────────────────────────────────
 EOF

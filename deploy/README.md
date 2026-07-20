@@ -16,10 +16,16 @@ LLM gateway stack on your laptop:
 
 ```
 deploy/
-├── docker-compose.yml          # litellm + litellm postgres/redis + prometheus
+├── docker-compose.yml          # litellm + litellm postgres/redis + prometheus + grafana
 ├── config.yaml                 # litellm config (store_model_in_db, prom callbacks)
 ├── init-db.sh                  # creates the `litellm_db` database on first boot
 ├── prometheus.yml              # scrape config (litellm:4000 /metrics)
+├── grafana/
+│   ├── dashboards/
+│   │   └── litellm_dashboard.json   # offline'd LiteLLM observability dashboard
+│   └── provisioning/
+│       ├── datasources/prometheus.yml   # auto-wires Prometheus datasource
+│       └── dashboards/litellm.yml      # auto-loads the dashboard above
 ├── start_litellm_and_db.sh     # one-command launcher for the data plane + state
 ├── start_backend_local.sh      # one-command launcher for the Go control plane (working tree)
 └── start_backend_docker.sh     # one-command launcher for the Go control plane (container image)
@@ -44,6 +50,7 @@ Ports:
 - Postgres → `127.0.0.1:5433`  (user `agentplatform_user`, db `agentplatform` + `litellm_db`)
 - Redis    → `127.0.0.1:6379`
 - Prometheus → `http://localhost:9090`
+- Grafana    → `http://localhost:3000` (auto-provisioned Prometheus datasource + LiteLLM dashboard under the "LiteLLM" folder; dev credentials `admin/admin`)
 
 > Verified end-to-end (2026-06-24): backend `upsertUpstream`→`/model/new`,
 > `issueVirtualKey`→`/key/generate`, then a virtual key → litellm → **a real
@@ -165,6 +172,19 @@ What it does:
   callbacks wired in `config.yaml`).
 - The bundled Prometheus scrapes it every 15s — open
   `http://localhost:9090/targets?search=litellm` to confirm.
+- **Grafana** (`http://localhost:3000`) is auto-provisioned with the Prometheus
+  datasource and the offline'd LiteLLM dashboard
+  ([grafana/dashboards/litellm_dashboard.json](grafana/dashboards/litellm_dashboard.json);
+  source `BerriAI/litellm/cookbook/litellm_proxy_server/grafana_dashboard/dashboard_v2/grafana_dashboard.json`).
+  Open it after `docker compose up -d` — Prometheus picks up traffic as soon as a
+  virtual key issues a completion, so the panels fill in within seconds.
+  The dashboard JSON is loaded read-only from the repo, but Grafana's UI can
+  still save edits to its own copy (the file-based provider re-scans every 30s
+  and re-imports). To re-pin to the upstream dashboard, refresh the JSON file
+  from the URL above.
+- Anonymous viewer login is enabled for dev convenience (no password prompt);
+  disable it via `GF_AUTH_ANONYMOUS_ENABLED=false` in any non-local deployment,
+  and override `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` in `.env`.
 
 ## Notes
 
