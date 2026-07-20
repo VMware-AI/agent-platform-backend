@@ -19,7 +19,6 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/internal/agentmgr"
-	"github.com/VMware-AI/agent-platform-backend/internal/skills"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/catalog"
 	"github.com/VMware-AI/agent-platform-backend/internal/config"
@@ -30,6 +29,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/reconcile"
 	"github.com/VMware-AI/agent-platform-backend/internal/secrets"
 	"github.com/VMware-AI/agent-platform-backend/internal/session"
+	"github.com/VMware-AI/agent-platform-backend/internal/skills"
 	"github.com/VMware-AI/agent-platform-backend/internal/store"
 	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 )

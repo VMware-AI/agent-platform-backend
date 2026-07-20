@@ -29,8 +29,10 @@ type Service struct {
 	HTTPBase string // e.g. "http://172.16.85.230:8081"
 }
 
-func (s *Service) scpDest(file string) string { return fmt.Sprintf("%s:%s/%s", s.SCPHost, s.DataDir, file) }
-func (s *Service) httpURL(file string) string  { return fmt.Sprintf("%s/%s", s.HTTPBase, file) }
+func (s *Service) scpDest(file string) string {
+	return fmt.Sprintf("%s:%s/%s", s.SCPHost, s.DataDir, file)
+}
+func (s *Service) httpURL(file string) string { return fmt.Sprintf("%s/%s", s.HTTPBase, file) }
 
 // SyncPackage downloads the skill's package_url and SCPs it to the jump host.
 func (s *Service) SyncPackage(ctx context.Context, skillID string, sourceURL string) error {
@@ -203,7 +205,9 @@ func (s *Service) handleSync(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 400, map[string]string{"error": "missing skillId"})
 		return
 	}
-	var body struct{ SourceURL string `json:"sourceUrl"` }
+	var body struct {
+		SourceURL string `json:"sourceUrl"`
+	}
 	json.NewDecoder(r.Body).Decode(&body)
 	if err := s.SyncPackage(r.Context(), id, body.SourceURL); err != nil {
 		log.Printf("[skills] sync error: %v", err)
