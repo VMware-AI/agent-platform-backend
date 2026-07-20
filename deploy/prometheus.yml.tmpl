@@ -3,6 +3,9 @@ global:
 
 scrape_configs:
   - job_name: "litellm-proxy"
+    authorization:
+      type: Bearer
+      credentials: <LITELLM_API_KEY>
     static_configs:
       # 抓取 docker 内部 litellm 服务的 4000 端口
       - targets: ["litellm:4000"]
