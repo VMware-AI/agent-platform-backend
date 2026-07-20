@@ -27,6 +27,10 @@ type Skill {
   version: String!
   description: String
   uri: String!
+  installMethod: String!
+  mcpConfig: Map
+  packageUrl: String
+  category: String
   createdAt: Time!
 }
 
@@ -55,6 +59,10 @@ input UpsertSkillInput {
   version: String!
   description: String
   uri: String!
+  installMethod: String
+  mcpConfig: Map
+  packageUrl: String
+  category: String
 }
 input UpsertImageInput {
   repository: String!

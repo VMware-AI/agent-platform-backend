@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -29,7 +30,15 @@ type Skill struct {
 	// Description holds the value of the "description" field.
 	Description string `json:"description,omitempty"`
 	// URI holds the value of the "uri" field.
-	URI          string `json:"uri,omitempty"`
+	URI string `json:"uri,omitempty"`
+	// InstallMethod holds the value of the "install_method" field.
+	InstallMethod string `json:"install_method,omitempty"`
+	// McpConfig holds the value of the "mcp_config" field.
+	McpConfig map[string]interface{} `json:"mcp_config,omitempty"`
+	// PackageURL holds the value of the "package_url" field.
+	PackageURL string `json:"package_url,omitempty"`
+	// Category holds the value of the "category" field.
+	Category     string `json:"category,omitempty"`
 	selectValues sql.SelectValues
 }
 
@@ -38,7 +47,9 @@ func (*Skill) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case skill.FieldName, skill.FieldVersion, skill.FieldDescription, skill.FieldURI:
+		case skill.FieldMcpConfig:
+			values[i] = new([]byte)
+		case skill.FieldName, skill.FieldVersion, skill.FieldDescription, skill.FieldURI, skill.FieldInstallMethod, skill.FieldPackageURL, skill.FieldCategory:
 			values[i] = new(sql.NullString)
 		case skill.FieldCreatedAt, skill.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -101,6 +112,32 @@ func (_m *Skill) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.URI = value.String
 			}
+		case skill.FieldInstallMethod:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field install_method", values[i])
+			} else if value.Valid {
+				_m.InstallMethod = value.String
+			}
+		case skill.FieldMcpConfig:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field mcp_config", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.McpConfig); err != nil {
+					return fmt.Errorf("unmarshal field mcp_config: %w", err)
+				}
+			}
+		case skill.FieldPackageURL:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field package_url", values[i])
+			} else if value.Valid {
+				_m.PackageURL = value.String
+			}
+		case skill.FieldCategory:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field category", values[i])
+			} else if value.Valid {
+				_m.Category = value.String
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -154,6 +191,18 @@ func (_m *Skill) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("uri=")
 	builder.WriteString(_m.URI)
+	builder.WriteString(", ")
+	builder.WriteString("install_method=")
+	builder.WriteString(_m.InstallMethod)
+	builder.WriteString(", ")
+	builder.WriteString("mcp_config=")
+	builder.WriteString(fmt.Sprintf("%v", _m.McpConfig))
+	builder.WriteString(", ")
+	builder.WriteString("package_url=")
+	builder.WriteString(_m.PackageURL)
+	builder.WriteString(", ")
+	builder.WriteString("category=")
+	builder.WriteString(_m.Category)
 	builder.WriteByte(')')
 	return builder.String()
 }

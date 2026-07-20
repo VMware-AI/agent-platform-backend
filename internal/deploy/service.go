@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 )
@@ -94,6 +95,8 @@ type Request struct {
 	// ContentLibraryItemID, when set, switches from CloneFromTemplate to OVF deploy
 	// via vCenter's content-library deploy pipeline (native OVF environment).
 	ContentLibraryItemID string
+	// Skills to install on the agent VM at deploy time (offline packages installed via cloud-init).
+	Skills []*ent.Skill
 	// HostMoRef is the target host managed object reference for OVF deploy.
 	HostMoRef string
 	// FolderMoRef is the target VM folder managed object reference for OVF deploy.
@@ -193,7 +196,7 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 	}
 
 	// 3) Inject per-VM cloud-init via guestinfo.
-	userdata := buildUserdata(s.GatewayURL, key.Key, req.Hostname, req.DefaultConfig, req.ConfigPath, req.OVFProperties, req.Models)
+	userdata := buildUserdata(s.GatewayURL, key.Key, req.Hostname, req.DefaultConfig, req.ConfigPath, req.OVFProperties, req.Models, req.Skills)
 	gi := map[string]string{"userdata": userdata}
 	// Static IP: inject network-config so VMware's cloud-init datasource
 	// picks it up. Also set a fresh instance-id to force cloud-init to run.
@@ -340,7 +343,7 @@ func buildNetplanConfig(props map[string]string) string {
 	return b.String()
 }
 
-func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, ovfProps map[string]string, models []string) string {
+func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, ovfProps map[string]string, models []string, skills []*ent.Skill) string {
 	base := strings.TrimRight(gatewayURL, "/")
 	var b strings.Builder
 	b.WriteString("#cloud-config\n")
@@ -535,6 +538,31 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 		}
 	}
 
+	// Skill offline install (runs after cloud-init write_files).
+	// Uses skill.PackageURL — must be synced to jump-host HTTP server first.
+	log.Printf("[deploy] buildUserdata: %d skills", len(skills))
+	if len(skills) > 0 {
+		b.WriteString("runcmd:\n")
+		for _, sk := range skills {
+			url := sk.PackageURL
+			if url == "" {
+				continue
+			}
+			switch sk.InstallMethod {
+			case "pip":
+				fmt.Fprintf(&b, "  - mkdir -p /tmp/skills_%s && curl -sL --max-time 120 %s | tar xz -C /tmp/skills_%s\n", sk.Name, url, sk.Name)
+				fmt.Fprintf(&b, "  - pip3 install --no-index --find-links /tmp/skills_%s --ignore-requires-python %s || true\n", sk.Name, sk.Name)
+			case "pip-requirements":
+				fmt.Fprintf(&b, "  - curl -s %s | tar xz -C /opt/skills\n", url)
+				fmt.Fprintf(&b, "  - cd /opt/skills/%s && pip3 install --user -r requirements.txt\n", sk.Name)
+			case "npm":
+				fmt.Fprintf(&b, "  - curl -s %s -o /tmp/skills_%s.tgz\n", url, sk.Name)
+				fmt.Fprintf(&b, "  - npm install -g /tmp/skills_%s.tgz\n", sk.Name)
+			case "binary":
+				fmt.Fprintf(&b, "  - curl -s %s | tar xz -C /opt/skills\n", url)
+			}
+		}
+	}
 	return b.String()
 }
 

@@ -97,6 +97,72 @@ func (_u *SkillUpdate) SetNillableURI(v *string) *SkillUpdate {
 	return _u
 }
 
+// SetInstallMethod sets the "install_method" field.
+func (_u *SkillUpdate) SetInstallMethod(v string) *SkillUpdate {
+	_u.mutation.SetInstallMethod(v)
+	return _u
+}
+
+// SetNillableInstallMethod sets the "install_method" field if the given value is not nil.
+func (_u *SkillUpdate) SetNillableInstallMethod(v *string) *SkillUpdate {
+	if v != nil {
+		_u.SetInstallMethod(*v)
+	}
+	return _u
+}
+
+// SetMcpConfig sets the "mcp_config" field.
+func (_u *SkillUpdate) SetMcpConfig(v map[string]interface{}) *SkillUpdate {
+	_u.mutation.SetMcpConfig(v)
+	return _u
+}
+
+// ClearMcpConfig clears the value of the "mcp_config" field.
+func (_u *SkillUpdate) ClearMcpConfig() *SkillUpdate {
+	_u.mutation.ClearMcpConfig()
+	return _u
+}
+
+// SetPackageURL sets the "package_url" field.
+func (_u *SkillUpdate) SetPackageURL(v string) *SkillUpdate {
+	_u.mutation.SetPackageURL(v)
+	return _u
+}
+
+// SetNillablePackageURL sets the "package_url" field if the given value is not nil.
+func (_u *SkillUpdate) SetNillablePackageURL(v *string) *SkillUpdate {
+	if v != nil {
+		_u.SetPackageURL(*v)
+	}
+	return _u
+}
+
+// ClearPackageURL clears the value of the "package_url" field.
+func (_u *SkillUpdate) ClearPackageURL() *SkillUpdate {
+	_u.mutation.ClearPackageURL()
+	return _u
+}
+
+// SetCategory sets the "category" field.
+func (_u *SkillUpdate) SetCategory(v string) *SkillUpdate {
+	_u.mutation.SetCategory(v)
+	return _u
+}
+
+// SetNillableCategory sets the "category" field if the given value is not nil.
+func (_u *SkillUpdate) SetNillableCategory(v *string) *SkillUpdate {
+	if v != nil {
+		_u.SetCategory(*v)
+	}
+	return _u
+}
+
+// ClearCategory clears the value of the "category" field.
+func (_u *SkillUpdate) ClearCategory() *SkillUpdate {
+	_u.mutation.ClearCategory()
+	return _u
+}
+
 // Mutation returns the SkillMutation object of the builder.
 func (_u *SkillUpdate) Mutation() *SkillMutation {
 	return _u.mutation
@@ -194,6 +260,27 @@ func (_u *SkillUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.URI(); ok {
 		_spec.SetField(skill.FieldURI, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.InstallMethod(); ok {
+		_spec.SetField(skill.FieldInstallMethod, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.McpConfig(); ok {
+		_spec.SetField(skill.FieldMcpConfig, field.TypeJSON, value)
+	}
+	if _u.mutation.McpConfigCleared() {
+		_spec.ClearField(skill.FieldMcpConfig, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.PackageURL(); ok {
+		_spec.SetField(skill.FieldPackageURL, field.TypeString, value)
+	}
+	if _u.mutation.PackageURLCleared() {
+		_spec.ClearField(skill.FieldPackageURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.Category(); ok {
+		_spec.SetField(skill.FieldCategory, field.TypeString, value)
+	}
+	if _u.mutation.CategoryCleared() {
+		_spec.ClearField(skill.FieldCategory, field.TypeString)
+	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -281,6 +368,72 @@ func (_u *SkillUpdateOne) SetNillableURI(v *string) *SkillUpdateOne {
 	if v != nil {
 		_u.SetURI(*v)
 	}
+	return _u
+}
+
+// SetInstallMethod sets the "install_method" field.
+func (_u *SkillUpdateOne) SetInstallMethod(v string) *SkillUpdateOne {
+	_u.mutation.SetInstallMethod(v)
+	return _u
+}
+
+// SetNillableInstallMethod sets the "install_method" field if the given value is not nil.
+func (_u *SkillUpdateOne) SetNillableInstallMethod(v *string) *SkillUpdateOne {
+	if v != nil {
+		_u.SetInstallMethod(*v)
+	}
+	return _u
+}
+
+// SetMcpConfig sets the "mcp_config" field.
+func (_u *SkillUpdateOne) SetMcpConfig(v map[string]interface{}) *SkillUpdateOne {
+	_u.mutation.SetMcpConfig(v)
+	return _u
+}
+
+// ClearMcpConfig clears the value of the "mcp_config" field.
+func (_u *SkillUpdateOne) ClearMcpConfig() *SkillUpdateOne {
+	_u.mutation.ClearMcpConfig()
+	return _u
+}
+
+// SetPackageURL sets the "package_url" field.
+func (_u *SkillUpdateOne) SetPackageURL(v string) *SkillUpdateOne {
+	_u.mutation.SetPackageURL(v)
+	return _u
+}
+
+// SetNillablePackageURL sets the "package_url" field if the given value is not nil.
+func (_u *SkillUpdateOne) SetNillablePackageURL(v *string) *SkillUpdateOne {
+	if v != nil {
+		_u.SetPackageURL(*v)
+	}
+	return _u
+}
+
+// ClearPackageURL clears the value of the "package_url" field.
+func (_u *SkillUpdateOne) ClearPackageURL() *SkillUpdateOne {
+	_u.mutation.ClearPackageURL()
+	return _u
+}
+
+// SetCategory sets the "category" field.
+func (_u *SkillUpdateOne) SetCategory(v string) *SkillUpdateOne {
+	_u.mutation.SetCategory(v)
+	return _u
+}
+
+// SetNillableCategory sets the "category" field if the given value is not nil.
+func (_u *SkillUpdateOne) SetNillableCategory(v *string) *SkillUpdateOne {
+	if v != nil {
+		_u.SetCategory(*v)
+	}
+	return _u
+}
+
+// ClearCategory clears the value of the "category" field.
+func (_u *SkillUpdateOne) ClearCategory() *SkillUpdateOne {
+	_u.mutation.ClearCategory()
 	return _u
 }
 
@@ -410,6 +563,27 @@ func (_u *SkillUpdateOne) sqlSave(ctx context.Context) (_node *Skill, err error)
 	}
 	if value, ok := _u.mutation.URI(); ok {
 		_spec.SetField(skill.FieldURI, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.InstallMethod(); ok {
+		_spec.SetField(skill.FieldInstallMethod, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.McpConfig(); ok {
+		_spec.SetField(skill.FieldMcpConfig, field.TypeJSON, value)
+	}
+	if _u.mutation.McpConfigCleared() {
+		_spec.ClearField(skill.FieldMcpConfig, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.PackageURL(); ok {
+		_spec.SetField(skill.FieldPackageURL, field.TypeString, value)
+	}
+	if _u.mutation.PackageURLCleared() {
+		_spec.ClearField(skill.FieldPackageURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.Category(); ok {
+		_spec.SetField(skill.FieldCategory, field.TypeString, value)
+	}
+	if _u.mutation.CategoryCleared() {
+		_spec.ClearField(skill.FieldCategory, field.TypeString)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &Skill{config: _u.config}

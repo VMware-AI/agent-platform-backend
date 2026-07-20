@@ -176,6 +176,10 @@ deleteImage(id: ID!): Boolean!
 | `version` | `String!` | — |
 | `description` | `String` | — |
 | `uri` | `String!` | — |
+| `installMethod` | `String!` | — |
+| `mcpConfig` | `Map` | — |
+| `packageUrl` | `String` | — |
+| `category` | `String` | — |
 | `createdAt` | `Time!` | — |
 
 ### UpsertArtifactInput
@@ -213,6 +217,10 @@ deleteImage(id: ID!): Boolean!
 | `version` | `String!` | — |
 | `description` | `String` | — |
 | `uri` | `String!` | — |
+| `installMethod` | `String` | — |
+| `mcpConfig` | `Map` | — |
+| `packageUrl` | `String` | — |
+| `category` | `String` | — |
 
 ### ArtifactKind
 

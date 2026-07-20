@@ -446,6 +446,7 @@ type DeployAgentInput struct {
 	Notes              *string            `json:"notes,omitempty"`
 	CloneMode          CloneMode          `json:"cloneMode"`
 	InstantCloneParent *string            `json:"instantCloneParent,omitempty"`
+	SkillIds           []string           `json:"skillIds,omitempty"`
 }
 
 type DeployedAgent struct {
@@ -1018,12 +1019,16 @@ type RoleConnection struct {
 }
 
 type Skill struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Version     string    `json:"version"`
-	Description *string   `json:"description,omitempty"`
-	URI         string    `json:"uri"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID            string         `json:"id"`
+	Name          string         `json:"name"`
+	Version       string         `json:"version"`
+	Description   *string        `json:"description,omitempty"`
+	URI           string         `json:"uri"`
+	InstallMethod string         `json:"installMethod"`
+	McpConfig     map[string]any `json:"mcpConfig,omitempty"`
+	PackageURL    *string        `json:"packageUrl,omitempty"`
+	Category      *string        `json:"category,omitempty"`
+	CreatedAt     time.Time      `json:"createdAt"`
 }
 
 type SnapshotAgentInput struct {
@@ -1187,10 +1192,14 @@ type UpsertImageInput struct {
 }
 
 type UpsertSkillInput struct {
-	Name        string  `json:"name"`
-	Version     string  `json:"version"`
-	Description *string `json:"description,omitempty"`
-	URI         string  `json:"uri"`
+	Name          string         `json:"name"`
+	Version       string         `json:"version"`
+	Description   *string        `json:"description,omitempty"`
+	URI           string         `json:"uri"`
+	InstallMethod *string        `json:"installMethod,omitempty"`
+	McpConfig     map[string]any `json:"mcpConfig,omitempty"`
+	PackageURL    *string        `json:"packageUrl,omitempty"`
+	Category      *string        `json:"category,omitempty"`
 }
 
 type User struct {

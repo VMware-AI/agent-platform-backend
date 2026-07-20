@@ -18949,19 +18949,23 @@ func (m *RotationCommandMutation) ResetEdge(name string) error {
 // SkillMutation represents an operation that mutates the Skill nodes in the graph.
 type SkillMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	created_at    *time.Time
-	updated_at    *time.Time
-	name          *string
-	version       *string
-	description   *string
-	uri           *string
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*Skill, error)
-	predicates    []predicate.Skill
+	op             Op
+	typ            string
+	id             *uuid.UUID
+	created_at     *time.Time
+	updated_at     *time.Time
+	name           *string
+	version        *string
+	description    *string
+	uri            *string
+	install_method *string
+	mcp_config     *map[string]interface{}
+	package_url    *string
+	category       *string
+	clearedFields  map[string]struct{}
+	done           bool
+	oldValue       func(context.Context) (*Skill, error)
+	predicates     []predicate.Skill
 }
 
 var _ ent.Mutation = (*SkillMutation)(nil)
@@ -19297,6 +19301,189 @@ func (m *SkillMutation) ResetURI() {
 	m.uri = nil
 }
 
+// SetInstallMethod sets the "install_method" field.
+func (m *SkillMutation) SetInstallMethod(s string) {
+	m.install_method = &s
+}
+
+// InstallMethod returns the value of the "install_method" field in the mutation.
+func (m *SkillMutation) InstallMethod() (r string, exists bool) {
+	v := m.install_method
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInstallMethod returns the old "install_method" field's value of the Skill entity.
+// If the Skill object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SkillMutation) OldInstallMethod(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInstallMethod is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInstallMethod requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInstallMethod: %w", err)
+	}
+	return oldValue.InstallMethod, nil
+}
+
+// ResetInstallMethod resets all changes to the "install_method" field.
+func (m *SkillMutation) ResetInstallMethod() {
+	m.install_method = nil
+}
+
+// SetMcpConfig sets the "mcp_config" field.
+func (m *SkillMutation) SetMcpConfig(value map[string]interface{}) {
+	m.mcp_config = &value
+}
+
+// McpConfig returns the value of the "mcp_config" field in the mutation.
+func (m *SkillMutation) McpConfig() (r map[string]interface{}, exists bool) {
+	v := m.mcp_config
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMcpConfig returns the old "mcp_config" field's value of the Skill entity.
+// If the Skill object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SkillMutation) OldMcpConfig(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMcpConfig is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMcpConfig requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMcpConfig: %w", err)
+	}
+	return oldValue.McpConfig, nil
+}
+
+// ClearMcpConfig clears the value of the "mcp_config" field.
+func (m *SkillMutation) ClearMcpConfig() {
+	m.mcp_config = nil
+	m.clearedFields[skill.FieldMcpConfig] = struct{}{}
+}
+
+// McpConfigCleared returns if the "mcp_config" field was cleared in this mutation.
+func (m *SkillMutation) McpConfigCleared() bool {
+	_, ok := m.clearedFields[skill.FieldMcpConfig]
+	return ok
+}
+
+// ResetMcpConfig resets all changes to the "mcp_config" field.
+func (m *SkillMutation) ResetMcpConfig() {
+	m.mcp_config = nil
+	delete(m.clearedFields, skill.FieldMcpConfig)
+}
+
+// SetPackageURL sets the "package_url" field.
+func (m *SkillMutation) SetPackageURL(s string) {
+	m.package_url = &s
+}
+
+// PackageURL returns the value of the "package_url" field in the mutation.
+func (m *SkillMutation) PackageURL() (r string, exists bool) {
+	v := m.package_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPackageURL returns the old "package_url" field's value of the Skill entity.
+// If the Skill object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SkillMutation) OldPackageURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPackageURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPackageURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPackageURL: %w", err)
+	}
+	return oldValue.PackageURL, nil
+}
+
+// ClearPackageURL clears the value of the "package_url" field.
+func (m *SkillMutation) ClearPackageURL() {
+	m.package_url = nil
+	m.clearedFields[skill.FieldPackageURL] = struct{}{}
+}
+
+// PackageURLCleared returns if the "package_url" field was cleared in this mutation.
+func (m *SkillMutation) PackageURLCleared() bool {
+	_, ok := m.clearedFields[skill.FieldPackageURL]
+	return ok
+}
+
+// ResetPackageURL resets all changes to the "package_url" field.
+func (m *SkillMutation) ResetPackageURL() {
+	m.package_url = nil
+	delete(m.clearedFields, skill.FieldPackageURL)
+}
+
+// SetCategory sets the "category" field.
+func (m *SkillMutation) SetCategory(s string) {
+	m.category = &s
+}
+
+// Category returns the value of the "category" field in the mutation.
+func (m *SkillMutation) Category() (r string, exists bool) {
+	v := m.category
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCategory returns the old "category" field's value of the Skill entity.
+// If the Skill object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SkillMutation) OldCategory(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCategory is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCategory requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCategory: %w", err)
+	}
+	return oldValue.Category, nil
+}
+
+// ClearCategory clears the value of the "category" field.
+func (m *SkillMutation) ClearCategory() {
+	m.category = nil
+	m.clearedFields[skill.FieldCategory] = struct{}{}
+}
+
+// CategoryCleared returns if the "category" field was cleared in this mutation.
+func (m *SkillMutation) CategoryCleared() bool {
+	_, ok := m.clearedFields[skill.FieldCategory]
+	return ok
+}
+
+// ResetCategory resets all changes to the "category" field.
+func (m *SkillMutation) ResetCategory() {
+	m.category = nil
+	delete(m.clearedFields, skill.FieldCategory)
+}
+
 // Where appends a list predicates to the SkillMutation builder.
 func (m *SkillMutation) Where(ps ...predicate.Skill) {
 	m.predicates = append(m.predicates, ps...)
@@ -19331,7 +19518,7 @@ func (m *SkillMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SkillMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 10)
 	if m.created_at != nil {
 		fields = append(fields, skill.FieldCreatedAt)
 	}
@@ -19349,6 +19536,18 @@ func (m *SkillMutation) Fields() []string {
 	}
 	if m.uri != nil {
 		fields = append(fields, skill.FieldURI)
+	}
+	if m.install_method != nil {
+		fields = append(fields, skill.FieldInstallMethod)
+	}
+	if m.mcp_config != nil {
+		fields = append(fields, skill.FieldMcpConfig)
+	}
+	if m.package_url != nil {
+		fields = append(fields, skill.FieldPackageURL)
+	}
+	if m.category != nil {
+		fields = append(fields, skill.FieldCategory)
 	}
 	return fields
 }
@@ -19370,6 +19569,14 @@ func (m *SkillMutation) Field(name string) (ent.Value, bool) {
 		return m.Description()
 	case skill.FieldURI:
 		return m.URI()
+	case skill.FieldInstallMethod:
+		return m.InstallMethod()
+	case skill.FieldMcpConfig:
+		return m.McpConfig()
+	case skill.FieldPackageURL:
+		return m.PackageURL()
+	case skill.FieldCategory:
+		return m.Category()
 	}
 	return nil, false
 }
@@ -19391,6 +19598,14 @@ func (m *SkillMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldDescription(ctx)
 	case skill.FieldURI:
 		return m.OldURI(ctx)
+	case skill.FieldInstallMethod:
+		return m.OldInstallMethod(ctx)
+	case skill.FieldMcpConfig:
+		return m.OldMcpConfig(ctx)
+	case skill.FieldPackageURL:
+		return m.OldPackageURL(ctx)
+	case skill.FieldCategory:
+		return m.OldCategory(ctx)
 	}
 	return nil, fmt.Errorf("unknown Skill field %s", name)
 }
@@ -19442,6 +19657,34 @@ func (m *SkillMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetURI(v)
 		return nil
+	case skill.FieldInstallMethod:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInstallMethod(v)
+		return nil
+	case skill.FieldMcpConfig:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMcpConfig(v)
+		return nil
+	case skill.FieldPackageURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPackageURL(v)
+		return nil
+	case skill.FieldCategory:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCategory(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Skill field %s", name)
 }
@@ -19475,6 +19718,15 @@ func (m *SkillMutation) ClearedFields() []string {
 	if m.FieldCleared(skill.FieldDescription) {
 		fields = append(fields, skill.FieldDescription)
 	}
+	if m.FieldCleared(skill.FieldMcpConfig) {
+		fields = append(fields, skill.FieldMcpConfig)
+	}
+	if m.FieldCleared(skill.FieldPackageURL) {
+		fields = append(fields, skill.FieldPackageURL)
+	}
+	if m.FieldCleared(skill.FieldCategory) {
+		fields = append(fields, skill.FieldCategory)
+	}
 	return fields
 }
 
@@ -19491,6 +19743,15 @@ func (m *SkillMutation) ClearField(name string) error {
 	switch name {
 	case skill.FieldDescription:
 		m.ClearDescription()
+		return nil
+	case skill.FieldMcpConfig:
+		m.ClearMcpConfig()
+		return nil
+	case skill.FieldPackageURL:
+		m.ClearPackageURL()
+		return nil
+	case skill.FieldCategory:
+		m.ClearCategory()
 		return nil
 	}
 	return fmt.Errorf("unknown Skill nullable field %s", name)
@@ -19517,6 +19778,18 @@ func (m *SkillMutation) ResetField(name string) error {
 		return nil
 	case skill.FieldURI:
 		m.ResetURI()
+		return nil
+	case skill.FieldInstallMethod:
+		m.ResetInstallMethod()
+		return nil
+	case skill.FieldMcpConfig:
+		m.ResetMcpConfig()
+		return nil
+	case skill.FieldPackageURL:
+		m.ResetPackageURL()
+		return nil
+	case skill.FieldCategory:
+		m.ResetCategory()
 		return nil
 	}
 	return fmt.Errorf("unknown Skill field %s", name)

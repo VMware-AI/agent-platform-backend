@@ -1193,6 +1193,10 @@ type Skill {
 	version: String!
 	description: String
 	uri: String!
+	installMethod: String!
+	mcpConfig: Map
+	packageUrl: String
+	category: String
 	createdAt: Time!
 }
 input SnapshotAgentInput {
@@ -1349,6 +1353,10 @@ input UpsertSkillInput {
 	version: String!
 	description: String
 	uri: String!
+	installMethod: String
+	mcpConfig: Map
+	packageUrl: String
+	category: String
 }
 type User {
 	id: ID!

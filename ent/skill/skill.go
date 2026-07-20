@@ -26,6 +26,14 @@ const (
 	FieldDescription = "description"
 	// FieldURI holds the string denoting the uri field in the database.
 	FieldURI = "uri"
+	// FieldInstallMethod holds the string denoting the install_method field in the database.
+	FieldInstallMethod = "install_method"
+	// FieldMcpConfig holds the string denoting the mcp_config field in the database.
+	FieldMcpConfig = "mcp_config"
+	// FieldPackageURL holds the string denoting the package_url field in the database.
+	FieldPackageURL = "package_url"
+	// FieldCategory holds the string denoting the category field in the database.
+	FieldCategory = "category"
 	// Table holds the table name of the skill in the database.
 	Table = "skills"
 )
@@ -39,6 +47,10 @@ var Columns = []string{
 	FieldVersion,
 	FieldDescription,
 	FieldURI,
+	FieldInstallMethod,
+	FieldMcpConfig,
+	FieldPackageURL,
+	FieldCategory,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -64,6 +76,8 @@ var (
 	VersionValidator func(string) error
 	// URIValidator is a validator for the "uri" field. It is called by the builders before save.
 	URIValidator func(string) error
+	// DefaultInstallMethod holds the default value on creation for the "install_method" field.
+	DefaultInstallMethod string
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -104,4 +118,19 @@ func ByDescription(opts ...sql.OrderTermOption) OrderOption {
 // ByURI orders the results by the uri field.
 func ByURI(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldURI, opts...).ToFunc()
+}
+
+// ByInstallMethod orders the results by the install_method field.
+func ByInstallMethod(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInstallMethod, opts...).ToFunc()
+}
+
+// ByPackageURL orders the results by the package_url field.
+func ByPackageURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPackageURL, opts...).ToFunc()
+}
+
+// ByCategory orders the results by the category field.
+func ByCategory(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCategory, opts...).ToFunc()
 }

@@ -20,5 +20,9 @@ func (Skill) Fields() []ent.Field {
 		field.String("version").NotEmpty(),
 		field.String("description").Optional(),
 		field.String("uri").NotEmpty(),
+		field.String("install_method").Default("pip"),
+		field.JSON("mcp_config", map[string]interface{}{}).Optional(),
+		field.String("package_url").Optional(),
+		field.String("category").Optional(),
 	}
 }

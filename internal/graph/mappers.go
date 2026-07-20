@@ -490,10 +490,20 @@ func toModelArtifact(a *ent.Artifact) *model.Artifact {
 }
 
 func toModelSkill(s *ent.Skill) *model.Skill {
-	m := &model.Skill{ID: s.ID.String(), Name: s.Name, Version: s.Version, URI: s.URI, CreatedAt: s.CreatedAt}
+	m := &model.Skill{ID: s.ID.String(), Name: s.Name, Version: s.Version, URI: s.URI, InstallMethod: string(s.InstallMethod), CreatedAt: s.CreatedAt}
+	if s.Category != "" {
+		c := s.Category
+		m.Category = &c
+	}
 	if s.Description != "" {
 		d := s.Description
 		m.Description = &d
+	}
+	if s.PackageURL != "" {
+		m.PackageURL = &s.PackageURL
+	}
+	if s.McpConfig != nil && len(s.McpConfig) > 0 {
+		m.McpConfig = s.McpConfig
 	}
 	return m
 }

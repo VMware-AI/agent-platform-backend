@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"regexp"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/artifact"
@@ -116,22 +117,56 @@ func (r *mutationResolver) DeleteArtifact(ctx context.Context, id string) (bool,
 
 // UpsertSkill is the resolver for the upsertSkill field.
 func (r *mutationResolver) UpsertSkill(ctx context.Context, input model.UpsertSkillInput) (*model.Skill, error) {
+	// Validate name: only allow alphanumeric, dash, underscore, dot
+	if matched, _ := regexp.MatchString(`^[a-zA-Z0-9][a-zA-Z0-9_.-]+$`, input.Name); !matched {
+		return nil, gqlerror.Errorf("invalid skill name: must match ^[a-zA-Z0-9][a-zA-Z0-9_.-]+$")
+	}
+	if matched, _ := regexp.MatchString(`^[a-zA-Z0-9][a-zA-Z0-9_.-]+$`, input.Version); !matched {
+		return nil, gqlerror.Errorf("invalid skill version: must match ^[a-zA-Z0-9][a-zA-Z0-9_.-]+$")
+	}
+	im := "pip"
+	if input.InstallMethod != nil && *input.InstallMethod != "" {
+		im = *input.InstallMethod
+	}
+	switch im {
+	case "pip", "pip-requirements", "npm", "binary":
+	default:
+		return nil, gqlerror.Errorf("invalid installMethod %q: must be pip, pip-requirements, npm, or binary", im)
+	}
 	existing, err := r.Ent.Skill.Query().
 		Where(skill.Name(input.Name), skill.Version(input.Version)).Only(ctx)
 	var s *ent.Skill
 	switch {
 	case ent.IsNotFound(err):
-		c := r.Ent.Skill.Create().SetName(input.Name).SetVersion(input.Version).SetURI(input.URI)
+		c := r.Ent.Skill.Create().SetName(input.Name).SetVersion(input.Version).SetURI(input.URI).SetInstallMethod(im)
 		if input.Description != nil {
 			c.SetDescription(*input.Description)
+		}
+		if input.McpConfig != nil {
+			c.SetMcpConfig(input.McpConfig)
+		}
+		if input.PackageURL != nil {
+			c.SetPackageURL(*input.PackageURL)
+		}
+		if input.Category != nil {
+			c.SetCategory(*input.Category)
 		}
 		s, err = c.Save(ctx)
 	case err != nil:
 		return nil, err
 	default:
-		u := existing.Update().SetURI(input.URI)
+		u := existing.Update().SetURI(input.URI).SetInstallMethod(im)
 		if input.Description != nil {
 			u.SetDescription(*input.Description)
+		}
+		if input.McpConfig != nil {
+			u.SetMcpConfig(input.McpConfig)
+		}
+		if input.PackageURL != nil {
+			u.SetPackageURL(*input.PackageURL)
+		}
+		if input.Category != nil {
+			u.SetCategory(*input.Category)
 		}
 		s, err = u.Save(ctx)
 	}
