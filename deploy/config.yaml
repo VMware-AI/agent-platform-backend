@@ -39,9 +39,8 @@ router_settings:
 
 litellm_settings:
   drop_params: true # tolerate provider param differences
-  # 开启 Prometheus 监控指标回调
-  success_callbacks: ["prometheus"]
-  failure_callbacks: ["prometheus"]
+  callbacks:
+    - prometheus
   json_logs: true
   request_timeout: 20
   cache: true

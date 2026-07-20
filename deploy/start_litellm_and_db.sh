@@ -32,11 +32,29 @@ if [[ ! -f .env ]]; then
   } > .env
 fi
 
-# 2) Bring up the stack.
+# Extract master key once — used by the prometheus render step below and the banner.
+MASTER_KEY="$(grep '^LITELLM_MASTER_KEY=' .env | cut -d= -f2-)"
+if [[ -z "${MASTER_KEY}" ]]; then
+  echo "LITELLM_MASTER_KEY missing or empty in .env — abort." >&2
+  exit 1
+fi
+
+# 2) Render prometheus.yml from the template, baking in the master key.
+#    prometheus.yml is bind-mounted into the prometheus container as-is, so
+#    it must exist with the real key before compose up. The template
+#    (git-tracked) holds the <LITELLM_API_KEY> placeholder; the generated
+#    prometheus.yml is gitignored.
+if [[ ! -f prometheus.yml.tmpl ]]; then
+  echo "prometheus.yml.tmpl missing — abort." >&2
+  exit 1
+fi
+sed "s|<LITELLM_API_KEY>|${MASTER_KEY}|g" prometheus.yml.tmpl > prometheus.yml
+
+# 3) Bring up the stack.
 echo "starting litellm + postgres + redis + prometheus…"
 compose up -d
 
-# 3) Wait for litellm to report alive.
+# 4) Wait for litellm to report alive.
 echo -n "waiting for litellm on :4000 "
 for _ in $(seq 1 60); do
   if curl -fsS http://localhost:4000/health/liveliness >/dev/null 2>&1; then
@@ -47,7 +65,6 @@ for _ in $(seq 1 60); do
   sleep 2
 done
 
-MASTER_KEY="$(grep '^LITELLM_MASTER_KEY=' .env | cut -d= -f2-)"
 cat <<EOF
 
 ────────────────────────────────────────────────────────────
@@ -62,5 +79,12 @@ cat <<EOF
 
  Then add a minimax upstream from the UI (or GraphQL):
    model=openai/MiniMax-Text-01  api_base=https://api.minimaxi.com/v1  apiKey=<your minimax key>
+
+ Observability:
+   Prometheus   → http://localhost:9090/targets?search=litellm
+   Grafana      → http://localhost:3000   (admin/admin, anonymous viewer enabled)
+                 The LiteLLM dashboard is auto-loaded under the "LiteLLM" folder
+                 and pre-wired to the Prometheus datasource — open it to start
+                 charting request rate / latency / token usage.
 ────────────────────────────────────────────────────────────
 EOF
