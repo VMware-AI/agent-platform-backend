@@ -81,6 +81,54 @@ func (_c *SkillCreate) SetURI(v string) *SkillCreate {
 	return _c
 }
 
+// SetInstallMethod sets the "install_method" field.
+func (_c *SkillCreate) SetInstallMethod(v string) *SkillCreate {
+	_c.mutation.SetInstallMethod(v)
+	return _c
+}
+
+// SetNillableInstallMethod sets the "install_method" field if the given value is not nil.
+func (_c *SkillCreate) SetNillableInstallMethod(v *string) *SkillCreate {
+	if v != nil {
+		_c.SetInstallMethod(*v)
+	}
+	return _c
+}
+
+// SetMcpConfig sets the "mcp_config" field.
+func (_c *SkillCreate) SetMcpConfig(v map[string]interface{}) *SkillCreate {
+	_c.mutation.SetMcpConfig(v)
+	return _c
+}
+
+// SetPackageURL sets the "package_url" field.
+func (_c *SkillCreate) SetPackageURL(v string) *SkillCreate {
+	_c.mutation.SetPackageURL(v)
+	return _c
+}
+
+// SetNillablePackageURL sets the "package_url" field if the given value is not nil.
+func (_c *SkillCreate) SetNillablePackageURL(v *string) *SkillCreate {
+	if v != nil {
+		_c.SetPackageURL(*v)
+	}
+	return _c
+}
+
+// SetCategory sets the "category" field.
+func (_c *SkillCreate) SetCategory(v string) *SkillCreate {
+	_c.mutation.SetCategory(v)
+	return _c
+}
+
+// SetNillableCategory sets the "category" field if the given value is not nil.
+func (_c *SkillCreate) SetNillableCategory(v *string) *SkillCreate {
+	if v != nil {
+		_c.SetCategory(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *SkillCreate) SetID(v uuid.UUID) *SkillCreate {
 	_c.mutation.SetID(v)
@@ -138,6 +186,10 @@ func (_c *SkillCreate) defaults() {
 		v := skill.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
+	if _, ok := _c.mutation.InstallMethod(); !ok {
+		v := skill.DefaultInstallMethod
+		_c.mutation.SetInstallMethod(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := skill.DefaultID()
 		_c.mutation.SetID(v)
@@ -175,6 +227,9 @@ func (_c *SkillCreate) check() error {
 		if err := skill.URIValidator(v); err != nil {
 			return &ValidationError{Name: "uri", err: fmt.Errorf(`ent: validator failed for field "Skill.uri": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.InstallMethod(); !ok {
+		return &ValidationError{Name: "install_method", err: errors.New(`ent: missing required field "Skill.install_method"`)}
 	}
 	return nil
 }
@@ -234,6 +289,22 @@ func (_c *SkillCreate) createSpec() (*Skill, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.URI(); ok {
 		_spec.SetField(skill.FieldURI, field.TypeString, value)
 		_node.URI = value
+	}
+	if value, ok := _c.mutation.InstallMethod(); ok {
+		_spec.SetField(skill.FieldInstallMethod, field.TypeString, value)
+		_node.InstallMethod = value
+	}
+	if value, ok := _c.mutation.McpConfig(); ok {
+		_spec.SetField(skill.FieldMcpConfig, field.TypeJSON, value)
+		_node.McpConfig = value
+	}
+	if value, ok := _c.mutation.PackageURL(); ok {
+		_spec.SetField(skill.FieldPackageURL, field.TypeString, value)
+		_node.PackageURL = value
+	}
+	if value, ok := _c.mutation.Category(); ok {
+		_spec.SetField(skill.FieldCategory, field.TypeString, value)
+		_node.Category = value
 	}
 	return _node, _spec
 }

@@ -85,6 +85,21 @@ func URI(v string) predicate.Skill {
 	return predicate.Skill(sql.FieldEQ(FieldURI, v))
 }
 
+// InstallMethod applies equality check predicate on the "install_method" field. It's identical to InstallMethodEQ.
+func InstallMethod(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldEQ(FieldInstallMethod, v))
+}
+
+// PackageURL applies equality check predicate on the "package_url" field. It's identical to PackageURLEQ.
+func PackageURL(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldEQ(FieldPackageURL, v))
+}
+
+// Category applies equality check predicate on the "category" field. It's identical to CategoryEQ.
+func Category(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldEQ(FieldCategory, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Skill {
 	return predicate.Skill(sql.FieldEQ(FieldCreatedAt, v))
@@ -433,6 +448,231 @@ func URIEqualFold(v string) predicate.Skill {
 // URIContainsFold applies the ContainsFold predicate on the "uri" field.
 func URIContainsFold(v string) predicate.Skill {
 	return predicate.Skill(sql.FieldContainsFold(FieldURI, v))
+}
+
+// InstallMethodEQ applies the EQ predicate on the "install_method" field.
+func InstallMethodEQ(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldEQ(FieldInstallMethod, v))
+}
+
+// InstallMethodNEQ applies the NEQ predicate on the "install_method" field.
+func InstallMethodNEQ(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldNEQ(FieldInstallMethod, v))
+}
+
+// InstallMethodIn applies the In predicate on the "install_method" field.
+func InstallMethodIn(vs ...string) predicate.Skill {
+	return predicate.Skill(sql.FieldIn(FieldInstallMethod, vs...))
+}
+
+// InstallMethodNotIn applies the NotIn predicate on the "install_method" field.
+func InstallMethodNotIn(vs ...string) predicate.Skill {
+	return predicate.Skill(sql.FieldNotIn(FieldInstallMethod, vs...))
+}
+
+// InstallMethodGT applies the GT predicate on the "install_method" field.
+func InstallMethodGT(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldGT(FieldInstallMethod, v))
+}
+
+// InstallMethodGTE applies the GTE predicate on the "install_method" field.
+func InstallMethodGTE(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldGTE(FieldInstallMethod, v))
+}
+
+// InstallMethodLT applies the LT predicate on the "install_method" field.
+func InstallMethodLT(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldLT(FieldInstallMethod, v))
+}
+
+// InstallMethodLTE applies the LTE predicate on the "install_method" field.
+func InstallMethodLTE(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldLTE(FieldInstallMethod, v))
+}
+
+// InstallMethodContains applies the Contains predicate on the "install_method" field.
+func InstallMethodContains(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldContains(FieldInstallMethod, v))
+}
+
+// InstallMethodHasPrefix applies the HasPrefix predicate on the "install_method" field.
+func InstallMethodHasPrefix(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldHasPrefix(FieldInstallMethod, v))
+}
+
+// InstallMethodHasSuffix applies the HasSuffix predicate on the "install_method" field.
+func InstallMethodHasSuffix(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldHasSuffix(FieldInstallMethod, v))
+}
+
+// InstallMethodEqualFold applies the EqualFold predicate on the "install_method" field.
+func InstallMethodEqualFold(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldEqualFold(FieldInstallMethod, v))
+}
+
+// InstallMethodContainsFold applies the ContainsFold predicate on the "install_method" field.
+func InstallMethodContainsFold(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldContainsFold(FieldInstallMethod, v))
+}
+
+// McpConfigIsNil applies the IsNil predicate on the "mcp_config" field.
+func McpConfigIsNil() predicate.Skill {
+	return predicate.Skill(sql.FieldIsNull(FieldMcpConfig))
+}
+
+// McpConfigNotNil applies the NotNil predicate on the "mcp_config" field.
+func McpConfigNotNil() predicate.Skill {
+	return predicate.Skill(sql.FieldNotNull(FieldMcpConfig))
+}
+
+// PackageURLEQ applies the EQ predicate on the "package_url" field.
+func PackageURLEQ(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldEQ(FieldPackageURL, v))
+}
+
+// PackageURLNEQ applies the NEQ predicate on the "package_url" field.
+func PackageURLNEQ(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldNEQ(FieldPackageURL, v))
+}
+
+// PackageURLIn applies the In predicate on the "package_url" field.
+func PackageURLIn(vs ...string) predicate.Skill {
+	return predicate.Skill(sql.FieldIn(FieldPackageURL, vs...))
+}
+
+// PackageURLNotIn applies the NotIn predicate on the "package_url" field.
+func PackageURLNotIn(vs ...string) predicate.Skill {
+	return predicate.Skill(sql.FieldNotIn(FieldPackageURL, vs...))
+}
+
+// PackageURLGT applies the GT predicate on the "package_url" field.
+func PackageURLGT(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldGT(FieldPackageURL, v))
+}
+
+// PackageURLGTE applies the GTE predicate on the "package_url" field.
+func PackageURLGTE(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldGTE(FieldPackageURL, v))
+}
+
+// PackageURLLT applies the LT predicate on the "package_url" field.
+func PackageURLLT(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldLT(FieldPackageURL, v))
+}
+
+// PackageURLLTE applies the LTE predicate on the "package_url" field.
+func PackageURLLTE(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldLTE(FieldPackageURL, v))
+}
+
+// PackageURLContains applies the Contains predicate on the "package_url" field.
+func PackageURLContains(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldContains(FieldPackageURL, v))
+}
+
+// PackageURLHasPrefix applies the HasPrefix predicate on the "package_url" field.
+func PackageURLHasPrefix(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldHasPrefix(FieldPackageURL, v))
+}
+
+// PackageURLHasSuffix applies the HasSuffix predicate on the "package_url" field.
+func PackageURLHasSuffix(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldHasSuffix(FieldPackageURL, v))
+}
+
+// PackageURLIsNil applies the IsNil predicate on the "package_url" field.
+func PackageURLIsNil() predicate.Skill {
+	return predicate.Skill(sql.FieldIsNull(FieldPackageURL))
+}
+
+// PackageURLNotNil applies the NotNil predicate on the "package_url" field.
+func PackageURLNotNil() predicate.Skill {
+	return predicate.Skill(sql.FieldNotNull(FieldPackageURL))
+}
+
+// PackageURLEqualFold applies the EqualFold predicate on the "package_url" field.
+func PackageURLEqualFold(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldEqualFold(FieldPackageURL, v))
+}
+
+// PackageURLContainsFold applies the ContainsFold predicate on the "package_url" field.
+func PackageURLContainsFold(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldContainsFold(FieldPackageURL, v))
+}
+
+// CategoryEQ applies the EQ predicate on the "category" field.
+func CategoryEQ(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldEQ(FieldCategory, v))
+}
+
+// CategoryNEQ applies the NEQ predicate on the "category" field.
+func CategoryNEQ(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldNEQ(FieldCategory, v))
+}
+
+// CategoryIn applies the In predicate on the "category" field.
+func CategoryIn(vs ...string) predicate.Skill {
+	return predicate.Skill(sql.FieldIn(FieldCategory, vs...))
+}
+
+// CategoryNotIn applies the NotIn predicate on the "category" field.
+func CategoryNotIn(vs ...string) predicate.Skill {
+	return predicate.Skill(sql.FieldNotIn(FieldCategory, vs...))
+}
+
+// CategoryGT applies the GT predicate on the "category" field.
+func CategoryGT(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldGT(FieldCategory, v))
+}
+
+// CategoryGTE applies the GTE predicate on the "category" field.
+func CategoryGTE(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldGTE(FieldCategory, v))
+}
+
+// CategoryLT applies the LT predicate on the "category" field.
+func CategoryLT(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldLT(FieldCategory, v))
+}
+
+// CategoryLTE applies the LTE predicate on the "category" field.
+func CategoryLTE(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldLTE(FieldCategory, v))
+}
+
+// CategoryContains applies the Contains predicate on the "category" field.
+func CategoryContains(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldContains(FieldCategory, v))
+}
+
+// CategoryHasPrefix applies the HasPrefix predicate on the "category" field.
+func CategoryHasPrefix(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldHasPrefix(FieldCategory, v))
+}
+
+// CategoryHasSuffix applies the HasSuffix predicate on the "category" field.
+func CategoryHasSuffix(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldHasSuffix(FieldCategory, v))
+}
+
+// CategoryIsNil applies the IsNil predicate on the "category" field.
+func CategoryIsNil() predicate.Skill {
+	return predicate.Skill(sql.FieldIsNull(FieldCategory))
+}
+
+// CategoryNotNil applies the NotNil predicate on the "category" field.
+func CategoryNotNil() predicate.Skill {
+	return predicate.Skill(sql.FieldNotNull(FieldCategory))
+}
+
+// CategoryEqualFold applies the EqualFold predicate on the "category" field.
+func CategoryEqualFold(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldEqualFold(FieldCategory, v))
+}
+
+// CategoryContainsFold applies the ContainsFold predicate on the "category" field.
+func CategoryContainsFold(v string) predicate.Skill {
+	return predicate.Skill(sql.FieldContainsFold(FieldCategory, v))
 }
 
 // And groups predicates with the AND operator between them.

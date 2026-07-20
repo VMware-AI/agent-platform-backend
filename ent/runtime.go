@@ -644,6 +644,10 @@ func init() {
 	skillDescURI := skillFields[4].Descriptor()
 	// skill.URIValidator is a validator for the "uri" field. It is called by the builders before save.
 	skill.URIValidator = skillDescURI.Validators[0].(func(string) error)
+	// skillDescInstallMethod is the schema descriptor for install_method field.
+	skillDescInstallMethod := skillFields[5].Descriptor()
+	// skill.DefaultInstallMethod holds the default value on creation for the install_method field.
+	skill.DefaultInstallMethod = skillDescInstallMethod.Default.(string)
 	// skillDescID is the schema descriptor for id field.
 	skillDescID := skillFields[0].Descriptor()
 	// skill.DefaultID holds the default value on creation for the id field.
