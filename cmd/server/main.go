@@ -19,6 +19,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent"
 	"github.com/VMware-AI/agent-platform-backend/ent/user"
 	"github.com/VMware-AI/agent-platform-backend/internal/agentmgr"
+	"github.com/VMware-AI/agent-platform-backend/internal/skills"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/catalog"
 	"github.com/VMware-AI/agent-platform-backend/internal/config"
@@ -147,6 +148,7 @@ func main() {
 	// secret store needs write access; the encrypted DBStore is a secrets.Store, so
 	// rotation completions persist (encrypted) across restarts.
 	agentMgr := &agentmgr.Service{Ent: client, Secrets: sec}
+	skillsSvc := &skills.Service{Ent: client, SCPHost: cfg.SkillRepoSCP, DataDir: cfg.SkillRepoDir, HTTPBase: cfg.SkillRepoHTTP}
 
 	resolver := &graph.Resolver{
 		Ent:                 client,
@@ -299,6 +301,9 @@ func main() {
 	// session middleware (machine client, no cookies/Origin). Still inside the
 	// RequestLogger wrap below.
 	mux.Handle("/v1/agents/", agentmgr.Handler(agentMgr))
+	mux.Handle("POST /v1/skills/sync/{skillId}", skillsSvc.Handler())
+	mux.Handle("POST /v1/skills/upload/{skillId}", skillsSvc.Handler())
+	mux.Handle("POST /v1/skills/install/{agentIp}/{skillId}", skillsSvc.Handler())
 	mux.Handle("/", playground.Handler("Agent Platform", "/query"))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)

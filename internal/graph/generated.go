@@ -841,12 +841,16 @@ type ComplexityRoot struct {
 	}
 
 	Skill struct {
-		CreatedAt   func(childComplexity int) int
-		Description func(childComplexity int) int
-		ID          func(childComplexity int) int
-		Name        func(childComplexity int) int
-		URI         func(childComplexity int) int
-		Version     func(childComplexity int) int
+		Category      func(childComplexity int) int
+		CreatedAt     func(childComplexity int) int
+		Description   func(childComplexity int) int
+		ID            func(childComplexity int) int
+		InstallMethod func(childComplexity int) int
+		McpConfig     func(childComplexity int) int
+		Name          func(childComplexity int) int
+		PackageURL    func(childComplexity int) int
+		URI           func(childComplexity int) int
+		Version       func(childComplexity int) int
 	}
 
 	SpendDailyPoint struct {
@@ -5073,6 +5077,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.RoleConnection.TotalCount(childComplexity), true
 
+	case "Skill.category":
+		if e.ComplexityRoot.Skill.Category == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Skill.Category(childComplexity), true
 	case "Skill.createdAt":
 		if e.ComplexityRoot.Skill.CreatedAt == nil {
 			break
@@ -5091,12 +5101,30 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Skill.ID(childComplexity), true
+	case "Skill.installMethod":
+		if e.ComplexityRoot.Skill.InstallMethod == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Skill.InstallMethod(childComplexity), true
+	case "Skill.mcpConfig":
+		if e.ComplexityRoot.Skill.McpConfig == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Skill.McpConfig(childComplexity), true
 	case "Skill.name":
 		if e.ComplexityRoot.Skill.Name == nil {
 			break
 		}
 
 		return e.ComplexityRoot.Skill.Name(childComplexity), true
+	case "Skill.packageUrl":
+		if e.ComplexityRoot.Skill.PackageURL == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Skill.PackageURL(childComplexity), true
 	case "Skill.uri":
 		if e.ComplexityRoot.Skill.URI == nil {
 			break
@@ -6228,6 +6256,10 @@ type Skill {
   version: String!
   description: String
   uri: String!
+  installMethod: String!
+  mcpConfig: Map
+  packageUrl: String
+  category: String
   createdAt: Time!
 }
 
@@ -6256,6 +6288,10 @@ input UpsertSkillInput {
   version: String!
   description: String
   uri: String!
+  installMethod: String
+  mcpConfig: Map
+  packageUrl: String
+  category: String
 }
 input UpsertImageInput {
   repository: String!
@@ -6458,6 +6494,8 @@ input DeployAgentInput {
   notes: String
   cloneMode: CloneMode! = full
   instantCloneParent: String
+  # Skill IDs to install on the agent VM at deploy time.
+  skillIds: [ID!]
 }
 
 # A single OVF property value for the deploy mutation.
@@ -9468,6 +9506,14 @@ func (ec *executionContext) childFields_Skill(ctx context.Context, field graphql
 		return ec.fieldContext_Skill_description(ctx, field)
 	case "uri":
 		return ec.fieldContext_Skill_uri(ctx, field)
+	case "installMethod":
+		return ec.fieldContext_Skill_installMethod(ctx, field)
+	case "mcpConfig":
+		return ec.fieldContext_Skill_mcpConfig(ctx, field)
+	case "packageUrl":
+		return ec.fieldContext_Skill_packageUrl(ctx, field)
+	case "category":
+		return ec.fieldContext_Skill_category(ctx, field)
 	case "createdAt":
 		return ec.fieldContext_Skill_createdAt(ctx, field)
 	}
@@ -29505,6 +29551,98 @@ func (ec *executionContext) fieldContext_Skill_uri(_ context.Context, field grap
 	return graphql.NewScalarFieldContext("Skill", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _Skill_installMethod(ctx context.Context, field graphql.CollectedField, obj *model.Skill) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Skill_installMethod(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.InstallMethod, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Skill_installMethod(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Skill", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Skill_mcpConfig(ctx context.Context, field graphql.CollectedField, obj *model.Skill) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Skill_mcpConfig(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.McpConfig, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v map[string]any) graphql.Marshaler {
+			return ec.marshalOMap2map(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Skill_mcpConfig(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Skill", field, false, false, errors.New("field of type Map does not have child fields"))
+}
+
+func (ec *executionContext) _Skill_packageUrl(ctx context.Context, field graphql.CollectedField, obj *model.Skill) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Skill_packageUrl(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.PackageURL, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Skill_packageUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Skill", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Skill_category(ctx context.Context, field graphql.CollectedField, obj *model.Skill) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Skill_category(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Category, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Skill_category(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Skill", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _Skill_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Skill) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -33602,7 +33740,7 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 		asMap["cloneMode"] = "full"
 	}
 
-	fieldsInOrder := [...]string{"name", "templateFamilyId", "templateVersionId", "resourcePoolId", "departmentId", "targetResourcePool", "hostname", "maxBudget", "targetNetwork", "ovfProperties", "keySource", "existingKeyId", "notes", "cloneMode", "instantCloneParent"}
+	fieldsInOrder := [...]string{"name", "templateFamilyId", "templateVersionId", "resourcePoolId", "departmentId", "targetResourcePool", "hostname", "maxBudget", "targetNetwork", "ovfProperties", "keySource", "existingKeyId", "notes", "cloneMode", "instantCloneParent", "skillIds"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -33714,6 +33852,13 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 				return it, err
 			}
 			it.InstantCloneParent = data
+		case "skillIds":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("skillIds"))
+			data, err := ec.unmarshalOID2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SkillIds = data
 		}
 	}
 	return it, nil
@@ -35848,7 +35993,7 @@ func (ec *executionContext) unmarshalInputUpsertSkillInput(ctx context.Context, 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "version", "description", "uri"}
+	fieldsInOrder := [...]string{"name", "version", "description", "uri", "installMethod", "mcpConfig", "packageUrl", "category"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -35883,6 +36028,34 @@ func (ec *executionContext) unmarshalInputUpsertSkillInput(ctx context.Context, 
 				return it, err
 			}
 			it.URI = data
+		case "installMethod":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("installMethod"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.InstallMethod = data
+		case "mcpConfig":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("mcpConfig"))
+			data, err := ec.unmarshalOMap2map(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.McpConfig = data
+		case "packageUrl":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("packageUrl"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PackageURL = data
+		case "category":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("category"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Category = data
 		}
 	}
 	return it, nil
@@ -42947,6 +43120,26 @@ func (ec *executionContext) _Skill(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "installMethod":
+			out.Values[i] = ec._Skill_installMethod(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "mcpConfig":
+			out.Values[i] = ec._Skill_mcpConfig(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "packageUrl":
+			out.Values[i] = ec._Skill_packageUrl(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "category":
+			out.Values[i] = ec._Skill_category(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
 		case "createdAt":
 			out.Values[i] = ec._Skill_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -47233,6 +47426,42 @@ func (ec *executionContext) marshalOFloat2ᚖfloat64(ctx context.Context, sel as
 	_ = sel
 	res := graphql.MarshalFloatContext(*v)
 	return graphql.WrapContextMarshaler(ctx, res)
+}
+
+func (ec *executionContext) unmarshalOID2ᚕstringᚄ(ctx context.Context, v any) ([]string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNID2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOID2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNID2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOID2ᚖstring(ctx context.Context, v any) (*string, error) {

@@ -54,6 +54,12 @@ type Config struct {
 	// "unset" sentinel — nothing is stamped and the daemon default (3) applies;
 	// the daemon rejects values < 1, so "retain nothing" is not expressible.
 	AgentKeepVersions int
+	// SkillRepoSCP is the SCP destination for offline skill packages (e.g. "root@10.121.166.205").
+	SkillRepoSCP string
+	// SkillRepoDir is the directory on the SCP host where skill packages are stored.
+	SkillRepoDir string
+	// SkillRepoHTTP is the HTTP base URL agent VMs use to fetch skill packages (e.g. "http://172.16.85.230:8081").
+	SkillRepoHTTP string
 	// EnvScopeEnabled turns on environment (env_scope) filtering on top of tenant
 	// isolation (LLD-10 §2.3). OFF by default — the tables/columns exist but env
 	// filtering only activates once the frontend X-Environment contract is ready.
@@ -235,6 +241,9 @@ func Load() (*Config, error) {
 	if c.ProviderProbeIntervalSeconds, err = getenvInt("PROVIDER_PROBE_INTERVAL_SECONDS", 600); err != nil {
 		return nil, err
 	}
+	c.SkillRepoSCP = getenv("SKILL_REPO_SCP", "root@10.121.166.205")
+	c.SkillRepoDir = getenv("SKILL_REPO_DIR", "/data/skill")
+	c.SkillRepoHTTP = getenv("SKILL_REPO_HTTP", "http://172.16.85.230:8081")
 	c.SecretsEncryptionKey = os.Getenv("SECRETS_ENCRYPTION_KEY")
 	c.SecretsEncryptionKeys = os.Getenv("SECRETS_ENCRYPTION_KEYS")
 	c.SecretsAuditEnabled = getenv("SECRETS_AUDIT_ENABLED", "false") == "true"

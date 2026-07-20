@@ -610,6 +610,10 @@ var (
 		{Name: "version", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString, Nullable: true},
 		{Name: "uri", Type: field.TypeString},
+		{Name: "install_method", Type: field.TypeString, Default: "pip"},
+		{Name: "mcp_config", Type: field.TypeJSON, Nullable: true},
+		{Name: "package_url", Type: field.TypeString, Nullable: true},
+		{Name: "category", Type: field.TypeString, Nullable: true},
 	}
 	// SkillsTable holds the schema information for the "skills" table.
 	SkillsTable = &schema.Table{
