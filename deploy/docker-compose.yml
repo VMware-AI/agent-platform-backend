@@ -100,7 +100,12 @@ services:
     # dashboard. Reads provisioning/datasources/*.yml + provisioning/dashboards/*.yml
     # at startup; the dashboard provider re-scans the dashboards dir every 30s
     # so editing the JSON in place updates without a restart.
-    image: grafana/grafana:10.4.0
+    # Pin to the in-org mirror (matching the rest of the stack —
+    # litellm/postgres/redis/prometheus all live under quay.io/vmware-ai/).
+    # Source: docker.io/grafana/grafana:10.4.0 (linux/amd64 + linux/arm64).
+    # To refresh after a new upstream release: deploy/sync_grafana_image.sh
+    # SRC_TAG=<new> DST_TAG=<new> ./sync_grafana_image.sh.
+    image: quay.io/vmware-ai/grafana:10.4.0
     container_name: grafana
     ports:
       - "3000:3000"
