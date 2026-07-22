@@ -551,7 +551,7 @@ func (r *queryResolver) UnboundKeys(ctx context.Context) ([]model.VirtualKey, er
 		return nil, gqlerror.Errorf("forbidden: admin only")
 	}
 	keys, err := r.Ent.VirtualKey.Query().
-		Where(virtualkey.AgentIDIsNil()).
+		Where(virtualkey.AgentIDIsNil(), virtualkey.StatusNEQ(virtualkey.StatusRevoked)).
 		All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list unbound keys: %w", err)
