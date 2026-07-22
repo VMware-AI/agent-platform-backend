@@ -30,8 +30,8 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/internal/secrets"
 	"github.com/VMware-AI/agent-platform-backend/internal/session"
 	"github.com/VMware-AI/agent-platform-backend/internal/skills"
-	"github.com/VMware-AI/agent-platform-backend/internal/terminal"
 	"github.com/VMware-AI/agent-platform-backend/internal/store"
+	"github.com/VMware-AI/agent-platform-backend/internal/terminal"
 	"github.com/VMware-AI/agent-platform-backend/internal/vcenter"
 )
 

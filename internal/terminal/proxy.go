@@ -78,8 +78,12 @@ func HandleTerminal(w http.ResponseWriter, r *http.Request) {
 	jpPass := os.Getenv("JUMP_HOST_PASSWORD")
 	agentUser := os.Getenv("AGENT_SSH_USER")
 	agentPass := os.Getenv("AGENT_SSH_PASSWORD")
-	if agentUser == "" { agentUser = "vmware" }
-	if agentPass == "" { agentPass = "VMware1!" }
+	if agentUser == "" {
+		agentUser = "vmware"
+	}
+	if agentPass == "" {
+		agentPass = "VMware1!"
+	}
 
 	var sshCmd *exec.Cmd
 	if jump != "" {

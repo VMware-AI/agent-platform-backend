@@ -32,7 +32,6 @@ type Service struct {
 	AgentPass string // Agent VM SSH password
 }
 
-
 func (s *Service) sshCmd(remoteCmd string) *exec.Cmd {
 	if s.JumpHost != "" {
 		return exec.Command("sshpass", "-p", s.JHPass,
