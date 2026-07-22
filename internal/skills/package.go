@@ -21,12 +21,26 @@ import (
 )
 
 // Service manages offline skill package distribution to a repo host.
-// SCPHost/DataDir/HTTPBase are configured via env vars (SKILL_REPO_SCP, SKILL_REPO_DIR, SKILL_REPO_HTTP).
 type Service struct {
-	Ent      *ent.Client
-	SCPHost  string // e.g. "root@10.121.166.205"
-	DataDir  string // e.g. "/data/skill"
-	HTTPBase string // e.g. "http://172.16.85.230:8081"
+	Ent       *ent.Client
+	SCPHost   string // e.g. "root@10.121.166.205"
+	DataDir   string // e.g. "/data/skill"
+	HTTPBase  string // e.g. "http://172.16.85.230:8081"
+	JumpHost  string // SSH bastion (empty = direct)
+	JHPass    string // jump host password
+	AgentUser string // default "vmware"
+	AgentPass string // Agent VM SSH password
+}
+
+func (s *Service) sshCmd(remoteCmd string) *exec.Cmd {
+	if s.JumpHost != "" {
+		return exec.Command("sshpass", "-p", s.JHPass,
+			"ssh", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-tt",
+			s.JumpHost, remoteCmd)
+	}
+	// Direct SSH to agent VM
+	args := []string{"-p", s.AgentPass, "ssh", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-tt", s.AgentUser + "@"}
+	return exec.Command("sshpass", append(args, remoteCmd)...)
 }
 
 func (s *Service) scpDest(file string) string {
@@ -158,24 +172,41 @@ func (s *Service) InstallOnAgent(ctx context.Context, agentIP, skillID string) e
 	if sk.PackageURL == "" {
 		return fmt.Errorf("skill %s has no offline package", sk.Name)
 	}
-	cmd := fmt.Sprintf(
-		"mkdir -p /tmp/skills_%s && curl -sL --max-time 300 %s | tar xz -C /tmp/skills_%s && pip3 install --no-index --find-links /tmp/skills_%s --ignore-requires-python %s",
+	installScript := fmt.Sprintf(
+		"mkdir -p /tmp/skills_%s && curl -sL --max-time 300 %s | tar xz -C /tmp/skills_%s && pip3 install --break-system-packages --no-index --find-links /tmp/skills_%s --ignore-requires-python %s",
 		sk.Name, sk.PackageURL, sk.Name, sk.Name, sk.Name,
 	)
-	log.Printf("[skills] installing %s on %s via jump host", sk.Name, agentIP)
-	sshCmd := fmt.Sprintf(
-		"sshpass -p VMware1! ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 vmware@%s '%s'",
-		agentIP, cmd,
-	)
-	c := exec.CommandContext(ctx, "sshpass", "-p", "root",
-		"ssh", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
-		"-o", "ConnectTimeout=10",
-		"root@10.121.166.205", sshCmd)
+	var agentSSH string
+	if s.JumpHost != "" {
+		agentSSH = fmt.Sprintf("sshpass -p %s ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 %s@%s '%s'",
+			s.AgentPass, s.AgentUser, agentIP, installScript)
+	} else {
+		agentSSH = installScript
+	}
+	log.Printf("[skills] installing %s on %s", sk.Name, agentIP)
+	c := s.sshCmd(agentSSH)
+	c = exec.CommandContext(ctx, c.Args[0], c.Args[1:]...)
 	out, err := c.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("install failed: %w (output: %s)", err, strings.TrimSpace(string(out)))
 	}
-	log.Printf("[skills] %s installed on %s", sk.Name, agentIP)
+	// Verify
+	verifyCmd := fmt.Sprintf("pip3 list 2>/dev/null | grep -i %s", sk.Name)
+	var verifySSH string
+	if s.JumpHost != "" {
+		verifySSH = fmt.Sprintf("sshpass -p %s ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 %s@%s '%s'",
+			s.AgentPass, s.AgentUser, agentIP, verifyCmd)
+	} else {
+		verifySSH = verifyCmd
+	}
+	vc := s.sshCmd(verifySSH)
+	vc = exec.CommandContext(ctx, vc.Args[0], vc.Args[1:]...)
+	vout, verr := vc.CombinedOutput()
+	if verr == nil && strings.TrimSpace(string(vout)) != "" {
+		log.Printf("[skills] %s verified on %s: %s", sk.Name, agentIP, strings.TrimSpace(string(vout)))
+	} else {
+		log.Printf("[skills] %s install on %s could not be verified: %v", sk.Name, agentIP, verr)
+	}
 	return nil
 }
 
