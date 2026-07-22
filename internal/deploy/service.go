@@ -372,6 +372,9 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 			b.WriteString("users:\n")
 			fmt.Fprintf(&b, "  - name: %s\n", user)
 			b.WriteString("    lock_passwd: false\n")
+			if pw != "" {
+				fmt.Fprintf(&b, "    passwd: %s\n", pw)
+			}
 			b.WriteString("    shell: /bin/bash\n")
 			b.WriteString("    sudo: ALL=(ALL) ALL\n")
 			if sshKey != "" {

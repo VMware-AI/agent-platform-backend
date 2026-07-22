@@ -46,6 +46,14 @@ type Config struct {
 	SkillRepoDir string
 	// SkillRepoHTTP is the HTTP base URL agent VMs use to fetch skill packages (e.g. "http://172.16.85.230:8081").
 	SkillRepoHTTP string
+	// JumpHost is the SSH bastion for reaching agent VMs (e.g. "root@10.121.166.205"). Empty = direct.
+	JumpHost string
+	// JumpHostPassword for the jump host SSH user.
+	JumpHostPassword string
+	// AgentSSHUser for SSH to agent VMs (default "vmware").
+	AgentSSHUser string
+	// AgentSSHPassword for the agent VM SSH user.
+	AgentSSHPassword string
 	// EnvScopeEnabled turns on environment (env_scope) filtering on top of tenant
 	// isolation (LLD-10 §2.3). OFF by default — the tables/columns exist but env
 	// filtering only activates once the frontend X-Environment contract is ready.
@@ -228,6 +236,10 @@ func Load() (*Config, error) {
 	c.SkillRepoSCP = getenv("SKILL_REPO_SCP", "root@10.121.166.205")
 	c.SkillRepoDir = getenv("SKILL_REPO_DIR", "/data/skill")
 	c.SkillRepoHTTP = getenv("SKILL_REPO_HTTP", "http://172.16.85.230:8081")
+	c.JumpHost = getenv("JUMP_HOST", "")
+	c.JumpHostPassword = getenv("JUMP_HOST_PASSWORD", "")
+	c.AgentSSHUser = getenv("AGENT_SSH_USER", "vmware")
+	c.AgentSSHPassword = getenv("AGENT_SSH_PASSWORD", "VMware1!")
 	c.SecretsEncryptionKey = os.Getenv("SECRETS_ENCRYPTION_KEY")
 	c.SecretsEncryptionKeys = os.Getenv("SECRETS_ENCRYPTION_KEYS")
 	c.SecretsAuditEnabled = getenv("SECRETS_AUDIT_ENABLED", "false") == "true"
