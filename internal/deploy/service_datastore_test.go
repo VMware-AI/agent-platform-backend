@@ -21,9 +21,11 @@ func (f *datastoreCaptureVC) DeployOVF(context.Context, vcenter.OVFDeploySpec) (
 	return nil, nil
 }
 
-func (f *datastoreCaptureVC) SetGuestinfo(context.Context, string, map[string]string) error { return nil }
-func (f *datastoreCaptureVC) PowerOn(context.Context, string) error                          { return nil }
-func (f *datastoreCaptureVC) Destroy(context.Context, string) error                          { return nil }
+func (f *datastoreCaptureVC) SetGuestinfo(context.Context, string, map[string]string) error {
+	return nil
+}
+func (f *datastoreCaptureVC) PowerOn(context.Context, string) error { return nil }
+func (f *datastoreCaptureVC) Destroy(context.Context, string) error { return nil }
 
 type noOpGateway struct{}
 
@@ -42,7 +44,7 @@ func (noOpGateway) DeleteTeam(context.Context, string) error { return nil }
 func (noOpGateway) ListAvailableModels(context.Context) ([]string, error) {
 	return nil, nil
 }
-func (noOpGateway) ListKeys(context.Context) ([]gateway.KeyInfo, error)  { return nil, nil }
+func (noOpGateway) ListKeys(context.Context) ([]gateway.KeyInfo, error)   { return nil, nil }
 func (noOpGateway) ListTeams(context.Context) ([]gateway.TeamInfo, error) { return nil, nil }
 
 func TestProvisionSetsVsanDatastoreForClone(t *testing.T) {
