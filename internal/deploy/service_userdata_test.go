@@ -40,12 +40,15 @@ func TestBuildUserdataWritesOpenCodeLiteLLMCompatibleProvider(t *testing.T) {
 	}
 
 	ocCfg := extractCloudInitJSON(t, userdata, "/home/vmware/.openclaw/openclaw.json")
-	if agents, ok := ocCfg["agents"]; ok {
-		if m, ok := agents.(map[string]any); ok {
-			if _, hasDefault := m["defaults"]; hasDefault {
-				t.Fatalf("openclaw agents.defaults must not hardcode a model: %#v", agents)
-			}
-		}
+	agents := ocCfg["agents"].(map[string]any)
+	defaults := agents["defaults"].(map[string]any)
+	if got := defaults["model"]; got != "openai/qwen-coder" {
+		t.Fatalf("openclaw agents.defaults.model = %v, want openai/qwen-coder", got)
+	}
+
+	mainCfg := extractCloudInitJSON(t, userdata, "/home/vmware/.openclaw/agents/main/config.json")
+	if got := mainCfg["model"]; got != "openai/qwen-coder" {
+		t.Fatalf("openclaw main config model = %v, want openai/qwen-coder", got)
 	}
 }
 

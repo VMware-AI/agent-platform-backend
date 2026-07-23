@@ -445,10 +445,23 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 		}
 		if len(models) > 0 {
 			ocCfg["models"].(map[string]interface{})["providers"].(map[string]interface{})["openai"].(map[string]interface{})["models"] = ocList
+			ocCfg["agents"] = map[string]interface{}{
+				"defaults": map[string]interface{}{
+					"model": "openai/" + models[0],
+				},
+			}
 		}
 		ocCfgBytes, err := json.Marshal(ocCfg)
 		if err != nil {
 			ocCfgBytes = []byte("{}")
+		}
+		ocAgentCfg := map[string]interface{}{"model": ""}
+		if len(models) > 0 {
+			ocAgentCfg["model"] = "openai/" + models[0]
+		}
+		ocAgentCfgBytes, err := json.Marshal(ocAgentCfg)
+		if err != nil {
+			ocAgentCfgBytes = []byte("{}")
 		}
 		b.WriteString("  - path: /home/vmware/.openclaw/openclaw.json\n")
 		b.WriteString("    owner: vmware:vmware\n")
@@ -456,9 +469,14 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 		b.WriteString("    content: |\n")
 		// Provider name is "openai" (not "litellm") — OpenClaw agent sessions default
 		// to the "openai" provider, so the gateway must expose models under that name.
-		// The runtime should pick from the bound model list; do not inject a hardcoded
-		// agent default here.
 		fmt.Fprintf(&b, "      %s\n", string(ocCfgBytes))
+		if len(models) > 0 {
+			b.WriteString("  - path: /home/vmware/.openclaw/agents/main/config.json\n")
+			b.WriteString("    owner: vmware:vmware\n")
+			b.WriteString("    permissions: \"0644\"\n")
+			b.WriteString("    content: |\n")
+			fmt.Fprintf(&b, "      %s\n", string(ocAgentCfgBytes))
+		}
 	}
 
 	// OpenCode config — always written alongside OpenClaw for dual-mode templates.
