@@ -137,10 +137,12 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 
 	// 1) Issue or reuse gateway key.
 	var key gateway.KeyResponse
+	generatedKey := true
 	if req.ExistingKey != "" {
 		// Reuse an existing unbound virtual key — no GenerateKey call.
 		key.Key = req.ExistingKey
 		key.Token = req.ExistingKeyToken
+		generatedKey = false
 	} else {
 		k, err := s.Gateway.GenerateKey(ctx, gateway.GenerateKeyRequest{
 			UserID:    req.UserID,
@@ -185,12 +187,15 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 			Template:       req.Template,
 			Name:           req.VMName,
 			ResourcePool:   req.ResourcePool,
+			Datastore:      "vsanDatastore",
 			Network:        req.Network,
 			PowerOn:        false,
 			ExtraConfig:    req.OVFProperties,
 			VAppProperties: req.OVFProperties,
 		}); err != nil {
-			s.revokeKey(ctx, key.Key) // no VM to clean up yet
+			if generatedKey {
+				s.revokeKey(ctx, key.Key) // no VM to clean up yet
+			}
 			return nil, fmt.Errorf("deploy: clone template: %w", err)
 		}
 	}
@@ -255,13 +260,13 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 		gi["agentmgr.agent_keep_versions"] = strconv.Itoa(req.AgentKeepVersions)
 	}
 	if err := s.VCenter.SetGuestinfo(ctx, req.VMName, gi); err != nil {
-		s.rollback(ctx, key.Key, req.VMName)
+		s.rollback(ctx, key.Key, req.VMName, generatedKey)
 		return nil, fmt.Errorf("deploy: inject guestinfo: %w", err)
 	}
 
 	// 4) Power on — cloud-init consumes guestinfo at first boot.
 	if err := s.VCenter.PowerOn(ctx, req.VMName); err != nil {
-		s.rollback(ctx, key.Key, req.VMName)
+		s.rollback(ctx, key.Key, req.VMName, generatedKey)
 		return nil, fmt.Errorf("deploy: power on: %w", err)
 	}
 
@@ -271,13 +276,15 @@ func (s *Service) Provision(ctx context.Context, req Request) (*Result, error) {
 // rollback tears down a half-provisioned agent: destroy the cloned VM and revoke
 // the key. Uses a detached context so cleanup runs even if ctx was canceled.
 // Cleanup failures are logged (not swallowed) so an operator can find the orphan.
-func (s *Service) rollback(ctx context.Context, key, vmName string) {
+func (s *Service) rollback(ctx context.Context, key, vmName string, revokeKey bool) {
 	cctx := context.WithoutCancel(ctx)
 	if err := s.VCenter.Destroy(cctx, vmName); err != nil {
 		log.Printf("deploy rollback: orphan VM %q, destroy failed: %v", vmName, err)
 	}
-	if err := s.Gateway.DeleteKey(cctx, key); err != nil {
-		log.Printf("deploy rollback: orphan gateway key, revoke failed: %v", err)
+	if revokeKey {
+		if err := s.Gateway.DeleteKey(cctx, key); err != nil {
+			log.Printf("deploy rollback: orphan gateway key, revoke failed: %v", err)
+		}
 	}
 }
 
@@ -389,65 +396,88 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 
 	// Ensure OpenCode config directory exists (cloud-init write_files does not create parents).
 	b.WriteString("bootcmd:\n")
+	b.WriteString("  - mkdir -p /etc/agent\n")
 	b.WriteString("  - mkdir -p /home/vmware/.config/opencode\n")
+	b.WriteString("  - mkdir -p /home/vmware/.openclaw/agents/main\n")
+	b.WriteString("  - mkdir -p /home/vmware/.hermes\n")
 	b.WriteString("  - chown -R vmware:vmware /home/vmware/.config\n")
+	b.WriteString("  - chown -R vmware:vmware /home/vmware/.openclaw\n")
+	b.WriteString("  - chown -R vmware:vmware /home/vmware/.hermes\n")
 
 	// All write_files entries must come after the write_files: header.
 	b.WriteString("write_files:\n")
 
 	// Build model list fragments from key models (operator-curated per agent).
-	ocModelsJSON := ""
+	type ocModel struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	ocList := make([]ocModel, len(models))
 	ocCodeMap := make(map[string]map[string]string)
-	if len(models) > 0 {
-		type ocModel struct {
-			ID   string `json:"id"`
-			Name string `json:"name"`
-		}
-		ocList := make([]ocModel, len(models))
-		for i, m := range models {
-			ocList[i] = ocModel{ID: m, Name: m}
-			ocCodeMap[m] = map[string]string{"name": m}
-		}
-		if b, err := json.Marshal(ocList); err == nil {
-			ocModelsJSON = string(b)
-		}
+	for i, m := range models {
+		ocList[i] = ocModel{ID: m, Name: m}
+		ocCodeMap[m] = map[string]string{"name": m}
 	}
 
 	// OpenClaw config with API key injected
 	if key != "" {
 		ocGatewayToken := GenerateGatewayToken()
+		ocCfg := map[string]interface{}{
+			"gateway": map[string]interface{}{
+				"auth": map[string]interface{}{
+					"mode":  "token",
+					"token": ocGatewayToken,
+				},
+				"bind": "lan",
+				"mode": "local",
+				"port": 18789,
+			},
+			"models": map[string]interface{}{
+				"mode": "replace",
+				"providers": map[string]interface{}{
+					"openai": map[string]interface{}{
+						"api":     "openai-completions",
+						"apiKey":  key,
+						"baseUrl": base + "/v1",
+					},
+				},
+			},
+		}
+		if len(models) > 0 {
+			ocCfg["models"].(map[string]interface{})["providers"].(map[string]interface{})["openai"].(map[string]interface{})["models"] = ocList
+		}
+		ocCfgBytes, err := json.Marshal(ocCfg)
+		if err != nil {
+			ocCfgBytes = []byte("{}")
+		}
 		b.WriteString("  - path: /home/vmware/.openclaw/openclaw.json\n")
 		b.WriteString("    owner: vmware:vmware\n")
 		b.WriteString("    permissions: \"0600\"\n")
 		b.WriteString("    content: |\n")
 		// Provider name is "openai" (not "litellm") — OpenClaw agent sessions default
 		// to the "openai" provider, so the gateway must expose models under that name.
-		fmt.Fprintf(&b, "      {\"gateway\":{\"auth\":{\"mode\":\"token\",\"token\":\"%s\"},\"bind\":\"lan\",\"mode\":\"local\",\"port\":18789},\"models\":{\"mode\":\"merge\",\"providers\":{\"openai\":{\"api\":\"openai-completions\",\"apiKey\":\"%s\",\"baseUrl\":\"%s/v1\",\"models\":%s}}}}\n", ocGatewayToken, key, base, ocModelsJSON)
-		// Agent default model — uses first key-bound model so it survives model name
-		// changes (startup picks the default unless overridden by session).
-		if len(models) > 0 {
-			b.WriteString("  - path: /home/vmware/.openclaw/agents/main/config.json\n")
-			b.WriteString("    owner: vmware:vmware\n")
-			b.WriteString("    permissions: \"0644\"\n")
-			b.WriteString("    content: |\n")
-			fmt.Fprintf(&b, "      {\"model\":\"openai/%s\"}\n", models[0])
-		}
+		// The runtime should pick from the bound model list; do not inject a hardcoded
+		// agent default here.
+		fmt.Fprintf(&b, "      %s\n", string(ocCfgBytes))
 	}
 
 	// OpenCode config — always written alongside OpenClaw for dual-mode templates.
-	if key != "" && len(models) > 0 {
-		defaultModel := models[0]
+	if key != "" {
 		ocCfg := map[string]interface{}{
-			"model": "openai/" + defaultModel,
+			"enabled_providers": []string{"litellm"},
 			"provider": map[string]interface{}{
-				"openai": map[string]interface{}{
+				"litellm": map[string]interface{}{
+					"name": "LiteLLM",
+					"npm":  "@ai-sdk/openai-compatible",
 					"options": map[string]interface{}{
 						"baseURL": base + "/v1",
 						"apiKey":  key,
 					},
-					"models": ocCodeMap,
 				},
 			},
+		}
+		if len(models) > 0 {
+			ocCfg["provider"].(map[string]interface{})["litellm"].(map[string]interface{})["models"] = ocCodeMap
 		}
 		var ocCfgBytes []byte
 		if b, err := json.Marshal(ocCfg); err == nil {
@@ -463,7 +493,7 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 	}
 
 	// Hermes config — OpenAI-compatible provider via LiteLLM.
-	if key != "" && len(models) > 0 {
+	if key != "" {
 		b.WriteString("  - path: /home/vmware/.hermes/.env\n")
 		b.WriteString("    owner: vmware:vmware\n")
 		b.WriteString("    permissions: \"0600\"\n")
@@ -475,8 +505,7 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 		b.WriteString("    permissions: \"0600\"\n")
 		b.WriteString("    content: |\n")
 		fmt.Fprintf(&b, "      model:\n")
-		fmt.Fprintf(&b, "        provider: custom\n")
-		fmt.Fprintf(&b, "        default: %s\n", models[0])
+		fmt.Fprintf(&b, "        provider: custom:litellm\n")
 		fmt.Fprintf(&b, "      custom_providers:\n")
 		fmt.Fprintf(&b, "        - name: litellm\n")
 		fmt.Fprintf(&b, "          base_url: %s/v1\n", base)
@@ -522,7 +551,7 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 
 	b.WriteString("  - path: /etc/agent/llm-gateway.env\n")
 	b.WriteString("    permissions: \"0640\"\n")
-	b.WriteString("    owner: root:agent\n")
+	b.WriteString("    owner: root:root\n")
 	b.WriteString("    content: |\n")
 	fmt.Fprintf(&b, "      OPENAI_BASE_URL=%s/v1\n", base)
 	fmt.Fprintf(&b, "      OPENAI_API_KEY=%s\n", key)
@@ -531,7 +560,7 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 		b.WriteString(configPath)
 		b.WriteString("\n")
 		b.WriteString("    permissions: \"0640\"\n")
-		b.WriteString("    owner: root:agent\n")
+		b.WriteString("    owner: root:root\n")
 		b.WriteString("    content: |\n")
 		// Indent each line by 6 spaces under the cloud-init block scalar.
 		for _, line := range strings.Split(defaultConfig, "\n") {

@@ -442,6 +442,7 @@ type ComplexityRoot struct {
 		LoadBalancingStrategy func(childComplexity int) int
 		Name                  func(childComplexity int) int
 		Provider              func(childComplexity int) int
+		PublicURL             func(childComplexity int) int
 		UpdatedAt             func(childComplexity int) int
 	}
 
@@ -2724,6 +2725,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ModelGateway.Provider(childComplexity), true
+	case "ModelGateway.publicUrl":
+		if e.ComplexityRoot.ModelGateway.PublicURL == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ModelGateway.PublicURL(childComplexity), true
 	case "ModelGateway.updatedAt":
 		if e.ComplexityRoot.ModelGateway.UpdatedAt == nil {
 			break
@@ -6486,6 +6493,9 @@ input DeployAgentInput {
   targetNetwork: String
   # OVF/vApp properties from the template, keyed by property id.
   ovfProperties: [OVFPropertyInput!]
+  # Optional Skill hub ids selected in the deploy dialog. Resolved to offline
+  # packages and installed through cloud-init when the VM first boots.
+  skillIds: [ID!]
   # Key source: "new" issues a fresh gateway key; "existing" binds an unbound key.
   keySource: KeySource! = new
   # Required when keySource=existing — the id of an unbound virtual key to reuse.
@@ -6494,8 +6504,6 @@ input DeployAgentInput {
   notes: String
   cloneMode: CloneMode! = full
   instantCloneParent: String
-  # Skill IDs to install on the agent VM at deploy time.
-  skillIds: [ID!]
 }
 
 # A single OVF property value for the deploy mutation.
@@ -6892,6 +6900,7 @@ type ModelGateway {
   name: String!
   provider: ModelGatewayProvider!
   endpoint: String!
+  publicUrl: String
   backendModelCount: Int!
   loadBalancingStrategy: LoadBalancingStrategy
   lastSyncAt: Time
@@ -6953,6 +6962,8 @@ input ModelGatewayInput {
   name: String!
   provider: ModelGatewayProvider!
   endpoint: String!
+  # Agent/VM reachable LiteLLM URL. endpoint is for backend control-plane access.
+  publicUrl: String
   # litellm master key(接入表单填写)→ 后端写 secret store,只存引用,明文不落库。
   masterKey: String
 }
@@ -7356,6 +7367,7 @@ enum ProviderModelProvider {
   custom       # 任意 OpenAI 兼容端点
   deepseek     # DeepSeek
   minimax      # MiniMax
+  ollama_chat  # Ollama native chat API
   moonshot     # Moonshot(月之暗面)
   openrouter   # OpenRouter(多模型聚合)
   openai
@@ -7578,6 +7590,7 @@ extend type Mutation {
 input TestPrivateModelSpecConnectionInput {
   apiBase: String!
   apiKey: String!
+  customLlmProvider: String
 }
 
 # 0.1.x: TestPrivateModelSpecConnection 返回 — success/message + 上游 /v1/models 返回的 model id 列表
@@ -8950,6 +8963,8 @@ func (ec *executionContext) childFields_ModelGateway(ctx context.Context, field 
 		return ec.fieldContext_ModelGateway_provider(ctx, field)
 	case "endpoint":
 		return ec.fieldContext_ModelGateway_endpoint(ctx, field)
+	case "publicUrl":
+		return ec.fieldContext_ModelGateway_publicUrl(ctx, field)
 	case "backendModelCount":
 		return ec.fieldContext_ModelGateway_backendModelCount(ctx, field)
 	case "loadBalancingStrategy":
@@ -18008,6 +18023,29 @@ func (ec *executionContext) _ModelGateway_endpoint(ctx context.Context, field gr
 	)
 }
 func (ec *executionContext) fieldContext_ModelGateway_endpoint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ModelGateway_publicUrl(ctx context.Context, field graphql.CollectedField, obj *model.ModelGateway) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ModelGateway_publicUrl(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.PublicURL, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_ModelGateway_publicUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ModelGateway", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
@@ -33740,7 +33778,7 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 		asMap["cloneMode"] = "full"
 	}
 
-	fieldsInOrder := [...]string{"name", "templateFamilyId", "templateVersionId", "resourcePoolId", "departmentId", "targetResourcePool", "hostname", "maxBudget", "targetNetwork", "ovfProperties", "keySource", "existingKeyId", "notes", "cloneMode", "instantCloneParent", "skillIds"}
+	fieldsInOrder := [...]string{"name", "templateFamilyId", "templateVersionId", "resourcePoolId", "departmentId", "targetResourcePool", "hostname", "maxBudget", "targetNetwork", "ovfProperties", "skillIds", "keySource", "existingKeyId", "notes", "cloneMode", "instantCloneParent"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -33817,6 +33855,13 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 				return it, err
 			}
 			it.OvfProperties = data
+		case "skillIds":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("skillIds"))
+			data, err := ec.unmarshalOID2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SkillIds = data
 		case "keySource":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keySource"))
 			data, err := ec.unmarshalNKeySource2githubᚗcomᚋVMwareᚑAIᚋagentᚑplatformᚑbackendᚋinternalᚋgraphᚋmodelᚐKeySource(ctx, v)
@@ -33852,13 +33897,6 @@ func (ec *executionContext) unmarshalInputDeployAgentInput(ctx context.Context, 
 				return it, err
 			}
 			it.InstantCloneParent = data
-		case "skillIds":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("skillIds"))
-			data, err := ec.unmarshalOID2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SkillIds = data
 		}
 	}
 	return it, nil
@@ -34295,7 +34333,7 @@ func (ec *executionContext) unmarshalInputModelGatewayInput(ctx context.Context,
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "provider", "endpoint", "masterKey"}
+	fieldsInOrder := [...]string{"name", "provider", "endpoint", "publicUrl", "masterKey"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -34323,6 +34361,13 @@ func (ec *executionContext) unmarshalInputModelGatewayInput(ctx context.Context,
 				return it, err
 			}
 			it.Endpoint = data
+		case "publicUrl":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("publicUrl"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PublicURL = data
 		case "masterKey":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("masterKey"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -35376,7 +35421,7 @@ func (ec *executionContext) unmarshalInputTestPrivateModelSpecConnectionInput(ct
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"apiBase", "apiKey"}
+	fieldsInOrder := [...]string{"apiBase", "apiKey", "customLlmProvider"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -35397,6 +35442,13 @@ func (ec *executionContext) unmarshalInputTestPrivateModelSpecConnectionInput(ct
 				return it, err
 			}
 			it.APIKey = data
+		case "customLlmProvider":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("customLlmProvider"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CustomLlmProvider = data
 		}
 	}
 	return it, nil
@@ -39258,6 +39310,11 @@ func (ec *executionContext) _ModelGateway(ctx context.Context, sel ast.Selection
 		case "endpoint":
 			out.Values[i] = ec._ModelGateway_endpoint(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "publicUrl":
+			out.Values[i] = ec._ModelGateway_publicUrl(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
 		case "backendModelCount":

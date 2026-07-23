@@ -150,6 +150,7 @@ func (r *Resolver) toModelGateway(g *ent.GatewayConnection) *model.ModelGateway 
 		Name:                  g.Name,
 		Provider:              model.ModelGatewayProviderLitellm,
 		Endpoint:              g.Endpoint,
+		PublicURL:             g.PublicURL,
 		BackendModelCount:     backendModelCount,
 		LoadBalancingStrategy: strategy,
 		LastSyncAt:            g.LastSyncedAt,

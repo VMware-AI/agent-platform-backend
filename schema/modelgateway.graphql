@@ -30,6 +30,7 @@ type ModelGateway {
   name: String!
   provider: ModelGatewayProvider!
   endpoint: String!
+  publicUrl: String
   backendModelCount: Int!
   loadBalancingStrategy: LoadBalancingStrategy
   lastSyncAt: Time
@@ -91,6 +92,8 @@ input ModelGatewayInput {
   name: String!
   provider: ModelGatewayProvider!
   endpoint: String!
+  # Agent/VM reachable LiteLLM URL. endpoint is for backend control-plane access.
+  publicUrl: String
   # litellm master key(接入表单填写)→ 后端写 secret store,只存引用,明文不落库。
   masterKey: String
 }

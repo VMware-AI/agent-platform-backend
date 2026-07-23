@@ -7,6 +7,9 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/agent-platform-backend ./cmd/server
 
 FROM quay.io/vmware-ai/debian:12.12-slim
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 python3-pip openssh-client sshpass \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=build /out/agent-platform-backend /agent-platform-backend
 EXPOSE 8080
 ENTRYPOINT ["/agent-platform-backend"]

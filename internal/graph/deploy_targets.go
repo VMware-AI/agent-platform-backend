@@ -7,8 +7,11 @@ package graph
 import (
 	"context"
 	"fmt"
+	"log"
+	"strings"
 
 	"github.com/VMware-AI/agent-platform-backend/ent"
+	entskill "github.com/VMware-AI/agent-platform-backend/ent/skill"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
@@ -37,6 +40,7 @@ type deployTargets struct {
 	pool         *ent.ResourcePool
 	cred         secrets.Credential
 	tenantID     *uuid.UUID
+	skills       []*ent.Skill
 }
 
 // resolveDeployTargets runs DeployAgent's read-only validation/resolution prefix
@@ -76,7 +80,10 @@ func (r *mutationResolver) resolveDeployTargets(ctx context.Context, input model
 	}
 	gwURL := ""
 	if gwConn != nil {
-		gwURL = gwConn.Endpoint
+		gwURL = deployGatewayPublicURL(gwConn, r.ControlPlaneURL)
+		if gwURL == "" {
+			return nil, gqlerror.Errorf("deploy is not configured (agent-reachable LiteLLM URL required)")
+		}
 	}
 	cu := auth.FromContext(ctx)
 	ownerID, err := uuid.Parse(cu.ID)
@@ -140,6 +147,10 @@ func (r *mutationResolver) resolveDeployTargets(ctx context.Context, input model
 	if err != nil {
 		return nil, err
 	}
+	skills, err := r.resolveDeploySkills(ctx, fam.Skills, input.SkillIds)
+	if err != nil {
+		return nil, err
+	}
 
 	return &deployTargets{
 		deptID:       deptID,
@@ -156,5 +167,89 @@ func (r *mutationResolver) resolveDeployTargets(ctx context.Context, input model
 		pool:         pool,
 		cred:         cred,
 		tenantID:     tenantID,
+		skills:       skills,
 	}, nil
+}
+
+func (r *mutationResolver) resolveTemplateSkills(ctx context.Context, names []string) ([]*ent.Skill, error) {
+	if len(names) == 0 {
+		return nil, nil
+	}
+	seen := make(map[string]struct{}, len(names))
+	clean := make([]string, 0, len(names))
+	for _, name := range names {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
+		clean = append(clean, name)
+	}
+	if len(clean) == 0 {
+		return nil, nil
+	}
+	skills, err := r.Ent.Skill.Query().Where(entskill.NameIn(clean...)).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("resolve template skills: %w", err)
+	}
+	found := make(map[string]struct{}, len(skills))
+	for _, sk := range skills {
+		found[sk.Name] = struct{}{}
+	}
+	for _, name := range clean {
+		if _, ok := found[name]; !ok {
+			log.Printf("deploy: template skill %q has no synced package row; skipping", name)
+		}
+	}
+	return skills, nil
+}
+
+func (r *mutationResolver) resolveDeploySkills(ctx context.Context, templateNames []string, selectedIDs []string) ([]*ent.Skill, error) {
+	skills, err := r.resolveTemplateSkills(ctx, templateNames)
+	if err != nil {
+		return nil, err
+	}
+	if len(selectedIDs) == 0 {
+		return skills, nil
+	}
+	ids := make([]uuid.UUID, 0, len(selectedIDs))
+	for _, raw := range selectedIDs {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			return nil, gqlerror.Errorf("invalid skillId")
+		}
+		ids = append(ids, id)
+	}
+	selected, err := r.Ent.Skill.Query().Where(entskill.IDIn(ids...)).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("resolve selected skills: %w", err)
+	}
+	if len(selected) != len(ids) {
+		return nil, gqlerror.Errorf("selected skill not found")
+	}
+	byID := make(map[uuid.UUID]*ent.Skill, len(skills)+len(selected))
+	for _, sk := range skills {
+		byID[sk.ID] = sk
+	}
+	for _, sk := range selected {
+		byID[sk.ID] = sk
+	}
+	out := make([]*ent.Skill, 0, len(byID))
+	for _, sk := range byID {
+		out = append(out, sk)
+	}
+	return out, nil
+}
+
+func deployGatewayPublicURL(g *ent.GatewayConnection, controlPlaneURL string) string {
+	if g == nil {
+		return ""
+	}
+	if g.PublicURL != nil && strings.TrimSpace(*g.PublicURL) != "" {
+		return strings.TrimSpace(*g.PublicURL)
+	}
+	return strings.TrimSpace(g.Endpoint)
 }

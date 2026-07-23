@@ -12,6 +12,7 @@ enum ProviderModelProvider {
   custom       # 任意 OpenAI 兼容端点
   deepseek     # DeepSeek
   minimax      # MiniMax
+  ollama_chat  # Ollama native chat API
   moonshot     # Moonshot(月之暗面)
   openrouter   # OpenRouter(多模型聚合)
   openai
@@ -234,6 +235,7 @@ extend type Mutation {
 input TestPrivateModelSpecConnectionInput {
   apiBase: String!
   apiKey: String!
+  customLlmProvider: String
 }
 
 # 0.1.x: TestPrivateModelSpecConnection 返回 — success/message + 上游 /v1/models 返回的 model id 列表

@@ -581,11 +581,15 @@ func (r *mutationResolver) RefreshProviderModelStatus(ctx context.Context, id st
 		}
 		return nil, err
 	}
-	newStatus, _, _ := r.probeOneProviderModel(ctx, row)
-	if newStatus != "" && string(row.Status) != newStatus {
-		updated, err := r.Ent.ProviderModel.UpdateOneID(uid).
+	newStatus, updatedSpecs, lastChecked := r.probeOneProviderModel(ctx, row)
+	if newStatus != "" {
+		upd := r.Ent.ProviderModel.UpdateOneID(uid).
 			SetStatus(providermodel.Status(newStatus)).
-			Save(ctx)
+			SetLastCheckedAt(lastChecked)
+		if updatedSpecs != nil {
+			upd = upd.SetModelSpecs(updatedSpecs)
+		}
+		updated, err := upd.Save(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -618,7 +622,12 @@ func (r *mutationResolver) TestPrivateModelSpecConnection(ctx context.Context, i
 		return nil, gqlerror.Errorf("invalid apiBase: %v", err)
 	}
 
-	infos, err := c.ListModelsAt(probeCtx, "/models")
+	var infos []gateway.ModelInfo
+	if input.CustomLlmProvider != nil && *input.CustomLlmProvider == "ollama_chat" {
+		infos, err = c.ListOllamaTags(probeCtx)
+	} else {
+		infos, err = c.ListModelsAt(probeCtx, "/models")
+	}
 	if err != nil {
 		log.Printf("private model spec test failed: apiBase=%s err=%v", input.APIBase, err)
 		r.audit(ctx, "provider_model.test_spec_dry_run",
@@ -725,17 +734,4 @@ func (r *queryResolver) ProviderModelInfo(ctx context.Context, filter *model.Pro
 		TotalPages:  totalPages,
 		Size:        size,
 	}, nil
-}
-
-// deleteProviderModelCascade drops a ProviderModel row, treating IsNotFound
-// as a no-op so concurrent cascades (two callers both observing
-// len(specs) == 0 after their splice) don't surface as 500s. Used only
-// from DeleteProviderModelSpec's last-spec branch — DeleteProviderModel's
-// own DeleteOneID stays as-is (different audit/observability surface).
-func (r *Resolver) deleteProviderModelCascade(ctx context.Context, pmID uuid.UUID) error {
-	err := r.Ent.ProviderModel.DeleteOneID(pmID).Exec(ctx)
-	if err != nil && !ent.IsNotFound(err) {
-		return err
-	}
-	return nil
 }

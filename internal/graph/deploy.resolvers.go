@@ -15,6 +15,7 @@ import (
 	"github.com/VMware-AI/agent-platform-backend/ent/virtualkey"
 	"github.com/VMware-AI/agent-platform-backend/internal/auth"
 	"github.com/VMware-AI/agent-platform-backend/internal/deploy"
+	"github.com/VMware-AI/agent-platform-backend/internal/gateway"
 	"github.com/VMware-AI/agent-platform-backend/internal/graph/model"
 	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
@@ -72,23 +73,33 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 	// GenerateKey and reuses the existing gateway key).
 	var existingKey, existingKeyToken string
 	var keyModels []string
+	var existingKeyID uuid.UUID
+	var usingExistingKey bool
 	if input.ExistingKeyID != nil && *input.ExistingKeyID != "" {
-		if vkID, perr := uuid.Parse(*input.ExistingKeyID); perr == nil {
-			if vk, verr := r.Ent.VirtualKey.Get(ctx, vkID); verr == nil {
-				existingKey = vk.LitellmKey
-				existingKeyToken = vk.LitellmToken
-				keyModels = vk.Models
-			}
+		vkID, perr := uuid.Parse(*input.ExistingKeyID)
+		if perr != nil {
+			r.deleteAgentRow(ctx, ag)
+			return nil, gqlerror.Errorf("invalid existingKeyId")
 		}
+		vk, verr := r.Ent.VirtualKey.Get(ctx, vkID)
+		if verr != nil {
+			r.deleteAgentRow(ctx, ag)
+			return nil, fmt.Errorf("lookup existing virtual key: %w", verr)
+		}
+		if vk.Status != virtualkey.StatusActive {
+			r.deleteAgentRow(ctx, ag)
+			return nil, gqlerror.Errorf("existing key is not active")
+		}
+		if vk.AgentID != nil {
+			r.deleteAgentRow(ctx, ag)
+			return nil, gqlerror.Errorf("existing key is already bound")
+		}
+		existingKeyID = vk.ID
+		usingExistingKey = true
+		existingKey = vk.LitellmKey
+		existingKeyToken = vk.LitellmToken
+		keyModels = vk.Models
 	}
-
-	conn, err := r.VCenterConnect(ctx, t.pool.Endpoint, t.cred.Username, t.cred.Password, t.pool.Insecure)
-	if err != nil {
-		r.deleteAgentRow(ctx, ag)
-		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
-		return nil, fmt.Errorf("connect vcenter: %w", err)
-	}
-	defer func() { _ = conn.Logout(ctx) }()
 
 	// Resolve the agent's inline default_config (agent→config→artifact.content)
 	// so it is embedded into cloud-init at deploy — no fetch from the VM (LLD-09).
@@ -116,22 +127,106 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 
 	// Instant Clone path — fork from running parent VM (seconds).
 	if input.CloneMode == model.CloneModeInstant {
-		return r.deployAgentInstant(ctx, ag, t, conn, input, vmName, enrollToken, defaultConfig, configPath)
+		conn, err := r.VCenterConnect(ctx, t.pool.Endpoint, t.cred.Username, t.cred.Password, t.pool.Insecure)
+		if err != nil {
+			r.deleteAgentRow(ctx, ag)
+			r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
+			return nil, fmt.Errorf("connect vcenter: %w", err)
+		}
+		defer func() { _ = conn.Logout(ctx) }()
+		return r.deployAgentInstant(ctx, ag, t, conn, input, vmName, enrollToken, defaultConfig, configPath, keyModels)
 	}
 
-	svc := &deploy.Service{Gateway: t.gw, VCenter: conn, GatewayURL: t.gwURL}
-	// Decouple provisioning from the HTTP write deadline (server WriteTimeout=60s):
-	// a clone + power-on can run minutes, and if the request ctx is canceled
-	// mid-clone the vCenter task keeps running untracked → orphan VM. Run it on a
-	// detached ctx with a generous deadline so the clone completes (or fails)
-	// within our tracking, and rollback can clean up on a real error.
-	provCtx, cancelProv := context.WithTimeout(context.WithoutCancel(ctx), deployProvisionTimeout)
-	defer cancelProv()
-	res, err := svc.Provision(provCtx, deploy.Request{
+	var issuedSecret string
+	if !usingExistingKey {
+		key, err := t.gw.GenerateKey(ctx, gateway.GenerateKeyRequest{
+			UserID:    ag.OwnerUserID.String(),
+			TeamID:    t.deployTeamID, // department = litellm team (LLD-13 §3.3); empty = default gateway, no team
+			Models:    keyModels,
+			MaxBudget: input.MaxBudget,
+			Metadata:  map[string]any{"agent": ag.Name},
+		})
+		if err != nil {
+			r.deleteAgentRow(ctx, ag)
+			r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
+			return nil, fmt.Errorf("issue key: %w", err)
+		}
+		existingKey = key.Key
+		existingKeyToken = key.Token
+		issuedSecret = key.Key
+	}
+
+	// Persist or bind the gateway key before returning. The raw key is returned
+	// once; the background VM provisioning reuses this key and never generates a
+	// second one.
+	var vkID uuid.UUID
+	if usingExistingKey {
+		vkUpdate := r.Ent.VirtualKey.UpdateOneID(existingKeyID).SetAgentID(ag.ID)
+		if existingKeyToken != "" {
+			vkUpdate.SetLitellmToken(existingKeyToken) // gateway reconciliation id
+		}
+		vk, err := vkUpdate.Save(ctx)
+		if err != nil {
+			r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
+			r.deleteAgentRow(ctx, ag)
+			return nil, fmt.Errorf("bind existing virtual key failed: %w", err)
+		}
+		vkID = vk.ID
+	} else {
+		vkCreate := r.Ent.VirtualKey.Create().
+			SetLitellmKey(existingKey).
+			SetMaskedKey(maskKey(existingKey)).
+			SetModelGatewayID(t.gwConn.ID).
+			SetModels(keyModels).
+			SetUserID(t.ownerID.String()).
+			SetAgentID(ag.ID).
+			SetName(ag.Name)
+		if t.deployTeamID != "" {
+			// No-op leftover from the per-agent-per-org refactor: deploy
+			// paths don't need a teamID context (keys belong to an agent,
+			// not a team).
+			_ = t.deployTeamID
+		}
+		if existingKeyToken != "" {
+			vkCreate.SetLitellmToken(existingKeyToken) // gateway reconciliation id
+		}
+		vk, err := vkCreate.Save(ctx)
+		if err != nil {
+			revokeDeployKey(context.WithoutCancel(ctx), t.gw, existingKey, ag.ID.String())
+			r.deleteAgentRow(ctx, ag)
+			r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
+			return nil, fmt.Errorf("persist virtual key failed: %w", err)
+		}
+		vkID = vk.ID
+	}
+
+	updated, err := r.Ent.Agent.UpdateOne(ag).
+		SetStatus(agent.StatusProvisioning).
+		SetVMRef(vmName).
+		SetVirtualKeyID(vkID).
+		Save(ctx)
+	if err != nil {
+		if usingExistingKey {
+			if _, clearErr := r.Ent.VirtualKey.UpdateOneID(vkID).ClearAgentID().Save(context.WithoutCancel(ctx)); clearErr != nil {
+				log.Printf("deploy rollback: clear existing vk binding %s failed: %v", vkID, clearErr)
+			}
+		} else {
+			if delErr := r.Ent.VirtualKey.DeleteOneID(vkID).Exec(context.WithoutCancel(ctx)); delErr != nil {
+				log.Printf("deploy rollback: delete dangling vk row %s failed: %v", vkID, delErr)
+			}
+			revokeDeployKey(context.WithoutCancel(ctx), t.gw, existingKey, ag.ID.String())
+		}
+		r.deleteAgentRow(ctx, ag)
+		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
+		return nil, fmt.Errorf("start deploy failed: %w", err)
+	}
+	r.audit(ctx, "agent.deploy.start", "agent", updated.ID.String(), true, cu.ID)
+
+	req := deploy.Request{
 		AgentName: ag.Name,
 		UserID:    ag.OwnerUserID.String(),
-		TeamID:    t.deployTeamID,          // department = litellm team (LLD-13 §3.3); empty = default gateway, no team
-		Template:  t.version.OvaIdentifier, // clone from the catalog version's OVA
+		TeamID:    t.deployTeamID,
+		Template:  t.version.OvaIdentifier,
 		VMName:    vmName,
 		// vSphere placement pool. A true OVA template has no source resource pool,
 		// so a real deploy MUST supply one or CloneFromTemplate fails ("source has
@@ -150,64 +245,15 @@ func (r *mutationResolver) DeployAgent(ctx context.Context, input model.DeployAg
 		KnowledgeRoot:    r.resolveKnowledgeRoot(ctx, ag),  // LLD-11 K4
 		OVFProperties:    mapOVFProperties(input.OvfProperties),
 		Models:           keyModels,
+		Skills:           t.skills,
 		ExistingKey:      existingKey,
 		ExistingKeyToken: existingKeyToken,
-	})
-	if err != nil {
-		// Provision rolls back its own partial work (VM+key); the agent row is ours.
-		r.deleteAgentRow(ctx, ag)
-		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
-		return nil, fmt.Errorf("provision: %w", err)
 	}
-
-	// Persist the issued key (secret is Sensitive) and mark the agent running.
-	// Provision already succeeded: the VM is running and a live gateway key exists.
-	// If either write below fails we must compensate (destroy VM + revoke key +
-	// drop the agent row), else we leak an orphan VM and an ungoverned key.
-	vkCreate := r.Ent.VirtualKey.Create().
-		SetLitellmKey(res.VirtualKey).
-		SetMaskedKey(maskKey(res.VirtualKey)).
-		SetModelGatewayID(t.gwConn.ID).
-		SetModels(nil).
-		SetUserID(t.ownerID.String()).
-		SetName(ag.Name)
-	if t.deployTeamID != "" {
-		// No-op leftover from the per-agent-per-org refactor: deploy
-		// paths don't need a teamID context (keys belong to an agent,
-		// not a team).
-		_ = t.deployTeamID
-	}
-	if res.VirtualKeyToken != "" {
-		vkCreate.SetLitellmToken(res.VirtualKeyToken) // gateway reconciliation id
-	}
-	vk, err := vkCreate.Save(ctx)
-	if err != nil {
-		r.rollbackDeployCreate(ctx, conn, t.gw, ag, vmName, res.VirtualKey)
-		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
-		return nil, fmt.Errorf("persist virtual key failed: %w", err)
-	}
-	// NB: assign to a NEW var — `ag, err = Save()` would nil out `ag` on error,
-	// breaking the compensation that needs the original row.
-	updated, err := r.Ent.Agent.UpdateOne(ag).
-		SetStatus(agent.StatusRunning).
-		SetVMRef(vmName).
-		SetVirtualKeyID(vk.ID).
-		Save(ctx)
-	if err != nil {
-		// The vk row persisted but the agent didn't finalize; drop the now-dangling
-		// row (it points at a key we're about to revoke) then compensate.
-		if delErr := r.Ent.VirtualKey.DeleteOne(vk).Exec(context.WithoutCancel(ctx)); delErr != nil {
-			log.Printf("deploy rollback: delete dangling vk row %s failed: %v", vk.ID, delErr)
-		}
-		r.rollbackDeployCreate(ctx, conn, t.gw, ag, vmName, res.VirtualKey)
-		r.audit(ctx, "agent.deploy", "agent", ag.ID.String(), false, cu.ID)
-		return nil, fmt.Errorf("finalize agent failed: %w", err)
-	}
-	r.audit(ctx, "agent.deploy", "agent", updated.ID.String(), true, cu.ID)
+	r.startFullDeployAsync(updated.ID, vkID, t, req, usingExistingKey, cu.ID)
 
 	return &model.DeployedAgent{
 		Agent:            toModelAgent(updated),
-		VirtualKeySecret: res.VirtualKey,
+		VirtualKeySecret: issuedSecret,
 		TemplateVersion:  toModelOvaVersion(t.version, t.familyID.String()),
 		ResourcePool:     toModelResourcePool(t.pool),
 	}, nil

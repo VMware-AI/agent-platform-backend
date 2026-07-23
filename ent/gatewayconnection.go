@@ -26,6 +26,10 @@ type GatewayConnection struct {
 	Name string `json:"name,omitempty"`
 	// Endpoint holds the value of the "endpoint" field.
 	Endpoint string `json:"endpoint,omitempty"`
+	// AdminURL holds the value of the "admin_url" field.
+	AdminURL *string `json:"admin_url,omitempty"`
+	// PublicURL holds the value of the "public_url" field.
+	PublicURL *string `json:"public_url,omitempty"`
 	// MasterKeyRef holds the value of the "master_key_ref" field.
 	MasterKeyRef string `json:"master_key_ref,omitempty"`
 	// LastSyncedAt holds the value of the "last_synced_at" field.
@@ -46,7 +50,7 @@ func (*GatewayConnection) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case gatewayconnection.FieldBackendModelCount:
 			values[i] = new(sql.NullInt64)
-		case gatewayconnection.FieldName, gatewayconnection.FieldEndpoint, gatewayconnection.FieldMasterKeyRef, gatewayconnection.FieldStatus, gatewayconnection.FieldLoadBalanceStrategy:
+		case gatewayconnection.FieldName, gatewayconnection.FieldEndpoint, gatewayconnection.FieldAdminURL, gatewayconnection.FieldPublicURL, gatewayconnection.FieldMasterKeyRef, gatewayconnection.FieldStatus, gatewayconnection.FieldLoadBalanceStrategy:
 			values[i] = new(sql.NullString)
 		case gatewayconnection.FieldCreatedAt, gatewayconnection.FieldUpdatedAt, gatewayconnection.FieldLastSyncedAt:
 			values[i] = new(sql.NullTime)
@@ -96,6 +100,20 @@ func (_m *GatewayConnection) assignValues(columns []string, values []any) error 
 				return fmt.Errorf("unexpected type %T for field endpoint", values[i])
 			} else if value.Valid {
 				_m.Endpoint = value.String
+			}
+		case gatewayconnection.FieldAdminURL:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field admin_url", values[i])
+			} else if value.Valid {
+				_m.AdminURL = new(string)
+				*_m.AdminURL = value.String
+			}
+		case gatewayconnection.FieldPublicURL:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field public_url", values[i])
+			} else if value.Valid {
+				_m.PublicURL = new(string)
+				*_m.PublicURL = value.String
 			}
 		case gatewayconnection.FieldMasterKeyRef:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -176,6 +194,16 @@ func (_m *GatewayConnection) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("endpoint=")
 	builder.WriteString(_m.Endpoint)
+	builder.WriteString(", ")
+	if v := _m.AdminURL; v != nil {
+		builder.WriteString("admin_url=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.PublicURL; v != nil {
+		builder.WriteString("public_url=")
+		builder.WriteString(*v)
+	}
 	builder.WriteString(", ")
 	builder.WriteString("master_key_ref=")
 	builder.WriteString(_m.MasterKeyRef)

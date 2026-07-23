@@ -56,6 +56,55 @@ func secureToken() string {
 	return hex.EncodeToString(b)
 }
 
+func (r *mutationResolver) startFullDeployAsync(agentID, vkID uuid.UUID, t *deployTargets, req deploy.Request, usingExistingKey bool, actor string) {
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), deployProvisionTimeout)
+		defer cancel()
+
+		conn, err := r.VCenterConnect(ctx, t.pool.Endpoint, t.cred.Username, t.cred.Password, t.pool.Insecure)
+		if err != nil {
+			r.failAsyncFullDeploy(ctx, agentID, vkID, t.gw, req.ExistingKey, usingExistingKey, actor, fmt.Errorf("connect vcenter: %w", err))
+			return
+		}
+		defer func() { _ = conn.Logout(ctx) }()
+
+		svc := &deploy.Service{Gateway: t.gw, VCenter: conn, GatewayURL: t.gwURL}
+		if _, err := svc.Provision(ctx, req); err != nil {
+			r.failAsyncFullDeploy(ctx, agentID, vkID, t.gw, req.ExistingKey, usingExistingKey, actor, fmt.Errorf("provision: %w", err))
+			return
+		}
+
+		if _, err := r.Ent.Agent.UpdateOneID(agentID).
+			SetStatus(agent.StatusRunning).
+			SetVMRef(req.VMName).
+			SetVirtualKeyID(vkID).
+			Save(ctx); err != nil {
+			r.failAsyncFullDeploy(ctx, agentID, vkID, t.gw, req.ExistingKey, usingExistingKey, actor, fmt.Errorf("finalize agent: %w", err))
+			return
+		}
+		r.audit(ctx, "agent.deploy", "agent", agentID.String(), true, actor)
+	}()
+}
+
+func (r *mutationResolver) failAsyncFullDeploy(ctx context.Context, agentID, vkID uuid.UUID, gw gateway.Client, key string, usingExistingKey bool, actor string, err error) {
+	log.Printf("deploy async: agent=%s failed: %v", agentID, err)
+	cctx := context.WithoutCancel(ctx)
+	if usingExistingKey {
+		if _, clearErr := r.Ent.VirtualKey.UpdateOneID(vkID).ClearAgentID().Save(cctx); clearErr != nil {
+			log.Printf("deploy async rollback: clear existing vk binding %s failed: %v", vkID, clearErr)
+		}
+	} else {
+		if delErr := r.Ent.VirtualKey.DeleteOneID(vkID).Exec(cctx); delErr != nil {
+			log.Printf("deploy async rollback: delete vk row %s failed: %v", vkID, delErr)
+		}
+		revokeDeployKey(cctx, gw, key, agentID.String())
+	}
+	if _, saveErr := r.Ent.Agent.UpdateOneID(agentID).SetStatus(agent.StatusFailed).Save(cctx); saveErr != nil {
+		log.Printf("deploy async rollback: mark agent %s failed: %v", agentID, saveErr)
+	}
+	r.audit(cctx, "agent.deploy", "agent", agentID.String(), false, actor)
+}
+
 // deployAgentInstant: InstantClone → VMware Tools → CustomizeGuest (static IP)
 // → StartGuestNetwork → wait IP → GuestInfo (OpenClaw) → ACK → RUNNING.
 func (r *mutationResolver) deployAgentInstant(
@@ -68,6 +117,7 @@ func (r *mutationResolver) deployAgentInstant(
 	_ string, // enrollToken (unused in new flow)
 	_ string, // defaultConfig (unused)
 	_ string, // configPath (unused)
+	keyModels []string,
 ) (*model.DeployedAgent, error) {
 	parentVM := derefString(input.InstantCloneParent)
 	if parentVM == "" {
@@ -75,10 +125,14 @@ func (r *mutationResolver) deployAgentInstant(
 	}
 	deploymentID := uuid.New().String()
 	generation := fmt.Sprintf("%d", time.Now().UnixMilli())
+	openClawModel, ok := selectPrimaryModel(keyModels)
+	if !ok {
+		return nil, fmt.Errorf("instant clone requires at least one bound model")
+	}
 
 	// 1. Gateway key
 	key, err := t.gw.GenerateKey(ctx, gateway.GenerateKeyRequest{
-		UserID: ag.OwnerUserID.String(), TeamID: t.deployTeamID, Models: nil,
+		UserID: ag.OwnerUserID.String(), TeamID: t.deployTeamID, Models: keyModels,
 		MaxBudget: input.MaxBudget,
 		Metadata:  map[string]any{"agent": ag.Name, "deployment": deploymentID},
 	})
@@ -228,7 +282,7 @@ func (r *mutationResolver) deployAgentInstant(
 		Command:      "start-openclaw",
 		OpenClawUser: runAsUser, OpenClawHome: "/home/" + runAsUser,
 		OpenClawPort: "18789", OpenClawBaseURL: t.gwURL,
-		OpenClawModel: "minmax", OpenClawAPIKey: key.Key,
+		OpenClawModel: openClawModel, OpenClawAPIKey: key.Key,
 		OpenClawGatewayToken: ocToken,
 	}
 	giMap := gi.ToGuestInfo()
@@ -303,4 +357,14 @@ func (r *mutationResolver) deployAgentInstant(
 		TemplateVersion: toModelOvaVersion(t.version, t.familyID.String()),
 		ResourcePool:    toModelResourcePool(t.pool),
 	}, nil
+}
+
+func selectPrimaryModel(models []string) (string, bool) {
+	for _, model := range models {
+		model = strings.TrimSpace(model)
+		if model != "" {
+			return model, true
+		}
+	}
+	return "", false
 }

@@ -23,6 +23,8 @@ func (GatewayConnection) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		field.String("name").NotEmpty().Unique(),
 		field.String("endpoint").NotEmpty(),
+		field.String("admin_url").Optional().Nillable(),
+		field.String("public_url").Optional().Nillable(),
 		field.String("master_key_ref").Optional(), // vault://item-id
 		// last_synced_at: when the gateway last successfully connected (set on a
 		// successful connection test). Nil = never synced. Distinct from updated_at

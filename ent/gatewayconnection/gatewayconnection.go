@@ -23,6 +23,10 @@ const (
 	FieldName = "name"
 	// FieldEndpoint holds the string denoting the endpoint field in the database.
 	FieldEndpoint = "endpoint"
+	// FieldAdminURL holds the string denoting the admin_url field in the database.
+	FieldAdminURL = "admin_url"
+	// FieldPublicURL holds the string denoting the public_url field in the database.
+	FieldPublicURL = "public_url"
 	// FieldMasterKeyRef holds the string denoting the master_key_ref field in the database.
 	FieldMasterKeyRef = "master_key_ref"
 	// FieldLastSyncedAt holds the string denoting the last_synced_at field in the database.
@@ -44,6 +48,8 @@ var Columns = []string{
 	FieldUpdatedAt,
 	FieldName,
 	FieldEndpoint,
+	FieldAdminURL,
+	FieldPublicURL,
 	FieldMasterKeyRef,
 	FieldLastSyncedAt,
 	FieldBackendModelCount,
@@ -158,6 +164,16 @@ func ByName(opts ...sql.OrderTermOption) OrderOption {
 // ByEndpoint orders the results by the endpoint field.
 func ByEndpoint(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEndpoint, opts...).ToFunc()
+}
+
+// ByAdminURL orders the results by the admin_url field.
+func ByAdminURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAdminURL, opts...).ToFunc()
+}
+
+// ByPublicURL orders the results by the public_url field.
+func ByPublicURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPublicURL, opts...).ToFunc()
 }
 
 // ByMasterKeyRef orders the results by the master_key_ref field.

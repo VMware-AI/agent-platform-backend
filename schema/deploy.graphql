@@ -45,6 +45,9 @@ input DeployAgentInput {
   targetNetwork: String
   # OVF/vApp properties from the template, keyed by property id.
   ovfProperties: [OVFPropertyInput!]
+  # Optional Skill hub ids selected in the deploy dialog. Resolved to offline
+  # packages and installed through cloud-init when the VM first boots.
+  skillIds: [ID!]
   # Key source: "new" issues a fresh gateway key; "existing" binds an unbound key.
   keySource: KeySource! = new
   # Required when keySource=existing — the id of an unbound virtual key to reuse.

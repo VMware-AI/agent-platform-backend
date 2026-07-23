@@ -72,6 +72,16 @@ func (r *Resolver) rollbackDeployCreate(ctx context.Context, conn VCenterClient,
 	r.deleteAgentRow(cctx, ag)
 }
 
+// rollbackDeployVMOnly compensates a failed deploy that reused an existing key:
+// the VM and just-created agent row belong to this attempt, but the key does not.
+func (r *Resolver) rollbackDeployVMOnly(ctx context.Context, conn VCenterClient, ag *ent.Agent, vmName string) {
+	cctx := context.WithoutCancel(ctx)
+	if err := conn.Destroy(cctx, vmName); err != nil {
+		log.Printf("deploy rollback: orphan VM %q, destroy failed: %v", vmName, err)
+	}
+	r.deleteAgentRow(cctx, ag)
+}
+
 // revokeDeployKey best-effort revokes a deploy's gateway key during rollback. The
 // key was minted on the agent's department/default gateway (gw, LLD-13 §3.3); the
 // rollback MUST revoke through that SAME client — not a process-wide default that

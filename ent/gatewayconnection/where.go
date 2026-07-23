@@ -75,6 +75,16 @@ func Endpoint(v string) predicate.GatewayConnection {
 	return predicate.GatewayConnection(sql.FieldEQ(FieldEndpoint, v))
 }
 
+// AdminURL applies equality check predicate on the "admin_url" field. It's identical to AdminURLEQ.
+func AdminURL(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldEQ(FieldAdminURL, v))
+}
+
+// PublicURL applies equality check predicate on the "public_url" field. It's identical to PublicURLEQ.
+func PublicURL(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldEQ(FieldPublicURL, v))
+}
+
 // MasterKeyRef applies equality check predicate on the "master_key_ref" field. It's identical to MasterKeyRefEQ.
 func MasterKeyRef(v string) predicate.GatewayConnection {
 	return predicate.GatewayConnection(sql.FieldEQ(FieldMasterKeyRef, v))
@@ -298,6 +308,156 @@ func EndpointEqualFold(v string) predicate.GatewayConnection {
 // EndpointContainsFold applies the ContainsFold predicate on the "endpoint" field.
 func EndpointContainsFold(v string) predicate.GatewayConnection {
 	return predicate.GatewayConnection(sql.FieldContainsFold(FieldEndpoint, v))
+}
+
+// AdminURLEQ applies the EQ predicate on the "admin_url" field.
+func AdminURLEQ(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldEQ(FieldAdminURL, v))
+}
+
+// AdminURLNEQ applies the NEQ predicate on the "admin_url" field.
+func AdminURLNEQ(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldNEQ(FieldAdminURL, v))
+}
+
+// AdminURLIn applies the In predicate on the "admin_url" field.
+func AdminURLIn(vs ...string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldIn(FieldAdminURL, vs...))
+}
+
+// AdminURLNotIn applies the NotIn predicate on the "admin_url" field.
+func AdminURLNotIn(vs ...string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldNotIn(FieldAdminURL, vs...))
+}
+
+// AdminURLGT applies the GT predicate on the "admin_url" field.
+func AdminURLGT(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldGT(FieldAdminURL, v))
+}
+
+// AdminURLGTE applies the GTE predicate on the "admin_url" field.
+func AdminURLGTE(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldGTE(FieldAdminURL, v))
+}
+
+// AdminURLLT applies the LT predicate on the "admin_url" field.
+func AdminURLLT(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldLT(FieldAdminURL, v))
+}
+
+// AdminURLLTE applies the LTE predicate on the "admin_url" field.
+func AdminURLLTE(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldLTE(FieldAdminURL, v))
+}
+
+// AdminURLContains applies the Contains predicate on the "admin_url" field.
+func AdminURLContains(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldContains(FieldAdminURL, v))
+}
+
+// AdminURLHasPrefix applies the HasPrefix predicate on the "admin_url" field.
+func AdminURLHasPrefix(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldHasPrefix(FieldAdminURL, v))
+}
+
+// AdminURLHasSuffix applies the HasSuffix predicate on the "admin_url" field.
+func AdminURLHasSuffix(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldHasSuffix(FieldAdminURL, v))
+}
+
+// AdminURLIsNil applies the IsNil predicate on the "admin_url" field.
+func AdminURLIsNil() predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldIsNull(FieldAdminURL))
+}
+
+// AdminURLNotNil applies the NotNil predicate on the "admin_url" field.
+func AdminURLNotNil() predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldNotNull(FieldAdminURL))
+}
+
+// AdminURLEqualFold applies the EqualFold predicate on the "admin_url" field.
+func AdminURLEqualFold(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldEqualFold(FieldAdminURL, v))
+}
+
+// AdminURLContainsFold applies the ContainsFold predicate on the "admin_url" field.
+func AdminURLContainsFold(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldContainsFold(FieldAdminURL, v))
+}
+
+// PublicURLEQ applies the EQ predicate on the "public_url" field.
+func PublicURLEQ(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldEQ(FieldPublicURL, v))
+}
+
+// PublicURLNEQ applies the NEQ predicate on the "public_url" field.
+func PublicURLNEQ(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldNEQ(FieldPublicURL, v))
+}
+
+// PublicURLIn applies the In predicate on the "public_url" field.
+func PublicURLIn(vs ...string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldIn(FieldPublicURL, vs...))
+}
+
+// PublicURLNotIn applies the NotIn predicate on the "public_url" field.
+func PublicURLNotIn(vs ...string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldNotIn(FieldPublicURL, vs...))
+}
+
+// PublicURLGT applies the GT predicate on the "public_url" field.
+func PublicURLGT(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldGT(FieldPublicURL, v))
+}
+
+// PublicURLGTE applies the GTE predicate on the "public_url" field.
+func PublicURLGTE(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldGTE(FieldPublicURL, v))
+}
+
+// PublicURLLT applies the LT predicate on the "public_url" field.
+func PublicURLLT(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldLT(FieldPublicURL, v))
+}
+
+// PublicURLLTE applies the LTE predicate on the "public_url" field.
+func PublicURLLTE(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldLTE(FieldPublicURL, v))
+}
+
+// PublicURLContains applies the Contains predicate on the "public_url" field.
+func PublicURLContains(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldContains(FieldPublicURL, v))
+}
+
+// PublicURLHasPrefix applies the HasPrefix predicate on the "public_url" field.
+func PublicURLHasPrefix(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldHasPrefix(FieldPublicURL, v))
+}
+
+// PublicURLHasSuffix applies the HasSuffix predicate on the "public_url" field.
+func PublicURLHasSuffix(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldHasSuffix(FieldPublicURL, v))
+}
+
+// PublicURLIsNil applies the IsNil predicate on the "public_url" field.
+func PublicURLIsNil() predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldIsNull(FieldPublicURL))
+}
+
+// PublicURLNotNil applies the NotNil predicate on the "public_url" field.
+func PublicURLNotNil() predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldNotNull(FieldPublicURL))
+}
+
+// PublicURLEqualFold applies the EqualFold predicate on the "public_url" field.
+func PublicURLEqualFold(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldEqualFold(FieldPublicURL, v))
+}
+
+// PublicURLContainsFold applies the ContainsFold predicate on the "public_url" field.
+func PublicURLContainsFold(v string) predicate.GatewayConnection {
+	return predicate.GatewayConnection(sql.FieldContainsFold(FieldPublicURL, v))
 }
 
 // MasterKeyRefEQ applies the EQ predicate on the "master_key_ref" field.
