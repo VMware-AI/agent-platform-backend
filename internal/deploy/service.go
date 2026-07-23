@@ -495,6 +495,7 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 			},
 		}
 		if len(models) > 0 {
+			ocCfg["model"] = "litellm/" + models[0]
 			ocCfg["provider"].(map[string]interface{})["litellm"].(map[string]interface{})["models"] = ocCodeMap
 		}
 		var ocCfgBytes []byte
@@ -524,6 +525,9 @@ func buildUserdata(gatewayURL, key, hostname, defaultConfig, configPath string, 
 		b.WriteString("    content: |\n")
 		fmt.Fprintf(&b, "      model:\n")
 		fmt.Fprintf(&b, "        provider: custom:litellm\n")
+		if len(models) > 0 {
+			fmt.Fprintf(&b, "        default: %s\n", models[0])
+		}
 		fmt.Fprintf(&b, "      custom_providers:\n")
 		fmt.Fprintf(&b, "        - name: litellm\n")
 		fmt.Fprintf(&b, "          base_url: %s/v1\n", base)

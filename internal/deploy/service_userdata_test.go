@@ -19,8 +19,8 @@ func TestBuildUserdataWritesOpenCodeLiteLLMCompatibleProvider(t *testing.T) {
 	)
 
 	cfg := extractCloudInitJSON(t, userdata, "/home/vmware/.config/opencode/opencode.json")
-	if _, ok := cfg["model"]; ok {
-		t.Fatalf("model field must be omitted when no hardcoded default is desired: %#v", cfg["model"])
+	if got := cfg["model"]; got != "litellm/qwen-coder" {
+		t.Fatalf("model = %v, want litellm/qwen-coder", got)
 	}
 	providers, ok := cfg["enabled_providers"].([]any)
 	if !ok || len(providers) != 1 || providers[0] != "litellm" {
@@ -73,11 +73,11 @@ func TestBuildUserdataWritesHermesLiteLLMCustomProvider(t *testing.T) {
 	if !strings.Contains(cfg, "provider: custom:litellm") {
 		t.Fatalf("Hermes default provider must select custom:litellm, got:\n%s", cfg)
 	}
+	if !strings.Contains(cfg, "default: qwen-coder") {
+		t.Fatalf("Hermes default model must use the key-bound model:\n%s", cfg)
+	}
 	if !strings.Contains(cfg, "base_url: http://172.16.85.230:4000/v1") {
 		t.Fatalf("Hermes config missing LiteLLM custom provider URL:\n%s", cfg)
-	}
-	if strings.Contains(cfg, "default:") {
-		t.Fatalf("Hermes config must not hardcode a default model:\n%s", cfg)
 	}
 }
 
