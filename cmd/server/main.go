@@ -72,6 +72,9 @@ func main() {
 	if err := catalog.Seed(ctx, client); err != nil {
 		log.Fatalf("seed catalog: %v", err)
 	}
+	if err := catalog.RepairOvaTemplates(ctx, client); err != nil {
+		log.Fatalf("repair ova catalog: %v", err)
+	}
 
 	// Login brute-force throttle: 10 failures per 15 minutes per key.
 	const loginThreshold = 10
@@ -296,6 +299,7 @@ func main() {
 	mux.Handle("POST /v1/skills/sync/{skillId}", skillsSvc.Handler())
 	mux.Handle("POST /v1/skills/upload/{skillId}", skillsSvc.Handler())
 	mux.Handle("POST /v1/skills/install/{agentIp}/{skillId}", skillsSvc.Handler())
+	mux.Handle("GET /v1/skills/installed/{agentIp}", skillsSvc.Handler())
 	mux.Handle("/v1/terminal/", http.HandlerFunc(terminal.HandleTerminal))
 	mux.Handle("/", playground.Handler("Agent Platform", "/query"))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {

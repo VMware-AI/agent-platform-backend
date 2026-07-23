@@ -24,7 +24,10 @@ import (
 // populated by an async goroutine — the mutation response returns the row in
 // its just-created state, which the UI refreshes on the next list query).
 func (r *mutationResolver) CreateModelGateway(ctx context.Context, input model.ModelGatewayInput) (*model.ModelGateway, error) {
-	c := r.Ent.GatewayConnection.Create().SetName(input.Name).SetEndpoint(input.Endpoint)
+	c := r.Ent.GatewayConnection.Create().
+		SetName(input.Name).
+		SetEndpoint(input.Endpoint).
+		SetNillablePublicURL(input.PublicURL)
 	ref, set, minted, err := r.resolveKeySecretRef(ctx, "gateway/"+input.Name, input.MasterKey, nil)
 	if err != nil {
 		return nil, err
@@ -62,7 +65,13 @@ func (r *mutationResolver) UpdateModelGateway(ctx context.Context, id string, in
 	if err != nil {
 		return nil, err
 	}
-	u := r.Ent.GatewayConnection.UpdateOneID(gid).SetName(input.Name).SetEndpoint(input.Endpoint)
+	u := r.Ent.GatewayConnection.UpdateOneID(gid).
+		SetName(input.Name).
+		SetEndpoint(input.Endpoint).
+		SetNillablePublicURL(input.PublicURL)
+	if input.PublicURL == nil || *input.PublicURL == "" {
+		u.ClearPublicURL()
+	}
 	// On a re-submitted masterKey the secret store mints a NEW ref; remember the
 	// prior one so we can delete it after the row is updated (no orphan on rotate).
 	rotatedFrom := ""

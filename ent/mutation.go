@@ -8214,6 +8214,8 @@ type GatewayConnectionMutation struct {
 	updated_at             *time.Time
 	name                   *string
 	endpoint               *string
+	admin_url              *string
+	public_url             *string
 	master_key_ref         *string
 	last_synced_at         *time.Time
 	backend_model_count    *int
@@ -8472,6 +8474,104 @@ func (m *GatewayConnectionMutation) OldEndpoint(ctx context.Context) (v string, 
 // ResetEndpoint resets all changes to the "endpoint" field.
 func (m *GatewayConnectionMutation) ResetEndpoint() {
 	m.endpoint = nil
+}
+
+// SetAdminURL sets the "admin_url" field.
+func (m *GatewayConnectionMutation) SetAdminURL(s string) {
+	m.admin_url = &s
+}
+
+// AdminURL returns the value of the "admin_url" field in the mutation.
+func (m *GatewayConnectionMutation) AdminURL() (r string, exists bool) {
+	v := m.admin_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAdminURL returns the old "admin_url" field's value of the GatewayConnection entity.
+// If the GatewayConnection object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GatewayConnectionMutation) OldAdminURL(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAdminURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAdminURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAdminURL: %w", err)
+	}
+	return oldValue.AdminURL, nil
+}
+
+// ClearAdminURL clears the value of the "admin_url" field.
+func (m *GatewayConnectionMutation) ClearAdminURL() {
+	m.admin_url = nil
+	m.clearedFields[gatewayconnection.FieldAdminURL] = struct{}{}
+}
+
+// AdminURLCleared returns if the "admin_url" field was cleared in this mutation.
+func (m *GatewayConnectionMutation) AdminURLCleared() bool {
+	_, ok := m.clearedFields[gatewayconnection.FieldAdminURL]
+	return ok
+}
+
+// ResetAdminURL resets all changes to the "admin_url" field.
+func (m *GatewayConnectionMutation) ResetAdminURL() {
+	m.admin_url = nil
+	delete(m.clearedFields, gatewayconnection.FieldAdminURL)
+}
+
+// SetPublicURL sets the "public_url" field.
+func (m *GatewayConnectionMutation) SetPublicURL(s string) {
+	m.public_url = &s
+}
+
+// PublicURL returns the value of the "public_url" field in the mutation.
+func (m *GatewayConnectionMutation) PublicURL() (r string, exists bool) {
+	v := m.public_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPublicURL returns the old "public_url" field's value of the GatewayConnection entity.
+// If the GatewayConnection object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GatewayConnectionMutation) OldPublicURL(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPublicURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPublicURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPublicURL: %w", err)
+	}
+	return oldValue.PublicURL, nil
+}
+
+// ClearPublicURL clears the value of the "public_url" field.
+func (m *GatewayConnectionMutation) ClearPublicURL() {
+	m.public_url = nil
+	m.clearedFields[gatewayconnection.FieldPublicURL] = struct{}{}
+}
+
+// PublicURLCleared returns if the "public_url" field was cleared in this mutation.
+func (m *GatewayConnectionMutation) PublicURLCleared() bool {
+	_, ok := m.clearedFields[gatewayconnection.FieldPublicURL]
+	return ok
+}
+
+// ResetPublicURL resets all changes to the "public_url" field.
+func (m *GatewayConnectionMutation) ResetPublicURL() {
+	m.public_url = nil
+	delete(m.clearedFields, gatewayconnection.FieldPublicURL)
 }
 
 // SetMasterKeyRef sets the "master_key_ref" field.
@@ -8748,7 +8848,7 @@ func (m *GatewayConnectionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GatewayConnectionMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 11)
 	if m.created_at != nil {
 		fields = append(fields, gatewayconnection.FieldCreatedAt)
 	}
@@ -8760,6 +8860,12 @@ func (m *GatewayConnectionMutation) Fields() []string {
 	}
 	if m.endpoint != nil {
 		fields = append(fields, gatewayconnection.FieldEndpoint)
+	}
+	if m.admin_url != nil {
+		fields = append(fields, gatewayconnection.FieldAdminURL)
+	}
+	if m.public_url != nil {
+		fields = append(fields, gatewayconnection.FieldPublicURL)
 	}
 	if m.master_key_ref != nil {
 		fields = append(fields, gatewayconnection.FieldMasterKeyRef)
@@ -8792,6 +8898,10 @@ func (m *GatewayConnectionMutation) Field(name string) (ent.Value, bool) {
 		return m.Name()
 	case gatewayconnection.FieldEndpoint:
 		return m.Endpoint()
+	case gatewayconnection.FieldAdminURL:
+		return m.AdminURL()
+	case gatewayconnection.FieldPublicURL:
+		return m.PublicURL()
 	case gatewayconnection.FieldMasterKeyRef:
 		return m.MasterKeyRef()
 	case gatewayconnection.FieldLastSyncedAt:
@@ -8819,6 +8929,10 @@ func (m *GatewayConnectionMutation) OldField(ctx context.Context, name string) (
 		return m.OldName(ctx)
 	case gatewayconnection.FieldEndpoint:
 		return m.OldEndpoint(ctx)
+	case gatewayconnection.FieldAdminURL:
+		return m.OldAdminURL(ctx)
+	case gatewayconnection.FieldPublicURL:
+		return m.OldPublicURL(ctx)
 	case gatewayconnection.FieldMasterKeyRef:
 		return m.OldMasterKeyRef(ctx)
 	case gatewayconnection.FieldLastSyncedAt:
@@ -8865,6 +8979,20 @@ func (m *GatewayConnectionMutation) SetField(name string, value ent.Value) error
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetEndpoint(v)
+		return nil
+	case gatewayconnection.FieldAdminURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAdminURL(v)
+		return nil
+	case gatewayconnection.FieldPublicURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPublicURL(v)
 		return nil
 	case gatewayconnection.FieldMasterKeyRef:
 		v, ok := value.(string)
@@ -8946,6 +9074,12 @@ func (m *GatewayConnectionMutation) AddField(name string, value ent.Value) error
 // mutation.
 func (m *GatewayConnectionMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(gatewayconnection.FieldAdminURL) {
+		fields = append(fields, gatewayconnection.FieldAdminURL)
+	}
+	if m.FieldCleared(gatewayconnection.FieldPublicURL) {
+		fields = append(fields, gatewayconnection.FieldPublicURL)
+	}
 	if m.FieldCleared(gatewayconnection.FieldMasterKeyRef) {
 		fields = append(fields, gatewayconnection.FieldMasterKeyRef)
 	}
@@ -8969,6 +9103,12 @@ func (m *GatewayConnectionMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *GatewayConnectionMutation) ClearField(name string) error {
 	switch name {
+	case gatewayconnection.FieldAdminURL:
+		m.ClearAdminURL()
+		return nil
+	case gatewayconnection.FieldPublicURL:
+		m.ClearPublicURL()
+		return nil
 	case gatewayconnection.FieldMasterKeyRef:
 		m.ClearMasterKeyRef()
 		return nil
@@ -8997,6 +9137,12 @@ func (m *GatewayConnectionMutation) ResetField(name string) error {
 		return nil
 	case gatewayconnection.FieldEndpoint:
 		m.ResetEndpoint()
+		return nil
+	case gatewayconnection.FieldAdminURL:
+		m.ResetAdminURL()
+		return nil
+	case gatewayconnection.FieldPublicURL:
+		m.ResetPublicURL()
 		return nil
 	case gatewayconnection.FieldMasterKeyRef:
 		m.ResetMasterKeyRef()

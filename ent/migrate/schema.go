@@ -263,6 +263,8 @@ var (
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "name", Type: field.TypeString, Unique: true},
 		{Name: "endpoint", Type: field.TypeString},
+		{Name: "admin_url", Type: field.TypeString, Nullable: true},
+		{Name: "public_url", Type: field.TypeString, Nullable: true},
 		{Name: "master_key_ref", Type: field.TypeString, Nullable: true},
 		{Name: "last_synced_at", Type: field.TypeTime, Nullable: true},
 		{Name: "backend_model_count", Type: field.TypeInt, Nullable: true},

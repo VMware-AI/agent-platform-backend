@@ -441,12 +441,12 @@ type DeployAgentInput struct {
 	MaxBudget          *float64           `json:"maxBudget,omitempty"`
 	TargetNetwork      *string            `json:"targetNetwork,omitempty"`
 	OvfProperties      []OVFPropertyInput `json:"ovfProperties,omitempty"`
+	SkillIds           []string           `json:"skillIds,omitempty"`
 	KeySource          KeySource          `json:"keySource"`
 	ExistingKeyID      *string            `json:"existingKeyId,omitempty"`
 	Notes              *string            `json:"notes,omitempty"`
 	CloneMode          CloneMode          `json:"cloneMode"`
 	InstantCloneParent *string            `json:"instantCloneParent,omitempty"`
-	SkillIds           []string           `json:"skillIds,omitempty"`
 }
 
 type DeployedAgent struct {
@@ -608,6 +608,7 @@ type ModelGateway struct {
 	Name                  string                 `json:"name"`
 	Provider              ModelGatewayProvider   `json:"provider"`
 	Endpoint              string                 `json:"endpoint"`
+	PublicURL             *string                `json:"publicUrl,omitempty"`
 	BackendModelCount     int                    `json:"backendModelCount"`
 	LoadBalancingStrategy *LoadBalancingStrategy `json:"loadBalancingStrategy,omitempty"`
 	LastSyncAt            *time.Time             `json:"lastSyncAt,omitempty"`
@@ -630,6 +631,7 @@ type ModelGatewayInput struct {
 	Name      string               `json:"name"`
 	Provider  ModelGatewayProvider `json:"provider"`
 	Endpoint  string               `json:"endpoint"`
+	PublicURL *string              `json:"publicUrl,omitempty"`
 	MasterKey *string              `json:"masterKey,omitempty"`
 }
 
@@ -1088,8 +1090,9 @@ type TestModelGatewayConnectionInput struct {
 }
 
 type TestPrivateModelSpecConnectionInput struct {
-	APIBase string `json:"apiBase"`
-	APIKey  string `json:"apiKey"`
+	APIBase           string  `json:"apiBase"`
+	APIKey            string  `json:"apiKey"`
+	CustomLlmProvider *string `json:"customLlmProvider,omitempty"`
 }
 
 type TestResourcePoolConnectionInput struct {
@@ -2633,6 +2636,7 @@ const (
 	ProviderModelProviderCustom     ProviderModelProvider = "custom"
 	ProviderModelProviderDeepseek   ProviderModelProvider = "deepseek"
 	ProviderModelProviderMinimax    ProviderModelProvider = "minimax"
+	ProviderModelProviderOllamaChat ProviderModelProvider = "ollama_chat"
 	ProviderModelProviderMoonshot   ProviderModelProvider = "moonshot"
 	ProviderModelProviderOpenrouter ProviderModelProvider = "openrouter"
 	ProviderModelProviderOpenai     ProviderModelProvider = "openai"
@@ -2643,6 +2647,7 @@ var AllProviderModelProvider = []ProviderModelProvider{
 	ProviderModelProviderCustom,
 	ProviderModelProviderDeepseek,
 	ProviderModelProviderMinimax,
+	ProviderModelProviderOllamaChat,
 	ProviderModelProviderMoonshot,
 	ProviderModelProviderOpenrouter,
 	ProviderModelProviderOpenai,
@@ -2651,7 +2656,7 @@ var AllProviderModelProvider = []ProviderModelProvider{
 
 func (e ProviderModelProvider) IsValid() bool {
 	switch e {
-	case ProviderModelProviderCustom, ProviderModelProviderDeepseek, ProviderModelProviderMinimax, ProviderModelProviderMoonshot, ProviderModelProviderOpenrouter, ProviderModelProviderOpenai, ProviderModelProviderAnthropic:
+	case ProviderModelProviderCustom, ProviderModelProviderDeepseek, ProviderModelProviderMinimax, ProviderModelProviderOllamaChat, ProviderModelProviderMoonshot, ProviderModelProviderOpenrouter, ProviderModelProviderOpenai, ProviderModelProviderAnthropic:
 		return true
 	}
 	return false

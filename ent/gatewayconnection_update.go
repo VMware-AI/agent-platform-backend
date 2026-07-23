@@ -63,6 +63,46 @@ func (_u *GatewayConnectionUpdate) SetNillableEndpoint(v *string) *GatewayConnec
 	return _u
 }
 
+// SetAdminURL sets the "admin_url" field.
+func (_u *GatewayConnectionUpdate) SetAdminURL(v string) *GatewayConnectionUpdate {
+	_u.mutation.SetAdminURL(v)
+	return _u
+}
+
+// SetNillableAdminURL sets the "admin_url" field if the given value is not nil.
+func (_u *GatewayConnectionUpdate) SetNillableAdminURL(v *string) *GatewayConnectionUpdate {
+	if v != nil {
+		_u.SetAdminURL(*v)
+	}
+	return _u
+}
+
+// ClearAdminURL clears the value of the "admin_url" field.
+func (_u *GatewayConnectionUpdate) ClearAdminURL() *GatewayConnectionUpdate {
+	_u.mutation.ClearAdminURL()
+	return _u
+}
+
+// SetPublicURL sets the "public_url" field.
+func (_u *GatewayConnectionUpdate) SetPublicURL(v string) *GatewayConnectionUpdate {
+	_u.mutation.SetPublicURL(v)
+	return _u
+}
+
+// SetNillablePublicURL sets the "public_url" field if the given value is not nil.
+func (_u *GatewayConnectionUpdate) SetNillablePublicURL(v *string) *GatewayConnectionUpdate {
+	if v != nil {
+		_u.SetPublicURL(*v)
+	}
+	return _u
+}
+
+// ClearPublicURL clears the value of the "public_url" field.
+func (_u *GatewayConnectionUpdate) ClearPublicURL() *GatewayConnectionUpdate {
+	_u.mutation.ClearPublicURL()
+	return _u
+}
+
 // SetMasterKeyRef sets the "master_key_ref" field.
 func (_u *GatewayConnectionUpdate) SetMasterKeyRef(v string) *GatewayConnectionUpdate {
 	_u.mutation.SetMasterKeyRef(v)
@@ -251,6 +291,18 @@ func (_u *GatewayConnectionUpdate) sqlSave(ctx context.Context) (_node int, err 
 	if value, ok := _u.mutation.Endpoint(); ok {
 		_spec.SetField(gatewayconnection.FieldEndpoint, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.AdminURL(); ok {
+		_spec.SetField(gatewayconnection.FieldAdminURL, field.TypeString, value)
+	}
+	if _u.mutation.AdminURLCleared() {
+		_spec.ClearField(gatewayconnection.FieldAdminURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.PublicURL(); ok {
+		_spec.SetField(gatewayconnection.FieldPublicURL, field.TypeString, value)
+	}
+	if _u.mutation.PublicURLCleared() {
+		_spec.ClearField(gatewayconnection.FieldPublicURL, field.TypeString)
+	}
 	if value, ok := _u.mutation.MasterKeyRef(); ok {
 		_spec.SetField(gatewayconnection.FieldMasterKeyRef, field.TypeString, value)
 	}
@@ -331,6 +383,46 @@ func (_u *GatewayConnectionUpdateOne) SetNillableEndpoint(v *string) *GatewayCon
 	if v != nil {
 		_u.SetEndpoint(*v)
 	}
+	return _u
+}
+
+// SetAdminURL sets the "admin_url" field.
+func (_u *GatewayConnectionUpdateOne) SetAdminURL(v string) *GatewayConnectionUpdateOne {
+	_u.mutation.SetAdminURL(v)
+	return _u
+}
+
+// SetNillableAdminURL sets the "admin_url" field if the given value is not nil.
+func (_u *GatewayConnectionUpdateOne) SetNillableAdminURL(v *string) *GatewayConnectionUpdateOne {
+	if v != nil {
+		_u.SetAdminURL(*v)
+	}
+	return _u
+}
+
+// ClearAdminURL clears the value of the "admin_url" field.
+func (_u *GatewayConnectionUpdateOne) ClearAdminURL() *GatewayConnectionUpdateOne {
+	_u.mutation.ClearAdminURL()
+	return _u
+}
+
+// SetPublicURL sets the "public_url" field.
+func (_u *GatewayConnectionUpdateOne) SetPublicURL(v string) *GatewayConnectionUpdateOne {
+	_u.mutation.SetPublicURL(v)
+	return _u
+}
+
+// SetNillablePublicURL sets the "public_url" field if the given value is not nil.
+func (_u *GatewayConnectionUpdateOne) SetNillablePublicURL(v *string) *GatewayConnectionUpdateOne {
+	if v != nil {
+		_u.SetPublicURL(*v)
+	}
+	return _u
+}
+
+// ClearPublicURL clears the value of the "public_url" field.
+func (_u *GatewayConnectionUpdateOne) ClearPublicURL() *GatewayConnectionUpdateOne {
+	_u.mutation.ClearPublicURL()
 	return _u
 }
 
@@ -551,6 +643,18 @@ func (_u *GatewayConnectionUpdateOne) sqlSave(ctx context.Context) (_node *Gatew
 	}
 	if value, ok := _u.mutation.Endpoint(); ok {
 		_spec.SetField(gatewayconnection.FieldEndpoint, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.AdminURL(); ok {
+		_spec.SetField(gatewayconnection.FieldAdminURL, field.TypeString, value)
+	}
+	if _u.mutation.AdminURLCleared() {
+		_spec.ClearField(gatewayconnection.FieldAdminURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.PublicURL(); ok {
+		_spec.SetField(gatewayconnection.FieldPublicURL, field.TypeString, value)
+	}
+	if _u.mutation.PublicURLCleared() {
+		_spec.ClearField(gatewayconnection.FieldPublicURL, field.TypeString)
 	}
 	if value, ok := _u.mutation.MasterKeyRef(); ok {
 		_spec.SetField(gatewayconnection.FieldMasterKeyRef, field.TypeString, value)

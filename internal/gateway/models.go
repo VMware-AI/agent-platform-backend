@@ -180,10 +180,14 @@ type RoutingStrategy string
 var ErrUnknownRoutingStrategy = errors.New("gateway: unknown routing strategy")
 
 // TestConnection reuses c.get so the retry + error-class semantics stay
-// consistent with ListModels (same endpoint, /models). A transient 5xx now
-// retries 3× instead of failing on the first hit.
+// consistent with ListModels. LiteLLM deployments differ by version: some
+// expose the list at /models, while OpenAI-compatible surfaces expose
+// /v1/models. Accept either path for reachability.
 func (c *HTTPClient) TestConnection(ctx context.Context) error {
-	return c.get(ctx, "/models", nil)
+	if err := c.get(ctx, "/models", nil); err != nil {
+		return c.get(ctx, "/v1/models", nil)
+	}
+	return nil
 }
 
 // NewModel creates (or refreshes) a litellm deployment (POST /model/new). On
@@ -228,13 +232,11 @@ func (c *HTTPClient) DeleteModel(ctx context.Context, modelID string) error {
 // decide whether to fail the broader operation. An empty/missing "data" array
 // is treated as zero models (a freshly-started litellm returns that).
 func (c *HTTPClient) ListModels(ctx context.Context) ([]ModelInfo, error) {
-	var out struct {
-		Data []ModelInfo `json:"data"`
+	models, err := c.ListModelsAt(ctx, "/models")
+	if err == nil {
+		return models, nil
 	}
-	if err := c.get(ctx, "/models", &out); err != nil {
-		return nil, err
-	}
-	return out.Data, nil
+	return c.ListModelsAt(ctx, "/v1/models")
 }
 
 // ListModelsAt calls GET {path} and decodes the response's "data" array of
@@ -249,6 +251,27 @@ func (c *HTTPClient) ListModelsAt(ctx context.Context, path string) ([]ModelInfo
 		return nil, err
 	}
 	return out.Data, nil
+}
+
+// ListOllamaTags calls Ollama's native GET /api/tags endpoint and projects
+// models[].name into the same ModelInfo shape used by OpenAI-compatible probes.
+func (c *HTTPClient) ListOllamaTags(ctx context.Context) ([]ModelInfo, error) {
+	var out struct {
+		Models []struct {
+			Name string `json:"name"`
+		} `json:"models"`
+	}
+	if err := c.get(ctx, "/api/tags", &out); err != nil {
+		return nil, err
+	}
+	models := make([]ModelInfo, 0, len(out.Models))
+	for _, m := range out.Models {
+		if m.Name == "" {
+			continue
+		}
+		models = append(models, ModelInfo{ID: m.Name, ModelName: m.Name})
+	}
+	return models, nil
 }
 
 // GetRoutingStrategy calls GET /router/settings and reads the routing_strategy

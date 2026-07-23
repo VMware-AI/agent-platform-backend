@@ -61,6 +61,34 @@ func (_c *GatewayConnectionCreate) SetEndpoint(v string) *GatewayConnectionCreat
 	return _c
 }
 
+// SetAdminURL sets the "admin_url" field.
+func (_c *GatewayConnectionCreate) SetAdminURL(v string) *GatewayConnectionCreate {
+	_c.mutation.SetAdminURL(v)
+	return _c
+}
+
+// SetNillableAdminURL sets the "admin_url" field if the given value is not nil.
+func (_c *GatewayConnectionCreate) SetNillableAdminURL(v *string) *GatewayConnectionCreate {
+	if v != nil {
+		_c.SetAdminURL(*v)
+	}
+	return _c
+}
+
+// SetPublicURL sets the "public_url" field.
+func (_c *GatewayConnectionCreate) SetPublicURL(v string) *GatewayConnectionCreate {
+	_c.mutation.SetPublicURL(v)
+	return _c
+}
+
+// SetNillablePublicURL sets the "public_url" field if the given value is not nil.
+func (_c *GatewayConnectionCreate) SetNillablePublicURL(v *string) *GatewayConnectionCreate {
+	if v != nil {
+		_c.SetPublicURL(*v)
+	}
+	return _c
+}
+
 // SetMasterKeyRef sets the "master_key_ref" field.
 func (_c *GatewayConnectionCreate) SetMasterKeyRef(v string) *GatewayConnectionCreate {
 	_c.mutation.SetMasterKeyRef(v)
@@ -292,6 +320,14 @@ func (_c *GatewayConnectionCreate) createSpec() (*GatewayConnection, *sqlgraph.C
 	if value, ok := _c.mutation.Endpoint(); ok {
 		_spec.SetField(gatewayconnection.FieldEndpoint, field.TypeString, value)
 		_node.Endpoint = value
+	}
+	if value, ok := _c.mutation.AdminURL(); ok {
+		_spec.SetField(gatewayconnection.FieldAdminURL, field.TypeString, value)
+		_node.AdminURL = &value
+	}
+	if value, ok := _c.mutation.PublicURL(); ok {
+		_spec.SetField(gatewayconnection.FieldPublicURL, field.TypeString, value)
+		_node.PublicURL = &value
 	}
 	if value, ok := _c.mutation.MasterKeyRef(); ok {
 		_spec.SetField(gatewayconnection.FieldMasterKeyRef, field.TypeString, value)
