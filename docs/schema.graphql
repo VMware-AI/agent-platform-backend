@@ -431,6 +431,7 @@ input DeployAgentInput {
 	maxBudget: Float
 	targetNetwork: String
 	ovfProperties: [OVFPropertyInput!]
+	skillIds: [ID!]
 	keySource: KeySource! = new
 	existingKeyId: ID
 	notes: String
@@ -611,6 +612,7 @@ type ModelGateway {
 	name: String!
 	provider: ModelGatewayProvider!
 	endpoint: String!
+	publicUrl: String
 	backendModelCount: Int!
 	loadBalancingStrategy: LoadBalancingStrategy
 	lastSyncAt: Time
@@ -630,6 +632,7 @@ input ModelGatewayInput {
 	name: String!
 	provider: ModelGatewayProvider!
 	endpoint: String!
+	publicUrl: String
 	masterKey: String
 }
 enum ModelGatewayProvider {
@@ -937,6 +940,7 @@ enum ProviderModelProvider {
 	custom
 	deepseek
 	minimax
+	ollama_chat
 	moonshot
 	openrouter
 	openai
@@ -1260,6 +1264,7 @@ input TestModelGatewayConnectionInput {
 input TestPrivateModelSpecConnectionInput {
 	apiBase: String!
 	apiKey: String!
+	customLlmProvider: String
 }
 input TestResourcePoolConnectionInput {
 	name: String!

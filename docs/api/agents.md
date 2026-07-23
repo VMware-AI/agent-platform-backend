@@ -707,6 +707,7 @@ A vCenter resource pool offered as a placement target for the cloned VM. A true 
 | `maxBudget` | `Float` | — | Optional per-key spend cap handed to the gateway when issuing the agent's key. |
 | `targetNetwork` | `String` | — | Optional target network/portgroup path for the agent VM's NIC. Matches VsphereNetwork.path. "" = keep the source template's NIC mapping. |
 | `ovfProperties` | `[OVFPropertyInput!]` | — | OVF/vApp properties from the template, keyed by property id. |
+| `skillIds` | `[ID!]` | — | Optional Skill hub ids selected in the deploy dialog. Resolved to offline packages and installed through cloud-init when the VM first boots. |
 | `keySource` | `KeySource!` | `new` | Key source: "new" issues a fresh gateway key; "existing" binds an unbound key. |
 | `existingKeyId` | `ID` | — | Required when keySource=existing — the id of an unbound virtual key to reuse. |
 | `notes` | `String` | — | Optional free-text deploy notes. |
